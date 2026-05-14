@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
-import type { LoginInput, LoginResponse, RegisterInput, RegisterResponse } from 'shared'
-import { authApi, type AuthUser } from '@/api'
+import type { AuthUser, LoginInput, LoginResponse, RegisterInput, RegisterResponse } from 'shared'
+import { ApiError, authApi } from '@/api'
 
 const guestUser: AuthUser = {
   id: '',
@@ -14,7 +14,9 @@ const guestUser: AuthUser = {
 
 export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false)
+  const sessionInitialized = ref(false)
   const currentUser = reactive<AuthUser>({ ...guestUser })
+  let initializeSessionPromise: Promise<void> | null = null
 
   function applyUser(user: AuthUser) {
     Object.assign(currentUser, guestUser, user)
@@ -53,5 +55,42 @@ export const useAuthStore = defineStore('auth', () => {
     resetUser()
   }
 
-  return { isAuthenticated, currentUser, login, register, logout, resetUser }
+  async function initializeSession() {
+    if (sessionInitialized.value) {
+      return
+    }
+
+    if (initializeSessionPromise !== null) {
+      await initializeSessionPromise
+      return
+    }
+
+    initializeSessionPromise = (async () => {
+      try {
+        const response = await authApi.me()
+        applyUser(response.user)
+      } catch (error) {
+        if (error instanceof ApiError && error.statusCode === 401) {
+          resetUser()
+          return
+        }
+        console.error('Failed to initialize auth session', error)
+      } finally {
+        sessionInitialized.value = true
+        initializeSessionPromise = null
+      }
+    })()
+
+    await initializeSessionPromise
+  }
+
+  return {
+    isAuthenticated,
+    currentUser,
+    login,
+    register,
+    logout,
+    resetUser,
+    initializeSession,
+  }
 })

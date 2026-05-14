@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   getHttpStatusLine,
+  setCookies,
   writeHttpStatus,
 } from "./http-response-handlers.js";
 
@@ -17,5 +18,33 @@ describe("http-response-handlers", () => {
     writeHttpStatus({ writeStatus }, 422);
 
     expect(writeStatus).toHaveBeenCalledWith("422 Unprocessable Entity");
+  });
+
+  it("does not emit cookie security flags when they are false", () => {
+    const writeHeader = vi.fn();
+
+    setCookies(
+      { writeHeader } as any,
+      new Map([
+        [
+          "session",
+          {
+            name: "session",
+            value: "token",
+            path: "/",
+            httpOnly: false,
+            secure: false,
+            expires: undefined,
+            maxAge: undefined,
+            sameSite: "Lax",
+          },
+        ],
+      ]),
+    );
+
+    expect(writeHeader).toHaveBeenCalledWith(
+      "Set-Cookie",
+      "session=token; Path=/; SameSite=Lax",
+    );
   });
 });

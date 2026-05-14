@@ -161,12 +161,15 @@ export const sessionHandler = async (
     await destroySession(sessionInfo?.id, contextUserToken);
   };
 
-  context.auth.getUserId = (): string | null => {
+  context.auth.getUserId = (): bigint | null => {
     if (sessionInfo === null) return null;
     if (sessionInfo.data.userId === undefined) return null;
-    return typeof sessionInfo.data.userId === 'string' ? sessionInfo.data.userId : null;
+    if (typeof sessionInfo.data.userId !== 'string') return null;
+    if (!/^\d+$/.test(sessionInfo.data.userId)) return null;
+
+    return BigInt(sessionInfo.data.userId);
   };
-  context.auth.check = (): boolean => Boolean(sessionInfo?.data.userId);
+  context.auth.check = (): boolean => context.auth.getUserId() !== null;
   context.auth.login = async (userId: string | undefined, userToken: string | undefined): Promise<boolean> => {
     if (userId === undefined || userToken === undefined) return false;
     try {

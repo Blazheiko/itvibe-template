@@ -34,6 +34,14 @@ export default [
         description: "Login a user",
       }),
       defineRoute({
+        url: "/me",
+        method: "get",
+        handler: AuthController.me.bind(AuthController),
+        ResponseSchema: ResponseSchemas.CurrentUserResponseSchema,
+        description: "Get current authenticated user",
+        middlewares: ["auth_guard"],
+      }),
+      defineRoute({
         url: "/logout",
         method: "post",
         handler: AuthController.logout.bind(AuthController),

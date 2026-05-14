@@ -8,7 +8,7 @@ const adminGuard: Middleware = async (context: HttpContext, next: () => Promise<
         context.responseData.payload = { status: 'forbidden', message: 'Admin access required' };
         return;
     }
-    const user = await userRepository.findById(BigInt(userId));
+    const user = await userRepository.findById(userId);
     if (user?.role !== 'admin') {
         context.responseData.status = 403;
         context.responseData.payload = { status: 'forbidden', message: 'Admin access required' };

@@ -5,6 +5,7 @@ import { authService } from "#app/services/auth-service.js";
 import { Result } from "better-result";
 import type {
   ChangePasswordResponse,
+  CurrentUserResponse,
   ForgotPasswordResponse,
   RegisterResponse,
   LoginResponse,
@@ -104,6 +105,24 @@ export default {
     return result.value;
   },
 
+  async me(context: HttpContext<EmptyFormInput>): Promise<CurrentUserResponse> {
+    const userId = context.auth.getUserId();
+    if (userId === null) {
+      await context.auth.logout();
+      return mapControllerError(context, unauthorized());
+    }
+
+    const result = await authService.getCurrentUser(userId);
+    if (Result.isError(result)) {
+      if (result.error._tag === "Unauthorized") {
+        await context.auth.logout();
+      }
+      return mapControllerError(context, result.error);
+    }
+
+    return result.value;
+  },
+
   async logoutAll(
     context: HttpContext<EmptyFormInput>,
   ): Promise<LogoutAllResponse> {
@@ -131,7 +150,7 @@ export default {
     }
 
     const payload = getTypedPayload(context);
-    const result = await authService.changePassword(BigInt(userId), payload);
+    const result = await authService.changePassword(userId, payload);
     if (Result.isError(result)) {
       return mapControllerError(context, result.error);
     }
@@ -194,7 +213,7 @@ export default {
     }
 
     const result = await emailVerificationService.queueVerificationEmail(
-      BigInt(userId),
+      userId,
     );
     if (Result.isError(result)) {
       return mapControllerError(context, result.error);

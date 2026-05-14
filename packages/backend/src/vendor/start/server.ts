@@ -543,7 +543,7 @@ const setHttpHandler = async (
     };
     const context = contextHandler(httpData, responseData);
     requestId = context.requestId;
-    userId = context.auth.getUserId() ?? undefined;
+    userId = context.auth.getUserId()?.toString();
 
     if (
       (route.middlewares?.length === 0 ||

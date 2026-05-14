@@ -1,9 +1,10 @@
-import { env } from 'node:process';
+import { shouldUseSecureCookies } from "#config/secure-cookies.js";
+
 export default Object.freeze({
     default: {
         path: '/',
         httpOnly: true,
-        secure: env['APP_ENV'] !== 'local',
+        secure: shouldUseSecureCookies(),
         maxAge: 3600,
         sameSite: 'Lax',
     },

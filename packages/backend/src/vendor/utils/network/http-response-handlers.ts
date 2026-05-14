@@ -66,8 +66,8 @@ export const setCookies = (res: HttpResponse, cookies: Map<string, Cookie>): voi
         cookie.expires !== undefined
           ? `; Expires=${cookie.expires.toUTCString()}`
           : "";
-      const httpOnlyPart = cookie.httpOnly !== undefined ? "; HttpOnly" : "";
-      const securePart = cookie.secure !== undefined ? "; Secure" : "";
+      const httpOnlyPart = cookie.httpOnly === true ? "; HttpOnly" : "";
+      const securePart = cookie.secure === true ? "; Secure" : "";
       const maxAgePart =
         cookie.maxAge !== undefined ? `; Max-Age=${String(cookie.maxAge)}` : "";
       const sameSitePart =

@@ -86,7 +86,7 @@ export type Middleware = (
 ) => Promise<void>;
 
 export interface Auth {
-  getUserId: () => string | null;
+  getUserId: () => bigint | null;
   check: () => boolean;
   login: (userId: string | undefined, userToken: string | undefined) => Promise<boolean>;
   logout: () => Promise<boolean>;

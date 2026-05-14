@@ -18,18 +18,19 @@ import type {
   LoginInput,
   RegisterInput,
 } from "shared/schemas";
+import type { AuthUser } from "shared";
+
+type AuthSuccessResult = AppResult<{
+  status: "success";
+  user: AuthUser;
+}>;
 
 export const authService = {
   async register(
     payload: RegisterInput,
     auth: Auth,
     session: Session,
-  ): Promise<
-    AppResult<{
-      status: "success";
-      user: ReturnType<typeof userTransformer.serialize>;
-    }>
-  > {
+  ): Promise<AuthSuccessResult> {
     const { name, password } = payload;
     const email = payload.email.toLowerCase();
 
@@ -106,12 +107,7 @@ export const authService = {
   async login(
     payload: LoginInput,
     auth: Auth,
-  ): Promise<
-    AppResult<{
-      status: "success";
-      user: ReturnType<typeof userTransformer.serialize>;
-    }>
-  > {
+  ): Promise<AuthSuccessResult> {
     const { password } = payload;
     const email = payload.email.toLowerCase();
 
@@ -181,6 +177,28 @@ export const authService = {
     }
 
     return Result.ok({ status: "success" });
+  },
+
+  async getCurrentUser(
+    userId: bigint,
+  ): Promise<AuthSuccessResult> {
+    const userResult = await tryInternal(
+      () => userRepository.findById(userId),
+      "Failed to load current user",
+    );
+    if (Result.isError(userResult)) {
+      return Result.err(userResult.error);
+    }
+
+    const user = userResult.value;
+    if (user === undefined) {
+      return Result.err(unauthorized("Session user not found"));
+    }
+
+    return Result.ok({
+      status: "success",
+      user: userTransformer.serialize(user),
+    });
   },
 
   async logoutAll(

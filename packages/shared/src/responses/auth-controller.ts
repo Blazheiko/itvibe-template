@@ -2,7 +2,7 @@ import { type } from "@arktype/type";
 import type { ErrorCode as AppErrorCode } from "../errors/error-codes.js";
 import { CanonicalErrorResponseSchema, type CanonicalErrorResponse } from "./error-response.js";
 
-const AuthUserSchema = type({
+export const AuthUserSchema = type({
   id: "string",
   name: "string",
   email: "string",
@@ -10,6 +10,7 @@ const AuthUserSchema = type({
   "emailVerifiedAt?": "string | null",
   "role?": "'user' | 'admin' | 'partner'",
 });
+export type AuthUser = typeof AuthUserSchema.infer;
 
 export const RegisterResponseSchema = type.or(
   {
@@ -30,6 +31,15 @@ export const LoginResponseSchema = type.or(
   CanonicalErrorResponseSchema,
 );
 export type LoginResponse = typeof LoginResponseSchema.infer;
+
+export const CurrentUserResponseSchema = type.or(
+  {
+    status: "'success'",
+    user: AuthUserSchema,
+  },
+  CanonicalErrorResponseSchema,
+);
+export type CurrentUserResponse = typeof CurrentUserResponseSchema.infer;
 
 export const LogoutResponseSchema = type.or(
   { status: "'success'", "message?": "string" },

@@ -1,6 +1,8 @@
 import type {
+  AuthUser as SharedAuthUser,
   ChangePasswordInput,
   ChangePasswordResponse,
+  CurrentUserResponse,
   EmptyFormInput,
   ForgotPasswordInput,
   ForgotPasswordResponse,
@@ -22,11 +24,10 @@ import { createApiPath, requestJson } from './http'
 
 type SuccessResponse<T extends { status: string }> = Exclude<T, { status: 'error' }>
 type EmptyPayload = EmptyFormInput | Record<string, never>
-type AuthUserPayload = Extract<LoginResponse, { status: 'success' }>['user']
 
 export const OAUTH_PROVIDERS = ['google', 'github', 'gitlab'] as const
 export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number]
-export type AuthUser = Exclude<AuthUserPayload, undefined>
+export type AuthUser = SharedAuthUser
 
 const AUTH_BASE_PATH = '/auth'
 const OAUTH_BASE_PATH = '/auth/oauth'
@@ -45,6 +46,13 @@ export const authApi = {
       method: 'POST',
       path: `${AUTH_BASE_PATH}/login`,
       body: input,
+    })
+  },
+
+  me() {
+    return requestJson<SuccessResponse<CurrentUserResponse>>({
+      method: 'GET',
+      path: `${AUTH_BASE_PATH}/me`,
     })
   },
 

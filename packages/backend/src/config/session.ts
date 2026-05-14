@@ -1,9 +1,11 @@
 import { duration } from 'metautil';
-import { env } from 'node:process';
+import { shouldUseSecureCookies } from "#config/secure-cookies.js";
+
 export default Object.freeze({
     // enabled: true,
     storage: 'redis',
-    cookieName: 'uapi',
+    // Renaming the cookie invalidates existing browser sessions after deploy.
+    cookieName: 'itvibe',
     age: Math.floor( duration('24h')/1000 ), // d - days, h - hours, m - minutes, s - seconds
 
     /**
@@ -12,7 +14,7 @@ export default Object.freeze({
     cookie: {
         path: '/',
         httpOnly: true,
-        secure: env['APP_ENV'] !== 'local',
+        secure: shouldUseSecureCookies(),
         sameSite: 'Lax', // 'Strict' || 'Lax' . 'None' is not secure use only for CSRF protection
     },
 
