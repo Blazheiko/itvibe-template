@@ -1,0 +1,15 @@
+node_modules/
+packages/*/node_modules/
+packages/*/dist/
+*.tsbuildinfo
+packages/*/package-lock.json
+
+.idea/
+.omx/
+
+.env
+.env.*
+packages/*/.env
+packages/*/.env.*
+!.env.example
+!packages/*/.env.example

@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+  --bg: #f5efe3;
+  --bg-strong: #efe3d0;
+  --panel: rgba(255, 251, 245, 0.78);
+  --panel-strong: rgba(104, 55, 36, 0.1);
+  --text: #231711;
+  --muted: #6d5648;
+  --line: rgba(69, 35, 20, 0.16);
+  --accent: #a94f2d;
+  --accent-dark: #843819;
+  --success: #2c6b4f;
+  --shadow: 0 28px 60px rgba(92, 56, 37, 0.16);
+  --display-font: 'Avenir Next Condensed', 'Franklin Gothic Medium', 'Arial Narrow', sans-serif;
+  --body-font: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.8), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(169, 79, 45, 0.15), transparent 22%),
+    linear-gradient(135deg, #f8f3ea 0%, #f0e1ca 45%, #ead6c2 100%);
+  font-family: var(--body-font);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}

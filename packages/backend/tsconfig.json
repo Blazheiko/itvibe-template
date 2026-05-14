@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "disableSourceOfProjectReferenceRedirect": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "#app/*": ["src/app/*"],
+      "#config/*": ["src/config/*"],
+      "#vendor/*": ["src/vendor/*"],
+      "#database/*": ["src/database/*"],
+      "#logger": ["src/vendor/utils/logger"],
+      "#drizzle/*": ["src/drizzle/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "../shared" }]
+}
