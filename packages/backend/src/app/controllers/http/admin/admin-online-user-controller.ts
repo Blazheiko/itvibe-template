@@ -1,0 +1,38 @@
+import { adminOnlineUsersService } from "#app/services/admin/admin-online-users-service.js";
+import { mapControllerError } from "#app/controllers/shared/controller-error.js";
+import { badRequest, notFound } from "#app/services/shared/errors.js";
+import type { HttpContext } from "#vendor/types/types.js";
+import type {
+  AdminOnlineUserDetailResponse,
+  AdminOnlineUserListResponse,
+} from "shared/responses";
+
+export default {
+  async list(_context: HttpContext): Promise<AdminOnlineUserListResponse> {
+    const items = await adminOnlineUsersService.listOnlineUsers();
+    return {
+      status: "success",
+      items,
+      total: items.length,
+    };
+  },
+
+  async getById(context: HttpContext): Promise<AdminOnlineUserDetailResponse> {
+    const idParam = context.httpData.params["id"] ?? "";
+    if (!/^\d+$/.test(idParam)) {
+      return mapControllerError(context, badRequest("Invalid user id"));
+    }
+
+    const user = await adminOnlineUsersService.getOnlineUserDetail(
+      BigInt(idParam),
+    );
+    if (user === undefined) {
+      return mapControllerError(context, notFound("User", "User not found"));
+    }
+
+    return {
+      status: "success",
+      user,
+    };
+  },
+};

@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>itvibe-template — презентація</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --bg-soft: #161b22;
+        --card: #1c2330;
+        --border: #2a3344;
+        --text: #e6edf3;
+        --muted: #9aa7b8;
+        --accent: #4f9dff;
+        --accent-2: #8b5cf6;
+        --green: #3fb950;
+        --pink: #f778ba;
+        --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        font-family:
+          "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+          sans-serif;
+        background:
+          radial-gradient(
+            1200px 800px at 80% -10%,
+            rgba(79, 157, 255, 0.18),
+            transparent 60%
+          ),
+          radial-gradient(
+            900px 700px at -10% 110%,
+            rgba(139, 92, 246, 0.18),
+            transparent 55%
+          ),
+          var(--bg);
+        color: var(--text);
+        overflow: hidden;
+      }
+
+      .deck {
+        height: 100vh;
+        width: 100vw;
+        position: relative;
+      }
+
+      .slide {
+        position: absolute;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        padding: 6vh 9vw calc(60px + 4vh);
+        overflow-y: auto;
+        animation: fade 0.45s ease;
+      }
+
+      @media (max-height: 640px) {
+        .slide {
+          justify-content: flex-start;
+        }
+      }
+
+      .slide.active {
+        display: flex;
+      }
+
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .kicker {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        font-size: clamp(2.2rem, 6vw, 4.2rem);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        font-size: clamp(1.7rem, 4vw, 2.8rem);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin-bottom: 1.6rem;
+      }
+
+      .gradient {
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .lead {
+        font-size: clamp(1.05rem, 2vw, 1.5rem);
+        color: var(--muted);
+        max-width: 60ch;
+        margin-top: 1.4rem;
+        line-height: 1.5;
+      }
+
+      ul.bullets {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        max-width: 70ch;
+      }
+
+      ul.bullets li {
+        font-size: clamp(1rem, 1.8vw, 1.35rem);
+        padding-left: 1.9rem;
+        position: relative;
+        line-height: 1.4;
+        color: var(--text);
+      }
+
+      ul.bullets li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.55em;
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 3px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      }
+
+      ul.bullets li b {
+        color: #fff;
+      }
+
+      ul.bullets li small {
+        display: block;
+        color: var(--muted);
+        font-size: 0.85em;
+        margin-top: 0.15rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.2rem;
+        margin-top: 0.5rem;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.4rem 1.5rem;
+        box-shadow: var(--shadow);
+      }
+
+      .card .ico {
+        font-size: 1.8rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .card h3 {
+        font-size: 1.15rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .card p {
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2.5rem;
+      }
+
+      .col h3 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .col.good h3 {
+        color: var(--green);
+      }
+
+      .col.over h3 {
+        color: var(--pink);
+      }
+
+      table.matrix {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+        margin-top: 0.5rem;
+      }
+
+      table.matrix th,
+      table.matrix td {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      table.matrix th {
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.78em;
+      }
+
+      table.matrix td code {
+        background: var(--bg-soft);
+        padding: 0.1rem 0.45rem;
+        border-radius: 6px;
+        color: var(--pink);
+        font-size: 0.92em;
+      }
+
+      .arch {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .node {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.4rem;
+        text-align: center;
+        min-width: 140px;
+        box-shadow: var(--shadow);
+      }
+
+      .node .t {
+        font-weight: 700;
+        font-size: 1.05rem;
+      }
+
+      .node .s {
+        color: var(--muted);
+        font-size: 0.82rem;
+        margin-top: 0.2rem;
+      }
+
+      .node.accent {
+        border-color: var(--accent);
+      }
+      .node.purple {
+        border-color: var(--accent-2);
+      }
+
+      .arrow {
+        color: var(--muted);
+        font-size: 1.6rem;
+      }
+
+      .services {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        margin-top: 1.4rem;
+      }
+
+      .pill {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.45rem 1rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      pre {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.3rem 1.5rem;
+        overflow: auto;
+        font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+        line-height: 1.6;
+        margin-top: 1rem;
+        max-width: 760px;
+      }
+
+      pre code {
+        font-family: "SF Mono", "Fira Code", Consolas, monospace;
+        color: #c9d1d9;
+      }
+
+      .tok-c {
+        color: #6e7681;
+      }
+      .tok-k {
+        color: var(--accent);
+      }
+      .tok-s {
+        color: #7ee787;
+      }
+      .tok-f {
+        color: #d2a8ff;
+      }
+      .tok-t {
+        color: #ffa657;
+      }
+
+      pre.sm code {
+        font-size: 0.82em;
+      }
+
+      /* vertical request flow */
+      .flow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+        overflow-y: auto;
+        max-height: 64vh;
+        padding-right: 4px;
+      }
+
+      .flow .step {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        border-radius: 10px;
+        padding: 0.55rem 1rem;
+        width: min(620px, 86vw);
+        box-shadow: var(--shadow);
+      }
+
+      .flow .step b {
+        font-size: 0.98rem;
+      }
+
+      .flow .step .s {
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 0.1rem;
+      }
+
+      .flow .step .s code {
+        color: var(--pink);
+        background: var(--bg-soft);
+        padding: 0 0.3rem;
+        border-radius: 4px;
+      }
+
+      .flow .step.alt {
+        border-left-color: var(--accent-2);
+      }
+      .flow .step.endpoint {
+        border-left-color: var(--green);
+        text-align: center;
+      }
+
+      .flow .down {
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 0.6;
+      }
+
+      /* footer / nav */
+      .bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 9vw;
+        background: linear-gradient(0deg, rgba(13, 17, 23, 0.9), transparent);
+        z-index: 20;
+      }
+
+      .brand {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .brand span {
+        color: var(--accent);
+      }
+
+      .ctrls {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+
+      .btn {
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--text);
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition:
+          transform 0.1s ease,
+          border-color 0.2s ease;
+      }
+      .btn:hover {
+        border-color: var(--accent);
+      }
+      .btn:active {
+        transform: scale(0.94);
+      }
+
+      .counter {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        min-width: 56px;
+        text-align: center;
+      }
+
+      .progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        z-index: 30;
+        transition: width 0.35s ease;
+      }
+
+      .hint {
+        position: fixed;
+        top: 18px;
+        right: 9vw;
+        color: var(--muted);
+        font-size: 0.8rem;
+        z-index: 20;
+      }
+
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.2rem;
+        margin-top: 0.5rem;
+      }
+
+      .shot {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .shot .frame {
+        position: relative;
+        aspect-ratio: 16 / 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.02) 0 12px,
+            transparent 12px 24px
+          ),
+          var(--card);
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .shot .frame img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .shot .ph {
+        text-align: center;
+        padding: 0 1rem;
+        line-height: 1.4;
+      }
+      .shot .ph .ico {
+        font-size: 1.8rem;
+        display: block;
+        margin-bottom: 0.4rem;
+      }
+
+      .shot .cap {
+        padding: 0.7rem 1rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        border-top: 1px solid var(--border);
+      }
+
+      .badge-row {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+      }
+      .badge {
+        border: 1px solid var(--border);
+        background: var(--bg-soft);
+        border-radius: 8px;
+        padding: 0.35rem 0.8rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      @media (max-width: 720px) {
+        .two-col {
+          grid-template-columns: 1fr;
+          gap: 1.4rem;
+        }
+        .slide {
+          padding: 8vh 7vw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="progress" id="progress"></div>
+    <div class="hint">← → щоб гортати · F — на весь екран</div>
+
+    <div class="deck" id="deck">
+      <!-- 1. Title -->
+      <section class="slide active">
+        <div class="kicker">Full-stack TypeScript шаблон</div>
+        <h1>itvibe-<span class="gradient">template</span></h1>
+        <p class="lead">
+          Монорепозиторій для швидкого старту production-ready SPA: Vue 3
+          фронтенд, високопродуктивний uWebSockets.js бекенд і спільний пакет
+          контрактів, типобезпечний з обох боків.
+        </p>
+        <div class="badge-row">
+          <span class="badge">Vue 3 + Vite</span>
+          <span class="badge">uWebSockets.js</span>
+          <span class="badge">PostgreSQL + Drizzle</span>
+          <span class="badge">Redis</span>
+          <span class="badge">pnpm workspace</span>
+        </div>
+      </section>
+
+      <!-- 2. What it's good for -->
+      <section class="slide">
+        <div class="kicker">Навіщо це</div>
+        <h2>Для чого підходить шаблон</h2>
+        <p class="lead" style="margin-top: 0; margin-bottom: 2rem">
+          Шаблон створено для <b>швидкого запуску SPA-застосунків</b>. Замість
+          того щоб щоразу налаштовувати однаковий фундамент, ви стартуєте з
+          робочого застосунку, де вже є те, що потрібно більшості продуктів з
+          першого дня.
+        </p>
+        <ul class="bullets">
+          <li>
+            <b>Авторизація з коробки</b> — email, телефон (SMS) та соціальні
+            мережі, із сесіями, CSRF-захистом і тротлінгом.
+          </li>
+          <li>
+            <b>Реалтайм за замовчуванням</b> — налаштований WebSocket-шар для
+            живих оновлень, presence і двостороннього обміну.
+          </li>
+          <li>
+            <b>Push-сповіщення</b> — серверна доставка web-push підключеним
+            клієнтам.
+          </li>
+          <li>
+            <b>Встановлюваний PWA</b> — фронтенд на Vue 3 готовий до встановлення
+            й офлайн-роботи.
+          </li>
+        </ul>
+      </section>
+
+      <!-- 3. Core features grid -->
+      <section class="slide">
+        <div class="kicker">Що всередині</div>
+        <h2>Готова інфраструктура</h2>
+        <div class="grid">
+          <div class="card">
+            <div class="ico">🔐</div>
+            <h3>Auth &amp; Security</h3>
+            <p>Cookies, CSRF (synchronizer-token), CORS, CSP, тротлінг, ролі та
+              guard-и.</p>
+          </div>
+          <div class="card">
+            <div class="ico">⚡</div>
+            <h3>Realtime</h3>
+            <p>WebSocket на uWebSockets.js, presence, координація між інстансами
+              через Redis.</p>
+          </div>
+          <div class="card">
+            <div class="ico">🗄️</div>
+            <h3>База даних</h3>
+            <p>PostgreSQL + Drizzle ORM: міграції, схеми, Drizzle Studio.</p>
+          </div>
+          <div class="card">
+            <div class="ico">📦</div>
+            <h3>Спільні контракти</h3>
+            <p>Схеми, enum-и, guard-и та responses, що перевикористовуються на
+              фронті й беку.</p>
+          </div>
+          <div class="card">
+            <div class="ico">🔔</div>
+            <h3>Інтеграції</h3>
+            <p>S3/MinIO, пошта (SMTP), push, AI-провайдери, Telegram.</p>
+          </div>
+          <div class="card">
+            <div class="ico">📊</div>
+            <h3>Спостережуваність</h3>
+            <p>Sentry для помилок і трасування, структуроване логування Pino.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Architecture -->
+      <section class="slide">
+        <div class="kicker">Архітектура</div>
+        <h2>Як це працює разом</h2>
+        <p class="lead" style="margin-top: 0; margin-bottom: 1rem">
+          Фронтенд і бекенд спілкуються через HTTP + WebSocket і поділяють єдиний
+          пакет контрактів — форми запитів/відповідей перевіряються типами з обох
+          боків.
+        </p>
+        <div class="arch">
+          <div class="node accent">
+            <div class="t">Vue 3 SPA / PWA</div>
+            <div class="s">фронтенд</div>
+          </div>
+          <div class="arrow">⇄</div>
+          <div class="node purple">
+            <div class="t">shared</div>
+            <div class="s">схеми / контракти</div>
+          </div>
+          <div class="arrow">⇄</div>
+          <div class="node accent">
+            <div class="t">uWebSockets.js</div>
+            <div class="s">бекенд</div>
+          </div>
+        </div>
+        <div class="services">
+          <span class="pill">PostgreSQL</span>
+          <span class="pill">Redis</span>
+          <span class="pill">S3 / MinIO</span>
+          <span class="pill">SMTP</span>
+          <span class="pill">AI providers</span>
+          <span class="pill">Sentry</span>
+        </div>
+        <p class="lead" style="font-size: 1rem; margin-top: 1.5rem">
+          Бекенд — шарувата архітектура:
+          <b>repository → transformer → service → controller → route</b>.
+        </p>
+      </section>
+
+      <!-- 5. Ready-made flows -->
+      <section class="slide">
+        <div class="kicker">Готові сценарії</div>
+        <h2>Робочі продуктові флоу</h2>
+        <ul class="bullets">
+          <li>
+            Реєстрація email, підтвердження пошти, вхід/вихід, logout-all, зміна
+            та скидання пароля (зокрема через one-time токен).
+          </li>
+          <li>
+            Опційна авторизація за телефоном (register / confirm / complete) та
+            прив'язка телефону й email до акаунта.
+          </li>
+          <li>OAuth redirect/callback як основа для соціального входу.</li>
+          <li>Сторінка акаунта з профілем та керуванням аватаром.</li>
+          <li>Керування підпискою на push + ендпоінт «надіслати тестовий push».</li>
+          <li>
+            Адмін-зона: користувачі, онлайн-користувачі, історія онлайну, база
+            знань.
+          </li>
+          <li>AI-підтримка: чат з історією та статтями бази знань.</li>
+          <li>API playground для ручного тестування HTTP/WebSocket.</li>
+        </ul>
+      </section>
+
+      <!-- 5b. Product UI -->
+      <section class="slide">
+        <div class="kicker">Демо</div>
+        <h2>Що користувач бачить одразу</h2>
+        <p class="lead" style="margin-top: 0; margin-bottom: 1.2rem; font-size: 1rem">
+          Готові екрани з коробки — не лише код, а робочий продукт.
+        </p>
+        <div class="shots">
+          <div class="shot">
+            <div class="frame">
+              <div class="ph"><span class="ico">🔐</span>скриншот<br /><code>docs/screenshots/login.png</code></div>
+              <img src="docs/screenshots/login.png" alt="Login / Register" onerror="this.remove()" />
+            </div>
+            <div class="cap">Вхід / Реєстрація</div>
+          </div>
+          <div class="shot">
+            <div class="frame">
+              <div class="ph"><span class="ico">👤</span>скриншот<br /><code>docs/screenshots/account.png</code></div>
+              <img src="docs/screenshots/account.png" alt="Account" onerror="this.remove()" />
+            </div>
+            <div class="cap">Сторінка акаунта</div>
+          </div>
+          <div class="shot">
+            <div class="frame">
+              <div class="ph"><span class="ico">🛠️</span>скриншот<br /><code>docs/screenshots/admin.png</code></div>
+              <img src="docs/screenshots/admin.png" alt="Admin panel" onerror="this.remove()" />
+            </div>
+            <div class="cap">Адмін-панель</div>
+          </div>
+          <div class="shot">
+            <div class="frame">
+              <div class="ph"><span class="ico">💬</span>скриншот<br /><code>docs/screenshots/support.png</code></div>
+              <img src="docs/screenshots/support.png" alt="Support chat" onerror="this.remove()" />
+            </div>
+            <div class="cap">Чат підтримки (AI)</div>
+          </div>
+          <div class="shot">
+            <div class="frame">
+              <div class="ph"><span class="ico">🧪</span>скриншот<br /><code>docs/screenshots/playground.png</code></div>
+              <img src="docs/screenshots/playground.png" alt="API playground" onerror="this.remove()" />
+            </div>
+            <div class="cap">API playground</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Best fit / overkill -->
+      <section class="slide">
+        <div class="kicker">Коли брати</div>
+        <h2>Кому підходить — і навпаки</h2>
+        <div class="two-col">
+          <div class="col good">
+            <h3>✓ Найкраще підходить</h3>
+            <ul class="bullets">
+              <li>SaaS-дашборди та продукти з акаунтами</li>
+              <li>Адмін-панелі з реалтайм-активністю</li>
+              <li>PWA з авторизацією, push та офлайном</li>
+              <li>Застосунки зі спільними контрактами фронту/беку</li>
+              <li>Продукти з AI-підтримкою чи базою знань</li>
+            </ul>
+          </div>
+          <div class="col over">
+            <h3>✕ Ймовірно надлишково</h3>
+            <ul class="bullets">
+              <li>Статичні лендінги</li>
+              <li>Serverless-first edge-застосунки</li>
+              <li>Проєкти без авторизації, БД чи реалтайму</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 1.6rem; border-left: 3px solid var(--accent-2)">
+          <p style="color: var(--text); font-size: 0.98rem; line-height: 1.5">
+            <b>Можлива адаптація — backend-only / API.</b> Основний сценарій —
+            production-ready SPA, але можна прибрати пакет
+            <code style="color: var(--pink)">frontend</code>, вимкнути статику
+            (<code style="color: var(--pink)">SERVE_STATIC=false</code>) і
+            сесії/CSRF та залишити бекенд + api-playground для ручного тесту API.
+          </p>
+        </div>
+      </section>
+
+      <!-- 7. Prerequisites matrix -->
+      <section class="slide">
+        <div class="kicker">Залежності фіч</div>
+        <h2>Що вмикається опційно</h2>
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>Фіча</th>
+              <th>Потребує</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Підтвердження email / скидання пароля</td>
+              <td><code>SMTP_*</code> (<code>SMTP_ENABLED=true</code>)</td>
+            </tr>
+            <tr>
+              <td>Авторизація за телефоном</td>
+              <td><code>AUTH_PHONE_ENABLED=true</code> + SMS-провайдер</td>
+            </tr>
+            <tr>
+              <td>Push-сповіщення</td>
+              <td><code>VAPID_*</code> ключі</td>
+            </tr>
+            <tr>
+              <td>Завантаження аватарів / скриншоти KB</td>
+              <td>S3 або MinIO (<code>S3_*</code>)</td>
+            </tr>
+            <tr>
+              <td>AI-підтримка</td>
+              <td><code>OPENAI_API_KEY</code> / <code>XAI_API_KEY</code> / <code>MISTRAL_API_KEY</code></td>
+            </tr>
+            <tr>
+              <td>Presence / сесії / тротлінг</td>
+              <td>Redis</td>
+            </tr>
+            <tr>
+              <td>Моніторинг помилок</td>
+              <td><code>SENTRY_DSN</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 7b. Security / CSP -->
+      <section class="slide">
+        <div class="kicker">Безпека</div>
+        <h2>Захист «з коробки» + CSP</h2>
+        <div class="grid">
+          <div class="card">
+            <div class="ico">🍪</div>
+            <h3>Сесії та CSRF</h3>
+            <p>Cookie-сесії в Redis, synchronizer-token CSRF із ротацією на
+              login/logout, режим report-only до ввімкнення enforce.</p>
+          </div>
+          <div class="card">
+            <div class="ico">🌐</div>
+            <h3>CORS &amp; proxy</h3>
+            <p>Білий список origin-ів, довіра до проксі лише за
+              <code style="color: var(--pink)">TRUSTED_PROXY_CIDRS</code>,
+              тротлінг за реальним IP.</p>
+          </div>
+          <div class="card">
+            <div class="ico">🛡️</div>
+            <h3>Content Security Policy</h3>
+            <p>Політика директивами у
+              <code style="color: var(--pink)">config/csp.ts</code> +
+              <code style="color: var(--pink)">reportOnly</code> для безпечного
+              викату.</p>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 1.4rem; border-left: 3px solid var(--accent)">
+          <p style="color: var(--text); font-size: 0.96rem; line-height: 1.5">
+            <b>CSP як директиви, а не «магічний рядок».</b>
+            <code style="color: var(--pink)">script-src</code>,
+            <code style="color: var(--pink)">style-src</code>,
+            <code style="color: var(--pink)">img-src</code>,
+            <code style="color: var(--pink)">connect-src</code>,
+            <code style="color: var(--pink)">frame-ancestors</code> та інші
+            налаштовуються в одному місці; <code style="color: var(--pink)">connect-src</code>
+            залежить від середовища (суворіше у production, м'якше локально).
+            Заголовок видається на HTML-відповідях зі static-сервера —
+            опційно (вмикається в коді), розкочуйте з
+            <code style="color: var(--pink)">reportOnly: true</code>.
+          </p>
+        </div>
+      </section>
+
+      <!-- 8. Getting started -->
+      <section class="slide">
+        <div class="kicker">Старт</div>
+        <h2>Запуск за 3 кроки</h2>
+        <pre><code><span class="tok-c"># 1. Встановити залежності воркспейсу</span>
+pnpm <span class="tok-k">install</span>
+
+<span class="tok-c"># 2. Налаштувати оточення бекенду</span>
+cp packages/backend/.env.example packages/backend/.env
+
+<span class="tok-c"># 3. Зібрати shared і запустити backend + frontend</span>
+pnpm <span class="tok-k">dev</span></code></pre>
+        <div class="services">
+          <span class="pill">Backend → :3000</span>
+          <span class="pill">Frontend → :5173</span>
+          <span class="pill">API playground → :5174</span>
+        </div>
+        <p class="lead" style="font-size: 1rem; margin-top: 1.2rem">
+          Для базового старту достатньо PostgreSQL; Redis потрібен для повної
+          auth/realtime поведінки. <code style="color: var(--pink)">./init.sh</code>
+          проганяє install → typecheck → lint → test → build.
+        </p>
+      </section>
+
+      <!-- 9. Route example -->
+      <section class="slide">
+        <div class="kicker">Appendix · маршрут</div>
+        <h2>Опис маршруту</h2>
+        <p class="lead" style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1rem">
+          Групи маршрутів у
+          <code style="color: var(--pink)">src/app/routes/http-routes.ts</code>:
+          спільний префікс і middleware-и для всієї групи.
+        </p>
+        <pre class="sm"><code><span class="tok-c">// src/app/routes/http-routes.ts</span>
+{
+  <span class="tok-f">prefix</span>: <span class="tok-s">"avatar"</span>,
+  <span class="tok-f">middlewares</span>: [<span class="tok-s">"session_web"</span>, <span class="tok-s">"csrf_guard"</span>, <span class="tok-s">"auth_guard"</span>],
+  <span class="tok-f">group</span>: [
+    <span class="tok-f">defineRoute</span>({
+      <span class="tok-f">url</span>: <span class="tok-s">"/upload"</span>,
+      <span class="tok-f">method</span>: <span class="tok-s">"post"</span>,
+      <span class="tok-f">handler</span>: AvatarController.<span class="tok-f">uploadAvatar</span>.<span class="tok-f">bind</span>(AvatarController),
+      <span class="tok-f">allowedContentTypes</span>: [<span class="tok-s">"multipart"</span>],   <span class="tok-c">// для файлів</span>
+      <span class="tok-f">validator</span>: EmptyFormInputSchema,        <span class="tok-c">// ArkType зі shared</span>
+      <span class="tok-f">ResponseSchema</span>: ResponseSchemas.UploadAvatarResponseSchema,
+      <span class="tok-f">description</span>: <span class="tok-s">"Upload user avatar"</span>,
+    }),
+  ],
+}</code></pre>
+      </section>
+
+      <!-- 10. Controller example -->
+      <section class="slide">
+        <div class="kicker">Appendix · контролер</div>
+        <h2>Контролер — лише транспорт</h2>
+        <p class="lead" style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1rem">
+          Типізований payload → виклик сервісу → мапінг помилок на HTTP-коди.
+          Бізнес-логіки та SQL тут немає.
+        </p>
+        <pre class="sm"><code><span class="tok-k">async</span> <span class="tok-f">login</span>(context: <span class="tok-t">HttpContext</span>&lt;<span class="tok-t">LoginInput</span>&gt;): <span class="tok-t">Promise</span>&lt;<span class="tok-t">LoginResponse</span>&gt; {
+  <span class="tok-k">const</span> payload = <span class="tok-f">getTypedPayload</span>(context); <span class="tok-c">// типізовано як LoginInput</span>
+
+  <span class="tok-k">const</span> result = <span class="tok-k">await</span> authService.<span class="tok-f">login</span>(payload, context.auth, context.session);
+
+  <span class="tok-k">if</span> (Result.<span class="tok-f">isError</span>(result)) {
+    <span class="tok-k">return</span> <span class="tok-f">mapControllerError</span>(context, result.error);
+  }
+  <span class="tok-k">return</span> result.value; <span class="tok-c">// { status, user, wsUrl, wsToken }</span>
+}</code></pre>
+      </section>
+
+      <!-- 11. Request flow -->
+      <section class="slide">
+        <div class="kicker">Appendix · потік запиту</div>
+        <h2>Шлях одного HTTP-запиту</h2>
+        <div class="flow">
+          <div class="step endpoint"><b>Client</b><div class="s">HTTP request</div></div>
+          <div class="down">↓</div>
+          <div class="step"><b>uWebSockets.js</b><div class="s">парсинг TLS/HTTP · <code>server.ts</code></div></div>
+          <div class="down">↓</div>
+          <div class="step"><b>Router</b><div class="s">match prefix + url + method, витяг <code>:params</code></div></div>
+          <div class="down">↓</div>
+          <div class="step"><b>collectRequestMetadata</b><div class="s">cookies, query, headers, IP — знімок до першого await</div></div>
+          <div class="down">↓</div>
+          <div class="step alt"><b>Rate limit · Body guards</b><div class="s">sliding window → <code>429</code> · <code>413</code> / <code>415</code></div></div>
+          <div class="down">↓</div>
+          <div class="step"><b>readAndParseBody → Validator</b><div class="s">ArkType валідація, інакше <code>400</code></div></div>
+          <div class="down">↓</div>
+          <div class="step alt"><b>Middleware chain</b><div class="s"><code>session_web → csrf_guard → auth_guard</code></div></div>
+          <div class="down">↓</div>
+          <div class="step"><b>Controller</b><div class="s">транспорт: payload/params/files → виклик сервісу</div></div>
+          <div class="down">↓</div>
+          <div class="step"><b>Service → Repository → Transformer</b><div class="s">логіка → Drizzle/Postgres → DB row у API payload</div></div>
+          <div class="down">↓</div>
+          <div class="step endpoint"><b>sendResponse → Client</b><div class="s">status + headers + cookies + JSON</div></div>
+        </div>
+      </section>
+
+      <!-- 12. Next step -->
+      <section class="slide">
+        <div class="kicker">Старт за хвилини</div>
+        <h2>Наступний крок</h2>
+        <ul class="bullets">
+          <li>Клонувати шаблон</li>
+          <li>Налаштувати <code style="color: var(--pink)">.env</code></li>
+          <li>Запустити <code style="color: var(--pink)">pnpm dev</code></li>
+          <li>Замінити branding і почати першу продуктову фічу</li>
+        </ul>
+        <pre style="max-width: 560px"><code>git clone &lt;repo&gt; my-product && cd my-product
+pnpm install && cp packages/backend/.env.example packages/backend/.env
+pnpm dev</code></pre>
+      </section>
+
+      <!-- 13. Closing -->
+      <section class="slide">
+        <div class="kicker">Підсумок</div>
+        <h1>Менше рутини — <span class="gradient">більше продукту</span></h1>
+        <p class="lead">
+          Уся інфраструктура вже зроблена: авторизація, реалтайм, push, PWA,
+          сховище, пошта, AI та типобезпечні контракти. Ви фокусуєтесь на фічах
+          свого продукту з першого комміту.
+        </p>
+        <div class="badge-row">
+          <span class="badge">MIT License</span>
+          <span class="badge">Docker-ready</span>
+          <span class="badge">CI: ./init.sh</span>
+          <span class="badge">AGENTS.md для контриб'юторів</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="bar">
+      <div class="brand">itvibe-<span>template</span></div>
+      <div class="ctrls">
+        <button class="btn" id="prev" aria-label="Назад">‹</button>
+        <div class="counter"><span id="cur">1</span> / <span id="total">9</span></div>
+        <button class="btn" id="next" aria-label="Вперед">›</button>
+      </div>
+    </div>
+
+    <script>
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const total = slides.length;
+      let i = 0;
+      const curEl = document.getElementById("cur");
+      const totalEl = document.getElementById("total");
+      const progress = document.getElementById("progress");
+      totalEl.textContent = total;
+
+      function show(n) {
+        i = Math.max(0, Math.min(total - 1, n));
+        slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+        curEl.textContent = i + 1;
+        progress.style.width = ((i + 1) / total) * 100 + "%";
+      }
+
+      document.getElementById("next").onclick = () => show(i + 1);
+      document.getElementById("prev").onclick = () => show(i - 1);
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown")
+          show(i + 1);
+        else if (e.key === "ArrowLeft" || e.key === "PageUp") show(i - 1);
+        else if (e.key === "Home") show(0);
+        else if (e.key === "End") show(total - 1);
+        else if (e.key === "f" || e.key === "F") {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+          else document.exitFullscreen();
+        }
+      });
+
+      // swipe on touch devices
+      let sx = null;
+      document.addEventListener("touchstart", (e) => (sx = e.touches[0].clientX));
+      document.addEventListener("touchend", (e) => {
+        if (sx === null) return;
+        const dx = e.changedTouches[0].clientX - sx;
+        if (Math.abs(dx) > 50) show(dx < 0 ? i + 1 : i - 1);
+        sx = null;
+      });
+
+      show(0);
+    </script>
+  </body>
+</html>

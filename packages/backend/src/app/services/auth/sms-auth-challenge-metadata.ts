@@ -1,0 +1,46 @@
+import { rateLimited, type AppError } from "#app/services/shared/errors.js";
+
+export function extractChallengeUserId(metadata: unknown): bigint | null {
+  if (
+    metadata !== null &&
+    typeof metadata === "object" &&
+    "userId" in metadata &&
+    typeof metadata.userId === "string" &&
+    /^\d+$/.test(metadata.userId)
+  ) {
+    return BigInt(metadata.userId);
+  }
+
+  return null;
+}
+
+export function extractChallengeSessionId(metadata: unknown): string | null {
+  if (
+    metadata !== null &&
+    typeof metadata === "object" &&
+    "sessionId" in metadata &&
+    typeof metadata.sessionId === "string"
+  ) {
+    const normalizedSessionId = metadata.sessionId.trim();
+    return normalizedSessionId === "" ? null : normalizedSessionId;
+  }
+
+  return null;
+}
+
+export function buildResendCooldownError(
+  resendAvailableAt: Date,
+): AppError {
+  const retryAfterSeconds = Math.max(
+    1,
+    Math.ceil((resendAvailableAt.getTime() - Date.now()) / 1000),
+  );
+
+  return rateLimited(
+    "A verification code was already sent recently. Please wait before requesting another one.",
+    {
+      reason: "resend_cooldown_active",
+      retryAfterSeconds,
+    },
+  );
+}

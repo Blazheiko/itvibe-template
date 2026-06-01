@@ -1,0 +1,29 @@
+{
+  "schema": {
+    "fields": ["id", "name", "description", "owner", "branch", "dependencies", "status", "evidence"],
+    "status_values": ["not-started", "in_progress", "blocked", "review", "done"],
+    "notes": "owner = team member or agent name responsible. branch = git branch where progress.md and session-handoff.md for this feature live. Only the owner edits the feature's row; everyone else opens a PR to change it."
+  },
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "Project Setup",
+      "description": "Confirm the project can install dependencies, run verification, and start from a clean checkout",
+      "owner": "",
+      "branch": "main",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-002",
+      "name": "First User-Facing Feature",
+      "description": "Replace this placeholder with the first concrete behavior the team should implement",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    }
+  ]
+}

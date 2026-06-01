@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1480" font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App background -->
+  <rect width="720" height="1480" fill="#EDF1F7"/>
+
+  <!-- Top app bar -->
+  <rect width="720" height="120" fill="url(#bg)"/>
+  <circle cx="60" cy="60" r="22" fill="#ffffff" opacity="0.25"/>
+  <rect x="44" y="44" width="32" height="4" rx="2" fill="#ffffff"/>
+  <rect x="44" y="58" width="32" height="4" rx="2" fill="#ffffff"/>
+  <rect x="44" y="72" width="32" height="4" rx="2" fill="#ffffff"/>
+  <text x="110" y="72" font-size="32" font-weight="600" fill="#ffffff">Promo Editor</text>
+  <circle cx="640" cy="60" r="22" fill="#ffffff" opacity="0.25"/>
+  <path d="M630 60 L640 70 L654 50" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Tool tabs -->
+  <rect x="32" y="156" width="656" height="64" rx="32" fill="#ffffff"/>
+  <rect x="40" y="164" width="156" height="48" rx="24" fill="#2563EB"/>
+  <text x="118" y="195" font-size="22" font-weight="600" fill="#ffffff" text-anchor="middle">Layout</text>
+  <text x="270" y="195" font-size="22" fill="#64748B" text-anchor="middle">Text</text>
+  <text x="400" y="195" font-size="22" fill="#64748B" text-anchor="middle">Image</text>
+  <text x="540" y="195" font-size="22" fill="#64748B" text-anchor="middle">Theme</text>
+
+  <!-- Canvas / page preview -->
+  <rect x="48" y="256" width="624" height="900" rx="24" fill="#ffffff" stroke="#CBD5E1" stroke-width="2"/>
+
+  <!-- Hero block -->
+  <rect x="72" y="280" width="576" height="280" rx="16" fill="url(#hero)"/>
+  <rect x="104" y="316" width="320" height="28" rx="6" fill="#ffffff" opacity="0.9"/>
+  <rect x="104" y="356" width="440" height="20" rx="4" fill="#ffffff" opacity="0.7"/>
+  <rect x="104" y="384" width="380" height="20" rx="4" fill="#ffffff" opacity="0.7"/>
+  <rect x="104" y="476" width="180" height="56" rx="28" fill="#ffffff"/>
+  <text x="194" y="512" font-size="22" font-weight="600" fill="#2563EB" text-anchor="middle">Buy now</text>
+
+  <!-- Feature blocks -->
+  <rect x="72" y="588" width="270" height="200" rx="12" fill="#F1F5F9"/>
+  <circle cx="120" cy="640" r="26" fill="#14B8A6"/>
+  <path d="M111 640 L119 648 L131 632" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="92" y="680" width="200" height="14" rx="3" fill="#334155"/>
+  <rect x="92" y="704" width="160" height="10" rx="3" fill="#94A3B8"/>
+  <rect x="92" y="724" width="180" height="10" rx="3" fill="#94A3B8"/>
+  <rect x="92" y="744" width="140" height="10" rx="3" fill="#94A3B8"/>
+
+  <rect x="378" y="588" width="270" height="200" rx="12" fill="#F1F5F9"/>
+  <circle cx="426" cy="640" r="26" fill="#2563EB"/>
+  <path d="M420 632 L420 648 M414 640 L432 640" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <rect x="398" y="680" width="200" height="14" rx="3" fill="#334155"/>
+  <rect x="398" y="704" width="160" height="10" rx="3" fill="#94A3B8"/>
+  <rect x="398" y="724" width="180" height="10" rx="3" fill="#94A3B8"/>
+  <rect x="398" y="744" width="140" height="10" rx="3" fill="#94A3B8"/>
+
+  <!-- Selected block with handles -->
+  <rect x="72" y="820" width="576" height="300" rx="12" fill="#F8FAFC" stroke="#2563EB" stroke-width="3" stroke-dasharray="8 6"/>
+  <rect x="100" y="852" width="240" height="22" rx="5" fill="#334155"/>
+  <rect x="100" y="888" width="380" height="14" rx="3" fill="#94A3B8"/>
+  <rect x="100" y="912" width="340" height="14" rx="3" fill="#94A3B8"/>
+  <rect x="100" y="952" width="160" height="120" rx="10" fill="#E2E8F0"/>
+  <path d="M140 1012 L180 980 L220 1012 L220 1052 L140 1052 Z" fill="#CBD5E1"/>
+  <circle cx="160" cy="990" r="8" fill="#CBD5E1"/>
+  <rect x="288" y="952" width="280" height="14" rx="3" fill="#94A3B8"/>
+  <rect x="288" y="976" width="240" height="14" rx="3" fill="#94A3B8"/>
+  <rect x="288" y="1000" width="260" height="14" rx="3" fill="#94A3B8"/>
+
+  <!-- Selection handles -->
+  <rect x="64" y="812" width="16" height="16" rx="3" fill="#2563EB"/>
+  <rect x="640" y="812" width="16" height="16" rx="3" fill="#2563EB"/>
+  <rect x="64" y="1112" width="16" height="16" rx="3" fill="#2563EB"/>
+  <rect x="640" y="1112" width="16" height="16" rx="3" fill="#2563EB"/>
+
+  <!-- Bottom toolbar -->
+  <rect x="32" y="1216" width="656" height="120" rx="60" fill="#0F172A"/>
+  <circle cx="120" cy="1276" r="28" fill="#14B8A6"/>
+  <path d="M108 1276 L120 1264 L132 1276 M120 1264 L120 1288" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="240" cy="1276" r="28" fill="#1E293B"/>
+  <path d="M228 1276 L252 1276 M240 1264 L240 1288" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="360" cy="1276" r="28" fill="#1E293B"/>
+  <rect x="346" y="1262" width="28" height="28" rx="4" stroke="#ffffff" stroke-width="3" fill="none"/>
+  <circle cx="480" cy="1276" r="28" fill="#1E293B"/>
+  <path d="M468 1276 L478 1286 L494 1268" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="540" y="1248" width="120" height="56" rx="28" fill="#2563EB"/>
+  <text x="600" y="1284" font-size="22" font-weight="600" fill="#ffffff" text-anchor="middle">Publish</text>
+
+  <!-- Home indicator -->
+  <rect x="280" y="1432" width="160" height="8" rx="4" fill="#0F172A" opacity="0.3"/>
+</svg>

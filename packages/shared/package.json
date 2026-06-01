@@ -1,0 +1,60 @@
+{
+  "name": "shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./brands": {
+      "types": "./dist/brands/index.d.ts",
+      "import": "./dist/brands/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    },
+    "./responses": {
+      "types": "./dist/responses/index.d.ts",
+      "import": "./dist/responses/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js"
+    },
+    "./enums": {
+      "types": "./dist/enums/index.d.ts",
+      "import": "./dist/enums/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    },
+    "./guards": {
+      "types": "./dist/guards/index.d.ts",
+      "import": "./dist/guards/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsc --build --watch",
+    "clean": "rm -rf dist .tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@ark/util": "0.56.0",
+    "@arktype/type": "2.2.0",
+    "libphonenumber-js": "^1.12.9"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
