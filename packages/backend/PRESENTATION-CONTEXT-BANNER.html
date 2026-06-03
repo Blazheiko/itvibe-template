@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1200" />
+    <title>Банер — Безпечне використання uWebSockets.js</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #0a0e14;
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+
+      /* 1200 x 630 — формат OG / соцмереж */
+      .banner {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background:
+          radial-gradient(1100px 540px at 82% -16%, rgba(168,230,163,0.16), transparent 60%),
+          radial-gradient(820px 520px at 2% 122%, rgba(128,200,255,0.13), transparent 62%),
+          linear-gradient(150deg, #0d1320 0%, #0a0e14 55%, #0b1018 100%);
+        color: #e8f0fa;
+        padding: 46px 56px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .banner::before {
+        content: "";
+        position: absolute; inset: 0;
+        background-image:
+          linear-gradient(rgba(128,200,255,0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(128,200,255,0.05) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: radial-gradient(900px 520px at 30% 40%, #000 35%, transparent 80%);
+        pointer-events: none;
+      }
+
+      .row { position: relative; display: flex; align-items: center; gap: 14px; }
+
+      .brand {
+        font-size: 14px; font-weight: 700; letter-spacing: 0.18em;
+        text-transform: uppercase; color: #80c8ff;
+      }
+      .brand .dot { color: #3a5170; margin: 0 8px; }
+      .brand .muted { color: #6f86a6; font-weight: 600; }
+
+      .badge {
+        margin-left: auto;
+        font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em;
+        color: #a8e6a3;
+        border: 1px solid rgba(168,230,163,0.35);
+        background: rgba(168,230,163,0.08);
+        padding: 6px 13px; border-radius: 999px;
+      }
+
+      /* центральна частина — дві колонки */
+      .main {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1.06fr 0.94fr;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .kicker {
+        font-size: 18px; font-weight: 700; color: #ffd479;
+        letter-spacing: 0.02em; margin-bottom: 12px;
+        display: flex; align-items: center; gap: 10px;
+      }
+
+      h1 {
+        font-size: 66px; line-height: 0.99; font-weight: 900;
+        letter-spacing: -0.025em;
+      }
+      h1 .uws  { color: #80c8ff; }
+      h1 .safe { color: #a8e6a3; }
+
+      .subtitle {
+        margin-top: 16px;
+        font-size: 19px; font-weight: 600; color: #b9cbe0;
+        line-height: 1.36;
+      }
+      .subtitle b { color: #e8f0fa; }
+
+      .pipeline {
+        margin-top: 18px;
+        font-family: 'SFMono-Regular', Menlo, monospace;
+        font-size: 15.5px; font-weight: 600; color: #cfe6ff;
+        display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+      }
+      .pipeline .step { color: #e8f0fa; }
+      .pipeline .arr { color: #ffd479; }
+
+      /* картка з кодом */
+      .code-card {
+        position: relative;
+        background: linear-gradient(180deg, #0f1825 0%, #0c121c 100%);
+        border: 1px solid rgba(128,200,255,0.22);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px -28px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.03);
+        overflow: hidden;
+      }
+      .code-head {
+        display: flex; align-items: center; gap: 8px;
+        padding: 11px 15px; border-bottom: 1px solid rgba(128,200,255,0.12);
+        background: rgba(128,200,255,0.04);
+      }
+      .code-head .dotled { width: 11px; height: 11px; border-radius: 50%; }
+      .code-head .r { background: #ff5f57; } .code-head .y { background: #febc2e; } .code-head .g { background: #28c840; }
+      .code-head .fname {
+        margin-left: 8px; font-family: Menlo, monospace; font-size: 12.5px;
+        color: #7f96b4; font-weight: 600;
+      }
+      pre.code {
+        margin: 0; padding: 16px 18px;
+        font-family: 'SFMono-Regular', Menlo, monospace;
+        font-size: 13.5px; line-height: 1.55; color: #cdd9ea;
+        white-space: pre;
+      }
+      .c-com { color: #6a7d95; font-style: italic; }
+      .c-key { color: #ff9d9d; }
+      .c-fn  { color: #80c8ff; }
+      .c-str { color: #a8e6a3; }
+      .c-var { color: #ffd479; }
+
+      .foot { position: relative; display: flex; align-items: flex-end; gap: 16px; }
+      .tags { display: flex; gap: 8px; flex-wrap: wrap; max-width: 880px; }
+      .tag {
+        font-size: 13.5px; font-weight: 700;
+        padding: 7px 13px; border-radius: 9px;
+        background: rgba(168,230,163,0.09);
+        border: 1px solid rgba(168,230,163,0.26);
+        color: #cfe6da;
+      }
+      .tag.code { color: #ff9d9d; border-color: rgba(255,138,138,0.32); background: rgba(255,138,138,0.08); }
+
+      .cta { margin-left: auto; text-align: right; white-space: nowrap; }
+      .cta .slides { font-size: 50px; font-weight: 900; color: #80c8ff; line-height: 1; letter-spacing: -0.02em; }
+      .cta .slides span { font-size: 22px; color: #6f86a6; font-weight: 700; }
+      .cta .label { margin-top: 5px; font-size: 13px; font-weight: 600; color: #8aa0bd; }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+
+      <div class="row">
+        <span class="brand">itvibe-template <span class="dot">·</span> <span class="muted">packages/backend</span> <span class="dot">·</span> <span class="muted">vendor core</span></span>
+        <span class="badge">🛡️ SECURITY DEEP DIVE · UA</span>
+      </div>
+
+      <div class="main">
+        <div class="left">
+          <div class="kicker">🛡️ Приклад, як безпечно використовувати</div>
+          <h1><span class="uws">uWebSockets.js</span><br/><span class="safe">безпечно</span></h1>
+          <div class="subtitle">Patterns проти типових пасток uWS: <b>snapshot req до першого <code>await</code></b>, rate-limit <b>до</b> тіла, allowlist для headers/cookies, валідація всіх даних контексту</div>
+          <div class="pipeline">
+            <span class="step">raw req</span><span class="arr">→</span>
+            <span class="step">snapshot</span><span class="arr">→</span>
+            <span class="step">validate</span><span class="arr">→</span>
+            <span class="step">context</span><span class="arr">→</span>
+            <span class="step">handler</span>
+          </div>
+        </div>
+
+        <div class="code-card">
+          <div class="code-head">
+            <span class="dotled r"></span><span class="dotled y"></span><span class="dotled g"></span>
+            <span class="fname">vendor/start/server.ts</span>
+          </div>
+<pre class="code"><span class="c-com">// uWS: req валідний лише ДО першого await</span>
+<span class="c-key">const</span> <span class="c-fn">collectRequestMetadata</span> = (req, res, route) => {
+  <span class="c-key">const</span> cookies = <span class="c-fn">parseCookies</span>(req.<span class="c-fn">getHeader</span>(<span class="c-str">"cookie"</span>))
+  <span class="c-key">const</span> query   = <span class="c-key">new</span> <span class="c-fn">URLSearchParams</span>(req.<span class="c-fn">getQuery</span>())
+  <span class="c-key">const</span> headers = <span class="c-fn">getHeaders</span>(req)
+  <span class="c-key">const</span> ip      = <span class="c-fn">getIP</span>(req, res)
+  <span class="c-key">return</span> { ip, cookies, query, headers } <span class="c-com">// детач</span>
+}
+<span class="c-com">// ↓ далі — лише snapshot, ніколи raw req</span>
+<span class="c-key">await</span> <span class="c-fn">readAndParseBody</span>(res, <span class="c-var">meta</span>, route)</pre>
+        </div>
+      </div>
+
+      <div class="foot">
+        <div class="tags">
+          <span class="tag">snapshot до await</span>
+          <span class="tag">rate-limit перед body</span>
+          <span class="tag">allowlist headers/cookies</span>
+          <span class="tag">ArkType валідація</span>
+          <span class="tag code">413</span>
+          <span class="tag code">415</span>
+          <span class="tag code">422</span>
+          <span class="tag code">429</span>
+        </div>
+        <div class="cta">
+          <div class="slides">32<span> слайди</span></div>
+          <div class="label">PRESENTATION-CONTEXT.html</div>
+        </div>
+      </div>
+
+    </div>
+  </body>
+</html>
