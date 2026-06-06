@@ -11,6 +11,11 @@ export const TestRouteResponseSchema = type({
 });
 export type TestRouteResponse = typeof TestRouteResponseSchema.infer;
 
+export const PingRouteResponseSchema = type({
+  ping: "string",
+});
+export type PingResponseSchema = typeof PingRouteResponseSchema.infer;
+
 export const InitResponseSchema = type.or(
   {
     status: "'ok'",

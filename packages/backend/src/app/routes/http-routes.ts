@@ -49,6 +49,13 @@ import {
 } from "shared/schemas";
 
 export default [
+  defineRoute({
+    url: "/ping",
+    method: "get",
+    handler: MainController.ping.bind(MainController),
+    ResponseSchema: ResponseSchemas.PingResponseSchema,
+    description: "Ping",
+  }),
   {
     group: [
       defineRoute({
@@ -195,7 +202,8 @@ export default [
         handler: AuthController.startEmailLink.bind(AuthController),
         validator: LinkEmailStartInputSchema,
         ResponseSchema: ResponseSchemas.LinkEmailStartResponseSchema,
-        description: "Send an email verification link for adding an email to the current account",
+        description:
+          "Send an email verification link for adding an email to the current account",
         middlewares: ["auth_guard"],
       }),
     ],
@@ -265,14 +273,18 @@ export default [
       defineRoute({
         url: "/vapid-public-key",
         method: "get",
-        handler: PushSubscriptionController.getVapidPublicKey.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.getVapidPublicKey.bind(
+          PushSubscriptionController,
+        ),
         ResponseSchema: ResponseSchemas.GetVapidPublicKeyResponseSchema,
         description: "Get VAPID public key for push subscriptions",
       }),
       defineRoute({
         url: "/test-push",
         method: "get",
-        handler: PushSubscriptionController.testPush.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.testPush.bind(
+          PushSubscriptionController,
+        ),
         queryValidator: PushSubscriptionTestQuerySchema,
         ResponseSchema: ResponseSchemas.TestPushResponseSchema,
         description: "Send a test push notification to the current user",
@@ -280,51 +292,67 @@ export default [
       defineRoute({
         url: "/",
         method: "get",
-        handler: PushSubscriptionController.getSubscriptions.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.getSubscriptions.bind(
+          PushSubscriptionController,
+        ),
         ResponseSchema: ResponseSchemas.GetSubscriptionsResponseSchema,
       }),
       defineRoute({
         url: "/",
         method: "post",
-        handler: PushSubscriptionController.createSubscription.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.createSubscription.bind(
+          PushSubscriptionController,
+        ),
         validator: CreateSubscriptionInputSchema,
         ResponseSchema: ResponseSchemas.CreateSubscriptionResponseSchema,
       }),
       defineRoute({
         url: "/:subscriptionId",
         method: "get",
-        handler: PushSubscriptionController.getSubscription.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.getSubscription.bind(
+          PushSubscriptionController,
+        ),
         ResponseSchema: ResponseSchemas.GetSubscriptionResponseSchema,
       }),
       defineRoute({
         url: "/:subscriptionId",
         method: "put",
-        handler: PushSubscriptionController.updateSubscription.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.updateSubscription.bind(
+          PushSubscriptionController,
+        ),
         validator: UpdateSubscriptionInputSchema,
         ResponseSchema: ResponseSchemas.UpdateSubscriptionResponseSchema,
       }),
       defineRoute({
         url: "/:subscriptionId",
         method: "delete",
-        handler: PushSubscriptionController.deleteSubscription.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.deleteSubscription.bind(
+          PushSubscriptionController,
+        ),
         ResponseSchema: ResponseSchemas.DeleteSubscriptionResponseSchema,
       }),
       defineRoute({
         url: "/:subscriptionId/logs",
         method: "get",
-        handler: PushSubscriptionController.getSubscriptionLogs.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.getSubscriptionLogs.bind(
+          PushSubscriptionController,
+        ),
         ResponseSchema: ResponseSchemas.GetSubscriptionLogsResponseSchema,
       }),
       defineRoute({
         url: "/:subscriptionId/statistics",
         method: "get",
-        handler: PushSubscriptionController.getSubscriptionStatistics.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.getSubscriptionStatistics.bind(
+          PushSubscriptionController,
+        ),
         ResponseSchema: ResponseSchemas.GetSubscriptionStatisticsResponseSchema,
       }),
       defineRoute({
         url: "/:subscriptionId/deactivate",
         method: "put",
-        handler: PushSubscriptionController.deactivateSubscription.bind(PushSubscriptionController),
+        handler: PushSubscriptionController.deactivateSubscription.bind(
+          PushSubscriptionController,
+        ),
         validator: EmptyFormInputSchema,
         ResponseSchema: ResponseSchemas.DeactivateSubscriptionResponseSchema,
       }),
@@ -389,7 +417,9 @@ export default [
       defineRoute({
         url: "/knowledge-base",
         method: "get",
-        handler: AdminKnowledgeBaseController.getAll.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.getAll.bind(
+          AdminKnowledgeBaseController,
+        ),
         queryValidator: AdminKnowledgeBaseListQuerySchema,
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseListResponseSchema,
         description: "List all knowledge base articles",
@@ -397,14 +427,18 @@ export default [
       defineRoute({
         url: "/knowledge-base/:id",
         method: "get",
-        handler: AdminKnowledgeBaseController.getById.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.getById.bind(
+          AdminKnowledgeBaseController,
+        ),
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseItemResponseSchema,
         description: "Get a knowledge base article by id",
       }),
       defineRoute({
         url: "/knowledge-base",
         method: "post",
-        handler: AdminKnowledgeBaseController.create.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.create.bind(
+          AdminKnowledgeBaseController,
+        ),
         validator: SupportKnowledgeBaseCreateSchema,
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseItemResponseSchema,
         description: "Create a knowledge base article",
@@ -412,7 +446,9 @@ export default [
       defineRoute({
         url: "/knowledge-base/:id",
         method: "put",
-        handler: AdminKnowledgeBaseController.update.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.update.bind(
+          AdminKnowledgeBaseController,
+        ),
         validator: SupportKnowledgeBaseUpdateSchema,
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseItemResponseSchema,
         description: "Update a knowledge base article",
@@ -420,14 +456,19 @@ export default [
       defineRoute({
         url: "/knowledge-base/:id",
         method: "delete",
-        handler: AdminKnowledgeBaseController.delete.bind(AdminKnowledgeBaseController),
-        ResponseSchema: ResponseSchemas.SupportKnowledgeBaseDeleteResponseSchema,
+        handler: AdminKnowledgeBaseController.delete.bind(
+          AdminKnowledgeBaseController,
+        ),
+        ResponseSchema:
+          ResponseSchemas.SupportKnowledgeBaseDeleteResponseSchema,
         description: "Delete a knowledge base article",
       }),
       defineRoute({
         url: "/knowledge-base/:id/screenshot",
         method: "post",
-        handler: AdminKnowledgeBaseController.uploadScreenshot.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.uploadScreenshot.bind(
+          AdminKnowledgeBaseController,
+        ),
         validator: EmptyFormInputSchema,
         allowedContentTypes: ["multipart"],
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseItemResponseSchema,
@@ -436,38 +477,51 @@ export default [
       defineRoute({
         url: "/knowledge-base/:id/screenshot",
         method: "delete",
-        handler: AdminKnowledgeBaseController.deleteScreenshot.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.deleteScreenshot.bind(
+          AdminKnowledgeBaseController,
+        ),
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseItemResponseSchema,
         description: "Delete screenshot for a knowledge base article",
       }),
       defineRoute({
         url: "/knowledge-base/:id/reindex",
         method: "post",
-        handler: AdminKnowledgeBaseController.reindex.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.reindex.bind(
+          AdminKnowledgeBaseController,
+        ),
         validator: EmptyFormInputSchema,
-        ResponseSchema: ResponseSchemas.SupportKnowledgeBaseReindexResponseSchema,
+        ResponseSchema:
+          ResponseSchemas.SupportKnowledgeBaseReindexResponseSchema,
         description: "Reindex a knowledge base article",
       }),
       defineRoute({
         url: "/knowledge-base/reindex-all",
         method: "post",
-        handler: AdminKnowledgeBaseController.reindexAll.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.reindexAll.bind(
+          AdminKnowledgeBaseController,
+        ),
         validator: EmptyFormInputSchema,
-        ResponseSchema: ResponseSchemas.SupportKnowledgeBaseReindexResponseSchema,
+        ResponseSchema:
+          ResponseSchemas.SupportKnowledgeBaseReindexResponseSchema,
         description: "Reindex all knowledge base articles",
       }),
       defineRoute({
         url: "/knowledge-base/init",
         method: "post",
-        handler: AdminKnowledgeBaseController.startInit.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.startInit.bind(
+          AdminKnowledgeBaseController,
+        ),
         validator: EmptyFormInputSchema,
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseInitResponseSchema,
-        description: "Initialize knowledge base from docs/support-knowledge-base",
+        description:
+          "Initialize knowledge base from docs/support-knowledge-base",
       }),
       defineRoute({
         url: "/knowledge-base/init-status",
         method: "get",
-        handler: AdminKnowledgeBaseController.getInitStatus.bind(AdminKnowledgeBaseController),
+        handler: AdminKnowledgeBaseController.getInitStatus.bind(
+          AdminKnowledgeBaseController,
+        ),
         ResponseSchema: ResponseSchemas.SupportKnowledgeBaseInitResponseSchema,
         description: "Get knowledge base initialization status",
       }),
@@ -546,14 +600,18 @@ export default [
       defineRoute({
         url: "/history-online",
         method: "get",
-        handler: AdminOnlineHistoryController.list.bind(AdminOnlineHistoryController),
+        handler: AdminOnlineHistoryController.list.bind(
+          AdminOnlineHistoryController,
+        ),
         queryValidator: AdminOnlineHistoryListQuerySchema,
         description: "List online history records (admin)",
       }),
       defineRoute({
         url: "/users-online/:id",
         method: "get",
-        handler: AdminOnlineUserController.getById.bind(AdminOnlineUserController),
+        handler: AdminOnlineUserController.getById.bind(
+          AdminOnlineUserController,
+        ),
         description: "Get online user detail (admin)",
       }),
       defineRoute({

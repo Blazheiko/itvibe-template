@@ -50,6 +50,10 @@ export default {
     return { status: "ok", ...result.value };
   },
 
+  ping() {
+    return { ping: "ok" };
+  },
+
   async init({
     responseData,
     session,
