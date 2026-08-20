@@ -26,8 +26,6 @@ const getDefaultAuth = (): Auth => ({
   logoutAll: () => Promise.resolve(0),
 });
 
-const session: Session = getDefaultSession();
-const auth: Auth = getDefaultAuth();
 
 export default (
   httpData: HttpData,
@@ -43,7 +41,7 @@ export default (
     logger: requestLogger,
     httpData,
     responseData,
-    session,
-    auth,
+    session: getDefaultSession(),
+    auth: getDefaultAuth(),
   };
 };
