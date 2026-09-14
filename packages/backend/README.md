@@ -227,6 +227,7 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 - legacy sessions without a token are backfilled lazily on the next session load
 - login, logout, and logout-all rotate the session and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request
 - the `main/init` bootstrap response also returns the current `csrfToken`
+- `session_web` attaches the session `csrfToken` to any response written by the middleware chain itself (the 401 from `auth_guard`, the 403 from `csrf_guard`), so an anonymous visitor — whose `main/init` is rejected before it reaches the handler — still receives the token it needs to sign the login request
 - unsafe HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) must send the token in `X-CSRF-Token`
 - `csrf_guard` is registered after `session_web` and before auth/role guards on cookie-backed route groups
 - requests without a session bypass `csrf_guard` and are left to `auth_guard` to reject with 401
@@ -234,13 +235,7 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 - OAuth redirect/callback is treated as a separate flow protected by OAuth `state`
 - on `csrf_invalid` the frontend triggers a single `init_app` refresh; subsequent unsafe requests succeed once the rotated token is in memory
 
-The token is also injected into backend-served HTML as:
-
-```html
-<meta name="csrf-token" content="__CSRF_TOKEN__" />
-```
-
-At runtime `__CSRF_TOKEN__` is replaced with the session token. If the placeholder is missing, the backend logs an error and does not silently inject a fallback. Tokenized HTML is session-bound and must not be cached by shared caches/CDNs; HTML responses use `Cache-Control: private, no-store`.
+The token never leaves the session over HTML. The SPA shell is served as a plain cacheable static file (`Cache-Control: public, max-age=0, must-revalidate` plus an `ETag`, so repeat visits get a `304`), and no session is created while serving it. The SPA holds the token in memory only: it receives it from the `main/init` bootstrap response and refreshes it from every response that rotates it.
 
 Relevant environment variables:
 
@@ -250,7 +245,7 @@ Relevant environment variables:
 
 Rollout recommendation:
 
-1. Deploy token generation, HTML injection, frontend header sending, and `csrf_guard` with `CSRF_ENFORCE=false`.
+1. Deploy token generation, the bootstrap response token, frontend header sending, and `csrf_guard` with `CSRF_ENFORCE=false`.
 2. Review report-only logs for missing tokens, origin mismatches, and stale clients.
 3. Fix any client paths that do not refresh or send the token.
 4. Enable `CSRF_ENFORCE=true` gradually, starting with low-risk route groups.

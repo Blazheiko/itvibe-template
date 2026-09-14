@@ -13,6 +13,8 @@ export const CanonicalErrorResponseSchema = type({
   message: "string",
   "reason?": "string",
   "details?": "unknown",
+  /** Session CSRF token, attached to responses of cookie-backed routes. */
+  "csrfToken?": "string",
 });
 
 export interface CanonicalErrorResponse extends Record<string, unknown> {
@@ -21,6 +23,8 @@ export interface CanonicalErrorResponse extends Record<string, unknown> {
   message: string;
   reason?: string;
   details?: ErrorDetails;
+  /** Session CSRF token, attached to responses of cookie-backed routes. */
+  csrfToken?: string;
 }
 
 export const ErrorResponseSchema = CanonicalErrorResponseSchema;

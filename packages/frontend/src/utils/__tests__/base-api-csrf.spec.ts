@@ -23,16 +23,22 @@ const jsonResponse = (payload: unknown, status = 200): Response =>
         headers: { 'Content-Type': 'application/json' },
     })
 
+/** The token is seeded the way the app gets it: from an API response, not from the HTML shell. */
+const loadApi = async () => {
+    const { setCsrfToken } = await import('../csrf-token')
+    setCsrfToken(CSRF_TOKEN)
+    return (await import('../base-api')).default
+}
+
 describe('base-api CSRF headers', () => {
     beforeEach(() => {
         vi.resetModules()
         vi.clearAllMocks()
-        document.head.innerHTML = `<meta name="csrf-token" content="${CSRF_TOKEN}">`
         globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ status: 'success' }))
     })
 
     it('adds X-CSRF-Token to unsafe JSON requests', async () => {
-        const api = (await import('../base-api')).default
+        const api = await loadApi()
 
         await api.http('POST', '/api/test', { value: 1 })
 
@@ -50,7 +56,7 @@ describe('base-api CSRF headers', () => {
     })
 
     it('does not add X-CSRF-Token to GET requests', async () => {
-        const api = (await import('../base-api')).default
+        const api = await loadApi()
 
         await api.http('GET', '/api/test')
 
@@ -65,7 +71,7 @@ describe('base-api CSRF headers', () => {
     })
 
     it('adds X-CSRF-Token to uploads without overwriting multipart Content-Type', async () => {
-        const api = (await import('../base-api')).default
+        const api = await loadApi()
         const formData = new FormData()
         formData.append('file', new Blob(['hello']), 'hello.txt')
 
@@ -84,6 +90,37 @@ describe('base-api CSRF headers', () => {
         )
     })
 
+    it('picks up the token from an unauthorized bootstrap response', async () => {
+        // An anonymous visitor gets 401 from init; the token still has to reach the SPA,
+        // otherwise the login request it needs to sign could never be signed.
+        globalThis.fetch = vi.fn().mockResolvedValueOnce(
+            jsonResponse(
+                {
+                    status: 'error',
+                    code: 'unauthorized',
+                    message: 'Session expired or not found',
+                    csrfToken: FRESH_CSRF_TOKEN,
+                },
+                401,
+            ),
+        )
+        const api = (await import('../base-api')).default
+
+        await api.http('GET', '/api/main/init')
+
+        globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ status: 'success' }))
+        await api.http('POST', '/api/auth/login', { email: 'a@b.c' })
+
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/api/auth/login'),
+            expect.objectContaining({
+                headers: expect.objectContaining({
+                    'X-CSRF-Token': FRESH_CSRF_TOKEN,
+                }),
+            }),
+        )
+    })
+
     it('refreshes token from successful API responses', async () => {
         globalThis.fetch = vi.fn().mockResolvedValue(
             jsonResponse({
@@ -91,7 +128,7 @@ describe('base-api CSRF headers', () => {
                 csrfToken: NEXT_CSRF_TOKEN,
             }),
         )
-        const api = (await import('../base-api')).default
+        const api = await loadApi()
 
         await api.http('POST', '/api/test')
         await api.http('POST', '/api/next')
@@ -145,7 +182,7 @@ describe('base-api CSRF headers', () => {
                     403,
                 ),
             )
-        const api = (await import('../base-api')).default
+        const api = await loadApi()
 
         await api.http('POST', '/api/test')
         await api.http('POST', '/api/test')

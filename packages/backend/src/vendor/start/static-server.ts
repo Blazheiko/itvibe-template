@@ -1,71 +1,17 @@
 import process from "node:process";
 import path from "node:path";
+import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
 // import logger from '#vendor/utils/logger.js';
 import appConfig from "#config/app.js";
 // import cspConfig from "#config/csp.js";
-import type sessionConfigType from "#config/session.js";
 import type { HttpRequest, HttpResponse } from "#vendor/start/server.js";
 import { MIME_TYPES } from "#vendor/constants/index.js";
 import { isBinaryExtension } from "#vendor/utils/helpers/file-utils.js";
-import logger from "#vendor/utils/logger.js";
-import type { sessionHandler as sessionHandlerType } from "#vendor/utils/session/session-handler.js";
-import type { resolveSessionCookie as resolveSessionCookieType } from "#vendor/utils/session/resolve-session-cookie.js";
-import type { deleteLegacySessionCookie as deleteLegacySessionCookieType } from "#vendor/utils/session/delete-legacy-session-cookie.js";
-import state from "#app/state/state.js";
-import type { HttpData, ResponseData } from "#vendor/types/types.js";
-import { parseCookies } from "#vendor/utils/network/http-request-handlers.js";
-import { getHeaders } from "../utils/network/http-request-handlers.js";
-import getIP from "#vendor/utils/network/get-ip.js";
 import {
-  setHeaders,
-  setCookies,
   setSecurityHeaders,
   writeHttpStatus,
 } from "#vendor/utils/network/http-response-handlers.js";
-import { createResponseData } from "#vendor/utils/network/response-data.js";
-import staticPageController from "#app/controllers/static/static-page-controller.js";
-import contextHandler from "#vendor/utils/context/http-context.js";
-
-type StaticSessionDependencies = {
-  sessionConfig: typeof sessionConfigType;
-  sessionHandler: typeof sessionHandlerType;
-  resolveSessionCookie: typeof resolveSessionCookieType;
-  deleteLegacySessionCookie: typeof deleteLegacySessionCookieType;
-};
-
-let staticSessionDependenciesPromise: Promise<StaticSessionDependencies> | null =
-  null;
-
-const getStaticSessionDependencies =
-  async (): Promise<StaticSessionDependencies> => {
-    staticSessionDependenciesPromise ??= Promise.all([
-      import("#config/session.js"),
-      import("#vendor/utils/session/session-handler.js"),
-      import("#vendor/utils/session/resolve-session-cookie.js"),
-      import("#vendor/utils/session/delete-legacy-session-cookie.js"),
-    ])
-      .then(
-        ([
-          sessionConfigModule,
-          sessionHandlerModule,
-          resolveSessionCookieModule,
-          deleteLegacyModule,
-        ]) => ({
-          sessionConfig: sessionConfigModule.default,
-          sessionHandler: sessionHandlerModule.sessionHandler,
-          resolveSessionCookie: resolveSessionCookieModule.resolveSessionCookie,
-          deleteLegacySessionCookie:
-            deleteLegacyModule.deleteLegacySessionCookie,
-        }),
-      )
-      .catch((err: unknown) => {
-        staticSessionDependenciesPromise = null;
-        throw err;
-      });
-
-    return staticSessionDependenciesPromise;
-  };
 
 const STATIC_PATH =
   appConfig.env === "manual-test"
@@ -112,6 +58,21 @@ const isUrlSafe = (url: string): boolean =>
 
 const cache = new Map<string, string | Buffer>();
 
+/**
+ * Validators must be derived from content, not from byte length: a rebuild
+ * typically changes only the fixed-length asset hashes inside `index.html`, so a
+ * length-based ETag would keep validating an obsolete app shell and a client
+ * would hold on to a shell referencing assets the new deployment no longer has.
+ * Files are read once at startup, so each hash is computed once too.
+ */
+const etags = new Map<string, string>();
+
+const computeEtag = (data: string | Buffer): string =>
+  `"${crypto.createHash("sha1").update(data).digest("base64url")}"`;
+
+const getEtag = (key: string, data: string | Buffer): string =>
+  etags.get(key) ?? computeEtag(data);
+
 const cacheFile = async (filePath: string): Promise<void> => {
   const ext = path.extname(filePath).substring(1).toLowerCase();
   if (!ALLOWED_STATIC_EXTENSIONS.has(ext)) return;
@@ -119,6 +80,7 @@ const cacheFile = async (filePath: string): Promise<void> => {
   const data = await fs.readFile(filePath, isBinary ? null : "utf8");
   const key = filePath.substring(STATIC_PATH.length);
   cache.set(key, data);
+  etags.set(key, computeEtag(data));
 };
 
 const cacheDirectory = async (directoryPath: string): Promise<void> => {
@@ -143,6 +105,7 @@ const cacheStaticSource = async (): Promise<Map<
     const indexHtml = cache.get("/index.html");
     if (indexHtml !== undefined && indexHtml !== "") {
       cache.set("/", indexHtml);
+      etags.set("/", getEtag("/index.html", indexHtml));
     }
     return cache;
   }
@@ -202,123 +165,34 @@ const staticIndexHandler = (res: HttpResponse): void => {
   });
 };
 
-type StaticHttpData = Readonly<
-  Omit<HttpData, "payload" | "params" | "contentType" | "isJson" | "query"> & {
-    path: string;
-    referer: string | undefined;
-    /**
-     * Static server uses raw URLSearchParams (no validator concept).
-     * This intentionally diverges from `HttpData.query`, which is a typed
-     * object validated by the route's `queryValidator` for API routes.
-     */
-    query: URLSearchParams;
-  }
->;
+/**
+ * The SPA shell is served as a plain cacheable static file: no session is
+ * created and nothing is injected per request. The session cookie and the
+ * CSRF token are issued by the API on app initialization.
+ */
+const HTML_CACHE_CONTROL = "public, max-age=0, must-revalidate";
 
-const getStaticHttpData = (
+const handleHtmlRequest = (
+  res: HttpResponse,
   req: HttpRequest,
-  res: HttpResponse,
-): Readonly<StaticHttpData> => {
-  const cookies = parseCookies(req.getHeader("cookie"));
-  const url = req.getUrl();
-  const query = new URLSearchParams(req.getQuery());
-  const headers = getHeaders(req);
-  // const ip = headers.get('x-forwarded-for') || headers.get('x-real-ip') || 'unknown';
-  const ip = getIP(req, res);
-  const referer = headers.get("referer");
-
-  return {
-    method: "get",
-    ip,
-    query,
-    headers,
-    cookies,
-    path: url,
-    referer: referer ?? undefined,
-    files: null,
-    hasFile: (): boolean => false,
-  };
-};
-
-// Thin wrapper around the shared response-data builder.
-const getResponseData = createResponseData;
-const sendStaticResponse = (
-  res: HttpResponse,
-  responseData: ResponseData,
   htmlData: string | Buffer,
+  etag: string,
 ): void => {
-  writeHttpStatus(res, responseData.status);
-  // if (httpData.isJson) res.writeHeader('content-type', 'application/json');
-  // setCspHeader(res);
-  res.writeHeader("content-type", MIME_TYPES["html"] ?? "");
-  setSecurityHeaders(res, responseData.headers);
-  if (responseData.headers.length > 0) setHeaders(res, responseData.headers);
-  if (responseData.cookies.size > 0) setCookies(res, responseData.cookies);
-  res.end(htmlData);
-};
+  const ifNoneMatch = req.getHeader("if-none-match");
 
-const staticPageHandler = async (
-  res: HttpResponse,
-  req: HttpRequest,
-  htmlData: string | Buffer,
-): Promise<void> => {
-  if (state["listenSocket"] !== undefined) {
-    try {
-      let aborted = false as boolean;
-      res.onAborted(() => {
-        aborted = true;
-      });
-      const httpData = getStaticHttpData(req, res);
-      const responseData = getResponseData();
-      responseData.payload = Buffer.isBuffer(htmlData)
-        ? htmlData.toString("utf8")
-        : htmlData;
-      const sessionContext = contextHandler(
-        httpData as unknown as HttpData,
-        responseData,
-      );
-      const {
-        sessionHandler,
-        resolveSessionCookie,
-        deleteLegacySessionCookie,
-      } = await getStaticSessionDependencies();
-      const { token, source } = resolveSessionCookie(httpData.cookies);
-      if (source === "legacy") {
-        deleteLegacySessionCookie(responseData);
-      }
-      await sessionHandler(sessionContext, token, undefined);
-
-      const context = {
-        httpData,
-        responseData,
-        sessionInfo: sessionContext.session.sessionInfo,
-      };
-
-      if (aborted) return;
-      await staticPageController(context);
-
-      res.cork(() => {
-        const payload = responseData.payload;
-        sendStaticResponse(
-          res,
-          responseData,
-          typeof payload === "string" || Buffer.isBuffer(payload)
-            ? payload
-            : htmlData,
-        );
-      });
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      logger.error({ err: error }, "Set Http Handler Error");
-      res.cork(() => {
-        writeHttpStatus(res, 500);
-        res.end("500 Internal Server Error");
-      });
+  res.cork(() => {
+    const notModified = ifNoneMatch === etag;
+    writeHttpStatus(res, notModified ? 304 : 200);
+    res.writeHeader("content-type", MIME_TYPES["html"] ?? "");
+    res.writeHeader("Cache-Control", HTML_CACHE_CONTROL);
+    res.writeHeader("ETag", etag);
+    setSecurityHeaders(res);
+    if (notModified) {
+      res.end();
+      return;
     }
-  } else {
-    logger.warn("We just refuse if already shutting down");
-    res.close();
-  }
+    res.end(htmlData);
+  });
 };
 
 const staticCacheHandler = async (
@@ -336,19 +210,23 @@ const staticCacheHandler = async (
       ? (MIME_TYPES[ext] ?? MIME_TYPES["default"])
       : MIME_TYPES["html"];
 
+  const etag = getEtag(url, cachedData);
+
+  if (mimeType === MIME_TYPES["html"]) {
+    handleHtmlRequest(res, req, cachedData, etag);
+    return;
+  }
+
   // Add cache headers for better performance
   const maxAge = 31536000; // 1 year in seconds
-  const isHtml = mimeType === MIME_TYPES["html"];
 
-  // Generate ETag based on content hash for better caching
   const dataLength = Buffer.isBuffer(cachedData)
     ? cachedData.length
     : Buffer.byteLength(cachedData, "utf8");
-  const etag = `"${String(dataLength)}-${url.replace(/[^a-zA-Z0-9]/g, "")}"`;
 
   // Check if client has cached version
   const ifNoneMatch = req.getHeader("if-none-match");
-  if (!isHtml && ifNoneMatch === etag) {
+  if (ifNoneMatch === etag) {
     // Cache hit - file not modified
     // logger.info(`Cache hit for ${url} - returning 304`);
     res.cork(() => {
@@ -362,11 +240,6 @@ const staticCacheHandler = async (
     });
     return;
   }
-  if (mimeType === MIME_TYPES["html"]) {
-    await staticPageHandler(res, req, cachedData);
-    return;
-  }
-
   res.cork(() => {
     writeHttpStatus(res, 200);
 
@@ -420,7 +293,7 @@ const staticHandler = async (
         ? (MIME_TYPES["html"] ?? "")
         : "";
     if (data !== null && statusCode === 200) {
-      await staticPageHandler(res, req, data);
+      handleHtmlRequest(res, req, data, getEtag("/index.html", data));
       return;
     }
   }

@@ -1,4 +1,3 @@
-const CSRF_META_SELECTOR = 'meta[name="csrf-token"]'
 const CSRF_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,128}$/
 
 let csrfToken: string | null = null
@@ -10,15 +9,11 @@ const normalizeToken = (value: unknown): string | null => {
     return value
 }
 
-export const readCsrfTokenFromMeta = (): string | null => {
-    const token = document.querySelector<HTMLMetaElement>(CSRF_META_SELECTOR)?.content ?? null
-    return normalizeToken(token)
-}
-
-export const getCsrfToken = (): string | null => {
-    csrfToken ??= readCsrfTokenFromMeta()
-    return csrfToken
-}
+/**
+ * The token is never embedded in the cacheable HTML shell: it arrives with the
+ * app initialization response and is refreshed from every response that rotates it.
+ */
+export const getCsrfToken = (): string | null => csrfToken
 
 export const setCsrfToken = (token: unknown): void => {
     const normalized = normalizeToken(token)
