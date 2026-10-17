@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import databaseConfig from '#config/database.js';
 import appConfig from '#config/app.js';
-import * as schema from './schema.js';
+import { relations } from './relations.js';
 
 const pool = new pg.Pool({
     host: databaseConfig.host,
@@ -16,8 +16,9 @@ const pool = new pg.Pool({
     ssl: false,
 });
 
-const db = drizzle(pool, {
-    schema,
+const db = drizzle({
+    client: pool,
+    relations,
     logger:
         appConfig.env === 'prod' || appConfig.env === 'production'
             ? false
