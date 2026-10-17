@@ -45,7 +45,7 @@ Generated output such as `dist/`, `node_modules/`, Playwright reports, and cover
 
 ## Build, Test, and Development Commands
 
-- `pnpm install`: install workspace dependencies. Requires Node `^20.19.0 || >=22.12.0` (Vitest 4 / Vite 7 minimum) and pnpm `>=9`.
+- `pnpm install`: install workspace dependencies. Requires Node `>=24` (see `.nvmrc`) and pnpm `>=9`.
 - `pnpm dev`: build `shared`, build `backend`, then run backend and frontend dev servers in parallel.
 - `pnpm dev:frontend` / `pnpm dev:backend`: run one package locally.
 - `pnpm build`: build all packages recursively.

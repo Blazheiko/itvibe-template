@@ -6,7 +6,7 @@ Vue 3 application for interactive browsing and testing of API routes with a mode
 
 ### Requirements
 
-1. **Node.js** 20.19.0 or higher (22.12.0+ is also supported)
+1. **Node.js** 24 or higher
 2. **API server** running at `http://127.0.0.1:5174`
 
 ### Installation and Setup
