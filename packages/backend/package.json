@@ -36,7 +36,7 @@
     "@sentry/node": "10.76.2",
     "ai": "6.0.309",
     "arctic": "3.7.0",
-    "better-result": "2.9.2",
+    "better-result": "3.0.1",
     "dotenv": "18.0.8",
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",

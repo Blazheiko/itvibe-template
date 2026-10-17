@@ -128,8 +128,8 @@ importers:
         specifier: 3.7.0
         version: 3.7.0
       better-result:
-        specifier: 2.9.2
-        version: 2.9.2
+        specifier: 3.0.1
+        version: 3.0.1
       dotenv:
         specifier: 18.0.8
         version: 18.0.8
@@ -1949,8 +1949,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  better-result@2.9.2:
-    resolution: {integrity: sha512-WIFoBPCdnTOdk9inkE1ZRvCZ4P0CpSkAiLlchC65N7n9DcjZ3NhqkBOlafzpOVnO8ixyi37kicmSJ3ENhPZl7Q==}
+  better-result@3.0.1:
+    resolution: {integrity: sha512-rnCeqEXkKPHmz5MO5ZroPRDyHe4YvlNPyy7qj8cVcWs/GnvSvC3086G74/220W+wWcIWlXgzvcjskFV0A4blUQ==}
 
   bidi-js@1.1.0:
     resolution: {integrity: sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==}
@@ -5176,7 +5176,7 @@ snapshots:
 
   baseline-browser-mapping@2.11.29: {}
 
-  better-result@2.9.2: {}
+  better-result@3.0.1: {}
 
   bidi-js@1.1.0:
     dependencies:
