@@ -25,19 +25,19 @@
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
-    "eslint": "^9.39.5",
+    "eslint": "^10.13.0",
     "prettier": "^3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.71.2"
   },
   "pnpm": {
     "overrides": {
-      "@typescript-eslint/utils": "^8.59.4",
-      "@typescript-eslint/typescript-estree": "^8.59.4",
-      "@typescript-eslint/project-service": "^8.59.4",
-      "@typescript-eslint/tsconfig-utils": "^8.59.4",
+      "@typescript-eslint/utils": "^8.71.2",
+      "@typescript-eslint/typescript-estree": "^8.71.2",
+      "@typescript-eslint/project-service": "^8.71.2",
+      "@typescript-eslint/tsconfig-utils": "^8.71.2",
       "mysql2": "^3.24.6"
     }
   }
