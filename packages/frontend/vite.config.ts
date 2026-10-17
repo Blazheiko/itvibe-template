@@ -16,6 +16,11 @@ export default defineConfig({
         }),
         vueDevTools(),
     ],
+    build: {
+        // Vite 7 changed the default to 'baseline-widely-available' (chrome107/safari16).
+        // Keep the Vite 6 browser floor until a supported-browser list is agreed.
+        target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+    },
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),

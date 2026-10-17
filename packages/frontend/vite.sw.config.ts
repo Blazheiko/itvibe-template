@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 // Конфигурация для сборки Service Worker
 export default defineConfig({
     build: {
+        // Same browser floor as the app bundle (see vite.config.ts).
+        target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
         lib: {
             entry: fileURLToPath(new URL('./src/service-worker.ts', import.meta.url)),
             name: 'ServiceWorker',
