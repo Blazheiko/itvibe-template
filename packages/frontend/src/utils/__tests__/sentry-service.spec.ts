@@ -142,6 +142,24 @@ describe('sentry service', () => {
     expect(sentryMocks.scope.setExtra).toHaveBeenCalledWith('foo', 'bar')
   })
 
+  it('disables personal and payload data collection (Sentry 11 defaults collect it)', async () => {
+      vi.stubEnv('VITE_SENTRY_DSN', 'https://example.invalid/4')
+      vi.stubEnv('VITE_SENTRY_ENABLED', 'true')
+
+      const sentryService = await loadService()
+      sentryService.init(createAppMock(), createRouterMock())
+
+      expect(sentryMocks.init).toHaveBeenCalledWith(
+          expect.objectContaining({
+              dataCollection: expect.objectContaining({
+                  userInfo: false,
+                  cookies: false,
+                  httpBodies: [],
+              }),
+          }),
+      )
+  })
+
   it('sanitizes events and breadcrumbs before send', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', 'https://example.invalid/4')
     vi.stubEnv('VITE_SENTRY_ENABLED', 'true')

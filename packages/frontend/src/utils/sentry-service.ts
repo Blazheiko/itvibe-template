@@ -310,7 +310,15 @@ export const sentryService = {
         replaysSessionSampleRate: sentryConfig.replaysSessionSampleRate,
         replaysOnErrorSampleRate: sentryConfig.replaysOnErrorSampleRate,
         maxBreadcrumbs: 50,
-        sendDefaultPii: false,
+        // Sentry 11 removed `sendDefaultPii` and collects user info, cookies and
+        // bodies by default; keep the previous `sendDefaultPii: false` behaviour.
+        dataCollection: {
+            userInfo: false,
+            cookies: false,
+            httpBodies: [],
+            genAI: { inputs: false, outputs: false },
+            stackFrameVariables: false,
+        },
         integrations: (defaultIntegrations: unknown[] = []) =>
           [...defaultIntegrations, ...integrations] as never,
         beforeSend: beforeSend as never,

@@ -259,6 +259,20 @@ function buildInitOptions(): SentryInitOptions {
       : { environment: sentryConfig.environment },
     sentryConfig.release === undefined ? {} : { release: sentryConfig.release },
     { tracesSampleRate: sentryConfig.tracesSampleRate },
+    // Sentry 11 removed `sendDefaultPii` and collects user info, cookies, bodies,
+    // gen-AI prompts/outputs and DB query data by default. Keep the v10
+    // `sendDefaultPii: false` behaviour explicitly.
+    {
+      dataCollection: {
+        userInfo: false,
+        cookies: false,
+        httpBodies: [],
+        genAI: { inputs: false, outputs: false },
+        databaseQueryData: false,
+        queues: false,
+        stackFrameVariables: false,
+      },
+    },
   );
 }
 

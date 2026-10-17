@@ -33,7 +33,7 @@
     "@aws-sdk/client-s3": "3.1152.0",
     "@aws-sdk/s3-request-presigner": "3.1152.0",
     "@mistralai/mistralai": "2.7.0",
-    "@sentry/node": "10.76.2",
+    "@sentry/node": "11.8.0",
     "ai": "6.0.309",
     "arctic": "3.7.0",
     "better-result": "3.0.1",
