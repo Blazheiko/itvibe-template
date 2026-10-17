@@ -14,7 +14,7 @@
         "type-check": "vue-tsc --build",
         "lint": "eslint . --fix",
         "format": "prettier --write src/",
-        "typecheck": "vue-tsc --build",
+        "typecheck": "vue-tsc --build --force",
         "test": "vitest run",
         "lint:check": "eslint ."
     },
