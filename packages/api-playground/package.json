@@ -17,7 +17,8 @@
     "type-check": "vue-tsc --build",
     "typecheck": "pnpm run type-check",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "lint:check": "eslint ."
   },
   "dependencies": {
     "@vueuse/core": "^14.4.0",

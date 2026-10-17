@@ -16,7 +16,7 @@
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev",
     "start": "pnpm --filter backend start",
-    "lint": "eslint .",
+    "lint": "eslint . && pnpm -r --if-present lint:check",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",

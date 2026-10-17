@@ -13,7 +13,10 @@
         "build-sw": "vite build --config vite.sw.config.ts",
         "type-check": "vue-tsc --build",
         "lint": "eslint . --fix",
-        "format": "prettier --write src/"
+        "format": "prettier --write src/",
+        "typecheck": "vue-tsc --build",
+        "test": "vitest run",
+        "lint:check": "eslint ."
     },
     "dependencies": {
         "@khmyznikov/pwa-install": "^0.7.0",
