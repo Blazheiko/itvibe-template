@@ -21,7 +21,7 @@
     "lint:check": "eslint ."
   },
   "dependencies": {
-    "@vueuse/core": "^14.4.0",
+    "@vueuse/core": "^15.0.0",
     "pinia": "^3.0.4",
     "shared": "workspace:*",
     "vue": "^3.5.44",
