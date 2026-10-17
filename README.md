@@ -328,7 +328,7 @@ docker build -t itvibe-template .
 docker run -p 3000:3000 --env-file packages/backend/.env itvibe-template
 ```
 
-The container entrypoint runs `pnpm db:create && pnpm db:migrate && pnpm start`.
+The container entrypoint runs `pnpm db:create:prod && pnpm db:migrate && pnpm start`. `db:create:prod` runs the compiled `dist/db/create-database.js`, because the image has only production dependencies (no `tsx`).
 
 ### Production / security checklist
 
