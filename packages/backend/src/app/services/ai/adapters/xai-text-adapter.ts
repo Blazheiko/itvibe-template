@@ -1,5 +1,5 @@
 import { streamText, tool, jsonSchema, stepCountIs } from "ai";
-import type { Tool, ToolExecuteFunction } from "ai";
+import type { ToolSet } from "ai";
 import { createXai } from "@ai-sdk/xai";
 import aiConfig from "#config/ai.js";
 import { buildFinalTextPrompt } from "#app/services/ai/types.js";
@@ -34,32 +34,26 @@ export const xaiTextAdapter: ITextAdapter = {
       Object.keys(opts.toolCallHandler.tools).length > 0;
 
     // Build tools with execute() delegates when toolCallHandler is provided
-    type CoreTool = Tool<unknown, string> & {
-      execute: ToolExecuteFunction<unknown, string>;
-    };
-    const wrappedTools: Record<string, CoreTool> | undefined = hasTools
+    const wrappedTools: ToolSet | undefined = hasTools
       ? Object.fromEntries(
           Object.entries(opts.toolCallHandler!.tools).map(
-            ([name, def]): [string, CoreTool] => {
-              const execute: ToolExecuteFunction<unknown, string> = async (
-                args,
-              ): Promise<string> => opts.toolCallHandler!.onCall(name, args);
-
-              return [
-                name,
-                tool<unknown, string>({
-                  description: def.description,
-                  inputSchema: jsonSchema(def.parametersSchema),
-                  execute,
-                }) as CoreTool,
-              ];
-            },
+            ([name, def]): [string, ToolSet[string]] => [
+              name,
+              tool({
+                description: def.description,
+                inputSchema: jsonSchema(def.parametersSchema),
+                execute: async (args: unknown): Promise<string> =>
+                  opts.toolCallHandler!.onCall(name, args),
+              }),
+            ],
           ),
         )
       : undefined;
 
     const streamParams = {
-      model: xaiProvider.chat(modelName),
+      // @ai-sdk/xai 5 dropped the Chat Completions model (`.chat()`); xAI is now
+      // reached through its Responses API.
+      model: xaiProvider.responses(modelName),
       system: opts.systemPrompt,
       prompt: opts.userPrompt,
       temperature: opts.temperature ?? 0.3,
@@ -78,7 +72,7 @@ export const xaiTextAdapter: ITextAdapter = {
     }
 
     let fullText = "";
-    for await (const part of result.fullStream) {
+    for await (const part of result.stream) {
       if (part.type === "text-delta") {
         fullText += part.text;
         yield part.text;
