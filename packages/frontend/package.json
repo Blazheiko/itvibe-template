@@ -30,7 +30,7 @@
         "vue": "^3.5.44",
         "vue-advanced-cropper": "^2.8.9",
         "vue-i18n": "^11.4.15",
-        "vue-router": "^4.6.4"
+        "vue-router": "^5.4.0"
     },
     "devDependencies": {
         "@playwright/test": "^1.64.1",
