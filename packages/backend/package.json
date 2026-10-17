@@ -18,6 +18,7 @@
     "clean": "rm -rf dist .tsbuildinfo",
     "typecheck": "tsc --noEmit",
     "db:create": "tsx src/db/create-database.ts",
+    "db:create:prod": "node dist/db/create-database.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -37,6 +38,7 @@
     "arctic": "3.7.0",
     "better-result": "2.9.2",
     "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",
     "ioredis": "5.10.1",
     "luxon": "3.7.2",
@@ -58,7 +60,6 @@
     "@types/pg": "^8.23.1",
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.2",
-    "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
     "vitest": "^4.1.12"
