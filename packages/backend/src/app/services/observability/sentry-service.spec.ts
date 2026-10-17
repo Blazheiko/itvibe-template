@@ -133,6 +133,26 @@ describe("sentryService", () => {
     expect(captureExceptionMock).toHaveBeenCalledWith(error);
   });
 
+  it("disables personal and payload data collection (Sentry 11 defaults collect it)", async () => {
+    process.env["SENTRY_DSN"] = "https://example.com/1";
+    process.env["SENTRY_ENABLED"] = "true";
+
+    const { sentryService } = await loadSentryService();
+    sentryService.init();
+
+    expect(initMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dataCollection: expect.objectContaining({
+          userInfo: false,
+          cookies: false,
+          httpBodies: [],
+          genAI: { inputs: false, outputs: false },
+          databaseQueryData: false,
+        }),
+      }),
+    );
+  });
+
   it("flushes after init", async () => {
     process.env["SENTRY_DSN"] = "https://example.com/1";
     process.env["SENTRY_ENABLED"] = "true";
