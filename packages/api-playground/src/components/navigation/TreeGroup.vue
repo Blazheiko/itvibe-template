@@ -131,7 +131,7 @@ const totalRoutesCount = computed(() => {
         </button>
       </template>
 
-      <template v-for="childGroup in group.group" :key="childGroup">
+      <template v-for="(childGroup, childIndex) in group.group" :key="childIndex">
         <TreeGroup
           v-if="childGroup && 'group' in childGroup"
           :group="childGroup as ApiGroup"

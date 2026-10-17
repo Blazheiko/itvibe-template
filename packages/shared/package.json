@@ -52,7 +52,7 @@
   "dependencies": {
     "@ark/util": "0.56.0",
     "@arktype/type": "2.2.0",
-    "libphonenumber-js": "^1.12.9"
+    "libphonenumber-js": "^1.13.15"
   },
   "devDependencies": {
     "typescript": "6.0.3"
