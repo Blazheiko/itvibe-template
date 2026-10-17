@@ -1,11 +1,11 @@
 FROM ubuntu:24.04 AS builder
 WORKDIR /app
 
-# Устанавливаем Node.js 22 и необходимые инструменты
+# Устанавливаем Node.js 24 и необходимые инструменты
 RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -60,11 +60,11 @@ RUN rm -rf packages/backend/public && \
 FROM ubuntu:24.04 AS production
 WORKDIR /app
 
-# Устанавливаем Node.js 22 и необходимые инструменты
+# Устанавливаем Node.js 24 и необходимые инструменты
 RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -78,9 +78,9 @@ COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/frontend/package.json ./packages/frontend/
 
-# Нужны dev-зависимости, чтобы выполнять миграции drizzle
-# Устанавливаем все зависимости включая devDependencies для drizzle-kit
-RUN pnpm install --frozen-lockfile --prod=false
+# Только production-зависимости: drizzle-kit (миграции) — в dependencies backend,
+# create-database запускается из dist, поэтому tsx и прочие devDependencies не нужны
+RUN pnpm install --frozen-lockfile --prod --filter backend...
 
 ENV NODE_ENV=production
 
@@ -96,8 +96,6 @@ COPY --from=builder /app/packages/backend/public-test ./packages/backend/public-
 COPY --from=builder /app/packages/backend/drizzle.config.js ./packages/backend/drizzle.config.js
 # Копируем миграции drizzle
 COPY --from=builder /app/packages/backend/src/drizzle/migrations ./packages/backend/src/drizzle/migrations
-# Копируем db скрипты (create-database, seed и т.д.)
-COPY --from=builder /app/packages/backend/src/db ./packages/backend/src/db
 
 # Копируем базу знаний поддержки
 COPY --from=builder /app/docs/support-knowledge-base ./docs/support-knowledge-base
@@ -107,4 +105,4 @@ EXPOSE 3000
 
 # Запускаем миграции и приложение
 WORKDIR /app/packages/backend
-CMD ["sh", "-c", "pnpm db:create && pnpm db:migrate && pnpm start"]
+CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]

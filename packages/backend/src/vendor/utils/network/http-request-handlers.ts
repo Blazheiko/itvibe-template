@@ -154,7 +154,7 @@ const readJson = (body: string): Record<string, unknown> => {
     throw new Error("error parse json");
   } catch (e) {
     console.error(e);
-    throw new Error(`error parse json: ${String(e)}`);
+    throw new Error(`error parse json: ${String(e)}`, { cause: e });
   }
 };
 

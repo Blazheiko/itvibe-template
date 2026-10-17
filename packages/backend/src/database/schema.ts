@@ -15,7 +15,7 @@ import {
     jsonb,
     customType,
 } from 'drizzle-orm/pg-core';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
@@ -325,91 +325,3 @@ export const supportChatHistory = pgTable(
         index('support_chat_history_user_idx').on(table.userId),
     ],
 );
-
-export const usersRelations = relations(users, ({ many }) => ({
-    oauthAccounts: many(oauthAccounts),
-    emailVerifications: many(emailVerifications),
-    emailLinkVerifications: many(emailLinkVerifications),
-    passwordResetTokens: many(passwordResetTokens),
-    onlineSessions: many(userOnline),
-    pushSubscriptions: many(pushSubscriptions),
-    pushNotificationLogs: many(pushNotificationLogs),
-    llmTextUsage: many(llmTextUsage),
-    supportChatHistory: many(supportChatHistory),
-}));
-
-export const userOnlineRelations = relations(userOnline, ({ one }) => ({
-    user: one(users, {
-        fields: [userOnline.userId],
-        references: [users.id],
-    }),
-}));
-
-export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one, many }) => ({
-    user: one(users, {
-        fields: [pushSubscriptions.userId],
-        references: [users.id],
-    }),
-    notificationLogs: many(pushNotificationLogs),
-}));
-
-export const pushNotificationLogsRelations = relations(pushNotificationLogs, ({ one }) => ({
-    user: one(users, {
-        fields: [pushNotificationLogs.userId],
-        references: [users.id],
-    }),
-    subscription: one(pushSubscriptions, {
-        fields: [pushNotificationLogs.subscriptionId],
-        references: [pushSubscriptions.id],
-    }),
-}));
-
-export const emailVerificationsRelations = relations(emailVerifications, ({ one }) => ({
-    user: one(users, {
-        fields: [emailVerifications.userId],
-        references: [users.id],
-    }),
-}));
-
-export const emailLinkVerificationsRelations = relations(emailLinkVerifications, ({ one }) => ({
-    user: one(users, {
-        fields: [emailLinkVerifications.userId],
-        references: [users.id],
-    }),
-}));
-
-export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
-    user: one(users, {
-        fields: [passwordResetTokens.userId],
-        references: [users.id],
-    }),
-}));
-
-export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
-    user: one(users, {
-        fields: [oauthAccounts.userId],
-        references: [users.id],
-    }),
-}));
-
-export const llmSystemPromptsRelations = relations(llmSystemPrompts, ({ many }) => ({
-    textUsage: many(llmTextUsage),
-}));
-
-export const llmTextUsageRelations = relations(llmTextUsage, ({ one }) => ({
-    user: one(users, {
-        fields: [llmTextUsage.userId],
-        references: [users.id],
-    }),
-    prompt: one(llmSystemPrompts, {
-        fields: [llmTextUsage.llmSystemPromptId],
-        references: [llmSystemPrompts.id],
-    }),
-}));
-
-export const supportChatHistoryRelations = relations(supportChatHistory, ({ one }) => ({
-    user: one(users, {
-        fields: [supportChatHistory.userId],
-        references: [users.id],
-    }),
-}));

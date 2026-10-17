@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20.0.0",
+    "node": "^24.15.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.15.0",
@@ -16,7 +16,7 @@
     "dev:backend": "pnpm --filter backend dev",
     "dev:frontend": "pnpm --filter frontend dev",
     "start": "pnpm --filter backend start",
-    "lint": "eslint .",
+    "lint": "eslint . && pnpm -r --if-present lint:check",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
@@ -25,19 +25,19 @@
     "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@eslint/js": "^9.17.0",
-    "@types/node": "^22.10.2",
-    "eslint": "^9.17.0",
-    "prettier": "^3.4.2",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.59.4"
+    "typescript-eslint": "^8.71.2"
   },
   "pnpm": {
     "overrides": {
-      "@typescript-eslint/utils": "^8.59.4",
-      "@typescript-eslint/typescript-estree": "^8.59.4",
-      "@typescript-eslint/project-service": "^8.59.4",
-      "@typescript-eslint/tsconfig-utils": "^8.59.4"
+      "@typescript-eslint/utils": "^8.71.2",
+      "@typescript-eslint/typescript-estree": "^8.71.2",
+      "@typescript-eslint/project-service": "^8.71.2",
+      "@typescript-eslint/tsconfig-utils": "^8.71.2"
     }
   }
 }

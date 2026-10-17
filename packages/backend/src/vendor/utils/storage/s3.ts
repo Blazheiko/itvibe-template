@@ -1,21 +1,49 @@
-import * as Minio from "minio";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import diskConfig from "#config/disk.js";
 import logger from "#logger";
 
-const endpoint = (diskConfig.s3Endpoint ?? "").replace(/^https?:\/\//, "");
+const rawEndpoint = diskConfig.s3Endpoint?.trim() ?? "";
+// Keep the old minio behaviour: an endpoint without a scheme means HTTPS.
+const endpoint =
+  rawEndpoint.length === 0 || /^https?:\/\//.test(rawEndpoint)
+    ? rawEndpoint
+    : `https://${rawEndpoint}`;
 
 logger.info(
   { endpoint, bucket: diskConfig.s3Bucket, region: diskConfig.s3Region },
-  "S3 config (minio)",
+  "S3 config (aws-sdk)",
 );
 
-const minioClient = new Minio.Client({
-  endPoint: endpoint,
-  useSSL: diskConfig.s3Endpoint?.startsWith("http://") !== true,
-  accessKey: diskConfig.s3AccessKeyId ?? "",
-  secretKey: diskConfig.s3SecretAccessKey ?? "",
-  region: diskConfig.s3Region ?? "us-east-1",
+const s3Client = new S3Client({
+  ...(endpoint.length > 0 ? { endpoint } : {}),
+  // `||` (not `??`): S3_REGION= in .env yields "", and the SDK rejects an empty region.
+  region: diskConfig.s3Region?.trim() || "us-east-1",
+  credentials: {
+    accessKeyId: diskConfig.s3AccessKeyId ?? "",
+    secretAccessKey: diskConfig.s3SecretAccessKey ?? "",
+  },
+  // Custom endpoints (MinIO, DigitalOcean Spaces, ...) are addressed path-style,
+  // which is what the minio client did for non-AWS hosts.
+  forcePathStyle: endpoint.length > 0 && !endpoint.includes("amazonaws.com"),
+  // Newer SDK versions add CRC checksums to every request by default; several
+  // S3-compatible stores reject them, so only send checksums when required.
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
 });
+
+function buildKey(key: string): string {
+  const s3DynamicDataPrefix = (
+    diskConfig.s3DynamicDataPrefix ?? "uploads"
+  ).replace(/^\/+|\/+$/g, "");
+  const prefix = (diskConfig.s3Prefix ?? "app").replace(/^\/+|\/+$/g, "");
+  return `${prefix}/${s3DynamicDataPrefix}/${key}`;
+}
 
 export async function uploadToS3(
   key: string,
@@ -28,39 +56,35 @@ export async function uploadToS3(
     { bucket, key, contentType, size: body.length, public: options.publicRead },
     "Uploading to S3",
   );
-  const s3DynamicDataPrefix = (
-    diskConfig.s3DynamicDataPrefix ?? "uploads"
-  ).replace(/^\/+|\/+$/g, "");
-  const prefix = (diskConfig.s3Prefix ?? "app").replace(/^\/+|\/+$/g, "");
 
-  const finalKey = `${prefix}/${s3DynamicDataPrefix}/${key}`;
-
-  const metaData: Record<string, string> = { "Content-Type": contentType };
-  // Mark the object world-readable so the stable CDN URL we hand to the LLM and
-  // bake into generated HTML actually resolves. Without this, S3-compatible
-  // stores (e.g. DigitalOcean Spaces) keep objects private and the URL 403s.
-  if (options.publicRead === true) {
-    metaData["x-amz-acl"] = "public-read";
-  }
-  // Lets callers force `attachment` so that opening the asset URL directly in
-  // a browser downloads the file instead of rendering it. Used for SVG, which
-  // can contain XML that browsers would otherwise execute as a document — we
-  // still rely on sanitization before upload; this is defense in depth.
-  if (
-    options.contentDisposition !== undefined &&
-    options.contentDisposition.length > 0
-  ) {
-    metaData["Content-Disposition"] = options.contentDisposition;
-  }
-
-  await minioClient.putObject(bucket, finalKey, body, body.length, metaData);
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: buildKey(key),
+      Body: body,
+      ContentLength: body.length,
+      ContentType: contentType,
+      // Mark the object world-readable so the stable CDN URL we hand to the LLM and
+      // bake into generated HTML actually resolves. Without this, S3-compatible
+      // stores (e.g. DigitalOcean Spaces) keep objects private and the URL 403s.
+      ...(options.publicRead === true ? { ACL: "public-read" as const } : {}),
+      // Lets callers force `attachment` so that opening the asset URL directly in
+      // a browser downloads the file instead of rendering it. Used for SVG, which
+      // can contain XML that browsers would otherwise execute as a document — we
+      // still rely on sanitization before upload; this is defense in depth.
+      ...(options.contentDisposition !== undefined &&
+      options.contentDisposition.length > 0
+        ? { ContentDisposition: options.contentDisposition }
+        : {}),
+    }),
+  );
 }
 
 export async function deleteFromS3(key: string): Promise<void> {
   const bucket = diskConfig.s3Bucket ?? "";
   logger.info({ bucket, key }, "Deleting object from S3");
 
-  await minioClient.removeObject(bucket, key);
+  await s3Client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }
 
 export async function presignUrl(
@@ -68,45 +92,27 @@ export async function presignUrl(
   expirySeconds = 3600,
 ): Promise<string> {
   const bucket = diskConfig.s3Bucket ?? "";
-  const prefix = (diskConfig.s3Prefix ?? "app").replace(/^\/+|\/+$/g, "");
-  const s3DynamicDataPrefix = (
-    diskConfig.s3DynamicDataPrefix ?? "uploads"
-  ).replace(/^\/+|\/+$/g, "");
-
-  const finalKey = `${prefix}/${s3DynamicDataPrefix}/${key}`;
-  return minioClient.presignedGetObject(bucket, finalKey, expirySeconds);
+  return getSignedUrl(
+    s3Client,
+    new GetObjectCommand({ Bucket: bucket, Key: buildKey(key) }),
+    { expiresIn: expirySeconds },
+  );
 }
 
 export async function downloadFromS3(
   key: string,
 ): Promise<{ data: Buffer; contentType: string | null }> {
   const bucket = diskConfig.s3Bucket ?? "";
-  const prefix = (diskConfig.s3Prefix ?? "app").replace(/^\/+|\/+$/g, "");
-  const s3DynamicDataPrefix = (
-    diskConfig.s3DynamicDataPrefix ?? "uploads"
-  ).replace(/^\/+|\/+$/g, "");
-
-  const finalKey = `${prefix}/${s3DynamicDataPrefix}/${key}`;
+  const finalKey = buildKey(key);
   logger.info({ bucket, key: finalKey }, "Downloading from S3");
 
-  const [stat, stream] = await Promise.all([
-    minioClient.statObject(bucket, finalKey),
-    minioClient.getObject(bucket, finalKey),
-  ]);
+  const response = await s3Client.send(
+    new GetObjectCommand({ Bucket: bucket, Key: finalKey }),
+  );
+  if (response.Body === undefined) {
+    throw new Error(`S3 object has no body: ${finalKey}`);
+  }
 
-  const contentType =
-    (stat.metaData["content-type"] as string | undefined) ?? null;
-
-  const data = await new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    stream.on("data", (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    stream.on("end", () => {
-      resolve(Buffer.concat(chunks));
-    });
-    stream.on("error", reject);
-  });
-
-  return { data, contentType };
+  const data = Buffer.from(await response.Body.transformToByteArray());
+  return { data, contentType: response.ContentType ?? null };
 }

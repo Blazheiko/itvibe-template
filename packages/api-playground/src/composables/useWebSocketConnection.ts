@@ -1,5 +1,5 @@
 // src/composables/useWebSocketConnection.ts
-import { useWebSocket } from '@vueuse/core'
+import { useIntervalFn, useWebSocket } from '@vueuse/core'
 import { ref, computed } from 'vue'
 import { useEventBus } from '@/utils/event-bus'
 
@@ -221,7 +221,8 @@ const { status, send, close, open, ws } = useWebSocket(
     heartbeat: {
       message: 'ping',
       responseMessage: 'pong',
-      interval: 10000,
+      // @vueuse/core 15 replaced `interval` with a scheduler returning a Pausable.
+      scheduler: (cb) => useIntervalFn(cb, 10000),
       pongTimeout: 5000,
     },
     onConnected() {
