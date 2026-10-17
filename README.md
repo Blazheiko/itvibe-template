@@ -77,7 +77,7 @@ build on (or strip out):
 
 ## Requirements
 
-- **Node.js** `>=20` (the Docker image uses Node 22)
+- **Node.js** `^20.19.0 || >=22.12.0` (the Docker image uses Node 22)
 - **pnpm** `>=9` (pinned to `9.15.0` via `packageManager`)
 
 ### Local services
@@ -356,7 +356,7 @@ Done, coding style, and testing guidelines before contributing.
 
 | Symptom                    | Things to check                                                                                                                |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm install` fails       | Node `>=20` and pnpm `9.15.0` (`node -v`, `pnpm -v`; `corepack enable`)                                                        |
+| `pnpm install` fails       | Node `^20.19.0 \|\| >=22.12.0` and pnpm `9.15.0` (`node -v`, `pnpm -v`; `corepack enable`)                                     |
 | Backend won't start        | `APP_KEY` and `DATABASE_URL` are set in `packages/backend/.env`, and PostgreSQL is reachable                                   |
 | E2E tests fail             | Make sure frontend and backend are running (`pnpm dev`) before `pnpm --filter frontend test:e2e`                               |
 | Drizzle / migration errors | Verify the database settings in `packages/backend/.env` (`DATABASE_URL` / `PGSQL_*`) and that the DB exists (`pnpm db:create`) |

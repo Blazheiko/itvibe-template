@@ -8,7 +8,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import diskConfig from "#config/disk.js";
 import logger from "#logger";
 
-const rawEndpoint = diskConfig.s3Endpoint ?? "";
+const rawEndpoint = diskConfig.s3Endpoint?.trim() ?? "";
 // Keep the old minio behaviour: an endpoint without a scheme means HTTPS.
 const endpoint =
   rawEndpoint.length === 0 || /^https?:\/\//.test(rawEndpoint)
@@ -22,7 +22,8 @@ logger.info(
 
 const s3Client = new S3Client({
   ...(endpoint.length > 0 ? { endpoint } : {}),
-  region: diskConfig.s3Region ?? "us-east-1",
+  // `||` (not `??`): S3_REGION= in .env yields "", and the SDK rejects an empty region.
+  region: diskConfig.s3Region?.trim() || "us-east-1",
   credentials: {
     accessKeyId: diskConfig.s3AccessKeyId ?? "",
     secretAccessKey: diskConfig.s3SecretAccessKey ?? "",
