@@ -4,6 +4,7 @@ import { mainService } from "#app/services/core/main-service.js";
 import { mapControllerError } from "#app/controllers/shared/controller-error.js";
 import type {
   InitResponse,
+  PingResponse,
   TestHeadersResponse,
   GetSetCookiesResponse,
   TestSessionResponse,
@@ -15,6 +16,10 @@ import type { SaveUserInput } from "shared/schemas";
 import { Result } from "better-result";
 
 export default {
+  ping(): PingResponse {
+    return mainService.ping();
+  },
+
   testSentryError({ logger }: HttpContext): never {
     logger.info("testSentryError");
     throw new Error("Sentry test error");

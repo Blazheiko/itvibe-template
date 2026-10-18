@@ -49,6 +49,13 @@ import {
 } from "shared/schemas";
 
 export default [
+  defineRoute({
+    url: "/ping",
+    method: "get",
+    handler: MainController.ping.bind(MainController),
+    ResponseSchema: ResponseSchemas.PingResponseSchema,
+    description: "Ping",
+  }),
   {
     group: [
       defineRoute({
