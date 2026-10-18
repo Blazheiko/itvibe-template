@@ -221,8 +221,10 @@ const { status, send, close, open, ws } = useWebSocket(
     heartbeat: {
       message: 'ping',
       responseMessage: 'pong',
-      // @vueuse/core 15 replaced `interval` with a scheduler returning a Pausable.
-      scheduler: (cb) => useIntervalFn(cb, 10000),
+      // @vueuse/core 15 replaced `interval` with a scheduler. `immediate: false`:
+      // useWebSocket resumes it on connect; a free-running interval's pong
+      // timeout could close a socket that is still in its handshake.
+      scheduler: (cb) => useIntervalFn(cb, 10000, { immediate: false }),
       pongTimeout: 5000,
     },
     onConnected() {

@@ -1,5 +1,6 @@
 // src/composables/useWebSocketConnection.ts
-import { useIntervalFn, useWebSocket } from '@vueuse/core'
+import { useWebSocket } from '@vueuse/core'
+import { createHeartbeatOptions } from '@/utils/websocket-heartbeat'
 import { ref, computed } from 'vue'
 import { buildApiError } from '@/utils/websocket-base'
 import type { ApiError, WebsocketMessage, WebsocketPayload } from '@/utils/websocket-base'
@@ -257,13 +258,7 @@ const { status, send, close, open, ws } = useWebSocket(
         //         console.error('WebSocket reconnection failed after maximum attempts')
         //     },
         // },
-        heartbeat: {
-            message: 'ping',
-            responseMessage: 'pong',
-            // @vueuse/core 15 replaced `interval` with a scheduler returning a Pausable.
-            scheduler: (cb) => useIntervalFn(cb, 10000),
-            pongTimeout: 5000,
-        },
+        heartbeat: createHeartbeatOptions(),
         onConnected() {
             console.log('WebSocket connected')
             isInitialized.value = true
