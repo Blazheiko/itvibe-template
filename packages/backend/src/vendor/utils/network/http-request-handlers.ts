@@ -50,6 +50,11 @@ export const resolveMaxBodySize = (kind: BodyKind): number => {
 const getHeaders = (req: HttpRequest): Map<string, string> => {
   const headers: Map<string, string> = new Map<string, string>();
   req.forEach((key, value) => {
+    // The raw `cookie` header carries session/csrf/ws secrets and is parsed
+    // separately into `httpData.cookies`. Keeping it out of the headers map
+    // avoids redundant validation and prevents accidental leakage by code
+    // that serializes/echoes all headers (e.g. testHeaders).
+    if (key === "cookie") return;
     if (validateHeader(key, value)) {
       headers.set(key, value.trim());
     } else {
