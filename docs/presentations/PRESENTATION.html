@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1200" />
+    <title>Backend Framework — itvibe-template</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reset.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/night.css" id="theme" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css" />
+    <style>
+      .reveal pre { font-size: 0.45em; line-height: 1.25; box-shadow: none; }
+      .reveal pre code { max-height: 560px; padding: 14px 18px; }
+      .reveal h1 { font-size: 1.8em; }
+      .reveal h2 { font-size: 1.3em; color: #80c8ff; }
+      .reveal h3 { color: #a8e6a3; }
+      .reveal table { font-size: 0.55em; }
+      .reveal th { color: #80c8ff; }
+      .reveal td, .reveal th { padding: 6px 12px; }
+      .reveal .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      .reveal .small { font-size: 0.7em; }
+      .reveal .tag { display: inline-block; padding: 2px 10px; margin: 2px; border-radius: 12px; background: #2a4a6a; font-size: 0.55em; color: #cfe6ff; }
+      .reveal ul { font-size: 0.75em; }
+      .reveal .ascii { font-family: "Menlo", monospace; font-size: 0.42em; text-align: left; white-space: pre; line-height: 1.2; color: #cfe6ff; }
+      .reveal .footnote { font-size: 0.5em; color: #888; margin-top: 20px; }
+      .reveal .title-slide h1 { color: #80c8ff; }
+      .reveal section.intro { text-align: left; }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+
+<!-- 1 -->
+<section class="title-slide">
+  <h1>Backend Framework</h1>
+  <h3>itvibe-template · packages/backend</h3>
+  <p class="small">High-performance HTTP/WebSocket сервер на uWebSockets.js<br/>з Drizzle ORM, ArkType-валідацією та Redis-сесіями</p>
+  <p class="footnote">Презентація за README пакету backend</p>
+</section>
+
+<!-- 2 -->
+<section>
+  <h2>Про що йтиметься</h2>
+  <ul>
+    <li>Tech Stack і філософія фреймворку</li>
+    <li>Повний життєвий цикл HTTP-запиту</li>
+    <li>Шари: Controller → Service → Repository → Transformer</li>
+    <li>Маршрутизація, валідація, middleware</li>
+    <li>Безпека: CSRF, rate-limit, proxy trust, body limits</li>
+    <li>Сесії/Auth API, OAuth (Arctic), WebSocket + web-push</li>
+    <li>AI-адаптери, route-docs, тестування, логування, Sentry</li>
+  </ul>
+</section>
+
+<!-- 3 -->
+<section>
+  <h2>Tech Stack</h2>
+  <div>
+    <span class="tag">uWebSockets.js — HTTP + WS</span>
+    <span class="tag">Drizzle ORM + PostgreSQL</span>
+    <span class="tag">ioredis — sessions/pubsub/presence</span>
+    <span class="tag">ArkType — schema engine</span>
+    <span class="tag">Pino — structured logging</span>
+    <span class="tag">Vitest</span>
+    <span class="tag">MinIO / S3</span>
+    <span class="tag">Nodemailer</span>
+    <span class="tag">Arctic — OAuth</span>
+    <span class="tag">web-push</span>
+    <span class="tag">AI SDKs (OpenAI, xAI, Mistral, Inworld)</span>
+  </div>
+  <p class="small" style="margin-top:30px">Ключові принципи: <b>чіткий поділ шарів</b>, <b>fail-fast</b> на конфігу, <b>типобезпека через ArkType</b>, <b>безпека за замовчуванням</b>.</p>
+</section>
+
+<!-- 4 -->
+<section>
+  <h2>Структура проєкту</h2>
+<pre><code class="language-text">src/
+├── index.ts
+├── app/
+│   ├── controllers/{http,ws}/    # транспортний шар
+│   ├── services/                 # бізнес-логіка, AppResult&lt;T&gt;
+│   ├── repositories/             # Drizzle DAOs
+│   ├── transformers/             # DB row → API payload
+│   ├── routes/{http-routes,ws-routes}.ts
+│   ├── middlewares/kernel.ts     # реєстр middleware за іменем
+│   ├── validate/{schemas,checkers,errors}/
+│   ├── websocket/                # registry, coordinator, auth
+│   ├── events/ start/ state/
+├── config/                       # app, db, redis, cors, csp, oauth ...
+├── database/{db,redis,schema}.ts
+├── drizzle/migrations/
+├── openapi/  scripts/  docs/
+└── vendor/                       # саме ядро фреймворку (server, router, types)</code></pre>
+</section>
+
+<!-- 5 -->
+<section>
+  <h2>Path Aliases</h2>
+  <table>
+    <tr><th>Alias</th><th>Path</th></tr>
+    <tr><td><code>#app/*</code></td><td>src/app/*</td></tr>
+    <tr><td><code>#config/*</code></td><td>src/config/*</td></tr>
+    <tr><td><code>#vendor/*</code></td><td>src/vendor/* (ядро фреймворку)</td></tr>
+    <tr><td><code>#database/*</code></td><td>src/database/*</td></tr>
+    <tr><td><code>#drizzle/*</code></td><td>src/drizzle/*</td></tr>
+    <tr><td><code>#logger</code></td><td>src/vendor/utils/logger</td></tr>
+  </table>
+  <pre><code class="language-ts">import { db } from '#database/db.js'
+import logger from '#logger'
+import { defineRoute } from '#app/routing/define-route.js'</code></pre>
+</section>
+
+<!-- 6 -->
+<section>
+  <h2>Request Flow — загальна схема</h2>
+  <div class="ascii">Client
+  │ HTTP
+  ▼
+uWebSockets.js (server.ts)           ← парсинг TLS/HTTP
+  ▼
+Router  (vendor/utils/routing)       ← prefix + url + method, :params
+  ▼
+collectRequestMetadata               ← cookies/query/headers/IP синхронно
+  ▼
+Rate limit (per-IP × per-route)      ← 429 + Retry-After + X-RateLimit-*
+  ▼
+Content-Type / body-size guards      ← 415 / 413 до читання тіла
+  ▼
+readAndParseBody                     ← JSON / multipart / urlencoded / text / octet
+  ▼
+Route validator (ArkType)            ← 400/422 при помилці
+  ▼
+HttpContext { requestId, logger, httpData, responseData, session, auth }
+  ▼
+Middleware chain (kernel.ts)         ← session_web → csrf_guard → auth_guard → ...
+  ▼
+Controller → Service → Repository → Transformer
+  ▼
+sendResponse → res.end()</div>
+</section>
+
+<!-- 7 -->
+<section>
+  <h2>Ключова особливість uWS</h2>
+  <p>Об'єкт <code>req</code> у uWebSockets.js <b>стає невалідним після першого <code>await</code></b>.</p>
+  <p>Тому <code>collectRequestMetadata()</code> у <code>server.ts</code> синхронно знімає «снепшот»:</p>
+  <ul>
+    <li>cookies, query, headers, IP</li>
+    <li>усе кладеться у звичайні структури (Map/об'єкти)</li>
+    <li>далі працюємо лише з ними</li>
+  </ul>
+  <p class="footnote">Саме тому весь подальший pipeline оперує <code>HttpContext</code>, а не raw <code>req/res</code>.</p>
+</section>
+
+<!-- 8 -->
+<section>
+  <h2>Шари та їх відповідальність</h2>
+  <table>
+    <tr><th>Шар</th><th>Призначення</th><th>Правила</th></tr>
+    <tr><td><b>Controller</b></td><td>Транспорт</td><td>Читає payload/params/files, мапить помилки в HTTP-статуси</td></tr>
+    <tr><td><b>Service</b></td><td>Бізнес-логіка</td><td>Оркеструє репозиторії, повертає <code>AppResult&lt;T&gt;</code></td></tr>
+    <tr><td><b>Repository</b></td><td>Межа БД</td><td>Лише Drizzle-запити, ніякого HTTP/сесії</td></tr>
+    <tr><td><b>Transformer</b></td><td>Контракт відповіді</td><td>DB row → API payload (bigint→string, ISO дати, приховування секретів)</td></tr>
+  </table>
+  <p class="small" style="margin-top:30px">Controller <b>не</b> знає про SQL. Service <b>не</b> знає про HTTP. Repository <b>не</b> знає ні про те, ні про інше.</p>
+</section>
+
+<!-- 9 -->
+<section>
+  <h2>Маршрути — реальний приклад з http-routes.ts</h2>
+  <pre><code class="language-ts">// src/app/routes/http-routes.ts
+{
+  group: [
+    defineRoute({
+      url: '/register/email',
+      method: 'post',
+      handler: AuthController.registerByEmail.bind(AuthController),
+      validator: RegisterEmailInputSchema,
+      ResponseSchema: ResponseSchemas.RegisterEmailResponseSchema,
+      description: 'Register a new user by email',
+    }),
+    defineRoute({
+      url: '/register/phone/start',
+      method: 'post',
+      handler: AuthController.startPhoneRegistration.bind(AuthController),
+      validator: RegisterPhoneStartInputSchema,
+      ResponseSchema: ResponseSchemas.RegisterPhoneStartResponseSchema,
+    }),
+  ],
+}</code></pre>
+  <p class="small">Маршрут <code>POST /register/email</code> — body валідується <code>RegisterEmailInputSchema</code>, після чого <code>AuthController.registerByEmail</code> отримує типізований <code>HttpContext&lt;RegisterEmailInput&gt;</code>.</p>
+</section>
+
+<!-- 10 -->
+<section>
+  <h2>Поля маршруту</h2>
+  <table>
+    <tr><th>Поле</th><th>Default</th><th>Призначення</th></tr>
+    <tr><td><code>url</code> / <code>method</code></td><td>—</td><td><code>:param</code>, методи get/post/put/patch/delete/ws</td></tr>
+    <tr><td><code>validator</code></td><td>—</td><td>ArkType-схема тіла (інакше body відкидається!)</td></tr>
+    <tr><td><code>queryValidator</code></td><td>—</td><td>Валідація query → типізований <code>httpData.query</code></td></tr>
+    <tr><td><code>queryArrays</code></td><td>[]</td><td>Ключі, які можуть повторюватися</td></tr>
+    <tr><td><code>queryAllowExtra</code></td><td>false</td><td>Дозволити зайві ключі, але зрізати їх</td></tr>
+    <tr><td><code>allowedContentTypes</code></td><td>['json']</td><td>Інакше — 415</td></tr>
+    <tr><td><code>middlewares</code></td><td>[]</td><td>Стекуються поверх групових</td></tr>
+    <tr><td><code>rateLimit</code></td><td>—</td><td>Per-route поверх per-group</td></tr>
+    <tr><td><code>ResponseSchema</code></td><td>—</td><td>Для генерації OpenAPI</td></tr>
+  </table>
+</section>
+
+<!-- 11 -->
+<section>
+  <h2>Вкладені групи</h2>
+  <pre><code class="language-ts">{
+  prefix: 'main',
+  middlewares: ['session_web'],
+  group: [
+    defineRoute({ url: '/init', method: 'get',
+      handler: MainController.init,
+      middlewares: ['auth_guard'] }),
+
+    {
+      prefix: 'admin',                    // → "main/admin"
+      middlewares: ['auth_guard'],        // + session_web від батька
+      group: [
+        defineRoute({ url: '/stats', method: 'get',
+          handler: AdminController.stats }),
+      ],
+    },
+  ],
+}</code></pre>
+  <p class="small">Префікси та middleware <b>успадковуються</b> по дереву груп.</p>
+</section>
+
+<!-- 12 -->
+<section>
+  <h2>Body Size Limits</h2>
+  <table>
+    <tr><th>Env</th><th>Default</th><th>Content-Type</th></tr>
+    <tr><td>APP_MAX_JSON_BODY_SIZE</td><td>2 MB</td><td>application/json</td></tr>
+    <tr><td>APP_MAX_MULTIPART_BODY_SIZE</td><td>50 MB</td><td>multipart/form-data</td></tr>
+    <tr><td>APP_MAX_OCTET_BODY_SIZE</td><td>50 MB</td><td>application/octet-stream</td></tr>
+    <tr><td>APP_MAX_BODY_SIZE</td><td>2 MB</td><td>urlencoded / text / other</td></tr>
+  </table>
+  <ul>
+    <li><b>413</b> — Payload Too Large (перевищення ліміту)</li>
+    <li><b>415</b> — Unsupported Media Type (Content-Type поза allowlist)</li>
+    <li>Перевірки відбуваються <b>до</b> читання тіла — буфер не виділяється даремно</li>
+  </ul>
+</section>
+
+<!-- 13 -->
+<section>
+  <h2>Rate Limiting</h2>
+  <ul>
+    <li>Sliding window, <b>per-process / in-memory</b></li>
+    <li>Оголошується на групі або маршруті: <code>{ windowMs, maxRequests }</code></li>
+    <li>Перевірка до читання body</li>
+  </ul>
+  <table>
+    <tr><th>Header</th><th>Опис</th></tr>
+    <tr><td>X-RateLimit-Limit</td><td>максимум за вікно</td></tr>
+    <tr><td>X-RateLimit-Remaining</td><td>залишок</td></tr>
+    <tr><td>X-RateLimit-Reset</td><td><b>абсолютний</b> Unix timestamp (секунди)</td></tr>
+    <tr><td>Retry-After</td><td>лише на 429, секунди</td></tr>
+  </table>
+  <p class="small">⚠️ За N інстансами ефективний ліміт = <code>maxRequests × N</code>. Це плата за відсутність мережевого round-trip.</p>
+</section>
+
+<!-- 14 -->
+<section>
+  <h2>Middleware — сигнатура</h2>
+  <pre><code class="language-ts">const adminGuard: Middleware = async (context, next) =&gt; {
+  const userId = context.auth.getUserId()
+  if (userId === null) {
+    context.responseData.status = 403
+    context.responseData.payload = { status: 'forbidden', message: 'Admin access required' }
+    return   // ← НЕ викликаємо next() → коротке замикання
+  }
+
+  const user = await userRepository.findById(BigInt(userId))
+  if (user?.role !== 'admin') {
+    context.responseData.status = 403
+    context.responseData.payload = { status: 'forbidden', message: '...' }
+    return
+  }
+
+  await next()  // ← пропускаємо далі
+}</code></pre>
+</section>
+
+<!-- 15 -->
+<section>
+  <h2>Вбудовані middleware (kernel.ts)</h2>
+  <table>
+    <tr><th>Key</th><th>Призначення</th></tr>
+    <tr><td>session_web</td><td>Завантажує/створює Redis-сесію з cookie</td></tr>
+    <tr><td>session_api</td><td>Сесія за Bearer-токеном в Authorization</td></tr>
+    <tr><td>csrf_guard</td><td>Перевірка X-CSRF-Token на unsafe-методах (cookie flows)</td></tr>
+    <tr><td>auth_guard</td><td>401, якщо <code>context.auth.check() === false</code></td></tr>
+    <tr><td>admin_guard</td><td>403, якщо роль не admin</td></tr>
+    <tr><td>partner_guard</td><td>403, якщо не партнерський акаунт</td></tr>
+  </table>
+  <p class="small">Реєстр — звичайний <code>Record&lt;string, Function&gt;</code>. Маршрути посилаються <b>за рядковим ключем</b> — це робить <code>routes</code> декларативними та читабельними.</p>
+</section>
+
+<!-- 16 -->
+<section>
+  <h2>Валідація — ArkType</h2>
+  <pre><code class="language-ts">// shared/schemas
+import { type } from 'arktype'
+
+export const CreateNoteInputSchema = type({
+  title: 'string',
+  'description?': 'string',
+})
+export type CreateNoteInput = typeof CreateNoteInputSchema.infer</code></pre>
+  <pre><code class="language-ts">// route
+defineRoute({
+  url: '/', method: 'post',
+  validator: CreateNoteInputSchema,            // ← raw схема, БЕЗ ручних обгорток
+  handler: NotesController.createNote.bind(NotesController),
+})</code></pre>
+  <p class="small">Один schema engine на весь проєкт. <code>defineRoute</code> сам проганяє схему через активний wrapper. Mixing Zod/Valibot/Yup per-route — заборонений.</p>
+</section>
+
+<!-- 17 -->
+<section>
+  <h2>Типізований payload</h2>
+  <pre><code class="language-ts">import { getTypedPayload } from '#vendor/utils/validation/get-typed-payload.js'
+import type { CreateNoteInput } from 'shared/schemas'
+
+async createNote(context: HttpContext&lt;CreateNoteInput&gt;) {
+  const payload = getTypedPayload(context)
+  // payload: CreateNoteInput — без приведень типів
+}</code></pre>
+  <p>Дженерик <code>HttpContext&lt;T&gt;</code> виводиться з <code>validator</code> у <code>defineRoute</code> автоматично.</p>
+  <p class="small">⚠️ Якщо маршрут <b>без</b> validator — body відкидається, <code>httpData.payload = null</code>. <code>getTypedPayload</code> кине <i>"Payload is missing"</i> — це навмисно, щоб баг виплив одразу.</p>
+</section>
+
+<!-- 18 -->
+<section>
+  <h2>Query validation</h2>
+  <pre><code class="language-ts">const ListQuerySchema = type({
+  page:  [type('string.integer.parse').pipe(type('number &gt; 0')), '=', '1'],
+  limit: [type('string.integer.parse').pipe(type('0 &lt; number &lt;= 200')), '=', '50'],
+  'userId?': 'string',
+})
+
+defineRoute({
+  url: '/items', method: 'get',
+  queryValidator: ListQuerySchema,
+  handler: ItemsController.list,
+})</code></pre>
+  <ul>
+    <li>Без <code>queryValidator</code> → <code>httpData.query === null</code></li>
+    <li>З ним → типізований об'єкт; невалідне → <b>422</b></li>
+    <li>Strict by default: зайві ключі → 422</li>
+    <li>Повтори ключів → 422, якщо ключа немає в <code>queryArrays</code></li>
+  </ul>
+</section>
+
+<!-- 19 -->
+<section>
+  <h2>HttpContext — поля</h2>
+  <table>
+    <tr><th>Field</th><th>Тип</th><th>Опис</th></tr>
+    <tr><td>requestId</td><td>string</td><td>унікальний ID, у логах/трейсі</td></tr>
+    <tr><td>logger</td><td>Logger</td><td>Pino scoped by requestId</td></tr>
+    <tr><td>httpData.payload</td><td>T | null</td><td>валідоване body</td></tr>
+    <tr><td>httpData.params</td><td>Record&lt;string,string&gt;</td><td>URL :params</td></tr>
+    <tr><td>httpData.query</td><td>TQuery | null</td><td>валідована query</td></tr>
+    <tr><td>httpData.headers/cookies</td><td>Map</td><td>заголовки та куки</td></tr>
+    <tr><td>httpData.files</td><td>Map | null</td><td>multipart-завантаження</td></tr>
+    <tr><td>responseData.status/payload</td><td>—</td><td>що віддати клієнту</td></tr>
+    <tr><td>session / auth</td><td>—</td><td>Redis-сесія, auth API</td></tr>
+  </table>
+</section>
+
+<!-- 20 -->
+<section>
+  <h2>Controller — реальний registerByEmail</h2>
+  <pre><code class="language-ts">// src/app/controllers/http/auth/auth-controller.ts
+export default {
+  async registerByEmail(
+    context: HttpContext&lt;RegisterEmailInput&gt;,
+  ): Promise&lt;RegisterEmailResponse&gt; {
+    context.logger.info('registerByEmail handler')
+    const payload = getTypedPayload(context)
+    const result = await authService.registerByEmail(
+      payload,
+      context.auth,
+      context.session,
+      context.logger,
+      { ipAddress: context.httpData.ip ?? '' },
+    )
+
+    if (Result.isError(result)) {
+      return mapControllerError(context, result.error)
+    }
+
+    return result.value
+  },
+  // ...
+}</code></pre>
+  <p class="small">Транспортний шар у чистому вигляді: лог → <code>getTypedPayload</code> → виклик <code>authService</code> з потрібним контекстом (<code>auth</code>, <code>session</code>, <code>logger</code>, <code>ipAddress</code>) → на помилку <code>mapControllerError</code>, на успіх — пробросити <code>result.value</code>.</p>
+</section>
+
+<!-- 20b -->
+<section>
+  <h2>mapControllerError — єдиний контракт помилок</h2>
+  <pre><code class="language-ts">// src/app/controllers/shared/controller-error.ts
+export function mapControllerError(
+  context: Pick&lt;HttpContext&lt;unknown, unknown&gt;, 'responseData'&gt;,
+  error: AppError,
+): ReturnType&lt;typeof appErrorToHttpPayload&gt; {
+  applyAppErrorStatus(context.responseData, error)
+  return appErrorToHttpPayload(error)
+}</code></pre>
+  <pre><code class="language-ts">// src/app/services/shared/apply-service-status.ts
+export type AppErrorHttpPayload = {
+  status: 'error'
+  message: string
+  code: ReturnType&lt;typeof appErrorCode&gt;
+  reason?: string
+}
+
+export function applyAppErrorStatus(responseData, error) {
+  responseData.status = appErrorStatus(error)
+  const retryAfterSeconds = appErrorRetryAfterSeconds(error)
+  if (retryAfterSeconds !== undefined) {
+    responseData.setHeader('Retry-After', String(retryAfterSeconds))
+  }
+}</code></pre>
+  <p class="small">Жоден controller не пише <code>status = 400/401/409</code> руками. <code>AppError</code> → HTTP status + <code>Retry-After</code> + канонічний payload <code>{ status, code, message, reason? }</code> — це той самий контракт, що описано в CLAUDE.md.</p>
+</section>
+
+<!-- 21 -->
+<section>
+  <h2>Service — AppResult&lt;T&gt;</h2>
+  <pre><code class="language-ts">export type AppError =
+  | { _tag: 'BadRequest';   message: string; reason?: string }
+  | { _tag: 'Unauthorized'; message: string }
+  | { _tag: 'Forbidden';    message: string; reason?: string }
+  | { _tag: 'NotFound';     resource: string; message: string }
+  | { _tag: 'Conflict';     message: string; reason?: string }
+  | { _tag: 'Internal';     publicMessage: string; cause?: unknown }
+
+export type AppResult&lt;T&gt; = Result&lt;T, AppError&gt;</code></pre>
+  <ul>
+    <li>Services повертають <b>результат</b>, а не кидають exception</li>
+    <li><code>tryInternal()</code> / <code>tryDomain()</code> обгортають throw-zones (репозиторії, vendor)</li>
+    <li><code>Internal.cause</code> — лише для логів/Sentry, у payload не потрапляє</li>
+  </ul>
+</section>
+
+<!-- 22 -->
+<section>
+  <h2>Service — приклад (auth.register)</h2>
+  <pre><code class="language-ts">async register(payload, auth, session) {
+  const email = payload.email.toLowerCase()
+
+  const existResult = await tryInternal(
+    () =&gt; userRepository.findByEmail(email),
+    'Failed to load user by email',
+  )
+  if (Result.isError(existResult)) return Result.err(existResult.error)
+  if (existResult.value !== undefined) {
+    return Result.err(conflict('Email already exists'))
+  }
+
+  const hash = await hashPassword(payload.password)
+  const user = await userRepository.create({ name: payload.name, email, password: hash })
+
+  await auth.login(String(user.id), session)
+  const wsToken = await generateWsToken(user.id)
+
+  return Result.ok({
+    status: 'success',
+    user:   userTransformer.serialize(user),
+    wsUrl:  getWsUrl(),
+    wsToken,
+  })
+}</code></pre>
+</section>
+
+<!-- 23 -->
+<section>
+  <h2>Repository — лише Drizzle</h2>
+  <pre><code class="language-ts">export const userRepository: IUserRepository = {
+  async create(data) {
+    const now = new Date()
+    const [created] = await db.insert(users)
+      .values({ ...data, createdAt: now, updatedAt: now }).returning()
+    if (created === undefined) throw new Error('Failed to create user')
+    return created
+  },
+
+  async findByEmail(email) {
+    return await db.select().from(users)
+      .where(sql`LOWER(${users.email}) = LOWER(${email})`)
+      .limit(1).then(r =&gt; r.at(0))
+  },
+  // ...
+}</code></pre>
+  <p class="small">Ніякого HTTP, ніякої сесії, ніякого форматування. Throw → service ловить через <code>tryInternal</code>.</p>
+</section>
+
+<!-- 24 -->
+<section>
+  <h2>Transformer — контракт відповіді</h2>
+  <pre><code class="language-ts">export const userTransformer = {
+  serialize(user: UserRow): SerializedUser {
+    const { id, password: _p, isAdmin: _a,
+            createdAt, updatedAt, emailVerifiedAt, ...rest } = user
+    return {
+      ...rest,
+      id:            String(id),                // bigint → string для JSON
+      created_at:    DateTime.fromJSDate(createdAt).toISO(),
+      updated_at:    DateTime.fromJSDate(updatedAt).toISO(),
+      emailVerified: emailVerifiedAt !== null,
+      emailVerifiedAt: emailVerifiedAt === null ? null
+        : DateTime.fromJSDate(emailVerifiedAt).toISO(),
+    }
+  },
+}</code></pre>
+  <p class="small">Саме тут — і лише тут — зрізаються <b>password</b>/<b>isAdmin</b>, конвертується bigint і форматуються дати.</p>
+</section>
+
+<!-- 25 -->
+<section>
+  <h2>База даних — pg.Pool + Drizzle</h2>
+  <pre><code class="language-ts">const pool = new pg.Pool({
+  host: databaseConfig.host, port: databaseConfig.port,
+  user: databaseConfig.user, password: databaseConfig.password,
+  database: databaseConfig.database,
+  max: 10,
+})
+
+export const db = drizzle(pool, { schema, logger: appConfig.env !== 'prod' })</code></pre>
+  <pre><code class="language-bash">pnpm db:create     # bootstrap порожньої БД
+pnpm db:generate   # згенерувати міграцію зі схеми
+pnpm db:migrate    # застосувати міграції
+pnpm db:studio     # Drizzle Studio
+pnpm db:seed       # seed-скрипт</code></pre>
+</section>
+
+<!-- 26 -->
+<section>
+  <h2>Schema (Drizzle pgTable)</h2>
+  <pre><code class="language-ts">export const userRoleEnum = pgEnum('user_role', ['user', 'admin'])
+
+export const users = pgTable('users', {
+  id:        bigserial('id', { mode: 'bigint' }).primaryKey(),
+  name:      varchar('name', { length: 100 }).notNull(),
+  email:     varchar('email', { length: 255 }).notNull().unique(),
+  password:  varchar('password', { length: 255 }),
+  avatar:    varchar('avatar', { length: 500 }),
+  role:      userRoleEnum('role').notNull().default('user'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+              .$onUpdate(() =&gt; new Date()),
+})</code></pre>
+</section>
+
+<!-- 26b -->
+<section>
+  <h2>Session &amp; Auth API</h2>
+  <pre><code class="language-ts">// context.auth — interface Auth
+getUserId(): string | null
+check():     boolean
+login(userId, userToken): Promise&lt;boolean&gt;   // ← ротує сесію
+logout():    Promise&lt;boolean&gt;                 // ← ротує сесію
+logoutAll(): Promise&lt;number&gt;                  // всі сесії юзера
+
+// context.session — interface Session
+sessionInfo:       SessionInfo | null
+updateSessionData(data): Promise&lt;SessionInfo | null&gt;   // merge
+changeSessionData(data): Promise&lt;SessionInfo | null&gt;   // replace
+destroySession() / destroyAllSessions(userId)</code></pre>
+  <ul>
+    <li>Сховище — <b>Redis</b>, ключ <code>session:{userToken}:{id}</code>, TTL <b>24h</b> (sliding: <code>GETEX EX</code> поновлює на кожному читанні)</li>
+    <li><code>SessionData</code>: <code>userId · userToken · wsToken · csrfToken</code></li>
+    <li>Cookie <code>__Host-uapi</code> у prod (legacy <code>uapi</code>) — <code>httpOnly</code>, <code>secure</code>, <code>SameSite=Lax</code></li>
+    <li><b>login/logout/logoutAll ротують session id</b> → захист від session-fixation + свіжий CSRF</li>
+  </ul>
+</section>
+
+<!-- 27 -->
+<section>
+  <h2>CSRF — синхронізуючий токен</h2>
+  <ul>
+    <li>У кожної Redis-сесії — власний <code>csrfToken</code></li>
+    <li>login/logout/logout-all <b>ротують</b> сесію та повертають свіжий токен у body</li>
+    <li><code>main/init</code> також повертає поточний токен</li>
+    <li>Unsafe-методи (POST/PUT/PATCH/DELETE) мають слати <code>X-CSRF-Token</code></li>
+    <li><code>csrf_guard</code> реєструється <b>після</b> <code>session_web</code> та <b>до</b> <code>auth_guard</code></li>
+    <li>Запити без сесії — пропускаються (401 віддасть <code>auth_guard</code>)</li>
+    <li>OPTIONS/safe-методи — пропускаються</li>
+    <li>OAuth redirect/callback — окремо, захист через OAuth <code>state</code></li>
+  </ul>
+</section>
+
+<!-- 28 -->
+<section>
+  <h2>CSRF у HTML та rollout</h2>
+  <pre><code class="language-html">&lt;meta name="csrf-token" content="__CSRF_TOKEN__" /&gt;</code></pre>
+  <p class="small">Плейсхолдер замінюється на токен сесії. HTML з токеном — session-bound: <code>Cache-Control: private, no-store</code>. Якщо плейсхолдера немає — лог error, fallback не вставляється.</p>
+  <h3>Env-прапорці</h3>
+  <ul>
+    <li><code>CSRF_ENFORCE</code> (default false) — report-only режим для безпечного rollout</li>
+    <li><code>CSRF_ALLOWED_ORIGINS</code> — список Origin для defense-in-depth</li>
+    <li><code>CSRF_STRICT_ORIGIN</code> — вимагати обидва заголовки Origin+Referer</li>
+  </ul>
+  <p class="small">Rollout: deploy у report-only → проаналізувати логи → полагодити клієнтів → вмикати enforce поступово.</p>
+</section>
+
+<!-- 29 -->
+<section>
+  <h2>Trusted proxy / client IP</h2>
+  <ul>
+    <li><code>TRUST_PROXY</code> — вмикає довіру до <code>X-Forwarded-For</code> / <code>X-Real-IP</code></li>
+    <li><code>TRUSTED_PROXY_CIDRS</code> — IPs/CIDRs, кому дозволено надсилати ці заголовки</li>
+  </ul>
+  <p class="small">Усі auth-throttles працюють за <b>resolved client IP</b>. Неправильна довіра до proxy = послаблений захист від abuse.</p>
+  <pre><code class="language-nginx">proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Real-IP $remote_addr;</code></pre>
+  <p class="small">Контракт: origin не має бути доступним напряму з інтернету; proxy <b>append</b>-ять, а не <b>replace</b>-ять XFF. <code>X-Real-IP</code> довіряється лише якщо peer ∈ TRUSTED_PROXY_CIDRS.</p>
+</section>
+
+<!-- 30 -->
+<section>
+  <h2>Phone auth / SMS — fail-fast</h2>
+  <ul>
+    <li><code>AUTH_PHONE_ENABLED</code> — вмикає phone flows</li>
+    <li><code>AUTH_SMS_PROVIDER</code>: <code>unsupported</code> (safe default) | <code>fake</code> (test only)</li>
+    <li><code>AUTH_OTP_HMAC_KEY</code> — HMAC для хешування OTP у БД (fallback на APP_KEY), ≥32 символи</li>
+  </ul>
+  <h3>Fail-fast політика</h3>
+  <ul>
+    <li><code>fake</code> провайдер відхиляється без явного <code>AUTH_SMS_PROVIDER_ALLOW_FAKE=true</code></li>
+    <li><code>fake</code> відхиляється у production-like (<code>APP_IS_PRODUCTION</code>)</li>
+    <li>Потрібен явний <code>AUTH_FAKE_SMS_CODE</code></li>
+    <li>Phone auth відхиляється, якщо ключ &lt;32 символів</li>
+  </ul>
+  <p class="footnote">+ throttles per phone / per IP / per hour для всіх channels.</p>
+</section>
+
+<!-- 30b -->
+<section>
+  <h2>OAuth (Arctic) — Google / GitHub / GitLab / Facebook</h2>
+  <pre><code class="language-ts">// redirect handler — GET /oauth/:provider
+const { url, state, codeVerifier } =
+  oauthService.getAuthorizationUrl(provider)        // Arctic + PKCE
+
+await context.session.updateSessionData({           // ← state у сесію
+  oauthState: state,
+  oauthCodeVerifier: codeVerifier,
+})
+context.responseData.status = 302
+context.responseData.setHeader('Location', url)</code></pre>
+  <pre><code class="language-ts">// callback handler — GET /oauth/:provider/callback
+const storedState   = session.sessionInfo?.data.oauthState
+const codeVerifier  = session.sessionInfo?.data.oauthCodeVerifier
+// порівнюємо storedState ⟷ receivedState, перевіряємо code
+const result = await oauthService.handleCallback(
+  provider, code, storedState, receivedState, codeVerifier, auth)
+await session.updateSessionData({ oauthState: undefined,
+                                  oauthCodeVerifier: undefined })  // cleanup
+responseData.setHeader('Location', result.value.redirectUrl)      // 302</code></pre>
+  <p class="small">Захист — <b>state + PKCE codeVerifier</b> у сесії (тому CSRF-guard пропускає OAuth). Будь-яка помилка → 302 на <code>OAUTH_FRONTEND_ERROR_URL</code>, успіх → <code>OAUTH_FRONTEND_SUCCESS_URL</code>. Identity лягає в <code>oauth_accounts</code>, далі <code>auth.login()</code>.</p>
+</section>
+
+<!-- 31 -->
+<section>
+  <h2>WebSocket — той самий скелет</h2>
+  <pre><code class="language-ts">// src/app/routes/ws-routes.ts
+export default [{
+  prefix: 'main',
+  rateLimit: { windowMs: 60_000, maxRequests: 600 },
+  group: [
+    defineWsRoute({
+      url: 'event_typing',
+      handler: WSApiController.eventTyping.bind(WSApiController),
+      validator: WSEventTypingPayloadSchema,
+      rateLimit: { windowMs: 60_000, maxRequests: 30 },
+    }),
+    defineWsRoute({
+      url: 'read_message',
+      handler: WSApiController.readMessage.bind(WSApiController),
+      validator: ReadMessagesInputSchema,
+    }),
+  ],
+}]</code></pre>
+  <p class="small">Та сама модель: <code>defineWsRoute</code>, validators, rate-limits. Pipeline відрізняється лише: <code>readAndParseBody</code> → <code>ws-api-dispatcher</code>, controller з <code>controllers/ws/</code>.</p>
+</section>
+
+<!-- 32 -->
+<section>
+  <h2>WS Infrastructure</h2>
+  <table>
+    <tr><th>Module</th><th>Призначення</th></tr>
+    <tr><td>ws-session-auth.ts</td><td>аутентифікація handshake, identity → <code>wsData.middlewareData</code></td></tr>
+    <tr><td>ws-connection-registry.ts</td><td>in-process map <code>userId → sockets[]</code>, локальний fan-out</td></tr>
+    <tr><td>ws-coordinator.ts</td><td>Redis pub/sub: доставка між кількома Node-інстансами</td></tr>
+  </table>
+  <pre><code class="language-ts">// WsContext: НЕМАЄ session/auth — identity береться з wsData.middlewareData
+eventTyping(context: WsContext&lt;WSEventTypingPayload&gt;): EventTypingResponse {
+  return wsService.eventTyping(getTypedPayload(context))
+}</code></pre>
+  <p class="small">Auth виконується один раз при підключенні, а не на кожне повідомлення.</p>
+</section>
+
+<!-- 32b -->
+<section>
+  <h2>Web Push — доповнення до WS</h2>
+  <pre><code class="language-ts">// pushNotificationSenderService
+await pushNotificationSenderService.sendToUser(userId, {
+  title: 'Нове повідомлення', body: '...', url: '/chat/42',
+  tag: 'chat', icon: '/icon.png', data: { chatId: 42 },
+}, { skipIfOnline: true, notificationType: 'chat' })
+//        ▲ якщо юзер онлайн у WS — push не шлемо (вже доставлено)</code></pre>
+  <ul>
+    <li><b>VAPID</b> ключі + subject; <code>ensureVapidConfigured()</code> — <b>fail-soft</b>: немає ключів → <code>warn</code> + push вимкнено, без падіння</li>
+    <li><code>skipIfOnline</code> питає <code>wsConnectionRegistry.isUserOnline()</code> — WS і push не дублюють одне одного</li>
+    <li>Підписки — таблиця <code>push_subscriptions</code>; кожна відправка логується в <code>push_notification_logs</code> (sent / failed)</li>
+    <li>Публічний VAPID-ключ віддається фронту через <code>getVapidPublicKey()</code></li>
+  </ul>
+</section>
+
+<!-- 33 -->
+<section>
+  <h2>Email throttles & File Uploads</h2>
+  <h3>Email registration / linking</h3>
+  <ul>
+    <li>per-email / per-IP per-hour для register</li>
+    <li>per-target / per-user per-hour + cooldown для link</li>
+    <li>Захищають від abuse без розкриття існування акаунта</li>
+  </ul>
+  <h3>File uploads → S3 / MinIO</h3>
+  <pre><code class="language-ts">const file = context.httpData.files?.get('photo')
+if (file === undefined) return Result.err(badRequest('No file uploaded'))
+
+const s3Key = `my-notes/${userId}/${randomUUID()}${path.extname(file.filename)}`
+await uploadToS3(s3Key, Buffer.from(file.data), file.type)</code></pre>
+</section>
+
+<!-- 33b -->
+<section>
+  <h2>AI SDKs — адаптери за єдиним інтерфейсом</h2>
+  <pre><code class="language-ts">// один контракт на всіх провайдерів — ITextAdapter
+interface ITextAdapter {
+  isConfigured(): boolean
+  get model(): string
+  streamText(opts, onComplete?):
+    AsyncGenerator&lt;string, string&gt;        // ← стрімінг токенів
+}
+
+// вибір драйвера: env (AI_TEXT_DRIVER) АБО за назвою моделі
+getTextAdapterForModel('grok-4.3')      // → xaiTextAdapter
+getTextAdapterForModel('mistral-...')   // → mistralaiTextAdapter
+getTextAdapterForModel('gpt-5.4-mini')  // → openaiTextAdapter</code></pre>
+  <ul>
+    <li>Адаптери: <span class="tag">OpenAI</span><span class="tag">xAI / Grok</span><span class="tag">Mistral</span> + <span class="tag">OpenAI embeddings</span> (RAG / support knowledge base)</li>
+    <li>Спільне: SSE-стрімінг, <b>tool calling</b> (<code>toolCallHandler</code>), облік токенів (<code>TokenUsage</code> у <code>onComplete</code>)</li>
+    <li>Той самий <b>fail-soft</b>, що й у Sentry/Push: немає API-ключа → <code>isConfigured()===false</code></li>
+    <li>Конфіг — <code>#config/ai.ts</code> (моделі, ключі, ендпоінти) у одному місці</li>
+  </ul>
+</section>
+
+<!-- 33c -->
+<section>
+  <h2>Route docs з ArkType-схем</h2>
+  <pre><code class="language-ts">// serialize-routes.ts — прибирає handler-и, дістає схеми
+{
+  url: '/register/email', method: 'post',
+  inputSchema:  { expression, fields[] },   // ← з validator
+  querySchema:  { expression, fields[] },   // ← з queryValidator
+  outputSchema: { expression, fields[] },   // ← з ResponseSchema
+}</code></pre>
+  <ul>
+    <li><code>validator</code> / <code>queryValidator</code> / <code>ResponseSchema</code> — це ArkType, тож їх можна <b>серіалізувати</b> без ручної роботи</li>
+    <li>Живить вбудований <b>doc-endpoint + api-playground UI</b> (прапорець <code>DOC_PAGE</code>)</li>
+    <li>Класичний експорт <b>OpenAPI/Swagger</b> — поки заготовка (<code>openapi/spec.ts</code>); фундамент (серіалізація схем) вже є</li>
+  </ul>
+  <p class="footnote">Декларативні маршрути → документація майже безкоштовно, бо схеми вже формалізовані.</p>
+</section>
+
+<!-- 34 -->
+<section>
+  <h2>Logging & Sentry</h2>
+  <pre><code class="language-ts">import logger from '#logger'
+
+context.logger.info('createNote handler')          // scoped by requestId
+context.logger.error({ err }, 'Failed to create note')
+
+logger.info('Server started')                      // поза запитом</code></pre>
+  <ul>
+    <li>Sentry — лише через <code>#app/services/sentry-service</code></li>
+    <li><code>@sentry/node</code> заборонено імпортувати деінде</li>
+    <li>У Sentry потрапляють <b>лише</b> <code>logger.error</code> та <code>logger.fatal</code></li>
+    <li><code>warn/info</code> — local-only, для рутини та observability</li>
+    <li>Handler exceptions ловимо з request-context: requestId, route, method, userId</li>
+  </ul>
+  <p class="small">Env: SENTRY_DSN, SENTRY_ENABLED (kill switch), SENTRY_ENVIRONMENT, SENTRY_RELEASE, SENTRY_TRACES_SAMPLE_RATE.</p>
+</section>
+
+<!-- 35 -->
+<section>
+  <h2>APP_IS_PRODUCTION vs APP_ENV</h2>
+  <div class="two-col">
+    <div>
+      <h3>APP_ENV</h3>
+      <ul>
+        <li>Описова назва</li>
+        <li>local / dev / staging / prod / prod-eu / live ...</li>
+        <li>Для логів та загального конфігу</li>
+      </ul>
+    </div>
+    <div>
+      <h3>APP_IS_PRODUCTION</h3>
+      <ul>
+        <li>Явний <b>security-класифікатор</b></li>
+        <li>Для fail-fast перевірок</li>
+        <li>Вмикається навіть за кастомних назв</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small" style="margin-top:30px">⚠️ Ніколи не покладатися на парсинг <code>APP_ENV</code> для security-політик. У Docker/Helm/CI виставляти <code>APP_IS_PRODUCTION=true</code> для кожного production-like середовища <b>явно</b>.</p>
+</section>
+
+<!-- 35b -->
+<section>
+  <h2>Тестування — Vitest</h2>
+  <pre><code class="language-bash">pnpm test         # vitest run  → 48 spec-файлів
+pnpm test:watch   # vitest      (18 vendor · 30 app)</code></pre>
+  <ul>
+    <li><code>*.spec.ts</code> лежать <b>поруч з кодом</b>, а не в окремому дереві</li>
+    <li><b>Vendor / ядро:</b> router, server, http/ws-validation, rate-limit, session, csrf-token, get-ip</li>
+    <li><b>App / бізнес:</b> auth-service (+ regression), oauth-service, password-reset, email-verification, otp-hash, csrf-guard, arktype-adapter</li>
+    <li>Юніт-фокус на <b>сервісах і утилітах</b> (детермінований, без мережі) — саме там живе логіка та security-edge-кейси</li>
+  </ul>
+  <p class="small">Архітектура «чистих шарів» робить це можливим: service тестується без HTTP, repository — за межею, тож моки мінімальні.</p>
+</section>
+
+<!-- 36 -->
+<section>
+  <h2>Available Scripts</h2>
+  <pre><code class="language-bash">pnpm dev                            # tsx watch
+pnpm build                          # tsc --build
+pnpm start                          # node dist/index.js
+pnpm typecheck                      # tsc --noEmit
+pnpm test / test:watch              # vitest
+
+pnpm db:create / db:generate / db:migrate
+pnpm db:studio / db:seed
+
+pnpm db:backfill-study-audio        # one-off backfills
+pnpm db:migrate:shared-study-audio  # migrate + backfill
+
+pnpm mail:test                      # тестовий SMTP send</code></pre>
+</section>
+
+<!-- 37 -->
+<section>
+  <h1>Підсумок</h1>
+  <ul>
+    <li><b>uWebSockets.js</b> для продуктивності + акуратний snapshot req</li>
+    <li><b>Декларативні маршрути</b> з групами та успадкуванням middleware</li>
+    <li><b>Один schema engine</b> (ArkType) для body / query / responses</li>
+    <li><b>Чисті шари</b>: Controller → Service (AppResult) → Repository → Transformer</li>
+    <li><b>Безпека за замовчуванням</b>: CSRF, rate-limit, body limits, trusted proxy, fail-fast на конфігу</li>
+    <li><b>WS як повноцінний громадянин</b>: ті самі defineRoute/validator/rate-limit + крос-інстансна координація</li>
+    <li><b>Sentry за єдиним фасадом</b>, лише error/fatal</li>
+    <li><b>Розширюваність за патерном адаптерів</b>: OAuth (Arctic), AI (OpenAI/xAI/Mistral), web-push — усі fail-soft за єдиним інтерфейсом</li>
+    <li><b>48 spec-файлів (Vitest)</b> + route-docs з ArkType-схем «майже безкоштовно»</li>
+  </ul>
+  <p class="footnote">Повний README: <code>packages/backend/README.md</code></p>
+</section>
+
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/notes/notes.js"></script>
+    <script>
+      Reveal.initialize({
+        hash: true,
+        slideNumber: 'c/t',
+        transition: 'slide',
+        width: 1280,
+        height: 800,
+        margin: 0.06,
+        plugins: [RevealHighlight, RevealNotes],
+      })
+    </script>
+  </body>
+</html>
