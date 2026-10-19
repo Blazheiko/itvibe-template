@@ -94,6 +94,18 @@
       "dependencies": [],
       "status": "not-started",
       "evidence": ""
+    },
+    {
+      "id": "feat-011",
+      "name": "Documentation v2",
+      "description": "VitePress documentation v2 pages (stage 6 of docs/plan/vitepress-documentation-tasks.md, T6.1-T6.10d): controllers/services, repositories/transformers, validation, websocket, storage, mail/push, AI, observability, caching/ETag, testing, deployment, shared/frontend/playground, workflow and reference pages. One page per PR.",
+      "owner": "Blazheiko",
+      "branch": "feat/docs-v2",
+      "dependencies": [
+        "feat-003"
+      ],
+      "status": "in_progress",
+      "evidence": ""
     }
   ]
 }
