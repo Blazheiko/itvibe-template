@@ -1,5 +1,10 @@
 # itvibe-template
 
+[![Docs](https://github.com/Blazheiko/itvibe-template/actions/workflows/docs.yml/badge.svg)](https://github.com/Blazheiko/itvibe-template/actions/workflows/docs.yml)
+
+📖 **Documentation:** <https://blazheiko.github.io/itvibe-template/> (Ukrainian, backend-focused;
+source in [`documentation/`](documentation/), run locally with `pnpm docs:dev`).
+
 A full-stack TypeScript monorepo template: a Vue 3 frontend, a high-performance
 uWebSockets.js backend, and a shared package for contracts (schemas, enums,
 guards, responses) reused on both sides of the wire.
@@ -120,6 +125,7 @@ Which optional service / env each feature needs:
 │   ├── backend/         # uWebSockets.js HTTP/WebSocket server (Drizzle, Redis, S3, mail, AI)
 │   ├── shared/          # Shared schemas, enums, guards, responses, utils (workspace:*)
 │   └── api-playground/  # Vue dev tool for exercising the backend API/WebSocket
+├── documentation/       # VitePress docs site, published to GitHub Pages
 ├── Dockerfile           # Multi-stage build: shared → frontend → backend → production image
 ├── init.sh              # One-shot install + typecheck + lint + test + build
 ├── feature_list.json    # Source of truth for feature ownership/status (see AGENTS.md)
