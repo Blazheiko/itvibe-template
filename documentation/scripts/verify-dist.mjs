@@ -44,6 +44,9 @@ const KEY_PAGES = [
     { page: 'backend/database.md', h1: 'База даних' },
     { page: 'backend/auth-security.md', h1: 'Автентифікація та безпека' },
     { page: 'backend/websocket.md', h1: 'WebSocket' },
+    { page: 'backend/controllers-services.md', h1: 'Контролери та сервіси' },
+    { page: 'backend/repositories-transformers.md', h1: 'Репозиторії та трансформери' },
+    { page: 'backend/validation.md', h1: 'Валідація' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
 ]
