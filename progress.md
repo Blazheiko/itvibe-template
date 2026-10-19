@@ -22,9 +22,11 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 
 - [x] T3.1–T3.3 — `.github/workflows/docs.yml` + include-sources vs `paths` check.
 
+- [x] T3.4 — draft PR #2 run: build success, deploy skipped.
+
 ### What's In Progress
 
-- [ ] T3.4 — draft PR run (build passes, deploy skipped).
+- [ ] Waiting for T3.5 (owner) before the first deploy; stage 4 can start now.
 
 ### What's Next
 
@@ -114,6 +116,9 @@ Stage 3 (T3.1–T3.3):
 - Mutation: removing `packages/backend/src/scripts/README.md` from `paths` → `not covered by
 on.pull_request.paths` and `on.push.paths` (anchor resolved); restored → green
 - `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` — green
+- T3.4: draft PR https://github.com/Blazheiko/itvibe-template/pull/2, run
+  https://github.com/Blazheiko/itvibe-template/actions/runs/39293516666 (`pull_request`) —
+  `build` success, `deploy` skipped. `workflow_dispatch` check moved to T5.3a (needs workflow on `main`).
 
 ## Notes for Next Session
 
