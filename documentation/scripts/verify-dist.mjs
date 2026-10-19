@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse } from 'node-html-parser'
+import { parse as parseYaml } from 'yaml'
 import {
     classifyUrl,
     countMermaidBlocks,
@@ -15,12 +16,16 @@ import {
     normalizeText,
     resolveInternalUrl,
     srcsetUrls,
+    uncoveredPaths,
+    workflowPaths,
 } from './verify/lib.mjs'
 
 const BASE = '/itvibe-template/'
 const MIN_ARTICLE_CHARS = 300
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = path.join(ROOT, '.vitepress', 'dist')
+const REPO = path.resolve(ROOT, '..')
+const WORKFLOW = path.join(REPO, '.github', 'workflows', 'docs.yml')
 const SKIP_DIRS = new Set(['.vitepress', 'node_modules', 'public', 'scripts'])
 
 /**
@@ -43,6 +48,8 @@ const HOME = {
 const INCLUDE_MARKERS = {}
 
 const errors = []
+/** Repo-relative POSIX paths of every include source, collected by checkSources (T3.3). */
+const includeSources = new Set()
 const fail = (where, message) => errors.push(`${where}: ${message}`)
 
 const htmlCache = new Map()
@@ -110,6 +117,7 @@ function checkSources() {
                 fail(where, `source file not found (${path.relative(ROOT, target)})`)
                 continue
             }
+            includeSources.add(path.relative(REPO, target).split(path.sep).join('/'))
             const included = readFileSync(target, 'utf8')
             mermaidExpected += include.partial ? 0 : countMermaidBlocks(included)
 
@@ -217,6 +225,25 @@ function checkUrls() {
     }
 }
 
+// T3.3: every include source must trigger the docs workflow, or the site goes stale silently.
+function checkWorkflowPaths() {
+    const where = path.relative(REPO, WORKFLOW)
+    if (!existsSync(WORKFLOW)) return fail(where, 'workflow not found')
+    const { pr, push } = workflowPaths(parseYaml(readFileSync(WORKFLOW, 'utf8')))
+    for (const [trigger, patterns] of [
+        ['pull_request', pr],
+        ['push', push],
+    ]) {
+        if (patterns.length === 0) {
+            fail(where, `on.${trigger}.paths is empty`)
+            continue
+        }
+        for (const file of uncoveredPaths([...includeSources], patterns)) {
+            fail(where, `include source ${file} is not covered by on.${trigger}.paths`)
+        }
+    }
+}
+
 if (!existsSync(DIST)) {
     console.error(`verify-dist: ${path.relative(ROOT, DIST)} not found — run docs:build first`)
     process.exit(1)
@@ -226,6 +253,7 @@ checkSources()
 checkKeyPages()
 checkHome()
 checkUrls()
+checkWorkflowPaths()
 
 if (errors.length > 0) {
     console.error(`verify-dist: ${errors.length} problem(s)\n`)

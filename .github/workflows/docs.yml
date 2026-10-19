@@ -1,0 +1,77 @@
+name: Docs
+
+# Keep `docs_paths` in sync with every `<!--@include-->` source: `pnpm docs:verify` fails
+# when an include points outside this list (task list T3.3).
+on:
+  pull_request:
+    paths: &docs_paths
+      - "documentation/**"
+      - "packages/backend/README.md"
+      - "packages/backend/src/docs/**"
+      - "packages/backend/src/scripts/README.md"
+      - "packages/backend/src/vendor/directory-structure.md"
+      - "packages/backend/src/vendor/start/*.md"
+      - "docs/reference/**"
+      - "docs/screenshots/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".nvmrc"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [main]
+    paths: *docs_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for lastUpdated
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter documentation typecheck
+
+      - run: pnpm --filter documentation test
+
+      - run: pnpm --filter documentation docs:build
+
+      - run: pnpm --filter documentation docs:verify
+
+      - if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: documentation/.vitepress/dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

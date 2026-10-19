@@ -20,15 +20,16 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 - [x] Stage 1 — VitePress scaffold (T1.1–T1.8), see Evidence.
 - [x] Stage 2 — `docs:verify` (T2.1–T2.5), see Evidence.
 
+- [x] T3.1–T3.3 — `.github/workflows/docs.yml` + include-sources vs `paths` check.
+
 ### What's In Progress
 
-- [ ] Stage 3 — CI/CD (T3.1–T3.4)
+- [ ] T3.4 — draft PR run (build passes, deploy skipped).
 
 ### What's Next
 
-1. T3.1–T3.2 — `.github/workflows/docs.yml` (build on PR, deploy only from `main`).
-2. T3.3 — include sources vs workflow `paths` check in `verify-dist.mjs`.
-3. T3.4 — draft PR run.
+1. T3.5 (owner, manual) — Settings → Pages → Source: GitHub Actions.
+2. Stage 4 — content v1, starting with T4.0 (classify existing docs).
 
 ## Blockers / Risks
 
@@ -51,6 +52,9 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
   `node:test` unit tests (`lib.test.mjs`, run by `pnpm test` via the `documentation` package);
   the runner `scripts/verify-dist.mjs` holds `KEY_PAGES`, `HOME` and `INCLUDE_MARKERS`.
   HTML parsing via `node-html-parser@9.0.5`.
+- **CI runs `documentation` test** (verify helpers) in addition to typecheck/build/verify.
+- **Workflow `paths` parsed with `yaml@2.9.1`** (resolves `&docs_paths` anchors); globs matched
+  with Node's `path.posix.matchesGlob`.
 - **Mermaid chunk-size warning** (>500 kB) during build is expected and left as is.
 
 ## Files Modified This Session
@@ -63,6 +67,7 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 - `pnpm-lock.yaml` — VitePress dependencies.
 - `documentation/scripts/verify-dist.mjs`, `documentation/scripts/verify/{lib,lib.test}.mjs` —
   `docs:verify`; `documentation/package.json` — `docs:verify`, `test`; root `docs:verify`.
+- `.github/workflows/docs.yml` — docs CI/CD.
 
 ## Evidence of Completion
 
@@ -100,6 +105,15 @@ Stage 2 acceptance (T2.1–T2.5):
     4 errors; `https:`, `mailto:`, `data:`, `#local` ignored
   - Mermaid container removed → `expected 1 Mermaid container(s), found 0`
 - `pnpm typecheck`, `pnpm lint`, `pnpm test` (incl. backend 268/268) — green
+
+Stage 3 (T3.1–T3.3):
+
+- `actionlint` 1.7.12 (docker `rhysd/actionlint`) — no findings on `.github/workflows/docs.yml`
+- upload-pages-artifact and deploy share `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`
+- `pnpm --filter documentation test` — 26/26; `docs:verify` — all checks passed
+- Mutation: removing `packages/backend/src/scripts/README.md` from `paths` → `not covered by
+on.pull_request.paths` and `on.push.paths` (anchor resolved); restored → green
+- `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` — green
 
 ## Notes for Next Session
 

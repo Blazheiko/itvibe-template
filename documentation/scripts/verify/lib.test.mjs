@@ -9,6 +9,8 @@ import {
     resolveInternalUrl,
     srcsetUrls,
     stripInlineMarkdown,
+    uncoveredPaths,
+    workflowPaths,
 } from './lib.mjs'
 
 const BASE = '/itvibe-template/'
@@ -126,5 +128,33 @@ describe('markdownToDist', () => {
             html: 'backend/index.html',
             urlPath: '/itvibe-template/backend/',
         })
+    })
+})
+
+describe('uncoveredPaths', () => {
+    const patterns = ['documentation/**', 'packages/backend/src/vendor/start/*.md', '.nvmrc']
+    it('returns only files outside every glob', () => {
+        assert.deepEqual(
+            uncoveredPaths(
+                [
+                    'documentation/guide/a.md',
+                    'packages/backend/src/vendor/start/SECURITY_ANALYSIS.md',
+                    'packages/backend/src/vendor/start/deep/x.md',
+                    'packages/backend/README.md',
+                ],
+                patterns,
+            ),
+            ['packages/backend/src/vendor/start/deep/x.md', 'packages/backend/README.md'],
+        )
+    })
+})
+
+describe('workflowPaths', () => {
+    it('reads pull_request and push paths, tolerating missing triggers', () => {
+        assert.deepEqual(
+            workflowPaths({ on: { pull_request: { paths: ['a/**'] }, push: { paths: ['a/**'] } } }),
+            { pr: ['a/**'], push: ['a/**'] },
+        )
+        assert.deepEqual(workflowPaths({ on: { workflow_dispatch: null } }), { pr: [], push: [] })
     })
 })

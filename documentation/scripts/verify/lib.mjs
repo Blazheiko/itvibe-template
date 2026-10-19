@@ -1,5 +1,7 @@
 // Pure helpers for verify-dist.mjs. No filesystem access here, so everything is unit-testable.
 
+import path from 'node:path'
+
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
 const INCLUDE_RE = /<!--\s*@include:\s*([^\s]+?)\s*-->/g
 const ASSET_EXT_RE = /\.[a-z0-9]+$/i
@@ -118,4 +120,17 @@ export function markdownToDist(mdRelPath, base) {
     else if (noExt.endsWith('/index')) urlPath = `${base}${noExt.slice(0, -'index'.length)}`
     else urlPath = `${base}${noExt}`
     return { html, urlPath }
+}
+
+/** Repo-relative POSIX paths from `files` that match none of the workflow `paths` globs. */
+export function uncoveredPaths(files, patterns) {
+    return files.filter((file) => !patterns.some((p) => path.posix.matchesGlob(file, p)))
+}
+
+/** Collect the `paths` filters of the pull_request and push triggers of a parsed workflow. */
+export function workflowPaths(workflow) {
+    const on = workflow?.on ?? {}
+    const pr = on.pull_request?.paths ?? []
+    const push = on.push?.paths ?? []
+    return { pr, push }
 }
