@@ -33,7 +33,7 @@ packages:
 │   │   │   ├── database/   # db.ts, redis.ts, schema.ts, relations.ts
 │   │   │   ├── db/         # create-database.ts, seed.ts
 │   │   │   ├── drizzle/    # migrations/, schema/, типи та guards
-│   │   │   ├── openapi/    # schemas.ts, spec.ts
+│   │   │   ├── openapi/    # невикористані заготовки (OpenAPI не генерується)
 │   │   │   ├── scripts/    # службові скрипти (send-test-email.ts тощо)
 │   │   │   ├── vendor/     # «ядро»: start/ (server, router), utils/, contracts/, types/
 │   │   │   └── index.ts    # точка входу
