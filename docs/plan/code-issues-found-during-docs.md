@@ -29,6 +29,14 @@
 | 17  | Фронтенд вшиває префікс `api/` у WS-події                             | Середня      | WebSocket / frontend  |
 | 18  | WS upgrade без валідної сесії не відхиляється                         | Низька       | WebSocket / безпека   |
 | 19  | Мертвий код у WebSocket-шарі                                          | Низька       | WebSocket / структура |
+| 20  | Сервіси push-нотифікацій звертаються до БД напряму                    | Середня      | Шари / БД             |
+| 21  | N+1 у `findByUserIdWithLogs` і статистика в JS                        | Середня      | Продуктивність        |
+| 22  | Контролери та middleware оминають сервіси                             | Низька       | Шари                  |
+| 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`               | Середня      | Шари / помилки        |
+| 24  | Repositories barrel неповний, змішані стилі імпорту                   | Низька       | Структура             |
+| 25  | `clearEmbedding` — два запити без транзакції, сирий SQL з назвами     | Низька       | БД                    |
+| 26  | ArkType-адаптер віддає лише `summary`, без помилок по полях           | Низька       | Валідація             |
+| 27  | Мертвий і застарілий код валідації та контролерів                     | Низька       | Структура             |
 
 ## Безпека
 
@@ -165,6 +173,53 @@
 - `packages/frontend/src/utils/websocket-base.ts` має власну логіку reconnect/ping, але `useWebSocketConnection` використовує з нього лише типи.
 - **Пропозиція:** видалити або явно позначити як legacy.
 
+## Шари, БД і валідація (знайдено під час T6.1–T6.3, feat-011)
+
+### 20. Сервіси push-нотифікацій звертаються до БД напряму
+
+- **Що:** `src/app/services/notifications/push-notification-sender-service.ts` імпортує `db` і робить `db.insert(pushNotificationLogs)`; `src/app/services/statistics/push-subscription-statistics-service.ts` робить `db.select` по `pushNotificationLogs`. Обидва оминають репозиторій.
+- **Пропозиція:** винести запити в `push-subscription-repository` (або окремий `push-notification-log-repository`).
+
+### 21. N+1 у `findByUserIdWithLogs` і статистика в JS
+
+- **Що:** `src/app/repositories/notifications/push-subscription-repository.ts` → `findByUserIdWithLogs` робить окремий запит логів на кожну підписку (`subscriptionsData.map(async …)`). Сервіс статистики завантажує всі логи і рахує агрегати в JavaScript.
+- **Пропозиція:** один запит з `inArray`/join; агрегати через `count()`/`group by` у SQL.
+
+### 22. Контролери та middleware оминають сервіси
+
+- **Що:** `src/app/controllers/http/admin/admin-user-controller.ts`, `src/app/middlewares/admin-guard.ts`, `src/app/websocket/ws-coordinator.ts` викликають `userRepository` напряму. `prompt-controller.ts` і `ai/usage/llm-usage-controller.ts` імпортують типи з модулів репозиторіїв.
+- **Наслідок:** ланцюжок Controller → Service → Repository із `documentation/backend/architecture.md` не суворий.
+- **Пропозиція:** перенести виклики в сервіси або явно задокументувати дозволені винятки (наприклад, guard).
+
+### 23. `prompt-controller` сам викликає OpenAI і кидає `Error`
+
+- **Що:** `src/app/controllers/http/ai/prompt-controller.ts` робить `fetch` до OpenAI і кидає `throw new Error(...)` замість `AppError`/`Result` через сервіс. Помилки провайдера йдуть клієнту як `500`.
+- **Пропозиція:** винести в AI-сервіс (є `textAdapter`), повертати доменні помилки.
+
+### 24. Repositories barrel неповний
+
+- **Що:** `src/app/repositories/index.ts` не експортує `promptRepository`, `supportRepository`, `supportKnowledgeRepository`, тому частина коду імпортує через barrel, а частина напряму. `user-online-repository.ts` імпортує `logger` (логування в шарі даних).
+- **Пропозиція:** доповнити barrel, прибрати логування з репозиторію.
+
+### 25. `clearEmbedding` без транзакції
+
+- **Що:** `src/app/repositories/support/support-knowledge-repository.ts` → `clearEmbedding` робить два запити без `db.transaction`; SQL для embedding містить назви таблиці й колонок рядками.
+- **Пропозиція:** транзакція і посилання на колонки через `sql` з об'єктами схеми.
+
+### 26. ArkType-адаптер віддає лише `summary`
+
+- **Що:** `src/app/validate/adapters/arktype-adapter.ts` повертає один `summary` як повідомлення; масив `messages[]` у помилці 422 не містить помилок по окремих полях.
+- **Пропозиція:** мапити `ArkErrors` у список `{ path, message }`.
+
+### 27. Мертвий і застарілий код
+
+- `src/app/validate/schemas/schemas.ts` — його імпорти закоментовані в `src/index.ts` і `vendor/start/server.ts`.
+- `src/app/validate/errors/validation-error.ts` — docstring «ArkType validation», хоча клас не залежить від рушія.
+- `src/vendor/utils/routing/serialize-routes.ts` — змінна `nativeValidator` насправді містить ArkType-опис.
+- `src/app/controllers/http/core/main-controller.ts` — `testSentryError` не зареєстрований у маршрутах (у продакшні недоступний), мертвий handler.
+- `packages/backend/README.md` (~рядок 343) пише `ValidationError → 400`, а код повертає `422` (`validation-error.ts`).
+- `src/docs/VALIDATOR_ABSTRACTION_PLAN.md`: не зроблено §3.6 (`InputSchema` export), §9 (`nativeValidator(predicate)`), §5.6 (`ResponseSchema`/`BaseType` у `vendor/types`).
+
 ## Що варто зробити далі
 
 Пропоную оформити окремі записи в `feature_list.json` (через PR у `main`):
@@ -176,3 +231,5 @@
 5. **internal-docs-cleanup** — п. 15 (видалити або оновити застарілі документи).
 6. **format-baseline** — п. 16.
 7. Окремої фічі поки немає: п. 17 і 19 — кандидати в новий запис (WebSocket cleanup).
+8. Окремої фічі поки немає: п. 20–25 — кандидати в новий запис (layering & data access cleanup);
+   п. 26 — до feat-008 або окремо; п. 27 — до feat-009.

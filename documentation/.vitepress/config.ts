@@ -41,6 +41,15 @@ export default withMermaid(
                             { text: 'Життєвий цикл запиту', link: '/backend/request-lifecycle' },
                             { text: 'Конфігурація', link: '/backend/configuration' },
                             {
+                                text: 'Контролери та сервіси',
+                                link: '/backend/controllers-services',
+                            },
+                            {
+                                text: 'Репозиторії та трансформери',
+                                link: '/backend/repositories-transformers',
+                            },
+                            { text: 'Валідація', link: '/backend/validation' },
+                            {
                                 text: 'Маршрутизація та middleware',
                                 link: '/backend/routing-middlewares',
                             },

@@ -16,11 +16,12 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 ### What's Done
 
-- [x] T6.4 — `documentation/backend/websocket.md` (PR pending review)
+- [x] T6.4 — `documentation/backend/websocket.md` (PR #9, merged)
+- [x] T6.1–T6.3 — controllers-services, repositories-transformers, validation (one PR, see Decisions)
 
 ### What's In Progress
 
-- [ ] T6.1 — `documentation/backend/controllers-services.md`
+- [ ] T6.8b — `documentation/backend/deployment.md`
 
 ### What's Next
 
@@ -40,6 +41,9 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - **Page PRs from this branch**: each page gets its own short-lived PR branch cut from `feat/docs-v2`
   or from `main`, so reviews stay one page per PR.
 
+- **T6.1–T6.3 in one PR**: the three pages cross-link each other, and the build fails on dead
+  links, so splitting them would require temporary link removal. Exception to one-page-per-PR.
+
 ## Files Modified This Session
 
 - `progress.md` — initialised for feat-011.
@@ -56,6 +60,17 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - New issues 17–19 added to `docs/plan/code-issues-found-during-docs.md`; item 18 → security-hardening.
 - Sidebar + `KEY_PAGES` updated; `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
 - Preview: 1 Mermaid SVG, 0 errors; 2 danger + 3 warning blocks; sidebar item active.
+
+**T6.1–T6.3 layers** (`docs/t6-1-3-layers`):
+
+- Pages written from code (3 parallel sub-agents), reviewed in main session; re-checked in code:
+  `ValidationError.statusCode = 422` (`validation-error.ts`, handled in `server.ts:345`); services
+  importing `db` directly (`push-notification-sender-service.ts`, `push-subscription-statistics-service.ts`);
+  N+1 in `findByUserIdWithLogs`; `prompt-controller.ts` calls `fetch` + `throw new Error`;
+  `testSentryError` handler exists but is not routed.
+- New issues 20–27 in `docs/plan/code-issues-found-during-docs.md`.
+- Sidebar + `KEY_PAGES` (12 backend pages); `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
+- Preview: 1 Mermaid SVG per page, 0 errors; secret scan clean.
 
 ## Notes for Next Session
 
