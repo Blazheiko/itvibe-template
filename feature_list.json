@@ -36,16 +36,6 @@
       "evidence": "PR #2 merged (bc32821); Pages deploy run 39298566100; release evidence in progress.md (Stage 5)"
     },
     {
-      "id": "feat-004",
-      "name": "OpenAPI Generation",
-      "description": "Generate an OpenAPI spec from backend routes/schemas (packages/backend/src/openapi/spec.ts is currently empty) and publish it in the documentation",
-      "owner": "",
-      "branch": "",
-      "dependencies": ["feat-003"],
-      "status": "not-started",
-      "evidence": ""
-    },
-    {
       "id": "feat-005",
       "name": "Security Hardening",
       "description": "Apply CSP from config/csp.ts to API/static responses; rate-limit WebSocket upgrade and add a global per-IP limit; stop logging WS/session tokens; runtime guard for broadcastToChannel channels (items 1, 2, 3, 9). Details: docs/plan/code-issues-found-during-docs.md",
