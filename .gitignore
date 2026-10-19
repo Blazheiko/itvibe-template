@@ -17,3 +17,7 @@ dist/
 docs/tech_spec/LANGUAGE_SETTINGS_SIMPLIFICATION_PLAN.md
 packages/backend/.windsurf/
 packages/backend/openspec/
+
+# VitePress
+documentation/.vitepress/cache/
+documentation/.vitepress/dist/

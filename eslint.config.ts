@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/*.mjs',
       '**/coverage/**',
       '**/generated/**',
+      'documentation/.vitepress/cache/**',
       'eslint.config.ts',
       'packages/backend/vitest.config.ts',
     ],
