@@ -21,9 +21,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 - [x] T6.8b — `documentation/backend/deployment.md` (stacked on the T6.1–T6.3 PR)
 
+- [x] T6.6 — `documentation/backend/observability.md` (stacked on T6.8b)
+
 ### What's In Progress
 
-- [ ] T6.6 — `documentation/backend/observability.md`
+- [ ] T6.8a — `documentation/backend/testing.md`
 
 ### What's Next
 
@@ -84,6 +86,16 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - Fixed a sentence that implied CSP is applied (it is not, item 1).
 - New issues 28–32; item 32 → security-hardening.
 - `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: 1 Mermaid SVG, 0 errors.
+
+**T6.6 Observability** (`docs/t6-6-observability`, based on `docs/t6-8b-deployment`):
+
+- Re-checked in code: pino created without `level` (default `info`), no `LOG_LEVEL`; multistream
+  main `trace` + Sentry stream `error`; `handleError` uses the global `logger`; child logger only
+  `requestId`; Sentry `tracesSampleRate` from `SENTRY_TRACES_SAMPLE_RATE`, `dataCollection` in
+  `sentry-service.ts`; no OpenTelemetry in backend `package.json`.
+- New issues 33–35 (requestId in handleError, LOG_LEVEL, readiness check).
+- `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: 1 Mermaid SVG, 0 errors;
+  DSN only as placeholder.
 
 ## Notes for Next Session
 
