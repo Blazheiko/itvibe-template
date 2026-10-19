@@ -44,6 +44,66 @@
       "dependencies": ["feat-003"],
       "status": "not-started",
       "evidence": ""
+    },
+    {
+      "id": "feat-005",
+      "name": "Security Hardening",
+      "description": "Apply CSP from config/csp.ts to API/static responses; rate-limit WebSocket upgrade and add a global per-IP limit; stop logging WS/session tokens; runtime guard for broadcastToChannel channels (items 1, 2, 3, 9). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-006",
+      "name": "Env Example Sync",
+      "description": "Fix SERVE_STATIC=true crash, PGSQL_PORT NaN fallback, unify DB defaults between app and scripts, sync .env.example with the 109 env vars read by code incl. REDIS_PREFIX (items 4, 5, 6, 8). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-007",
+      "name": "Database DX",
+      "description": "Document pgvector requirement in README, implement or remove the empty db:seed, remove/re-export empty src/drizzle/schema/index.ts (items 7, 10, 11). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-008",
+      "name": "HTTP Body Fixes",
+      "description": "Read body for PATCH (or forbid patch routes), proper response for null payload, tests for body-kind/limit resolution and 413, show limits in playground, settle default limits (items 12, 13, 14). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-009",
+      "name": "Internal Docs Cleanup",
+      "description": "Update or remove stale internal docs (SESSION_SECURITY, SECURITY_ANALYSIS, etag-improvements, directory-structure, scripts README), turn VALIDATOR_ABSTRACTION_PLAN into an ADR, fix backend README drift list (item 15). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-010",
+      "name": "Format Baseline",
+      "description": "Make pnpm format:check pass (193 files on main) and align backend code style with AGENTS.md (item 16). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }
