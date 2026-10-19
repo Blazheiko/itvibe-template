@@ -82,13 +82,8 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 
 ### Code/docs issues found (documented, NOT fixed — out of scope)
 
-- `SERVE_STATIC=true` in `.env.example` crashes startup (`ENOENT scandir packages/backend/public`).
-- PostgreSQL needs pgvector (`db:create` runs `CREATE EXTENSION vector`).
-- `PGSQL_PORT` fallback `Number(env) ?? 5432` never applies → `NaN` when unset.
-- `.env.example` drift: 8 names unused, 26 read-but-missing (list on `backend/configuration.md`).
-- CSP config (`config/csp.ts`) is never applied; WS upgrade has no IP rate limit; WS token logged.
-- `db:seed` is an empty stub; `src/drizzle/schema/index.ts` empty (real schema `src/database/schema.ts`).
-- Candidates for separate features/issues on `main`.
+Full list with evidence, severity and proposed follow-up features:
+[docs/plan/code-issues-found-during-docs.md](docs/plan/code-issues-found-during-docs.md).
 
 ## Files Modified This Session
 
