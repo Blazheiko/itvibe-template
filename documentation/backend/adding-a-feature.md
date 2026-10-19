@@ -1,0 +1,470 @@
+# Як додати фічу в бекенд
+
+Цей туторіал крок за кроком додає новий ресурс **`notes`** (нотатки поточного користувача) з двома ендпоінтами, `GET /api/notes` і `POST /api/notes`, і проходить усі шари архітектури проєкту: shared-схеми → Drizzle-таблиця й міграція → repository → transformer → service → controller → реєстрація маршруту → unit-тест на Vitest.
+
+Загальну картину шарів описано в [Архітектурі](/backend/architecture), роутинг і middleware — у [Роутингу та middleware](/backend/routing-middlewares), роботу з БД — у [Базі даних](/backend/database), а шлях запиту — у [Життєвому циклі запиту](/backend/request-lifecycle).
+
+::: tip Перевірено на практиці
+Весь код нижче було реально додано в чисту копію репозиторію, після чого пройшли `pnpm --filter shared build`, `pnpm typecheck`, `pnpm --filter backend test` (52 файли, 271 тест, разом із новим `note-service.spec.ts`) та `npx eslint` для змінених файлів. Як зразок узято наявну фічу push-підписок.
+:::
+
+## Що буде створено
+
+| Шар                  | Файл                                                                | Дія         |
+| -------------------- | ------------------------------------------------------------------- | ----------- |
+| Shared: вхід         | `packages/shared/src/schemas/note/create-note.ts`                   | новий       |
+| Shared: вхід         | `packages/shared/src/schemas/index.ts`                              | редагування |
+| Shared: відповіді    | `packages/shared/src/responses/note-controller.ts`                  | новий       |
+| Shared: відповіді    | `packages/shared/src/responses/index.ts`                            | редагування |
+| Таблиця              | `packages/backend/src/database/schema.ts`                           | редагування |
+| Міграція             | `packages/backend/src/drizzle/migrations/<timestamp>_add_notes/`    | генерується |
+| Repository           | `packages/backend/src/app/repositories/note/note-repository.ts`     | новий       |
+| Repository (barrel)  | `packages/backend/src/app/repositories/index.ts`                    | редагування |
+| Transformer          | `packages/backend/src/app/transformers/note-transformer.ts`         | новий       |
+| Transformer (barrel) | `packages/backend/src/app/transformers/index.ts`                    | редагування |
+| Service              | `packages/backend/src/app/services/note/note-service.ts`            | новий       |
+| Controller           | `packages/backend/src/app/controllers/http/note/note-controller.ts` | новий       |
+| Маршрути             | `packages/backend/src/app/routes/http-routes.ts`                    | редагування |
+| Тест                 | `packages/backend/src/app/services/note/note-service.spec.ts`       | новий       |
+
+## Крок 1. Схема вхідних даних у `shared`
+
+Вхідні payload-и описуються ArkType-схемами в `packages/shared/src/schemas/<домен>/`. Ключ `"+": "reject"` забороняє зайві поля, так само як у [create-subscription.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/push-subscription/create-subscription.ts).
+
+```ts
+// packages/shared/src/schemas/note/create-note.ts
+import { type } from '@arktype/type'
+
+export const CreateNoteInputSchema = type({
+    title: '1 <= string <= 200',
+    'body?': 'string <= 5000',
+    '+': 'reject',
+})
+
+export type CreateNoteInput = typeof CreateNoteInputSchema.infer
+```
+
+Експортуйте схему й тип з [packages/shared/src/schemas/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/index.ts) (звідти їх імпортують як `shared/schemas`):
+
+```ts
+export { CreateNoteInputSchema, type CreateNoteInput } from './note/create-note.js'
+```
+
+## Крок 2. Схеми відповідей у `shared`
+
+Відповіді контролерів живуть у `packages/shared/src/responses/` і будуються як `type.or(<успіх>, CanonicalErrorResponseSchema)`, див. [push-subscription-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/push-subscription-controller.ts) та [error-response.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/error-response.ts). Тип `Note` — це публічний контракт, який повертає transformer.
+
+```ts
+// packages/shared/src/responses/note-controller.ts
+import { type } from '@arktype/type'
+import { CanonicalErrorResponseSchema } from './error-response.js'
+
+export const NoteSchema = type({
+    id: 'string',
+    title: 'string',
+    body: 'string | null',
+    created_at: 'string | null',
+})
+export type Note = typeof NoteSchema.infer
+
+export const GetNotesResponseSchema = type.or(
+    { status: "'success'", notes: NoteSchema.array() },
+    CanonicalErrorResponseSchema,
+)
+export type GetNotesResponse = typeof GetNotesResponseSchema.infer
+
+export const CreateNoteResponseSchema = type.or(
+    { status: "'success'", note: NoteSchema },
+    CanonicalErrorResponseSchema,
+)
+export type CreateNoteResponse = typeof CreateNoteResponseSchema.infer
+```
+
+Додайте рядок у [packages/shared/src/responses/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/index.ts):
+
+```ts
+export * from './note-controller.js'
+```
+
+Бекенд споживає `shared` через `dist/` (див. `exports` у [packages/shared/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/package.json)), тому після змін **обов'язково** перезберіть пакет:
+
+```bash
+pnpm --filter shared build
+```
+
+## Крок 3. Таблиця й міграція
+
+Додайте таблицю в кінець [packages/backend/src/database/schema.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts). Усі потрібні хелпери (`pgTable`, `bigserial`, `bigint`, `varchar`, `text`, `timestamp`, `index`) там уже імпортовано, а `users` оголошено вище у файлі.
+
+```ts
+export const notes = pgTable(
+    'notes',
+    {
+        id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+        userId: bigint('user_id', { mode: 'bigint' })
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        title: varchar('title', { length: 200 }).notNull(),
+        body: text('body'),
+        createdAt: timestamp('created_at').notNull().defaultNow(),
+    },
+    (table) => [index('notes_user_id_idx').on(table.userId)],
+)
+```
+
+Згенеруйте міграцію ([drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js) пише їх у `src/drizzle/migrations` у форматі «тека на міграцію»):
+
+```bash
+pnpm --filter backend db:generate --name add_notes
+```
+
+`drizzle-kit generate` порівнює схему з попередніми знімками й **не потребує запущеної БД**. Результат — `src/drizzle/migrations/<timestamp>_add_notes/migration.sql`:
+
+```sql
+CREATE TABLE "notes" (
+	"id" bigserial PRIMARY KEY,
+	"user_id" bigint NOT NULL,
+	"title" varchar(200) NOT NULL,
+	"body" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX "notes_user_id_idx" ON "notes" ("user_id");--> statement-breakpoint
+ALTER TABLE "notes" ADD CONSTRAINT "notes_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
+```
+
+Щоб застосувати міграцію до живої БД, виконайте `pnpm --filter backend db:migrate` (потрібен PostgreSQL з налаштуваннями `PGSQL_*`). У цьому прикладі зв'язок іде лише через `userId`, тому [relations.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/relations.ts) не змінюємо.
+
+## Крок 4. Repository
+
+Repository — єдине місце, де виконуються запити Drizzle. Патерн узято з [push-subscription-repository.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/notifications/push-subscription-repository.ts): типи рядків через `InferSelectModel` / `InferInsertModel`, інтерфейс `I...Repository` і об'єкт-реалізація.
+
+```ts
+// packages/backend/src/app/repositories/note/note-repository.ts
+import { db } from '#database/db.js'
+import { notes } from '#database/schema.js'
+import { desc, eq } from 'drizzle-orm'
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
+
+export type NoteRow = InferSelectModel<typeof notes>
+export type NoteInsert = InferInsertModel<typeof notes>
+
+export interface INoteRepository {
+    create(data: NoteInsert): Promise<NoteRow>
+    findByUserId(userId: bigint): Promise<NoteRow[]>
+}
+
+export const noteRepository: INoteRepository = {
+    async create(data) {
+        const [created] = await db.insert(notes).values(data).returning()
+        if (created === undefined) {
+            throw new Error('Failed to create note')
+        }
+        return created
+    },
+
+    async findByUserId(userId) {
+        return await db
+            .select()
+            .from(notes)
+            .where(eq(notes.userId, userId))
+            .orderBy(desc(notes.createdAt))
+    },
+}
+```
+
+Додайте експорт у barrel [repositories/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/index.ts). Сервіси імпортують repository саме звідти, і саме цей модуль мокається в тестах:
+
+```ts
+export { noteRepository } from './note/note-repository.js'
+export type { NoteRow, NoteInsert } from './note/note-repository.js'
+```
+
+## Крок 5. Transformer
+
+Transformer перетворює рядок БД на публічний DTO: `bigint` → `string`, `Date` → ISO-рядок через `luxon`, як у [push-subscription-transformer.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/push-subscription-transformer.ts). Внутрішні поля (`userId`) назовні не віддаються.
+
+```ts
+// packages/backend/src/app/transformers/note-transformer.ts
+import { DateTime } from 'luxon'
+import type { Note } from 'shared'
+import type { NoteRow } from '#app/repositories/note/note-repository.js'
+
+export const noteTransformer = {
+    serialize(note: NoteRow): Note {
+        return {
+            id: String(note.id),
+            title: note.title,
+            body: note.body,
+            created_at: DateTime.fromJSDate(note.createdAt).toISO(),
+        }
+    },
+
+    serializeArray(notes: NoteRow[]): Note[] {
+        return notes.map((n) => noteTransformer.serialize(n))
+    },
+}
+```
+
+Експорт у [transformers/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/index.ts):
+
+```ts
+export { noteTransformer } from './note-transformer.js'
+```
+
+## Крок 6. Service
+
+Сервіс містить бізнес-логіку й не кидає винятків назовні. Він повертає `AppResult<T>` (`Result` з `better-result`, див. [errors.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)). Виклики repository обгортаються в `tryInternal` з [result-helpers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts): він перетворює виняток на помилку `Internal` з публічним повідомленням.
+
+```ts
+// packages/backend/src/app/services/note/note-service.ts
+import type { CreateNoteInput } from 'shared/schemas'
+import type { Note } from 'shared'
+import { Result } from 'better-result'
+import { noteRepository } from '#app/repositories/index.js'
+import { noteTransformer } from '#app/transformers/index.js'
+import type { AppResult } from '#app/services/shared/errors.js'
+import { tryInternal } from '#app/services/shared/result-helpers.js'
+
+export const noteService = {
+    async getNotes(userId: bigint): Promise<AppResult<{ notes: Note[] }>> {
+        const rowsResult = await tryInternal(
+            () => noteRepository.findByUserId(userId),
+            'Failed to load notes',
+        )
+        if (Result.isError(rowsResult)) {
+            return Result.err(rowsResult.error)
+        }
+
+        return Result.ok({
+            notes: noteTransformer.serializeArray(rowsResult.value),
+        })
+    },
+
+    async createNote(userId: bigint, payload: CreateNoteInput): Promise<AppResult<{ note: Note }>> {
+        const createdResult = await tryInternal(
+            () =>
+                noteRepository.create({
+                    userId,
+                    title: payload.title,
+                    body: payload.body ?? null,
+                }),
+            'Failed to create note',
+        )
+        if (Result.isError(createdResult)) {
+            return Result.err(createdResult.error)
+        }
+
+        return Result.ok({ note: noteTransformer.serialize(createdResult.value) })
+    },
+}
+```
+
+## Крок 7. Controller
+
+Контролер — тонкий шар. Він дістає `userId` з `context.auth`, бере вже провалідований payload через `getTypedPayload`, викликає сервіс і перетворює помилку на канонічну відповідь через `mapControllerError` (ця функція ж виставляє HTTP-статус). Структуру взято з [push-subscription-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts).
+
+```ts
+// packages/backend/src/app/controllers/http/note/note-controller.ts
+import type { HttpContext } from '#vendor/types/types.js'
+import { Result } from 'better-result'
+import { getTypedPayload } from '#vendor/utils/validation/get-typed-payload.js'
+import { mapControllerError } from '#app/controllers/shared/controller-error.js'
+import { noteService } from '#app/services/note/note-service.js'
+import { unauthorized } from '#app/services/shared/errors.js'
+import type { CreateNoteResponse, GetNotesResponse } from 'shared'
+import type { CreateNoteInput } from 'shared/schemas'
+
+function resolveUserId(context: HttpContext<unknown, unknown>): bigint | null {
+    const userId = context.auth.getUserId()
+    return userId === null ? null : BigInt(userId)
+}
+
+export default {
+    async getNotes(context: HttpContext): Promise<GetNotesResponse> {
+        const userId = resolveUserId(context)
+        if (userId === null) {
+            return mapControllerError(context, unauthorized())
+        }
+
+        const result = await noteService.getNotes(userId)
+        if (Result.isError(result)) {
+            return mapControllerError(context, result.error)
+        }
+
+        return { status: 'success', notes: result.value.notes }
+    },
+
+    async createNote(context: HttpContext<CreateNoteInput>): Promise<CreateNoteResponse> {
+        const userId = resolveUserId(context)
+        if (userId === null) {
+            return mapControllerError(context, unauthorized())
+        }
+
+        const payload = getTypedPayload(context)
+        const result = await noteService.createNote(userId, payload)
+        if (Result.isError(result)) {
+            return mapControllerError(context, result.error)
+        }
+
+        return { status: 'success', note: result.value.note }
+    },
+}
+```
+
+Автентифікацію гарантує middleware `auth_guard` на групі маршрутів (наступний крок). Перевірка `userId === null` — лише захисна гілка для типізації.
+
+## Крок 8. Реєстрація маршрутів
+
+У [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) додайте імпорт контролера (поруч з іншими) і допишіть `CreateNoteInputSchema` до наявного імпорту з `shared/schemas`:
+
+```ts
+import NoteController from '#app/controllers/http/note/note-controller.js'
+import { defineRoute } from '#app/routing/define-route.js'
+// ...
+import {
+    // ...
+    PushSubscriptionTestQuerySchema,
+    CreateNoteInputSchema,
+} from 'shared/schemas'
+```
+
+Потім додайте групу останнім елементом масиву, перед `] satisfies routeList;`:
+
+```ts
+  {
+    group: [
+      defineRoute({
+        url: "/",
+        method: "get",
+        handler: NoteController.getNotes.bind(NoteController),
+        ResponseSchema: ResponseSchemas.GetNotesResponseSchema,
+        description: "List notes of the current user",
+      }),
+      defineRoute({
+        url: "/",
+        method: "post",
+        handler: NoteController.createNote.bind(NoteController),
+        validator: CreateNoteInputSchema,
+        ResponseSchema: ResponseSchemas.CreateNoteResponseSchema,
+        description: "Create a note for the current user",
+      }),
+    ],
+    description: "Note routes",
+    middlewares: ["session_web", "csrf_guard", "auth_guard"],
+    prefix: "notes",
+  },
+] satisfies routeList;
+```
+
+[`defineRoute`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Роутингу та middleware](/backend/routing-middlewares)).
+
+## Крок 9. Тест сервісу
+
+Тести сервісів лежать поряд із кодом і мокають barrel `#app/repositories/index.js` через `vi.mock`, як у [push-subscription-service.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts). БД для них не потрібна.
+
+```ts
+// packages/backend/src/app/services/note/note-service.spec.ts
+import { Result } from 'better-result'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const noteRepositoryMock = {
+    create: vi.fn(),
+    findByUserId: vi.fn(),
+}
+
+vi.mock('#app/repositories/index.js', () => ({
+    noteRepository: noteRepositoryMock,
+}))
+
+async function loadNoteService() {
+    return import('./note-service.js')
+}
+
+afterEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+})
+
+describe('noteService', () => {
+    it('returns serialized notes of the user', async () => {
+        noteRepositoryMock.findByUserId.mockResolvedValue([
+            {
+                id: 1n,
+                userId: 7n,
+                title: 'Hello',
+                body: null,
+                createdAt: new Date('2026-01-01T00:00:00.000Z'),
+            },
+        ])
+
+        const { noteService } = await loadNoteService()
+        const result = await noteService.getNotes(7n)
+
+        expect(noteRepositoryMock.findByUserId).toHaveBeenCalledWith(7n)
+        expect(Result.isOk(result)).toBe(true)
+        if (Result.isOk(result)) {
+            expect(result.value.notes).toHaveLength(1)
+            expect(result.value.notes[0]).toMatchObject({
+                id: '1',
+                title: 'Hello',
+                body: null,
+            })
+        }
+    })
+
+    it('creates a note with body defaulting to null', async () => {
+        noteRepositoryMock.create.mockImplementation((data: Record<string, unknown>) =>
+            Promise.resolve({ id: 2n, createdAt: new Date(), ...data }),
+        )
+
+        const { noteService } = await loadNoteService()
+        const result = await noteService.createNote(7n, { title: 'Todo' })
+
+        expect(noteRepositoryMock.create).toHaveBeenCalledWith({
+            userId: 7n,
+            title: 'Todo',
+            body: null,
+        })
+        expect(Result.isOk(result)).toBe(true)
+        if (Result.isOk(result)) {
+            expect(result.value.note.id).toBe('2')
+        }
+    })
+
+    it('maps repository failure to an Internal error', async () => {
+        noteRepositoryMock.findByUserId.mockRejectedValue(new Error('db down'))
+
+        const { noteService } = await loadNoteService()
+        const result = await noteService.getNotes(7n)
+
+        expect(Result.isError(result)).toBe(true)
+        if (Result.isError(result)) {
+            expect(result.error._tag).toBe('Internal')
+        }
+    })
+})
+```
+
+Transformer тут не мокається, тож тест перевіряє реальну серіалізацію (`1n` → `"1"`).
+
+## Крок 10. Перевірка
+
+```bash
+pnpm --filter shared build
+pnpm typecheck
+pnpm --filter backend test
+npx eslint packages/backend/src/app/services/note packages/backend/src/app/controllers/http/note \
+  packages/backend/src/app/repositories/note packages/backend/src/app/transformers/note-transformer.ts \
+  packages/backend/src/app/routes/http-routes.ts packages/shared/src/schemas/note \
+  packages/shared/src/responses/note-controller.ts
+```
+
+Перед мержем пройдіть повний Definition of Done з [AGENTS.md](https://github.com/Blazheiko/itvibe-template/blob/main/AGENTS.md): `pnpm typecheck`, `pnpm lint`, `pnpm test` і ручну перевірку golden path. Тобто застосуйте міграцію (`db:migrate`), запустіть `pnpm dev`, увійдіть і викличте `POST /api/notes`, а потім `GET /api/notes`.
+
+## Типові помилки
+
+- **Забули `pnpm --filter shared build`.** Бекенд не бачить нових експортів `shared` / `shared/schemas`, бо читає `dist/`.
+- **Імпорт repository напряму з файлу**, а не з `#app/repositories/index.js`. Тоді `vi.mock` у тесті його не перехопить.
+- **Повернення `bigint` або `Date` з контролера.** Завжди пропускайте рядки через transformer.
+- **Кидання винятків із сервісу.** Повертайте `Result.err(...)`, а HTTP-статус виставить `mapControllerError`.

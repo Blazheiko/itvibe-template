@@ -1,0 +1,74 @@
+import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
+
+const repoUrl = 'https://github.com/Blazheiko/itvibe-template'
+
+export default withMermaid(
+    defineConfig({
+        base: '/itvibe-template/',
+        lang: 'uk-UA',
+        title: 'itvibe-template',
+        description:
+            'Документація full-stack TypeScript шаблону: Vue 3, uWebSockets.js, shared контракти',
+        cleanUrls: true,
+        lastUpdated: true,
+        ignoreDeadLinks: false,
+        head: [['link', { rel: 'icon', href: '/itvibe-template/logo.svg' }]],
+        themeConfig: {
+            logo: '/logo.svg',
+            nav: [
+                { text: 'Гайд', link: '/guide/introduction' },
+                { text: 'Бекенд', link: '/backend/' },
+                { text: 'Довідник', link: '/reference/scripts' },
+            ],
+            sidebar: {
+                '/guide/': [
+                    {
+                        text: 'Гайд',
+                        items: [
+                            { text: 'Вступ', link: '/guide/introduction' },
+                            { text: 'Швидкий старт', link: '/guide/getting-started' },
+                            { text: 'Структура проєкту', link: '/guide/project-structure' },
+                        ],
+                    },
+                ],
+                '/backend/': [
+                    {
+                        text: 'Бекенд',
+                        items: [
+                            { text: 'Огляд', link: '/backend/' },
+                            { text: 'Архітектура', link: '/backend/architecture' },
+                            { text: 'Життєвий цикл запиту', link: '/backend/request-lifecycle' },
+                            { text: 'Конфігурація', link: '/backend/configuration' },
+                            {
+                                text: 'Маршрутизація та middleware',
+                                link: '/backend/routing-middlewares',
+                            },
+                            { text: 'База даних', link: '/backend/database' },
+                            { text: 'Автентифікація та безпека', link: '/backend/auth-security' },
+                        ],
+                    },
+                    {
+                        text: 'Туторіали',
+                        items: [{ text: 'Як додати фічу', link: '/backend/adding-a-feature' }],
+                    },
+                ],
+                '/reference/': [
+                    {
+                        text: 'Довідник',
+                        items: [{ text: 'Скрипти', link: '/reference/scripts' }],
+                    },
+                ],
+            },
+            search: { provider: 'local' },
+            editLink: {
+                pattern: `${repoUrl}/edit/main/documentation/:path`,
+                text: 'Редагувати сторінку на GitHub',
+            },
+            socialLinks: [{ icon: 'github', link: repoUrl }],
+            outline: { label: 'На цій сторінці' },
+            docFooter: { prev: 'Попередня', next: 'Наступна' },
+            lastUpdated: { text: 'Оновлено' },
+        },
+    }),
+)
