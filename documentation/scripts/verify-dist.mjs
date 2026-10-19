@@ -32,7 +32,20 @@ const SKIP_DIRS = new Set(['.vitepress', 'node_modules', 'public', 'scripts'])
  * Key article pages (T2.3). Add each page here in the same task that writes it.
  * `h1` is the expected article title.
  */
-const KEY_PAGES = [{ page: 'guide/smoke.md', h1: 'Smoke-сторінка' }]
+const KEY_PAGES = [
+    { page: 'guide/introduction.md', h1: 'Вступ' },
+    { page: 'guide/getting-started.md', h1: 'Швидкий старт' },
+    { page: 'guide/project-structure.md', h1: 'Структура проєкту' },
+    { page: 'backend/index.md', h1: 'Огляд бекенду' },
+    { page: 'backend/architecture.md', h1: 'Архітектура бекенду' },
+    { page: 'backend/request-lifecycle.md', h1: 'Життєвий цикл запиту' },
+    { page: 'backend/configuration.md', h1: 'Конфігурація' },
+    { page: 'backend/routing-middlewares.md', h1: 'Маршрутизація та middleware' },
+    { page: 'backend/database.md', h1: 'База даних' },
+    { page: 'backend/auth-security.md', h1: 'Автентифікація та безпека' },
+    { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
+    { page: 'reference/scripts.md', h1: 'Скрипти' },
+]
 
 /** Home page (layout: home) checks (T2.3a). */
 const HOME = {

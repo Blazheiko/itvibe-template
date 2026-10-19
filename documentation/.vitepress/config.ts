@@ -17,14 +17,46 @@ export default withMermaid(
         themeConfig: {
             logo: '/logo.svg',
             nav: [
-                { text: 'Гайд', link: '/guide/smoke' },
-                { text: 'Бекенд', link: '/guide/smoke' },
+                { text: 'Гайд', link: '/guide/introduction' },
+                { text: 'Бекенд', link: '/backend/' },
+                { text: 'Довідник', link: '/reference/scripts' },
             ],
             sidebar: {
                 '/guide/': [
                     {
                         text: 'Гайд',
-                        items: [{ text: 'Smoke-сторінка', link: '/guide/smoke' }],
+                        items: [
+                            { text: 'Вступ', link: '/guide/introduction' },
+                            { text: 'Швидкий старт', link: '/guide/getting-started' },
+                            { text: 'Структура проєкту', link: '/guide/project-structure' },
+                        ],
+                    },
+                ],
+                '/backend/': [
+                    {
+                        text: 'Бекенд',
+                        items: [
+                            { text: 'Огляд', link: '/backend/' },
+                            { text: 'Архітектура', link: '/backend/architecture' },
+                            { text: 'Життєвий цикл запиту', link: '/backend/request-lifecycle' },
+                            { text: 'Конфігурація', link: '/backend/configuration' },
+                            {
+                                text: 'Маршрутизація та middleware',
+                                link: '/backend/routing-middlewares',
+                            },
+                            { text: 'База даних', link: '/backend/database' },
+                            { text: 'Автентифікація та безпека', link: '/backend/auth-security' },
+                        ],
+                    },
+                    {
+                        text: 'Туторіали',
+                        items: [{ text: 'Як додати фічу', link: '/backend/adding-a-feature' }],
+                    },
+                ],
+                '/reference/': [
+                    {
+                        text: 'Довідник',
+                        items: [{ text: 'Скрипти', link: '/reference/scripts' }],
                     },
                 ],
             },
