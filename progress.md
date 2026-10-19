@@ -18,15 +18,17 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 - [x] T0.3 — branch `feat/vitepress-docs` created from `main`; `./init.sh` green (see Evidence).
 
 - [x] Stage 1 — VitePress scaffold (T1.1–T1.8), see Evidence.
+- [x] Stage 2 — `docs:verify` (T2.1–T2.5), see Evidence.
 
 ### What's In Progress
 
-- [ ] Stage 2 — `docs:verify` (T2.1–T2.5)
+- [ ] Stage 3 — CI/CD (T3.1–T3.4)
 
 ### What's Next
 
-1. T2.1 — `documentation/scripts/verify-dist.mjs` skeleton + `docs:verify` script.
-2. T2.2–T2.5 — include, key pages, home hero, URL and Mermaid checks.
+1. T3.1–T3.2 — `.github/workflows/docs.yml` (build on PR, deploy only from `main`).
+2. T3.3 — include sources vs workflow `paths` check in `verify-dist.mjs`.
+3. T3.4 — draft PR run.
 
 ## Blockers / Risks
 
@@ -45,6 +47,10 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
   (plugin peer is `mermaid 10 || 11`, so 12.x is not used), `typescript@6.0.3` (workspace pin).
 - **No explicit `vue`**: `pnpm install` shows no `vue` peer warning (VitePress ships `vue@^3.5.13`).
 - **`docs:verify` script** is added in T2.1 together with the script file, not in T1.1.
+- **`docs:verify` layout**: pure helpers in `documentation/scripts/verify/lib.mjs` with
+  `node:test` unit tests (`lib.test.mjs`, run by `pnpm test` via the `documentation` package);
+  the runner `scripts/verify-dist.mjs` holds `KEY_PAGES`, `HOME` and `INCLUDE_MARKERS`.
+  HTML parsing via `node-html-parser@9.0.5`.
 - **Mermaid chunk-size warning** (>500 kB) during build is expected and left as is.
 
 ## Files Modified This Session
@@ -55,6 +61,8 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 - `pnpm-workspace.yaml` — `documentation` package; `package.json` — root `docs:dev|build|preview`.
 - `.gitignore`, `.prettierignore`, `eslint.config.ts` — ignore `documentation/.vitepress/{cache,dist}`.
 - `pnpm-lock.yaml` — VitePress dependencies.
+- `documentation/scripts/verify-dist.mjs`, `documentation/scripts/verify/{lib,lib.test}.mjs` —
+  `docs:verify`; `documentation/package.json` — `docs:verify`, `test`; root `docs:verify`.
 
 ## Evidence of Completion
 
@@ -77,6 +85,21 @@ Stage 1 acceptance (T1.8), `feat/vitepress-docs`:
 - Manual (`vitepress preview`, `/itvibe-template/guide/smoke`): Mermaid rendered to SVG (1),
   include of `packages/backend/src/scripts/README.md` rendered (`h1` "Build Scripts"),
   `/itvibe-template/logo.svg` loaded, brand CSS applied, no console errors
+
+Stage 2 acceptance (T2.1–T2.5):
+
+- `pnpm --filter documentation test` — 24/24 (URL classes, cleanUrls resolution, Cyrillic anchors,
+  srcset, include parsing, markers, Mermaid count, md→dist mapping)
+- `pnpm docs:build && pnpm docs:verify` — all checks passed
+- Mutation checks (each must fail, then restored to green):
+  - include source renamed → `source file not found` (VitePress itself built silently)
+  - include text removed from HTML → `text ... not found in .vp-doc`
+  - article emptied to `h1` only → `0 chars without headings`, include + Mermaid errors
+  - `.VPHero` removed → `no .VPHero`
+  - injected links: missing asset, `/logo.svg` outside base, missing page, missing `#anchor` →
+    4 errors; `https:`, `mailto:`, `data:`, `#local` ignored
+  - Mermaid container removed → `expected 1 Mermaid container(s), found 0`
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (incl. backend 268/268) — green
 
 ## Notes for Next Session
 

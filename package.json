@@ -18,6 +18,7 @@
     "docs:dev": "pnpm --filter documentation docs:dev",
     "docs:build": "pnpm --filter documentation docs:build",
     "docs:preview": "pnpm --filter documentation docs:preview",
+    "docs:verify": "pnpm --filter documentation docs:verify",
     "start": "pnpm --filter backend start",
     "lint": "eslint . && pnpm -r --if-present lint:check",
     "lint:fix": "eslint . --fix",

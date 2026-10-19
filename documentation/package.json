@@ -7,10 +7,13 @@
         "docs:dev": "vitepress dev",
         "docs:build": "vitepress build",
         "docs:preview": "vitepress preview",
-        "typecheck": "tsc --noEmit -p tsconfig.json"
+        "docs:verify": "node scripts/verify-dist.mjs",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "test": "node --test \"scripts/verify/*.test.mjs\""
     },
     "devDependencies": {
         "mermaid": "11.17.2",
+        "node-html-parser": "9.0.5",
         "typescript": "6.0.3",
         "vitepress": "1.6.4",
         "vitepress-plugin-mermaid": "2.0.17"

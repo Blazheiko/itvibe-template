@@ -1,0 +1,235 @@
+// Verifies the built site in .vitepress/dist (plan §5, stage 4; task list T2.1–T2.5).
+// Content checks look only inside the article container (.vp-doc), never at nav/sidebar/footer.
+// Usage: node scripts/verify-dist.mjs   (after `vitepress build`)
+
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { parse } from 'node-html-parser'
+import {
+    classifyUrl,
+    countMermaidBlocks,
+    deriveMarkers,
+    extractIncludes,
+    markdownToDist,
+    normalizeText,
+    resolveInternalUrl,
+    srcsetUrls,
+} from './verify/lib.mjs'
+
+const BASE = '/itvibe-template/'
+const MIN_ARTICLE_CHARS = 300
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const DIST = path.join(ROOT, '.vitepress', 'dist')
+const SKIP_DIRS = new Set(['.vitepress', 'node_modules', 'public', 'scripts'])
+
+/**
+ * Key article pages (T2.3). Add each page here in the same task that writes it.
+ * `h1` is the expected article title.
+ */
+const KEY_PAGES = [{ page: 'guide/smoke.md', h1: 'Smoke-сторінка' }]
+
+/** Home page (layout: home) checks (T2.3a). */
+const HOME = {
+    page: 'index.md',
+    name: 'itvibe-template',
+    tagline: 'Документація з фокусом на бекенд',
+}
+
+/**
+ * Explicit include markers, keyed by include path as written in the directive.
+ * Required for partial includes (#region / {lines}); optional override otherwise.
+ */
+const INCLUDE_MARKERS = {}
+
+const errors = []
+const fail = (where, message) => errors.push(`${where}: ${message}`)
+
+const htmlCache = new Map()
+function loadHtml(relFile) {
+    if (!htmlCache.has(relFile)) {
+        const abs = path.join(DIST, relFile)
+        htmlCache.set(relFile, existsSync(abs) ? parse(readFileSync(abs, 'utf8')) : null)
+    }
+    return htmlCache.get(relFile)
+}
+
+function walk(dir, filter, out = []) {
+    for (const entry of readdirSync(dir)) {
+        const abs = path.join(dir, entry)
+        if (statSync(abs).isDirectory()) {
+            if (!SKIP_DIRS.has(entry) || dir !== ROOT) walk(abs, filter, out)
+        } else if (filter(entry)) {
+            out.push(abs)
+        }
+    }
+    return out
+}
+
+function articleOf(relHtml, where) {
+    const root = loadHtml(relHtml)
+    if (root === null) {
+        fail(where, `missing ${relHtml} in dist`)
+        return null
+    }
+    const article = root.querySelector('.vp-doc')
+    if (article === null) fail(where, 'no .vp-doc article container')
+    return article
+}
+
+function textWithoutHeadings(article) {
+    const clone = parse(article.outerHTML)
+    for (const h of clone.querySelectorAll('h1, h2, h3, h4, h5, h6')) h.remove()
+    return normalizeText(clone.textContent)
+}
+
+// T2.2 + T2.5: includes and Mermaid, driven by the Markdown sources.
+function checkSources() {
+    const mdFiles = walk(ROOT, (name) => name.endsWith('.md'))
+    for (const mdAbs of mdFiles) {
+        const mdRel = path.relative(ROOT, mdAbs).split(path.sep).join('/')
+        const source = readFileSync(mdAbs, 'utf8')
+        const { html } = markdownToDist(mdRel, BASE)
+        const includes = extractIncludes(source)
+        let mermaidExpected = countMermaidBlocks(source)
+        if (includes.length === 0 && mermaidExpected === 0) continue
+
+        const article = articleOf(html, mdRel)
+        if (article === null) continue
+        const articleText = normalizeText(article.textContent)
+        const headingTexts = article
+            .querySelectorAll('h1, h2, h3, h4, h5, h6')
+            .map((h) => normalizeText(h.textContent))
+
+        for (const include of includes) {
+            const where = `${mdRel} include ${include.raw}`
+            const target = include.file.startsWith('@/')
+                ? path.join(ROOT, include.file.slice(2))
+                : path.resolve(path.dirname(mdAbs), include.file)
+            if (!existsSync(target)) {
+                fail(where, `source file not found (${path.relative(ROOT, target)})`)
+                continue
+            }
+            const included = readFileSync(target, 'utf8')
+            mermaidExpected += include.partial ? 0 : countMermaidBlocks(included)
+
+            const markers =
+                INCLUDE_MARKERS[include.raw] ??
+                (include.partial ? undefined : deriveMarkers(included))
+            if (markers === undefined) {
+                fail(where, 'partial include needs explicit markers in INCLUDE_MARKERS')
+                continue
+            }
+            if (markers.heading === undefined || markers.text === undefined) {
+                fail(where, 'could not derive heading + text markers; add them to INCLUDE_MARKERS')
+                continue
+            }
+            if (!headingTexts.includes(markers.heading)) {
+                fail(where, `heading "${markers.heading}" not found in .vp-doc`)
+            }
+            if (!articleText.includes(markers.text)) {
+                fail(where, `text "${markers.text.slice(0, 60)}" not found in .vp-doc`)
+            }
+        }
+
+        const mermaidFound = article.querySelectorAll('.mermaid').length
+        if (mermaidFound !== mermaidExpected) {
+            fail(mdRel, `expected ${mermaidExpected} Mermaid container(s), found ${mermaidFound}`)
+        }
+    }
+}
+
+// T2.3: key article pages exist, have the expected h1 and enough text.
+function checkKeyPages() {
+    for (const { page, h1 } of KEY_PAGES) {
+        const article = articleOf(markdownToDist(page, BASE).html, page)
+        if (article === null) continue
+        const firstH1 = article.querySelector('h1')
+        if (firstH1 === null || normalizeText(firstH1.textContent) !== h1) {
+            fail(page, `expected h1 "${h1}"`)
+        }
+        const chars = textWithoutHeadings(article).length
+        if (chars < MIN_ARTICLE_CHARS) {
+            fail(page, `article has ${chars} chars without headings, need ≥ ${MIN_ARTICLE_CHARS}`)
+        }
+    }
+}
+
+// T2.3a: home page hero (no .vp-doc on layout: home).
+function checkHome() {
+    const where = HOME.page
+    const root = loadHtml(markdownToDist(HOME.page, BASE).html)
+    if (root === null) return fail(where, 'missing in dist')
+    const hero = root.querySelector('.VPHero')
+    if (hero === null) return fail(where, 'no .VPHero')
+    const name = normalizeText(hero.querySelector('.name')?.textContent ?? '')
+    if (name !== HOME.name) fail(where, `hero name "${name}", expected "${HOME.name}"`)
+    const tagline = normalizeText(hero.querySelector('.tagline')?.textContent ?? '')
+    if (!tagline.includes(HOME.tagline)) fail(where, `hero tagline missing "${HOME.tagline}"`)
+    const actions = hero.querySelectorAll('.actions a')
+    if (actions.length === 0) fail(where, 'hero has no action links')
+    // Action hrefs are validated by checkUrls like every other link.
+}
+
+// T2.4: every src/href/srcset in every page.
+function checkUrls() {
+    const htmlFiles = walk(DIST, (name) => name.endsWith('.html'))
+    for (const abs of htmlFiles) {
+        const rel = path.relative(DIST, abs).split(path.sep).join('/')
+        if (rel === '404.html') continue
+        const pageUrl = markdownToDist(rel.replace(/\.html$/, '.md'), BASE).urlPath
+        const root = loadHtml(rel)
+        const urls = []
+        for (const el of root.querySelectorAll('[href], [src], [srcset]')) {
+            for (const attr of ['href', 'src']) {
+                const value = el.getAttribute(attr)
+                if (value !== undefined) urls.push(value)
+            }
+            const srcset = el.getAttribute('srcset')
+            if (srcset !== undefined) urls.push(...srcsetUrls(srcset))
+        }
+
+        for (const url of urls) {
+            if (classifyUrl(url) === 'skip') continue
+            const where = `${rel} → ${url}`
+            const resolved = resolveInternalUrl(url, pageUrl, BASE)
+            if ('error' in resolved) {
+                fail(where, resolved.error)
+                continue
+            }
+            if (resolved.kind === 'asset') {
+                if (!existsSync(path.join(DIST, resolved.file)))
+                    fail(where, 'asset not found in dist')
+                continue
+            }
+            const target = resolved.candidates.find((c) => existsSync(path.join(DIST, c)))
+            if (target === undefined) {
+                fail(where, `page not found (${resolved.candidates.join(' | ')})`)
+                continue
+            }
+            if (
+                resolved.hash !== '' &&
+                loadHtml(target).querySelector(`[id="${resolved.hash}"]`) === null
+            ) {
+                fail(where, `anchor #${resolved.hash} not found in ${target}`)
+            }
+        }
+    }
+}
+
+if (!existsSync(DIST)) {
+    console.error(`verify-dist: ${path.relative(ROOT, DIST)} not found — run docs:build first`)
+    process.exit(1)
+}
+
+checkSources()
+checkKeyPages()
+checkHome()
+checkUrls()
+
+if (errors.length > 0) {
+    console.error(`verify-dist: ${errors.length} problem(s)\n`)
+    for (const e of errors) console.error(`  ✖ ${e}`)
+    process.exit(1)
+}
+console.log('verify-dist: all checks passed')
