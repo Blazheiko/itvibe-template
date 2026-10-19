@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-19
-**Active Feature:** feat-003 - VitePress Documentation
+**Active Feature:** feat-003 - VitePress Documentation (done)
 **Branch:** `feat/vitepress-docs`
 
 Plan: [docs/plan/vitepress-documentation-plan.md](docs/plan/vitepress-documentation-plan.md) (rev. 3)
@@ -28,12 +28,12 @@ Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-docu
 
 ### What's In Progress
 
-- [ ] Stage 5 — release v1 (T5.1–T5.7).
+- [x] Stage 5 — release v1 (T5.1–T5.7). **feat-003 done.**
 
 ### What's Next
 
-1. T3.5 (owner, manual) — Settings → Pages → Source: GitHub Actions (needed before T5.3).
-2. T5.1 full run, T5.2 mark PR #2 ready for review.
+1. Stage 6 (v2 pages), one page per PR, see the task list.
+2. Follow-up features from `docs/plan/code-issues-found-during-docs.md`.
 
 ## Blockers / Risks
 
@@ -172,6 +172,21 @@ Stage 5 — T5.1 full run before merge (`feat/vitepress-docs` @ `3d8c971`), exit
 - `pnpm docs:build` complete; `pnpm docs:verify` — all checks passed
 - `pnpm format:check` — 193 pre-existing warnings, same as `main`
 - T3.5 confirmed via API: Pages `build_type: workflow`, `https://blazheiko.github.io/itvibe-template/`
+
+Stage 5 — release:
+
+- T5.2/T5.3: PR #2 ready → CI green → merged (`bc32821`); push run 39298566100 — `build` success,
+  `deploy` success → https://blazheiko.github.io/itvibe-template/
+- T5.3a: `workflow_dispatch` on `feat/vitepress-docs` (run 39298893387) — `build` success,
+  upload-pages-artifact skipped, `deploy` skipped
+- T5.4 on the live site: `/`, `/backend/configuration`, `/guide/getting-started`,
+  `/backend/request-lifecycle`, `/logo.svg` → 200; direct open + reload of
+  `/itvibe-template/backend/request-lifecycle` OK; 2 Mermaid SVG, 0 errors; images OK;
+  dark/light toggle OK (diagrams re-render); search «міграції», «сесія» → relevant pages;
+  no console errors. Trailing-slash URLs (`/backend/configuration/`) give 404 — expected with
+  `cleanUrls` on Pages; site links never use them (checked by `docs:verify`).
+- T5.5: README link + badge — PR #3 merged (`2fdf14b`)
+- T5.6: documentation rule in `AGENTS.md`; T5.7: `feat-003` → `done` (this PR)
 
 ## Notes for Next Session
 
