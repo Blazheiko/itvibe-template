@@ -43,6 +43,7 @@ const KEY_PAGES = [
     { page: 'backend/routing-middlewares.md', h1: 'Маршрутизація та middleware' },
     { page: 'backend/database.md', h1: 'База даних' },
     { page: 'backend/auth-security.md', h1: 'Автентифікація та безпека' },
+    { page: 'backend/websocket.md', h1: 'WebSocket' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
 ]
