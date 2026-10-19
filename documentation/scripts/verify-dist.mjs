@@ -47,6 +47,7 @@ const KEY_PAGES = [
     { page: 'backend/controllers-services.md', h1: 'Контролери та сервіси' },
     { page: 'backend/repositories-transformers.md', h1: 'Репозиторії та трансформери' },
     { page: 'backend/validation.md', h1: 'Валідація' },
+    { page: 'backend/deployment.md', h1: 'Деплой' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
 ]

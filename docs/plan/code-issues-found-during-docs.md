@@ -37,6 +37,11 @@
 | 25  | `clearEmbedding` — два запити без транзакції, сирий SQL з назвами     | Низька       | БД                    |
 | 26  | ArkType-адаптер віддає лише `summary`, без помилок по полях           | Низька       | Валідація             |
 | 27  | Мертвий і застарілий код валідації та контролерів                     | Низька       | Структура             |
+| 28  | Немає `.dockerignore`                                                 | Середня      | Docker / безпека      |
+| 29  | Контейнер працює від root, без `HEALTHCHECK`                          | Середня      | Docker / безпека      |
+| 30  | `CMD` через `sh -c`: міграції на кожному старті, сигнали              | Середня      | Docker / експлуатація |
+| 31  | Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`                   | Низька       | Docker / конфігурація |
+| 32  | `corsS3.xml`: `AllowedOrigin *` разом з `PUT`                         | Середня      | Безпека / S3          |
 
 ## Безпека
 
@@ -220,11 +225,42 @@
 - `packages/backend/README.md` (~рядок 343) пише `ValidationError → 400`, а код повертає `422` (`validation-error.ts`).
 - `src/docs/VALIDATOR_ABSTRACTION_PLAN.md`: не зроблено §3.6 (`InputSchema` export), §9 (`nativeValidator(predicate)`), §5.6 (`ResponseSchema`/`BaseType` у `vendor/types`).
 
+## Деплой (знайдено під час T6.8b, feat-011)
+
+Перевірено реальним `docker build` (успішно, ~206 с, образ 817 MB) і `docker run` (без БД падає на `db:create:prod` з `ECONNREFUSED`, exit 1).
+
+### 28. Немає `.dockerignore`
+
+- **Що:** у корені немає `.dockerignore`, а `Dockerfile` робить `COPY . .`.
+- **Наслідок:** у build context і builder-шар потрапляють локальні `.env`, `node_modules`, `dist`. Збірка повільніша, і є ризик витоку секретів у шари образу.
+- **Пропозиція:** додати `.dockerignore` (`**/node_modules`, `**/dist`, `**/.env*` крім `.env.example`, `.git`, `documentation/.vitepress/{cache,dist}`).
+
+### 29. Контейнер працює від root, без `HEALTHCHECK`
+
+- **Що:** у `Dockerfile` немає `USER` і `HEALTHCHECK`.
+- **Пропозиція:** `USER node`; `HEALTHCHECK` через `GET /api/ping`.
+
+### 30. `CMD` через `sh -c`
+
+- **Що:** `CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]`.
+- **Наслідок:** міграції виконуються на кожному старті контейнера, і при кількох репліках виникає гонка. PID 1 тут — shell, тому SIGTERM може не дійти до Node, і graceful shutdown з `src/index.ts` не спрацює.
+- **Пропозиція:** окремий одноразовий job для `db:create:prod`/`db:migrate`; `CMD ["node", "dist/index.js"]` (або `exec`/`tini`).
+
+### 31. Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`
+
+- **Що:** `Dockerfile` копіює фронтенд у `public`, але не встановлює `SERVE_STATIC=true`, тож за замовчуванням контейнер фронтенд не роздає. Задано `NODE_ENV=production`, але не `APP_ENV`, а саме його читають `secure` у cookie і конфіг CSP.
+- **Пропозиція:** задати `SERVE_STATIC=true` і `APP_ENV=production` в образі або явно описати їх як обов'язкові при запуску.
+
+### 32. `corsS3.xml`: `AllowedOrigin *` разом з `PUT`
+
+- **Що:** CORS-конфіг бакета дозволяє будь-яке джерело для `GET`/`POST`/`PUT`.
+- **Пропозиція:** обмежити `AllowedOrigin` доменами застосунку; для продакшну тримати окремий файл.
+
 ## Що варто зробити далі
 
 Пропоную оформити окремі записи в `feature_list.json` (через PR у `main`):
 
-1. **security-hardening** — п. 1, 2, 3, 9, 18.
+1. **security-hardening** — п. 1, 2, 3, 9, 18, 32.
 2. **env-example-sync** — п. 4, 5, 6, 8 (+ README).
 3. **db-dx** — п. 7, 10, 11.
 4. **http-body-fixes** — п. 12, 13, 14.
@@ -233,3 +269,4 @@
 7. Окремої фічі поки немає: п. 17 і 19 — кандидати в новий запис (WebSocket cleanup).
 8. Окремої фічі поки немає: п. 20–25 — кандидати в новий запис (layering & data access cleanup);
    п. 26 — до feat-008 або окремо; п. 27 — до feat-009.
+9. Окремої фічі поки немає: п. 28–31 — кандидати в новий запис (Docker hardening).
