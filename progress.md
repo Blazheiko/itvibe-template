@@ -165,6 +165,14 @@ Stage 4 (T4.0–T4.13):
 - Secret scan of pages: no key-like strings; no files outside `documentation/` changed.
 - `pnpm typecheck`, `pnpm lint`, `pnpm test` (documentation 26, shared 1, frontend 27, backend 268) — green.
 
+Stage 5 — T5.1 full run before merge (`feat/vitepress-docs` @ `3d8c971`), exit 0:
+
+- `pnpm typecheck` clean; `pnpm lint` clean
+- `pnpm test`: documentation 26/26, shared 1/1, frontend 27/27, backend 268/268
+- `pnpm docs:build` complete; `pnpm docs:verify` — all checks passed
+- `pnpm format:check` — 193 pre-existing warnings, same as `main`
+- T3.5 confirmed via API: Pages `build_type: workflow`, `https://blazheiko.github.io/itvibe-template/`
+
 ## Notes for Next Session
 
 - Follow the task list in order; the critical path is at the end of the task list.
