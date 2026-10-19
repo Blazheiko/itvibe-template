@@ -24,6 +24,26 @@
       "dependencies": ["feat-001"],
       "status": "not-started",
       "evidence": ""
+    },
+    {
+      "id": "feat-003",
+      "name": "VitePress Documentation",
+      "description": "VitePress documentation site in documentation/ with backend focus, published to GitHub Pages (plan: docs/plan/vitepress-documentation-plan.md, tasks: docs/plan/vitepress-documentation-tasks.md)",
+      "owner": "Blazheiko",
+      "branch": "feat/vitepress-docs",
+      "dependencies": [],
+      "status": "in_progress",
+      "evidence": ""
+    },
+    {
+      "id": "feat-004",
+      "name": "OpenAPI Generation",
+      "description": "Generate an OpenAPI spec from backend routes/schemas (packages/backend/src/openapi/spec.ts is currently empty) and publish it in the documentation",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-003"],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }
