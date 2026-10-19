@@ -29,6 +29,16 @@ A feature is `done` only when all of the following are recorded in `progress.md`
 - Manual verification of the golden path documented
 - Feature entry in `feature_list.json` flipped to `done` with the evidence commit/output referenced
 
+## Documentation
+
+The VitePress site in `documentation/` is published to GitHub Pages (https://blazheiko.github.io/itvibe-template/) from `main` by `.github/workflows/docs.yml`.
+
+- A change to public backend behaviour (a route, an env variable, a middleware, a migration or the DB schema) must update the matching page in `documentation/backend/` in the same PR.
+- Write pages from the code and link sources on GitHub. Mark unimplemented things with `::: warning План`. Use placeholders for secrets.
+- Add every new page to the sidebar in `documentation/.vitepress/config.ts` and to `KEY_PAGES` in `documentation/scripts/verify-dist.mjs`.
+- When a page uses `<!--@include-->`, the source path must be covered by `paths` in `docs.yml`.
+- Before merging, run `pnpm docs:build && pnpm docs:verify`.
+
 ## End of Session
 
 Before ending, commit + push the feature branch with an updated `progress.md` (current state, files modified, next step) and, if work is unfinished, fill `session-handoff.md` so the next session can restart cleanly.

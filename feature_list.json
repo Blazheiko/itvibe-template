@@ -32,8 +32,8 @@
       "owner": "Blazheiko",
       "branch": "feat/vitepress-docs",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #2 merged (bc32821); Pages deploy run 39298566100; release evidence in progress.md (Stage 5)"
     },
     {
       "id": "feat-004",
