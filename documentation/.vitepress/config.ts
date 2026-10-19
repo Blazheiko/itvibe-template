@@ -56,6 +56,7 @@ export default withMermaid(
                             { text: 'База даних', link: '/backend/database' },
                             { text: 'Автентифікація та безпека', link: '/backend/auth-security' },
                             { text: 'WebSocket', link: '/backend/websocket' },
+                            { text: 'Деплой', link: '/backend/deployment' },
                         ],
                     },
                     {

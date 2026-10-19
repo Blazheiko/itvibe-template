@@ -19,9 +19,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 - [x] T6.4 — `documentation/backend/websocket.md` (PR #9, merged)
 - [x] T6.1–T6.3 — controllers-services, repositories-transformers, validation (one PR, see Decisions)
 
+- [x] T6.8b — `documentation/backend/deployment.md` (stacked on the T6.1–T6.3 PR)
+
 ### What's In Progress
 
-- [ ] T6.8b — `documentation/backend/deployment.md`
+- [ ] T6.6 — `documentation/backend/observability.md`
 
 ### What's Next
 
@@ -71,6 +73,17 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - New issues 20–27 in `docs/plan/code-issues-found-during-docs.md`.
 - Sidebar + `KEY_PAGES` (12 backend pages); `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
 - Preview: 1 Mermaid SVG per page, 0 errors; secret scan clean.
+
+**T6.8b Деплой** (`docs/t6-8b-deployment`, based on `docs/t6-1-3-layers`):
+
+- Real `docker build -t itvibe-docs-check .` — success, ~206 s cold, image 817 MB; real `docker run`
+  with `APP_ENV=production` + dummy `APP_KEY`, no DB → `db:create:prod` `ECONNREFUSED 127.0.0.1:5432`,
+  exit 1 (documented). Image and container removed afterwards (checked).
+- Re-checked in repo: no `.dockerignore`; no `USER`/`HEALTHCHECK`; `CMD ["sh","-c",…]` with
+  migrations; `corsS3.xml` `AllowedOrigin *` + `PUT`.
+- Fixed a sentence that implied CSP is applied (it is not, item 1).
+- New issues 28–32; item 32 → security-hardening.
+- `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: 1 Mermaid SVG, 0 errors.
 
 ## Notes for Next Session
 
