@@ -10,8 +10,8 @@
 
 | #   | Проблема                                                                                                          | Серйозність  | Область                      |
 | --- | ----------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
-| 1   | CSP ніде не застосовується                                                                                        | Висока       | Безпека                      |
-| 2   | Немає rate limit на WebSocket upgrade і глобального per-IP ліміту                                                 | Висока       | Безпека                      |
+| 1   | ~~CSP ніде не застосовується~~ ✅                                                                                  | Висока       | Безпека                      |
+| 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅ (Redis — відкрито)                        | Висока       | Безпека                      |
 | 3   | WS-токен і `userToken` потрапляють у логи                                                                         | Середня      | Безпека                      |
 | 4   | `SERVE_STATIC=true` у `.env.example` ламає запуск                                                                 | Середня      | DX / конфігурація            |
 | 5   | Fallback `PGSQL_PORT` не працює → `NaN`                                                                           | Середня      | Конфігурація                 |
@@ -84,11 +84,15 @@
 
 ### 1. CSP ніде не застосовується
 
+> **Виправлено** у feat-005 (гілка `feat/security-hardening`) за планом [`csp-fix-plan.md`](./csp-fix-plan.md).
+
 - **Що:** конфіг `src/config/csp.ts` ніхто не імпортує. Код встановлення CSP у `src/vendor/start/static-server.ts` закоментовано. `setSecurityHeaders` у `src/vendor/start/server.ts` додає `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy` і HSTS, але `Content-Security-Policy` не додає.
 - **Наслідок:** жодна відповідь (API, статика, HTML) не має CSP. Це finding M-5 зі `SECURITY_ANALYSIS.md`, закритий лише частково.
 - **Пропозиція:** підключити `config/csp.ts` у `setSecurityHeaders` і в static handler; додати тест на наявність заголовка.
 
 ### 2. Немає rate limit на WebSocket upgrade і глобального per-IP ліміту
+
+> **Виправлено** у feat-005 (гілка `feat/security-hardening`) за планом [`ws-upgrade-rate-limit-plan.md`](./ws-upgrade-rate-limit-plan.md): L1 per-IP для HTTP API, окремий ліміт upgrade, лічильник з обмеженою пам'яттю. **Відкрита підзадача:** Redis-лічильник для кількох інстансів. Поки що замість нього рекомендовано edge-ліміт у nginx, його описано в `deployment.md`.
 
 - **Що:** rate limiting є лише per-route для HTTP (`src/vendor/utils/rate-limit/*`), перевірка виконується до читання body. Upgrade-запит WebSocket ліміту не має. Глобального L1-ліміту за IP також немає. Лічильник зберігається в пам'яті процесу, а не в Redis.
 - **Наслідок:** при кількох інстансах ліміт не спільний. Upgrade можна флудити. Це залишок finding C-2.

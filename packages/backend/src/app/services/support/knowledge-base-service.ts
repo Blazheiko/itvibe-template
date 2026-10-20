@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { UploadedFile } from "#vendor/types/types.js";
+import appConfig from "#config/app.js";
 import diskConfig from "#config/disk.js";
 import { supportKnowledgeRepository } from "#app/repositories/support/support-knowledge-repository.js";
-import type { KbArticleRow, KbRow } from "#app/repositories/support/support-knowledge-repository.js";
+import type {
+  KbArticleRow,
+  KbRow,
+} from "#app/repositories/support/support-knowledge-repository.js";
 import { supportEmbeddingService } from "#app/services/support/support-embedding-service.js";
 import { deleteFromS3, uploadToS3 } from "#vendor/utils/storage/s3.js";
 import logger from "#logger";
@@ -14,7 +18,6 @@ import {
   internalMessage,
 } from "#app/services/shared/errors.js";
 import { tryInternal } from "#app/services/shared/result-helpers.js";
-import { presignUrl } from "#vendor/utils/storage/s3.js";
 
 const MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_SCREENSHOT_TYPES = new Set([
@@ -50,7 +53,9 @@ export interface KbItemData {
   updatedAt: string;
 }
 
-function rowToData(row: KbArticleRow | (KbRow & { embeddingIndexed: boolean })): KbItemData {
+function rowToData(
+  row: KbArticleRow | (KbRow & { embeddingIndexed: boolean }),
+): KbItemData {
   return {
     id: String(row.id),
     title: row.title,
@@ -278,7 +283,12 @@ export const knowledgeBaseService = {
     const ext = getExtFromMime(file.type);
     const s3Key = `knowledge-base/${String(id)}/${randomUUID()}.${ext}`;
     const uploadResult = await tryInternal(
-      () => uploadToS3(s3Key, Buffer.from(file.data), file.type),
+      // Screenshots are public help content: the browser loads them from CDN_URL, the
+      // only media origin allowed by the CSP img-src.
+      () =>
+        uploadToS3(s3Key, Buffer.from(file.data), file.type, {
+          publicRead: true,
+        }),
       "Failed to upload knowledge base screenshot",
     );
     if (Result.isError(uploadResult)) {
@@ -364,28 +374,28 @@ export const knowledgeBaseService = {
 
   async getScreenshotUrl(
     articleId: bigint,
-  ): Promise<AppResult<{ signedUrl: string | null }>> {
-    const screenshotKeyResult = await knowledgeBaseService.getScreenshotKey(
-      articleId,
-    );
+  ): Promise<AppResult<{ url: string | null }>> {
+    const screenshotKeyResult =
+      await knowledgeBaseService.getScreenshotKey(articleId);
     if (Result.isError(screenshotKeyResult)) {
       return Result.err(screenshotKeyResult.error);
     }
 
     const screenshotKey = screenshotKeyResult.value;
     if (screenshotKey === null) {
-      return Result.ok({ signedUrl: null });
+      return Result.ok({ url: null });
     }
 
-    const signedUrlResult = await tryInternal(
-      () => presignUrl(screenshotKey, 300),
-      "Failed to presign screenshot URL",
-    );
-    if (Result.isError(signedUrlResult)) {
-      return Result.err(signedUrlResult.error);
+    const cdnUrl = appConfig.cdnUrl.trim().replace(/\/+$/, "");
+    if (cdnUrl.length === 0) {
+      logger.warn(
+        { articleId: String(articleId) },
+        "CDN_URL is not set, cannot serve KB screenshot",
+      );
+      return Result.ok({ url: null });
     }
 
-    return Result.ok({ signedUrl: signedUrlResult.value });
+    return Result.ok({ url: `${cdnUrl}/${buildFullS3Key(screenshotKey)}` });
   },
 
   async reindexArticle(id: bigint): Promise<AppResult<{ indexed: number }>> {

@@ -4,10 +4,10 @@ import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
 // import logger from '#vendor/utils/logger.js';
 import appConfig from "#config/app.js";
-// import cspConfig from "#config/csp.js";
 import type { HttpRequest, HttpResponse } from "#vendor/start/server.js";
 import { MIME_TYPES } from "#vendor/constants/index.js";
 import { isBinaryExtension } from "#vendor/utils/helpers/file-utils.js";
+import type { CspKind } from "#vendor/utils/network/csp.js";
 import {
   setSecurityHeaders,
   writeHttpStatus,
@@ -112,40 +112,13 @@ const cacheStaticSource = async (): Promise<Map<
   return null;
 };
 
-// const buildCspValue = (): string => {
-//   // Prefer full policy string if provided
-//   // const policy: unknown = (cspConfig as any)?.policy ?? (cspConfig as any)?.value;
-//   // if (typeof policy === 'string' && policy.trim().length > 0) return policy.trim();
+// The service worker script's own CSP would govern the worker (and its fetches), so it gets none.
+const SERVICE_WORKER_PATH = "/service-worker.js";
 
-//   const directives = cspConfig.directives;
-//   if (typeof directives === "object") {
-//     const parts: string[] = [];
-//     for (const [name, val] of Object.entries(
-//       directives as Record<string, unknown>,
-//     )) {
-//       if (Array.isArray(val)) {
-//         parts.push(`${name} ${val.join(" ")}`.trim());
-//       } else if (typeof val === "string") {
-//         parts.push(`${name} ${val}`.trim());
-//       } else if (val === true) {
-//         parts.push(name);
-//       }
-//     }
-//     return parts.join("; ").trim();
-//   }
-//   return "";
-// };
-
-// const cspHeaderValue: string = buildCspValue();
-// const cspHeaderName: string = cspConfig.reportOnly
-//   ? "Content-Security-Policy-Report-Only"
-//   : "Content-Security-Policy";
-// const isCspEnabled = Boolean(cspConfig.enabled && cspHeaderValue);
-
-// const setCspHeader = (res: HttpResponse): void => {
-//   if (!isCspEnabled) return;
-//   res.writeHeader(cspHeaderName, cspHeaderValue);
-// };
+const getAssetCspKind = (url: string, ext: string): CspKind | null => {
+  if (url === SERVICE_WORKER_PATH) return null;
+  return ext === "svg" ? "svg" : null;
+};
 
 const staticIndexHandler = (res: HttpResponse): void => {
   const data = cache.get("/index.html");
@@ -153,7 +126,7 @@ const staticIndexHandler = (res: HttpResponse): void => {
   const mimeType = MIME_TYPES["html"];
   res.cork(() => {
     writeHttpStatus(res, statusCode);
-    // setCspHeader(res);
+    setSecurityHeaders(res, [], statusCode === 200 ? "document" : "strict");
     if (mimeType !== undefined && mimeType !== "") {
       res.writeHeader("Content-Type", mimeType);
     }
@@ -186,7 +159,7 @@ const handleHtmlRequest = (
     res.writeHeader("content-type", MIME_TYPES["html"] ?? "");
     res.writeHeader("Cache-Control", HTML_CACHE_CONTROL);
     res.writeHeader("ETag", etag);
-    setSecurityHeaders(res);
+    setSecurityHeaders(res, [], "document");
     if (notModified) {
       res.end();
       return;
@@ -211,6 +184,7 @@ const staticCacheHandler = async (
       : MIME_TYPES["html"];
 
   const etag = getEtag(url, cachedData);
+  const cspKind = getAssetCspKind(url, ext);
 
   if (mimeType === MIME_TYPES["html"]) {
     handleHtmlRequest(res, req, cachedData, etag);
@@ -236,6 +210,7 @@ const staticCacheHandler = async (
         `public, max-age=${String(maxAge)}, immutable`,
       );
       res.writeHeader("ETag", etag);
+      setSecurityHeaders(res, [], cspKind);
       res.end();
     });
     return;
@@ -256,8 +231,7 @@ const staticCacheHandler = async (
     );
     res.writeHeader("ETag", etag);
 
-    // Add security headers
-    res.writeHeader("X-Content-Type-Options", "nosniff");
+    setSecurityHeaders(res, [], cspKind);
 
     // Note: Compression not implemented yet
     // When adding compression support, add: res.writeHeader('Vary', 'Accept-Encoding');
@@ -275,6 +249,7 @@ const staticHandler = async (
   if (!isUrlSafe(url)) {
     res.cork(() => {
       writeHttpStatus(res, 400);
+      setSecurityHeaders(res);
       res.end("Bad Request");
     });
     return;
@@ -301,7 +276,7 @@ const staticHandler = async (
   res.cork(() => {
     writeHttpStatus(res, statusCode);
     res.writeHeader("Content-Type", mimeType);
-    res.writeHeader("X-Content-Type-Options", "nosniff");
+    setSecurityHeaders(res);
     res.end(data ?? "");
   });
 };

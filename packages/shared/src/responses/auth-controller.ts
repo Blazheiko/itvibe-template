@@ -1,5 +1,5 @@
 import { type } from "@arktype/type";
-import { ErrorCodeSchema } from "../errors/error-codes.js";
+import { ErrorCodeSchema } from "./error-code-schema.js";
 import type { ErrorCode as AppErrorCode } from "../errors/error-codes.js";
 import {
   CanonicalErrorResponseSchema,

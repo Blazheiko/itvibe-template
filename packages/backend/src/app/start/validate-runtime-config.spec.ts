@@ -159,3 +159,61 @@ describe('validateRuntimeConfig', () => {
     }).not.toThrow();
   });
 });
+
+describe('rate limit configuration', () => {
+  it.each([
+    ['HTTP_GLOBAL_RATE_LIMIT_MAX', '-1'],
+    ['HTTP_GLOBAL_RATE_LIMIT_MAX', '1.5'],
+    ['HTTP_GLOBAL_RATE_LIMIT_MAX', 'Infinity'],
+    ['HTTP_GLOBAL_RATE_LIMIT_MAX', 'abc'],
+    ['HTTP_GLOBAL_RATE_LIMIT_MAX', ''],
+    ['HTTP_GLOBAL_RATE_LIMIT_WINDOW_MS', '0'],
+    ['WS_UPGRADE_RATE_LIMIT_WINDOW_MS', '1e3'],
+    ['WS_UPGRADE_RATE_LIMIT_MAX', 'NaN'],
+  ])('rejects %s=%s at startup', async (name, value) => {
+    process.env[name] = value;
+    const { validateRuntimeConfig } = await import('./validate-runtime-config.js');
+    expect(() => {
+      validateRuntimeConfig();
+    }).toThrow(`Invalid rate limit configuration: ${name} must be an integer`);
+  });
+
+  it('accepts MAX=0 (disabled) and positive windows', async () => {
+    process.env['HTTP_GLOBAL_RATE_LIMIT_MAX'] = '0';
+    process.env['WS_UPGRADE_RATE_LIMIT_WINDOW_MS'] = '1000';
+    const { default: rateLimitConfig } = await import('#config/rate-limit.js');
+    expect(rateLimitConfig.configError).toBeNull();
+    expect(rateLimitConfig.httpGlobal.max).toBe(0);
+    expect(rateLimitConfig.wsUpgrade.windowMs).toBe(1000);
+  });
+});
+
+describe('getProxyWarning', () => {
+  const load = async () => (await import('./validate-runtime-config.js')).getProxyWarning();
+
+  it('is silent outside production-like environments', async () => {
+    process.env['APP_IS_PRODUCTION'] = 'false';
+    process.env['TRUST_PROXY'] = 'false';
+    expect(await load()).toBeNull();
+  });
+
+  it('warns in production when the proxy is not trusted', async () => {
+    process.env['APP_IS_PRODUCTION'] = 'true';
+    process.env['TRUST_PROXY'] = 'false';
+    expect(await load()).toContain('TRUST_PROXY=false');
+  });
+
+  it('warns in production when TRUST_PROXY=true has no CIDRs', async () => {
+    process.env['APP_IS_PRODUCTION'] = 'true';
+    process.env['TRUST_PROXY'] = 'true';
+    process.env['TRUSTED_PROXY_CIDRS'] = '';
+    expect(await load()).toContain('TRUSTED_PROXY_CIDRS is empty');
+  });
+
+  it('is silent when the proxy is trusted', async () => {
+    process.env['APP_IS_PRODUCTION'] = 'true';
+    process.env['TRUST_PROXY'] = 'true';
+    process.env['TRUSTED_PROXY_CIDRS'] = '10.0.0.0/8';
+    expect(await load()).toBeNull();
+  });
+});

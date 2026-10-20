@@ -1,47 +1,79 @@
 import { env } from "node:process";
+import appConfig from "#config/app.js";
+import { getWsUrl } from "#app/services/communication/get-ws-url-service.js";
+import { parseBoolean } from "#vendor/utils/env/parse-boolean.js";
+import {
+  buildCspValue,
+  buildDocumentDirectives,
+  originOf,
+  parseOrigin,
+  parseOriginList,
+  parseReportUri,
+} from "#vendor/utils/network/csp.js";
+
+const blankToNull = (value: string | undefined): string | null => {
+  const trimmed = value?.trim() ?? "";
+  return trimmed === "" ? null : trimmed;
+};
+
+const buildDocumentPolicy = (): string => {
+  const apiOverride = blankToNull(env["CSP_API_ORIGIN"]);
+  const wsOverride = blankToNull(env["CSP_WS_ORIGIN"]);
+  const sentryOrigin = blankToNull(env["CSP_SENTRY_ORIGIN"]);
+  const reportUri = blankToNull(env["CSP_REPORT_URI"]);
+  const cdnUrl = blankToNull(appConfig.cdnUrl);
+
+  return buildCspValue(
+    buildDocumentDirectives({
+      isProduction: appConfig.isProductionLike,
+      // Must match the frontend's VITE_BASE_URL; same-origin is already covered by 'self'.
+      apiOrigin:
+        apiOverride !== null
+          ? parseOrigin(apiOverride, ["http"], "CSP_API_ORIGIN")
+          : appConfig.url !== ""
+            ? originOf(appConfig.url, ["http"], "APP_URL")
+            : null,
+      // The exact endpoint the API hands to clients, so CSP and the real WS address cannot diverge.
+      wsOrigin:
+        wsOverride !== null
+          ? parseOrigin(wsOverride, ["ws"], "CSP_WS_ORIGIN")
+          : originOf(getWsUrl(), ["ws"], "WS URL (DOMAIN / APP_ENV)"),
+      sentryOrigin:
+        sentryOrigin !== null
+          ? parseOrigin(sentryOrigin, ["http"], "CSP_SENTRY_ORIGIN")
+          : null,
+      // Media URLs reach the browser as CDN_URL + key (see main-service `cdnUrl`).
+      mediaOrigin:
+        cdnUrl !== null ? originOf(cdnUrl, ["http"], "CDN_URL") : null,
+      extraConnectSrc: parseOriginList(
+        env["CSP_EXTRA_CONNECT_SRC"],
+        ["http", "ws"],
+        "CSP_EXTRA_CONNECT_SRC",
+      ),
+      extraImgSrc: parseOriginList(
+        env["CSP_EXTRA_IMG_SRC"],
+        ["http"],
+        "CSP_EXTRA_IMG_SRC",
+      ),
+      reportUri:
+        reportUri !== null ? parseReportUri(reportUri, "CSP_REPORT_URI") : null,
+    }),
+  );
+};
+
+// Invalid values must not crash at import time: the error is reported by
+// validateRuntimeConfig() on startup, and CSP stays disabled meanwhile.
+let documentPolicy = "";
+let configError: string | null = null;
+try {
+  documentPolicy = buildDocumentPolicy();
+} catch (err: unknown) {
+  configError = err instanceof Error ? err.message : String(err);
+}
+
 export default Object.freeze({
-  enabled: true,
-  reportOnly: false,
-  // Provide a full CSP policy string, or remove `policy` and set `directives` map instead
-  //     policy:
-  //         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss: https:",
-  // Alternative shape (commented) if you prefer directives object
-  directives: {
-    "default-src": ["'self'", "blob:", "https://fonts.googleapis.com"],
-    "base-uri": ["'self'"],
-    "object-src": ["'none'"],
-    "frame-ancestors": ["'none'"],
-    "script-src": ["'self'", "'unsafe-inline'"],
-    "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-    "style-src-elem": [
-      "'self'",
-      "'unsafe-inline'",
-      "https://fonts.googleapis.com",
-    ],
-    "img-src": [
-      "'self'",
-      "data:",
-      "blob:",
-      "https://hel1.your-objectstorage.com",
-    ],
-    "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
-    "connect-src":
-      env["APP_ENV"] === "production" || env["APP_ENV"] === "prod"
-        ? [
-            "'self'",
-            "wss:",
-            "https:",
-            "blob:",
-            "https://hel1.your-objectstorage.com",
-          ]
-        : [
-            "'self'",
-            "ws:",
-            "wss:",
-            "https:",
-            "http:",
-            "blob:",
-            "https://hel1.your-objectstorage.com",
-          ],
-  },
+  enabled: parseBoolean(env["CSP_ENABLED"], true) && configError === null,
+  reportOnly: parseBoolean(env["CSP_REPORT_ONLY"], false),
+  documentPolicy,
+  configError,
 });

@@ -2,39 +2,25 @@
 
 ## Current Objective
 
-- Goal:
-- Current status:
-- Branch / commit:
+- Goal: feat-005 Security Hardening (items 1, 2, 3, 9)
+- Current status: item 1 (CSP) done and verified; items 2, 3, 9 not started
+- Branch / commit: `feat/security-hardening`
 
 ## Completed This Session
 
-- [ ] 
+- [x] CSP for HTML / SVG / API / errors / OPTIONS, service worker exempt
+- [x] `pnpm prod:local` and Playwright `test:e2e:csp` (enforce + report-only)
+- [x] Docs for CSP, `CSP_*` env, nginx example, e2e
 
 ## Verification Evidence
 
-| Check | Command | Result | Notes |
-|---|---|---|---|
-|  |  |  |  |
-
-## Files Changed
-
-- 
-
-## Decisions Made
-
-- 
+See `progress.md` → Evidence of Completion (item 1).
 
 ## Blockers / Risks
 
-- 
+- `test:e2e:csp` needs local PostgreSQL + Redis (from `packages/backend/.env`).
+- Existing `e2e/mobile-layout.spec.ts` is broken independently (stale selector).
 
-## Next Session Startup
+## Next Step
 
-1. Read `AGENTS.md`.
-2. Read `feature_list.json` and `progress.md`.
-3. Review this handoff.
-4. Run `./init.sh` or the documented verification command before editing.
-
-## Recommended Next Step
-
-- 
+- Item 2: done (see progress.md, Item 2). Redis counter left open.

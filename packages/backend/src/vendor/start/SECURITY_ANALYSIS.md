@@ -262,6 +262,8 @@ if (Number.isFinite(declared) && declared > limit) ...
 
 **Рекомендация:** добавить базовый набор security-headers глобально для всех ответов.
 
+**Статус (2026-10-20, feat-005):** закрыто. `setSecurityHeaders` ставит базовый набор и CSP на все ответы: полная политика на HTML, строгая на API/ошибки/OPTIONS, см. `vendor/utils/network/csp.ts` и `docs/plan/csp-fix-plan.md`.
+
 ---
 
 ## Низко

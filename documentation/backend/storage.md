@@ -83,7 +83,11 @@ sequenceDiagram
 ## Як файли віддаються
 
 - **Аватари** читаються напряму з CDN. Бекенд віддає фронтенду `cdnUrl` (`CDN_URL`), `s3Prefix` і `s3DynamicDataPrefix` ([main-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts)). Фронтенд будує URL у `getStorageFileUrl` ([state.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/stores/state.ts), [avatar-url.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/avatar-url.ts)). Якщо `CDN_URL` порожній, аватар не показується.
-- **Скриншоти KB** приватні. `GET /support/screenshot/:articleId` (потрібен `auth_guard`) генерує presigned GET із TTL **300 секунд** і відповідає `302` з заголовком `Location` ([support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)).
+- **Скриншоти KB** публічні: це довідковий контент, не секрет. Адмін завантажує їх з `ACL: public-read` ([knowledge-base-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts)). `GET /support/screenshot/:articleId` (потрібен `auth_guard`) відповідає `302` з `Location: <CDN_URL>/<повний ключ>` ([support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Якщо `CDN_URL` порожній, маршрут повертає `404`.
+
+::: warning Правило: медіа чату підтримки лише з нашого CDN
+Зображення й посилання, які бачить користувач у чаті підтримки, мають вести тільки на наш origin або на `CDN_URL`. Прямі посилання на S3-endpoint, presigned URL і сторонні хости заборонені: `img-src` у CSP дозволяє лише `'self'` і origin `CDN_URL`, і браузер перевіряє origin також після редиректу. Скриншоти, завантажені до цієї зміни без `public-read`, треба зробити публічними (ACL або політика бакета для префікса `knowledge-base/`), інакше CDN віддасть `403`.
+:::
 
 ::: warning Публічність аватарів
 `uploadAvatar` викликає `uploadToS3` **без** `publicRead`, але фронтенд відкриває аватар за прямим CDN-URL. Отже, аватари доступні лише тоді, коли бакет або префікс публічні на рівні політики сховища чи CDN. Це налаштовується поза кодом.
@@ -119,7 +123,7 @@ CORS бакета описує [`corsS3.xml`](https://github.com/Blazheiko/itvib
 
 ## Безпека
 
-- Приватні об'єкти (скриншоти) видаються лише через короткий presigned GET (300 с) після автентифікації. TTL за замовчуванням у `presignUrl` становить 3600 с.
+- Скриншоти KB і аватари публічні й віддаються через `CDN_URL`. `presignUrl` (TTL за замовчуванням 3600 с) у браузерних сценаріях не використовується: його host — S3-endpoint, якого немає в CSP `img-src`.
 - `ACL: public-read` підтримується модулем, але жоден поточний виклик його не використовує.
 - Імена об'єктів генеруються сервером (`randomUUID`), тому клієнт не може обрати шлях або перезаписати чужий файл.
 - Секрети `S3_*` зберігайте лише в оточенні, див. [Безпека та автентифікація](/backend/auth-security).

@@ -7,7 +7,8 @@ vendor/utils/
 │ ├── ws-api-dispatcher.ts
 │ └── serialize-routes.ts
 ├── rate-limit/
-│ ├── rate-limit-counter.ts
+│ ├── rate-limit-store.ts     # in-memory store (sliding log / fixed window)
+│ ├── upgrade-rate-limit.ts   # WS upgrade per-IP limit
 │ ├── http-rate-limit.ts
 │ └── ws-rate-limit.ts
 ├── middlewares/

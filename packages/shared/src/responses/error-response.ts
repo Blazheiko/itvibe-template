@@ -1,5 +1,5 @@
 import { type } from "@arktype/type";
-import { ErrorCodeSchema } from "../errors/error-codes.js";
+import { ErrorCodeSchema } from "./error-code-schema.js";
 import type { ErrorCode, ErrorDetails } from "../errors/error-codes.js";
 
 export const BaseResponseSchema = type({

@@ -1,5 +1,6 @@
-import { type } from "@arktype/type";
-
+// No runtime ArkType here: the frontend imports `ErrorCode`, and any @arktype/type
+// import pulls the whole engine into its bundle. The schema lives in
+// responses/error-code-schema.ts.
 export const ErrorCode = {
   BadRequest: "bad_request",
   Unauthorized: "unauthorized",
@@ -28,7 +29,6 @@ export const ErrorCodeValues = [
   "internal_error",
 ] as const;
 
-export const ErrorCodeSchema = type.enumerated(...ErrorCodeValues);
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export interface ValidationErrorDetails {

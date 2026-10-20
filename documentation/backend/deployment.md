@@ -18,6 +18,28 @@
 `Dockerfile` копіює фронтенд у `public`, але не задає `SERVE_STATIC`. Без `-e SERVE_STATIC=true` контейнер фронтенд не віддає. І навпаки: `SERVE_STATIC=true` без каталогу `public` ламає старт (проблема 4 у `docs/plan/code-issues-found-during-docs.md`).
 :::
 
+### CSP, коли фронтенд віддає проксі
+
+При `SERVE_STATIC=true` бекенд сам ставить CSP на HTML (див. [Content-Security-Policy](/backend/auth-security#content-security-policy)). Якщо HTML віддає nginx або CDN, політику документа треба задати там, з тим самим винятком для service worker:
+
+```nginx
+location = /service-worker.js {
+    # CSP у відповіді зі скриптом worker'а діяла б на сам worker
+    add_header Cache-Control "no-cache";
+}
+
+location / {
+    try_files $uri /index.html;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://cdn.example.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.example.com wss://api.example.com; upgrade-insecure-requests" always;
+}
+```
+
+Значення можна взяти з відповіді бекенда: `curl -sS -D - -o /dev/null https://<backend>/` при `SERVE_STATIC=true`.
+
+### Локальний production-like запуск
+
+`pnpm prod:local` ([`scripts/prod-local.sh`](https://github.com/Blazheiko/itvibe-template/blob/main/scripts/prod-local.sh)) збирає `shared`, frontend (з `VITE_BASE_URL=http://localhost:<PORT>`, без Sentry) і backend, копіює `frontend/dist` у `backend/public`, як `Dockerfile`, і стартує бекенд з `SERVE_STATIC=true`. Потрібні PostgreSQL і Redis з `packages/backend/.env`. Оскільки це plain http, скрипт задає `APP_ENV=local` і `APP_IS_PRODUCTION=false` (інакше `getWsUrl()` видав би `wss://`, а `upgrade-insecure-requests` зламав би всі запити). `PROD_LOCAL_SKIP_BUILD=true` пропускає збірку.
+
 ## Dockerfile
 
 ```mermaid
@@ -73,11 +95,41 @@ docker run --rm -p 3000:3000 --env-file ./production.env itvibe-template
 
 ## Runtime
 
-- **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Майте на увазі, що образ задає `NODE_ENV=production`, тож без `APP_ENV` режим уже production-like. Але `secure` у cookie і конфіг CSP (`config/csp.ts`, який поки ніде не застосовується, див. п. 1 у списку проблем) читають саме `APP_ENV`, тому задайте `APP_ENV=production` явно. Відомі розбіжності `.env.example` описано в проблемі 6.
+- **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Майте на увазі, що образ задає `NODE_ENV=production`, тож без `APP_ENV` режим уже production-like. Але `secure` у cookie і конфіг CSP (`config/csp.ts`, зокрема `wss:` у `getWsUrl()`) читають саме `APP_ENV`, тому задайте `APP_ENV=production` явно. Відомі розбіжності `.env.example` описано в проблемі 6.
 - **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip).
 - **Unix socket**: якщо задано `APP_UNIX_PATH`, сервер викликає `listen_unix` замість TCP, і `HOST`/`PORT` тоді ігноруються. У `.env.example` ця змінна має назву `UNIX_PATH`, а код її не читає (проблема 6).
 - **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. Через `sh -c` у `CMD` сигнал `docker stop` отримує shell, а не Node. Чи дійде він до процесу, не перевірено.
 - **Sentry**: бекенд читає `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` тощо під час виконання ([`config/sentry.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/sentry.ts)). Фронтенду потрібні `VITE_SENTRY_*` як `--build-arg` під час збірки.
+
+### Rate limit на edge
+
+Ліміти бекенду (L1, маршрути, upgrade) живуть у пам'яті кожного процесу. Для кількох інстансів додайте спільний ліміт на реверс-проксі. Приклад для nginx із шляхами за замовчуванням (`API_PATH_PREFIX=api`):
+
+```nginx
+limit_req_zone  $binary_remote_addr zone=api:10m rate=10r/s;
+limit_req_zone  $binary_remote_addr zone=ws_upgrade:10m rate=1r/s;
+limit_conn_zone $binary_remote_addr zone=ws_conn:10m;
+
+# За замовчуванням nginx відповідає 503; клієнту потрібен 429.
+limit_req_status  429;
+limit_conn_status 429;
+
+location /api/websocket {
+    limit_req  zone=ws_upgrade burst=20 nodelay;
+    limit_conn ws_conn 20;
+    proxy_pass http://backend;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+
+location /api/ {
+    limit_req zone=api burst=50 nodelay;
+    proxy_pass http://backend;
+}
+```
+
+Зона `limit_req_zone` спільна лише в межах одного nginx. Якщо незалежних edge-вузлів кілька, кожен рахує свою квоту. Деталі в [документації nginx](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html). Щоб бекенд бачив справжній IP клієнта, потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`.
 
 ## База даних у production
 

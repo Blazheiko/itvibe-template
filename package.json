@@ -20,6 +20,7 @@
     "docs:preview": "pnpm --filter documentation docs:preview",
     "docs:verify": "pnpm --filter documentation docs:verify",
     "start": "pnpm --filter backend start",
+    "prod:local": "./scripts/prod-local.sh",
     "lint": "eslint . && pnpm -r --if-present lint:check",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",

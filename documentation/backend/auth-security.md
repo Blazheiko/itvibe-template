@@ -71,13 +71,29 @@ sequenceDiagram
 
 ## Обмеження частоти запитів
 
-Захист працює на двох рівнях:
+Захист працює на кількох рівнях. HTTP і WebSocket мають окремі гілки й незалежні бюджети:
 
-1. **Rate limit маршрутів**: [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts) і [`ws-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/ws-rate-limit.ts). Ліміт задається полем `rateLimit: { windowMs, maxRequests }` на маршруті або групі, і ліміт маршруту має пріоритет над лімітом групи. Лічильник ([`rate-limit-counter.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-counter.ts)) використовує ковзне вікно, синхронний і зберігається **в пам'яті процесу** (`Map`, не більше 100 000 ключів, GC раз на 60 с). Ключ складається з IP і URL маршруту. HTTP-відповідь містить заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining` і `X-RateLimit-Reset`. Коли ліміт перевищено, повертається `429` з `Retry-After` і кодом `rate_limited`. Якщо сама перевірка падає з помилкою, повертається `503 rate_limit_unavailable`, тобто система працює за принципом fail-closed. У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) перевірка ліміту виконується **до** читання і парсингу тіла запиту.
-2. **Throttling auth-дій у Redis**: [`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts) атомарно виконує `INCR` і `EXPIRE` через Lua-скрипт для ключа `auth:throttle:<scope>:<key>`. Ліміти задаються в `config/auth.ts` змінними `AUTH_SMS_*`, `AUTH_EMAIL_REGISTER_*` і `AUTH_EMAIL_LINK_*`. Серед них: кількість SMS на телефон і на IP за годину, кількість невдалих підтверджень, cooldown між повторними відправками.
+```
+HTTP API:  L1 global per-IP  →  per-route limit  →  handler
+WebSocket: upgrade per-IP    →  auth (onUpgrade)  →  per-message limits
+```
+
+1. **L1, глобальний ліміт HTTP за IP** (`checkGlobalRateLimit` у [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)). Один fixed-window бюджет на IP для всіх API-запитів: зареєстровані маршрути, API-404, preflight `OPTIONS` і звичайні HTTP-запити на `/<API_PATH_PREFIX>/websocket`. Кожен запит рахується рівно один раз. Статика не рахується. За замовчуванням 600 запитів на хвилину (`HTTP_GLOBAL_RATE_LIMIT_*`). На успішній відповіді L1 заголовків не пише. На 429 він віддає `X-RateLimit-*` і `Retry-After` саме для себе, і per-route перевірка тоді не виконується.
+2. **Rate limit маршрутів**: [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts) і [`ws-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/ws-rate-limit.ts). Ліміт задається полем `rateLimit: { windowMs, maxRequests }` на маршруті або групі, і ліміт маршруту має пріоритет над лімітом групи. Ключ складається з IP і URL маршруту. HTTP-відповідь містить заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining` і `X-RateLimit-Reset`. Коли ліміт перевищено, повертається `429` з `Retry-After` і кодом `rate_limited`. Якщо сама перевірка падає з помилкою, повертається `503 rate_limit_unavailable`, тобто система працює за принципом fail-closed. У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) обидві HTTP-перевірки виконуються синхронно і **до** читання тіла запиту.
+3. **Ліміт WebSocket upgrade за IP** ([`upgrade-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/upgrade-rate-limit.ts)). `handleUpgrade` перевіряє його першим: до формату токена і до пошуку сесії. Тому флуд upgrade-запитами не коштує I/O, а невалідні токени теж витрачають бюджет. Перевищення дає `429` з `Retry-After`, помилка лічильника дає `503`. За замовчуванням 60 спроб на хвилину (`WS_UPGRADE_RATE_LIMIT_*`). Цього вистачає на кілька вкладок за одним NAT, які перепідключаються кожні 5 с.
+4. **Throttling auth-дій у Redis**: [`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts) атомарно виконує `INCR` і `EXPIRE` через Lua-скрипт для ключа `auth:throttle:<scope>:<key>`. Ліміти задаються в `config/auth.ts` змінними `AUTH_SMS_*`, `AUTH_EMAIL_REGISTER_*` і `AUTH_EMAIL_LINK_*`. Серед них: кількість SMS на телефон і на IP за годину, кількість невдалих підтверджень, cooldown між повторними відправками.
+
+**Лічильник** ([`rate-limit-store.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-store.ts)) синхронний і живе в пам'яті процесу:
+
+- **Відхилені спроби квоту не витрачають і не зберігаються.** Тому `Retry-After` точний: повтор через вказаний час проходить. Стан на ключ обмежений: sliding log довжиною не більше `max`, для L1 fixed window з одним лічильником.
+- **Межа ключів жорстка, 100 000.** На новий ключ перевіряються максимум 64 найстаріші ключі, і прострочені видаляються. Якщо місця досі немає, витісняється найстаріший ключ. Повний GC запускається раз на 60 с таймером.
+
+::: warning Переповнення store
+Коли ключів більше за межу, **строгість квот не гарантується**. FIFO-витіснення може скинути навіть активний лічильник, зокрема маршрутний ліміт логіну. Так пам'ять лишається обмеженою під атакою з великої кількості IP. Витіснення пише `warn` у лог не частіше разу на хвилину.
+:::
 
 ::: warning Масштабування
-Лічильник rate limit маршрутів зберігається в пам'яті кожного процесу окремо. Якщо запустити кілька інстансів, фактичний ліміт множиться на їх кількість. Throttling auth-дій зберігається в Redis, тому діє спільно для всіх інстансів.
+Лічильники L1, маршрутів і upgrade зберігаються в пам'яті кожного процесу окремо. Якщо запустити кілька інстансів, фактичний ліміт множиться на їх кількість. Redis тут не використовується, бо HTTP-перевірка мусить бути синхронною. Для кількох інстансів ставте edge-ліміт, див. [Розгортання](/backend/deployment#rate-limit-на-edge). Throttling auth-дій зберігається в Redis, тому діє спільно для всіх інстансів.
 :::
 
 ## CSRF
@@ -101,12 +117,63 @@ sequenceDiagram
 
 ## Заголовки безпеки та CSP
 
-[`http-response-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts) додає до кожної JSON-відповіді API та до HTML-оболонки SPA такі заголовки: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` і `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Статичні ресурси отримують лише `X-Content-Type-Options: nosniff`.
+[`http-response-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts) (`setSecurityHeaders`) додає до кожної відповіді — JSON API, помилок, CORS `OPTIONS`, HTML-оболонки SPA і статики — такі заголовки: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` і `Strict-Transport-Security: max-age=31536000; includeSubDomains`, а також CSP за правилами нижче.
 
 Статика ([`static-server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts)) завантажується в пам'ять під час старту з білого списку розширень, без файлів, що починаються з крапки. Запити з `..`, `%2e%2e`, `\0` або `%00` отримують `400`.
 
-::: danger CSP не застосовується
-[`config/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts) описує директиви CSP, але в коді його ніде не імпортують: побудова і запис заголовка `Content-Security-Policy` у `static-server.ts` закоментовані. Тому відповіді зараз приходять **без** CSP.
+### Content-Security-Policy
+
+Політику будує [`config/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts) з функцій [`vendor/utils/network/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/csp.ts). Значення заголовків обчислюються **один раз на старті**.
+
+| Відповідь                                            | Політика                                                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| HTML: `/`, `/index.html`, SPA fallback, і 200, і 304 | повна політика документа (нижче)                                        |
+| SVG зі статики, 200 і 304                            | `default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'` |
+| `/service-worker.js`                                 | **без CSP**                                                             |
+| інші JS, CSS, шрифти, картинки                       | без CSP (для підресурсів браузер її ігнорує)                            |
+| API JSON, помилки, статичні 400/404, CORS `OPTIONS`  | `default-src 'none'; frame-ancestors 'none'`                            |
+
+Політика документа:
+
+```text
+default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none';
+form-action 'self'; script-src 'self';
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
+img-src 'self' data: blob: <CDN_URL origin> <CSP_EXTRA_IMG_SRC>;
+font-src 'self' data: https://fonts.gstatic.com;
+connect-src 'self' <API origin> <WS origin> <CSP_SENTRY_ORIGIN> <CSP_EXTRA_CONNECT_SRC>;
+upgrade-insecure-requests          # лише в production-like режимі
+report-uri <CSP_REPORT_URI>        # якщо задано
+```
+
+Поза production-like режимом `connect-src` додатково дозволяє `ws://localhost:*` і `ws://127.0.0.1:*` (Vite HMR).
+
+**Режими.** Один режим діє на всі типи відповідей:
+
+| `CSP_ENABLED` | `CSP_REPORT_ONLY` | Результат                                                                           |
+| ------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| `false`       | будь-яке          | глобальна CSP не надсилається ніде                                                  |
+| `true`        | `false`           | `Content-Security-Policy`                                                           |
+| `true`        | `true`            | `Content-Security-Policy-Report-Only` для всіх відповідей, без глобальної enforcing |
+
+Кілька політик діють незалежно ([CSP3, multiple policies](https://www.w3.org/TR/CSP3/#multiple-policies)), тому в report-only режимі жодна глобальна enforcing-політика не надсилається — інакше вона блокувала б застосунок попри режим спостереження. Без `CSP_REPORT_URI` порушення видно лише в DevTools; для централізованого збору потрібен зовнішній отримувач. `upgrade-insecure-requests` у Report-Only ігнорується.
+
+**Власна політика маршруту.** Якщо контролер сам задає `Content-Security-Policy` або `Content-Security-Policy-Report-Only` (`responseData.setHeader`), глобальна політика для цієї відповіді не пишеться. Заголовок контролера надсилається як є, навіть при `CSP_ENABLED=false` і в report-only режимі: прапорці керують лише глобальними політиками.
+
+**Origins.** Беруться з тих адрес, які браузер реально використовує:
+
+- API — `CSP_API_ORIGIN`, за замовчуванням origin `APP_URL`. Має збігатися з `VITE_BASE_URL` фронтенду.
+- WebSocket — origin результату `getWsUrl()` ([`get-ws-url-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/communication/get-ws-url-service.ts): `DOMAIN`, `APP_ENV`, `API_PATH_PREFIX`), саме цю адресу API віддає клієнту як `wsUrl`. Перевизначення — `CSP_WS_ORIGIN`.
+- Медіа — origin `CDN_URL` (клієнт отримує його як `cdnUrl`). Це єдине джерело зображень поза `'self'`: чат підтримки та інші екрани віддають медіа тільки з нашого CDN, а не з presigned S3 URL (див. [Сховище](/backend/storage)). Запити до S3, які робить лише бекенд, у `connect-src` не потрібні.
+- Sentry — `CSP_SENTRY_ORIGIN` (origin з `VITE_SENTRY_DSN`).
+
+Невалідне значення (не origin, неправильна схема, `;`, `,` або пробіл) зупиняє старт через `validateRuntimeConfig()`.
+
+**Чому немає `'unsafe-inline'` у `script-src`.** Vite-збірка не має inline-скриптів; єдиний inline-блок в `index.html` — `application/ld+json`, на який `script-src` не діє. `eval` / `new Function` теж заборонені: фронтенд не імпортує ArkType у runtime (перевірка JIT у ArkType викликає `new Function`), тому WS-payload перевіряються гардами з [`ws-payload-guards.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/ws-payload-guards.ts), а `ErrorCodeSchema` винесено з `shared/errors` у `shared/responses`. E2e-тест `test:e2e:csp` падає на будь-якому порушенні CSP, тож повернення ArkType у бандл буде помічене.
+
+::: warning HTML без бекенда
+Коли `SERVE_STATIC=false`, HTML віддає reverse proxy або CDN, і CSP для документа треба налаштувати там (див. [Деплой](/backend/deployment#csp-коли-фронтенд-віддає-проксі)). Бекенд у такому разі ставить лише жорстку політику на API.
 :::
 
 ## Trust proxy і визначення IP
@@ -115,7 +182,7 @@ sequenceDiagram
 
 - `TRUST_PROXY` за замовчуванням дорівнює `false`. Тоді IP клієнта — це remote address сокета, а заголовки ігноруються.
 - Якщо `TRUST_PROXY=true`, заголовкам довіряють лише тоді, коли remote address входить у `TRUSTED_PROXY_CIDRS` (підтримуються IPv4, IPv6 і IPv4-mapped адреси). Ланцюжок `X-Forwarded-For` разом із remote address обходиться справа наліво, і клієнтом вважається перша адреса, яка не належить довіреному проксі. Якщо такої немає, використовується `X-Real-IP`, а потім remote address.
-- Цей IP використовують rate limit і throttling. Якщо `TRUST_PROXY` за реверс-проксі неправильно налаштовано, усі клієнти отримують спільний ліміт за IP проксі.
+- Цей IP використовують rate limit і throttling. Якщо `TRUST_PROXY` за реверс-проксі неправильно налаштовано, усі клієнти отримують спільний ліміт за IP проксі. У production-like режимі старт пише `warn`, якщо `TRUST_PROXY=false` або `TRUST_PROXY=true` з порожнім `TRUSTED_PROXY_CIDRS` ([validate-runtime-config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)).
 
 ## Авторизація WebSocket
 
@@ -141,12 +208,12 @@ sequenceDiagram
 - За реверс-проксі: `TRUST_PROXY=true` і точний `TRUSTED_PROXY_CIDRS`.
 - Телефонний вхід: справжній `AUTH_SMS_PROVIDER` і `AUTH_OTP_HMAC_KEY` довжиною щонайменше 32 символи. `fake` у production заборонено кодом.
 - Ключі OAuth (`GOOGLE_CLIENT_SECRET=<secret>` тощо) і `*_REDIRECT_URI` на https.
+- CSP: залиште `CSP_ENABLED=true`. Задайте `CSP_API_ORIGIN`, `CSP_WS_ORIGIN` (за проксі), `CSP_SENTRY_ORIGIN`, якщо адреси відрізняються від `APP_URL` / `getWsUrl()`. Перший деплой можна зробити з `CSP_REPORT_ONLY=true` і `CSP_REPORT_URI`.
 - `DOC_PAGE` не вмикайте: ендпоінт `/doc/routes` реєструється лише при `APP_ENV=manual-test`.
 
 ::: danger Відомі відкриті питання
 
-- CSP не застосовується (див. вище).
-- Для WebSocket upgrade немає rate limit за IP, як і глобального ліміту за IP для всіх маршрутів.
+- Rate limit не спільний між інстансами (немає Redis-лічильника). Обхід: edge-ліміт у nginx.
 - `verifyUpgradeToken` записує в лог сам WS-токен (`{ token }`), а `wsSessionHandler` записує `userToken`.
 - `broadcastToChannel` у `server.ts` приймає довільний рядок каналу без runtime-перевірки.
   :::

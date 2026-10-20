@@ -2,174 +2,119 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-19
-**Active Feature:** feat-011 - Documentation v2 (done)
-**Branch:** `feat/docs-v2`
+**Last Updated:** 2026-10-20
+**Active Feature:** feat-005 - Security Hardening (in_progress)
+**Branch:** `feat/security-hardening`
 
-Plan: [docs/plan/vitepress-documentation-plan.md](docs/plan/vitepress-documentation-plan.md) (rev. 3)
-Task list: [docs/plan/vitepress-documentation-tasks.md](docs/plan/vitepress-documentation-tasks.md), stage 6
-Known code issues: [docs/plan/code-issues-found-during-docs.md](docs/plan/code-issues-found-during-docs.md)
-
-Previous feature feat-003 (docs v1) is done; its log is in git history of this file (`main` @ `327d0de`).
+Scope (items from [docs/plan/code-issues-found-during-docs.md](docs/plan/code-issues-found-during-docs.md)): 1 (CSP), 2 (WS upgrade / per-IP rate limit), 3 (tokens in logs), 9 (`broadcastToChannel` runtime guard).
+CSP plan: [docs/plan/csp-fix-plan.md](docs/plan/csp-fix-plan.md). Rate-limit plan: [docs/plan/ws-upgrade-rate-limit-plan.md](docs/plan/ws-upgrade-rate-limit-plan.md). Start PR: #21 (feat-005 → in_progress).
 
 ## Status
 
 ### What's Done
 
-- [x] T6.4 — `documentation/backend/websocket.md` (PR #9, merged)
-- [x] T6.1–T6.3 — controllers-services, repositories-transformers, validation (one PR, see Decisions)
+- [x] Item 1 — CSP applied to every response type (plan steps 1–8)
+- [x] Item 2 — HTTP L1 per-IP limit, WS upgrade per-IP limit, bounded rate-limit store (Redis counter left open)
 
-- [x] T6.8b — `documentation/backend/deployment.md` (stacked on the T6.1–T6.3 PR)
+### In Progress / Next
 
-- [x] T6.6 — `documentation/backend/observability.md` (stacked on T6.8b)
+- [ ] Item 3 — stop logging WS token / `userToken`
+- [ ] Item 9 — runtime channel check in `broadcastToChannel`
 
-- [x] T6.8a — `documentation/backend/testing.md`
+## Item 2 (rate limit) — summary
 
-- [x] T6.7 — `documentation/backend/caching-etag.md`
+- `vendor/utils/rate-limit/rate-limit-store.ts` (new, replaces `rate-limit-counter.ts`): rejected attempts are not stored, exact `retryAfterMs`, sliding log ≤ `max` per key, fixed window for L1, hard key cap (scan ≤ 64 oldest, then FIFO eviction), GC only on a 60 s timer.
+- `http-rate-limit.ts`: `checkGlobalRateLimit` (L1, headers only on reject) + per-route limit on the store. `ws-rate-limit.ts` ported, contract unchanged.
+- `upgrade-rate-limit.ts` (new) → `handleUpgrade` checks it first: 429 + `Retry-After` / 503, before token and session lookup.
+- `server.ts`: L1 before the route limit in `setHttpHandler`; in `server.any("/*")` for API 404, preflight and plain HTTP on the WS path (`appConfig.pathPrefix`).
+- `config/rate-limit.ts` (new): `HTTP_GLOBAL_RATE_LIMIT_*` (600/60 s), `WS_UPGRADE_RATE_LIMIT_*` (60/60 s), strict integer validation → `validateRuntimeConfig()`; proxy warning (`getProxyWarning`) in production-like mode.
+- Docs: `auth-security.md` (two branches of layers, store semantics, overflow warning), `configuration.md`, `deployment.md` (nginx edge limit), `.env.example`.
 
-- [x] T6.5a–c — storage, mail-push, ai (one PR, sidebar group «Інтеграції»)
+### Decisions
 
-- [x] T6.9a–c — `shared/index.md`, `frontend/index.md`, `playground/index.md` (nav «Пакети»)
+- Upgrade default raised from 30 to 60/min: one tab reconnects every 5 s (12/min); tested with 3 tabs.
+- Redis counter not done: the HTTP check must stay synchronous (before `res.onData`). Documented, edge limit recommended.
+- Item 18 (refuse upgrade without a live session) stays out of scope: invalid-format tokens still get 401, valid-format ones without a session still upgrade and are closed with 4001.
 
-- [x] T6.10a–d — workflow, toolchain, glossary, roles-capabilities. **Stage 6 complete.**
+## Evidence of Completion (item 2)
 
-### What's In Progress
+- `pnpm typecheck` — clean; `pnpm lint` — 0 errors; `pnpm test` — pass (backend 59 files / 387 tests)
+- New tests: `rate-limit-store.spec.ts` (bounded state, recovery exactly at Retry-After after 50 rejections, key cap with `maxKeys: 4`, scan bound), `http-rate-limit.spec.ts`, `upgrade-rate-limit.spec.ts` (incl. 3-tab reconnect), `ws-upgrade-rate-limit.spec.ts`, `server-rate-limit.spec.ts` (one bucket for route/404/preflight/WS-path HTTP, counted once, `API_PATH_PREFIX`, static not counted), `validate-runtime-config.spec.ts` (invalid values, proxy warning)
+- `rate-limit.transport.spec.ts` on a real uWS server: small POST keeps its body, blocked POST never reaches the handler, real handshake 101 → 429 + `Retry-After` → 101 after the window. Mutation check: an `await` before the body read makes the POST tests hang and fail.
+- `pnpm docs:build && pnpm docs:verify` — pass
 
-- [x] feat-011 closed (`done`).
+Manual check, `pnpm prod:local` with `HTTP_GLOBAL_RATE_LIMIT_MAX=5 WS_UPGRADE_RATE_LIMIT_MAX=3 WS_UPGRADE_RATE_LIMIT_WINDOW_MS=5000` (handshake via `node:http.request` with full upgrade headers):
 
-### What's Next
+```text
+GET /api/main/init ×6
+  1–5: HTTP/1.1 401 Unauthorized
+  6:   HTTP/1.1 429 Too Many Requests  X-RateLimit-Limit: 5  Retry-After: 60
+WS /api/websocket
+  1–3: upgrade 101
+  4:   response 429 retry-after=5
+  after 5.1 s: upgrade 101
+```
 
-- Item 65 (`POST /main/save-user`, anonymous user creation with plaintext password) — fix first.
-- Register follow-up features for issue groups listed at the end of
-  `docs/plan/code-issues-found-during-docs.md`.
+## Item 1 (CSP) — summary
 
-Order (backend first): T6.4 websocket → T6.1 controllers-services → T6.2 repositories-transformers →
-T6.3 validation → T6.8b deployment → T6.6 observability → T6.8a testing → T6.7 caching-etag →
-T6.5a–c storage / mail-push / ai → T6.9a–c shared / frontend / playground → T6.10a–d.
+- `packages/backend/src/vendor/utils/network/csp.ts` (new): policy building, origin/report-URI validation, single-mode resolution.
+- `packages/backend/src/config/csp.ts`: directives from `APP_URL`, `getWsUrl()`, `CDN_URL`, `CSP_*`; config errors surface in `validateRuntimeConfig()`.
+- `setSecurityHeaders(res, headers, cspKind)` writes the CSP; wired into HTML (200/304, SPA fallback), SVG, static 400/404, CORS `OPTIONS`, doc page. `/service-worker.js` gets none.
+- `scripts/prod-local.sh` / `pnpm prod:local`; `pnpm --filter frontend test:e2e:csp` (Playwright, `e2e-csp/`).
+- Docs: `documentation/backend/{auth-security,configuration,deployment,testing}.md`.
 
-Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `docs:build && docs:verify` → CI.
+### Decisions / deviations from the plan
 
-## Blockers / Risks
+- Playwright CSP checks use a separate config (`playwright.csp.config.ts`) instead of a project in `playwright.config.ts`: its `webServer` is the backend, not Vite.
+- Enforce and report-only run sequentially on one port: the bundle has `VITE_BASE_URL` baked in, so a second instance on another port would call the wrong API origin.
+- `prod:local` runs `APP_ENV=local`, `APP_IS_PRODUCTION=false`: on plain http `getWsUrl()` would return `wss://` and `upgrade-insecure-requests` would break all requests. Hence `upgrade-insecure-requests` is covered by unit tests only, not e2e (needs HTTPS).
+- Media origin = `CDN_URL` only (the client receives `cdnUrl` from the API); no S3 origin is added because the browser never talks to S3 directly.
+- ArkType removed from the frontend runtime bundle: its JIT probe (`new Function`) was a CSP `eval` violation on every page load. `useBroadcastHandler` uses `ws-payload-guards.ts` (parity-tested against the ArkType schema); `ErrorCodeSchema` moved from `shared/errors` to `shared/responses/error-code-schema.ts`. `index.js` 1 042 259 → 873 428 bytes. e2e now fails on any CSP violation.
+- The feat-005 item 4 dependency is gone: `prod:local` creates `backend/public` before start.
 
-- [ ] PR #8 (register feat-011) must be merged before the first page PR.
+## Evidence of Completion (item 1)
 
-## Decisions Made
+- `pnpm typecheck` — clean
+- `pnpm lint` — 0 errors (pre-existing warnings only)
+- `pnpm test` — pass (backend 54 files / 338 tests, incl. `csp.spec.ts`, `static-server-csp.spec.ts` 33 cases, `server-csp.spec.ts` 15 cases)
+- `pnpm --filter frontend test:e2e:csp` — enforce 7/7, report-only 7/7 (WS confirmed by a `pong` frame, CDN image `naturalWidth > 0`, image outside `img-src` blocked/reported); earlier 5/5; with `CSP_ENABLED=false` the header, inline-script and fetch tests fail (proves they test CSP)
+- `pnpm docs:build && pnpm docs:verify` — pass
+- `pnpm --filter frontend test:e2e` — `mobile-layout.spec.ts` fails on `.modal.register-modal`, a selector that no longer exists in `src`; pre-existing, unrelated to CSP
 
-- **New ID feat-011** instead of reusing the freed feat-004, to keep IDs unique.
-- **Page PRs from this branch**: each page gets its own short-lived PR branch cut from `feat/docs-v2`
-  or from `main`, so reviews stay one page per PR.
+Manual check, `pnpm prod:local` with `ENABLED_CORS=true` (GET via `curl -sS -D - -o /dev/null`):
 
-- **T6.1–T6.3 in one PR**: the three pages cross-link each other, and the build fails on dead
-  links, so splitting them would require temporary link removal. Exception to one-page-per-PR.
-
-## Files Modified This Session
-
-- `progress.md` — initialised for feat-011.
-
-## Evidence of Completion
-
-**T6.4 WebSocket** (`feat/docs-v2`):
-
-- Page written from code (sub-agent), reviewed in main session; key claims re-checked in code:
-  dispatcher returns `not_found` «Route not found» (`ws-api-dispatcher.ts:111`); bad token format →
-  `401`, valid format without session → upgrade then close `4001` (`ws-handlers.ts`); frontend
-  hardcodes `api/` prefix (`useWebSocketConnection.ts:320`).
-- Fixed `backend/request-lifecycle.md` («Event not found» → «Route not found» + link).
-- New issues 17–19 added to `docs/plan/code-issues-found-during-docs.md`; item 18 → security-hardening.
-- Sidebar + `KEY_PAGES` updated; `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
-- Preview: 1 Mermaid SVG, 0 errors; 2 danger + 3 warning blocks; sidebar item active.
-
-**T6.1–T6.3 layers** (`docs/t6-1-3-layers`):
-
-- Pages written from code (3 parallel sub-agents), reviewed in main session; re-checked in code:
-  `ValidationError.statusCode = 422` (`validation-error.ts`, handled in `server.ts:345`); services
-  importing `db` directly (`push-notification-sender-service.ts`, `push-subscription-statistics-service.ts`);
-  N+1 in `findByUserIdWithLogs`; `prompt-controller.ts` calls `fetch` + `throw new Error`;
-  `testSentryError` handler exists but is not routed.
-- New issues 20–27 in `docs/plan/code-issues-found-during-docs.md`.
-- Sidebar + `KEY_PAGES` (12 backend pages); `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
-- Preview: 1 Mermaid SVG per page, 0 errors; secret scan clean.
-
-**T6.8b Деплой** (`docs/t6-8b-deployment`, based on `docs/t6-1-3-layers`):
-
-- Real `docker build -t itvibe-docs-check .` — success, ~206 s cold, image 817 MB; real `docker run`
-  with `APP_ENV=production` + dummy `APP_KEY`, no DB → `db:create:prod` `ECONNREFUSED 127.0.0.1:5432`,
-  exit 1 (documented). Image and container removed afterwards (checked).
-- Re-checked in repo: no `.dockerignore`; no `USER`/`HEALTHCHECK`; `CMD ["sh","-c",…]` with
-  migrations; `corsS3.xml` `AllowedOrigin *` + `PUT`.
-- Fixed a sentence that implied CSP is applied (it is not, item 1).
-- New issues 28–32; item 32 → security-hardening.
-- `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: 1 Mermaid SVG, 0 errors.
-
-**T6.6 Observability** (`docs/t6-6-observability`, based on `docs/t6-8b-deployment`):
-
-- Re-checked in code: pino created without `level` (default `info`), no `LOG_LEVEL`; multistream
-  main `trace` + Sentry stream `error`; `handleError` uses the global `logger`; child logger only
-  `requestId`; Sentry `tracesSampleRate` from `SENTRY_TRACES_SAMPLE_RATE`, `dataCollection` in
-  `sentry-service.ts`; no OpenTelemetry in backend `package.json`.
-- New issues 33–35 (requestId in handleError, LOG_LEVEL, readiness check).
-- `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: 1 Mermaid SVG, 0 errors;
-  DSN only as placeholder.
-
-**T6.8a Тестування** (`docs/t6-8a-testing`):
-
-- Real run `pnpm --filter backend test`: 51 files, 268 tests, ~2.2 s (stated on the page).
-- Commands on the page executed: `pnpm --filter backend test csrf-guard` → 1 file, 9 tests;
-  `pnpm --filter backend test -t …` does NOT filter (pnpm drops the flag) → replaced with
-  `pnpm --filter backend exec vitest run -t "422"` → 2 passed, 266 skipped.
-- Re-checked: `vitest.config.ts` has no `testTimeout`/`setupFiles`/coverage; only `docs.yml` workflow.
-- New issues 36–38.
-- Note: #11/#12 had been merged into stacked base branches, not `main`; landed via PR #13.
-  Page PRs are now always based on `main` (no stacking).
-
-**T6.7 Кешування та ETag** (`docs/t6-7-caching-etag`):
-
-- Re-checked in code: SHA-1 base64url ETag (`static-server.ts:71`); HTML `public, max-age=0, must-revalidate`;
-  other files `max-age=31536000, immutable`; exact `If-None-Match` match; CORS `maxAge: 90`;
-  no `Cache-Control` in `sendResponse`; prompt cache `Map` without TTL; `service-worker.js` fixed name.
-- Clarified SW update behaviour on the page (`updateViaCache`), so the risk is stated precisely.
-- New issues 39–43; item 42 → security-hardening.
-- `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: Mermaid renders.
-
-**T6.5a–c Інтеграції** (`docs/t6-5-integrations`):
-
-- Re-checked in code: `deleteFromS3` without `buildKey` (`s3.ts:83`); `createSubscription` →
-  `updateByEndpoint(endpoint, userId, …)`; `test-push` is `get`, `csrf_guard` checks only
-  `UNSAFE_METHODS`; `ai-provider.ts` falls back to Mistral; `vector(1536)` in schema;
-  `langNative = 'ru'` in `support-service.ts`.
-- New issues 44–55; items 46–48 → security-hardening.
-- Note: `npx web-push generate-vapid-keys` on the page is the web-push library CLI (no repo script) — stated on the page.
-
-**T6.9a–c Пакети** (`docs/t6-9-packages`):
-
-- Re-checked: `shared/test/languages.test.js` has only imports (explains `pass 1` in every run);
-  `shared/src/guards/index.ts` is `export {}` and commented out in `index.ts`; frontend
-  `base-api.ts` fallback `https://itvibe-template.example`; `App.vue:130` `console.log(data)`;
-  playground `fetch('/api/doc/routes')`; `TestFormWs.vue` `https` → `ws://`.
-- Nav menu «Пакети» + shared sidebar for `/shared/`, `/frontend/`, `/playground/`; 3 pages in `KEY_PAGES`.
-- New issues 56–64; item 60 → security-hardening.
-
-**T6.10a–d Процес, toolchain, глосарій, ролі** (`docs/t6-10-reference`):
-
-- Glossary and role matrix from `docs/reference/*` verified against code; non-existent roles
-  (Developer/QA, Operator) explained, not shown as enforced; unenforced rows marked.
-- **Critical finding re-checked:** `POST /<prefix>/main/save-user` — group `main` has only
-  `session_web` + `csrf_guard` (CSRF log-only by default); `mainService.saveUser` →
-  `userRepository.create({ …, password: payload.password })` with no hashing (registration uses
-  `hashPassword` from `metautil`). Item 65, marked critical; `::: danger` on the roles page.
-- `users.isAdmin` unused next to `role` (guards check `role`) — item 66.
-- `docs:verify` caught a broken anchor `#сесії` (real id `сесіі`) — fixed.
-- New issues 65–69. `pnpm docs:build` + `pnpm docs:verify` — all checks passed; stateDiagram renders.
-
-**Release of v2** (`main` @ `8515b09`):
-
-- Deploy run 39391819578 — success; live pages `guide/workflow`, `reference/roles-capabilities`,
-  `reference/glossary`, `backend/websocket`, `backend/ai`, `shared/`, `frontend/`, `playground/` → 200.
-- `pnpm typecheck`, `pnpm lint` clean; `pnpm test`: documentation 26/26, shared 1 (empty file, item 56),
-  frontend 27/27, backend 268/268; `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
-- Process note: stacked PRs #11/#12 merged into intermediate branches; landed via #13. Afterwards
-  all page PRs were based on `main`.
+```text
+GET /
+  HTTP/1.1 200 OK
+  content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://stage-lfl-s3.fra1.cdn.digitaloceanspaces.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 ws://localhost:3000 ws://localhost:* ws://127.0.0.1:*
+GET /index.html
+  HTTP/1.1 200 OK
+  content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://stage-lfl-s3.fra1.cdn.digitaloceanspaces.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 ws://localhost:3000 ws://localhost:* ws://127.0.0.1:*
+GET /settings
+  HTTP/1.1 200 OK
+  content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://stage-lfl-s3.fra1.cdn.digitaloceanspaces.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 ws://localhost:3000 ws://localhost:* ws://127.0.0.1:*
+GET /favicon.svg
+  HTTP/1.1 200 OK
+  content-security-policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'
+GET /service-worker.js
+  HTTP/1.1 200 OK
+GET /missing.js
+  HTTP/1.1 404 Not Found
+  content-security-policy: default-src 'none'; frame-ancestors 'none'
+GET /api/nope
+  HTTP/1.1 404 Not Found
+  content-security-policy: default-src 'none'; frame-ancestors 'none'
+GET /api/main/init
+  HTTP/1.1 401 Unauthorized
+  content-security-policy: default-src 'none'; frame-ancestors 'none'
+OPTIONS /api/main/init (Origin http://app.test)
+  HTTP/1.1 200 OK
+  content-security-policy: default-src 'none'; frame-ancestors 'none'
+  Access-Control-Allow-Origin: http://app.test
+```
 
 ## Notes for Next Session
 
-- Pages are written from code; known bugs are referenced from the code-issues file, not fixed here.
+- Continue with items 3 and 9 on this branch.
+- `feature_list.json` → `done` only after all four items.
+- Open: CSP is not browser-tested on the production branch (HTTPS/WSS, `upgrade-insecure-requests`) or against real S3/CDN (avatar upload, screenshot redirect). Needs a staging check.

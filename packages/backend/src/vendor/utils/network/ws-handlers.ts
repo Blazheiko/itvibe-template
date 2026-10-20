@@ -17,6 +17,7 @@ import type {
 } from "#vendor/types/types.js";
 import { wsSessionHandler } from "../session/session-handler.js";
 import getIP from "./get-ip.js";
+import checkUpgradeRateLimit from "#vendor/utils/rate-limit/upgrade-rate-limit.js";
 import { makeJson } from "#vendor/utils/helpers/json-handlers.js";
 import configApp from "#config/app.js";
 import type { Validator } from "#vendor/contracts/validator.js";
@@ -416,6 +417,25 @@ const handleUpgrade = async (
   const secWebsocketExtensions = req.getHeader("sec-websocket-extensions");
   const userAgent = req.getHeader("user-agent");
   const ip = getIP(req, res);
+
+  // Before the token check and the session lookup: a flood of upgrades costs no I/O.
+  const upgradeLimit = checkUpgradeRateLimit(ip);
+  if (upgradeLimit.kind !== "allowed") {
+    res.cork(() => {
+      if (upgradeLimit.kind === "limited") {
+        res
+          .writeStatus("429 Too Many Requests")
+          .writeHeader("Retry-After", String(upgradeLimit.retryAfter))
+          .end("Too many WebSocket upgrade requests");
+      } else {
+        res
+          .writeStatus("503 Service Unavailable")
+          .end("Rate limit check failed");
+      }
+    });
+    return;
+  }
+
   const protocols = secWebsocketProtocol
     .split(",")
     .map((value) => value.trim())
