@@ -9,6 +9,7 @@
         "preview": "vite preview",
         "test:unit": "vitest",
         "test:e2e": "playwright test",
+        "test:e2e:csp": "../../scripts/prod-local.sh --build-only && CSP_E2E_MODE=enforce playwright test -c playwright.csp.config.ts && CSP_E2E_MODE=report-only playwright test -c playwright.csp.config.ts",
         "build-only": "vite build",
         "build-sw": "vite build --config vite.sw.config.ts",
         "type-check": "vue-tsc --build",

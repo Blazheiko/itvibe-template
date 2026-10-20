@@ -21,3 +21,6 @@ packages/backend/openspec/
 # VitePress
 documentation/.vitepress/cache/
 documentation/.vitepress/dist/
+
+# Built SPA copied in by scripts/prod-local.sh (and the Dockerfile)
+packages/backend/public/
