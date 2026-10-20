@@ -63,6 +63,14 @@ export default withMermaid(
                         ],
                     },
                     {
+                        text: 'Інтеграції',
+                        items: [
+                            { text: 'Сховище файлів (S3)', link: '/backend/storage' },
+                            { text: 'Пошта та push', link: '/backend/mail-push' },
+                            { text: 'AI-інтеграції', link: '/backend/ai' },
+                        ],
+                    },
+                    {
                         text: 'Туторіали',
                         items: [{ text: 'Як додати фічу', link: '/backend/adding-a-feature' }],
                     },

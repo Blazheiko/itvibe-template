@@ -27,9 +27,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 - [x] T6.7 — `documentation/backend/caching-etag.md`
 
+- [x] T6.5a–c — storage, mail-push, ai (one PR, sidebar group «Інтеграції»)
+
 ### What's In Progress
 
-- [ ] T6.5a — `documentation/backend/storage.md`
+- [ ] T6.9a — `documentation/shared/index.md`
 
 ### What's Next
 
@@ -120,6 +122,15 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - Clarified SW update behaviour on the page (`updateViaCache`), so the risk is stated precisely.
 - New issues 39–43; item 42 → security-hardening.
 - `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: Mermaid renders.
+
+**T6.5a–c Інтеграції** (`docs/t6-5-integrations`):
+
+- Re-checked in code: `deleteFromS3` without `buildKey` (`s3.ts:83`); `createSubscription` →
+  `updateByEndpoint(endpoint, userId, …)`; `test-push` is `get`, `csrf_guard` checks only
+  `UNSAFE_METHODS`; `ai-provider.ts` falls back to Mistral; `vector(1536)` in schema;
+  `langNative = 'ru'` in `support-service.ts`.
+- New issues 44–55; items 46–48 → security-hardening.
+- Note: `npx web-push generate-vapid-keys` on the page is the web-push library CLI (no repo script) — stated on the page.
 
 ## Notes for Next Session
 
