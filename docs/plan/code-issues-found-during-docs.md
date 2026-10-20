@@ -45,6 +45,9 @@
 | 33  | `handleError` логує без `requestId`, контекст без `userId`            | Низька       | Observability                |
 | 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                | Низька       | Observability                |
 | 35  | Немає readiness-перевірки (DB/Redis)                                  | Середня      | Observability / експлуатація |
+| 36  | Немає CI для тестів застосунку і coverage                             | Середня      | Тести / CI                   |
+| 37  | `vitest.config.ts` без `testTimeout`, таймаути під навантаженням      | Низька       | Тести                        |
+| 38  | Playwright `webServer` використовує `npm` у pnpm-workspace            | Низька       | Тести / frontend             |
 
 ## Безпека
 
@@ -277,6 +280,25 @@
 - **Наслідок:** оркестратор/балансувальник спрямує трафік на інстанс без доступу до БД чи Redis.
 - **Пропозиція:** `GET /api/ready` з перевіркою DB і Redis (таймаути, без деталей у відповіді). Вимоги — шаблон `docs/requirements/operations/template-health-readiness-observability.md`.
 
+## Тестування (знайдено під час T6.8a, feat-011)
+
+Реальний прогін: `pnpm --filter backend test` — 51 файл, 268 тестів, ~2,2 с. Тести не потребують БД чи Redis, uWS мокається.
+
+### 36. Немає CI для тестів застосунку і coverage
+
+- **Що:** єдиний workflow — `.github/workflows/docs.yml`, і він тестує лише пакет `documentation`. Backend-, frontend- і shared-тести, typecheck та lint в CI не запускаються, лише локально через `./init.sh`. Coverage-інструментів чи скриптів немає в жодному пакеті.
+- **Пропозиція:** workflow `ci.yml` на PR (`pnpm typecheck`, `pnpm lint`, `pnpm test`, за потреби e2e); `@vitest/coverage-v8` зі звітом.
+
+### 37. `vitest.config.ts` без `testTimeout`
+
+- **Що:** `packages/backend/vitest.config.ts` не задає `testTimeout`, тож діє default 5 с. Під час feat-003 7 з 268 тестів один раз впали з таймаутом при паралельному навантаженні (typecheck + lint). При повторних прогонах — 268/268.
+- **Пропозиція:** явний `testTimeout` і/або обмеження `poolOptions` для CI.
+
+### 38. Playwright `webServer` використовує `npm`
+
+- **Що:** `packages/frontend/playwright.config.ts` запускає `npm run dev` / `npm run preview`, хоча репозиторій — pnpm-workspace.
+- **Пропозиція:** `pnpm dev` / `pnpm preview`.
+
 ## Що варто зробити далі
 
 Пропоную оформити окремі записи в `feature_list.json` (через PR у `main`):
@@ -292,3 +314,4 @@
    п. 26 — до feat-008 або окремо; п. 27 — до feat-009.
 9. Окремої фічі поки немає: п. 28–31 — кандидати в новий запис (Docker hardening).
 10. Окремої фічі поки немає: п. 33–35 — кандидати в новий запис (observability: логування та readiness).
+11. Окремої фічі поки немає: п. 36–38 — кандидати в новий запис (CI для застосунку + coverage).

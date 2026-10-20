@@ -49,6 +49,7 @@ const KEY_PAGES = [
     { page: 'backend/validation.md', h1: 'Валідація' },
     { page: 'backend/deployment.md', h1: 'Деплой' },
     { page: 'backend/observability.md', h1: 'Observability' },
+    { page: 'backend/testing.md', h1: 'Тестування' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
 ]

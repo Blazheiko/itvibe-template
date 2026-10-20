@@ -23,9 +23,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 - [x] T6.6 — `documentation/backend/observability.md` (stacked on T6.8b)
 
+- [x] T6.8a — `documentation/backend/testing.md`
+
 ### What's In Progress
 
-- [ ] T6.8a — `documentation/backend/testing.md`
+- [ ] T6.7 — `documentation/backend/caching-etag.md`
 
 ### What's Next
 
@@ -96,6 +98,17 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - New issues 33–35 (requestId in handleError, LOG_LEVEL, readiness check).
 - `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: 1 Mermaid SVG, 0 errors;
   DSN only as placeholder.
+
+**T6.8a Тестування** (`docs/t6-8a-testing`):
+
+- Real run `pnpm --filter backend test`: 51 files, 268 tests, ~2.2 s (stated on the page).
+- Commands on the page executed: `pnpm --filter backend test csrf-guard` → 1 file, 9 tests;
+  `pnpm --filter backend test -t …` does NOT filter (pnpm drops the flag) → replaced with
+  `pnpm --filter backend exec vitest run -t "422"` → 2 passed, 266 skipped.
+- Re-checked: `vitest.config.ts` has no `testTimeout`/`setupFiles`/coverage; only `docs.yml` workflow.
+- New issues 36–38.
+- Note: #11/#12 had been merged into stacked base branches, not `main`; landed via PR #13.
+  Page PRs are now always based on `main` (no stacking).
 
 ## Notes for Next Session
 
