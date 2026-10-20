@@ -57,6 +57,7 @@ export default withMermaid(
                             { text: 'Автентифікація та безпека', link: '/backend/auth-security' },
                             { text: 'WebSocket', link: '/backend/websocket' },
                             { text: 'Тестування', link: '/backend/testing' },
+                            { text: 'Кешування та ETag', link: '/backend/caching-etag' },
                             { text: 'Observability', link: '/backend/observability' },
                             { text: 'Деплой', link: '/backend/deployment' },
                         ],

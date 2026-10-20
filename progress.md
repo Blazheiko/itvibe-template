@@ -25,9 +25,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 - [x] T6.8a — `documentation/backend/testing.md`
 
+- [x] T6.7 — `documentation/backend/caching-etag.md`
+
 ### What's In Progress
 
-- [ ] T6.7 — `documentation/backend/caching-etag.md`
+- [ ] T6.5a — `documentation/backend/storage.md`
 
 ### What's Next
 
@@ -109,6 +111,15 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - New issues 36–38.
 - Note: #11/#12 had been merged into stacked base branches, not `main`; landed via PR #13.
   Page PRs are now always based on `main` (no stacking).
+
+**T6.7 Кешування та ETag** (`docs/t6-7-caching-etag`):
+
+- Re-checked in code: SHA-1 base64url ETag (`static-server.ts:71`); HTML `public, max-age=0, must-revalidate`;
+  other files `max-age=31536000, immutable`; exact `If-None-Match` match; CORS `maxAge: 90`;
+  no `Cache-Control` in `sendResponse`; prompt cache `Map` without TTL; `service-worker.js` fixed name.
+- Clarified SW update behaviour on the page (`updateViaCache`), so the risk is stated precisely.
+- New issues 39–43; item 42 → security-hardening.
+- `pnpm docs:build` + `pnpm docs:verify` — all checks passed; preview: Mermaid renders.
 
 ## Notes for Next Session
 
