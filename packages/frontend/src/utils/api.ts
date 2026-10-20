@@ -11,7 +11,6 @@ import type {
     VerifyEmailResponse,
     ResendVerificationEmailResponse,
     ResetPasswordResponse,
-    SaveUserResponse,
     UpdateWsTokenResponse,
     SupportKnowledgeBaseInitJob,
     AdminUserListResponse,
@@ -35,7 +34,6 @@ import type {
     ForgotPasswordInput,
     LoginInput,
     ResetPasswordInput,
-    SaveUserInput,
     VerifyEmailInput,
     AdminKnowledgeBaseListQueryInput,
     AdminOnlineHistoryListQueryInput,
@@ -177,10 +175,6 @@ export const mainApi = {
 
     updateWsToken: async (): Promise<ApiResponse<UpdateWsTokenResponse>> => {
         return baseApi.http<UpdateWsTokenResponse>('GET', '/api/main/update-ws-token')
-    },
-
-    saveUser: async (body: SaveUserInput): Promise<ApiResponse<SaveUserResponse>> => {
-        return baseApi.http<SaveUserResponse>('POST', '/api/main/save-user', body)
     },
 }
 

@@ -49,7 +49,7 @@ flowchart LR
 
 ## Контракти в packages/shared
 
-Пакет `shared` ([index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/index.ts)) експортує `schemas` (вхідні схеми, напр. `SaveUserInputSchema`), `responses` (схеми відповідей, напр. `InitResponseSchema`), `enums`, `errors`, `brands`, `utils`. Маршрути імпортують їх як `shared/schemas` і `shared/responses`, а контролери — типи відповідей (`InitResponse`, `PingResponse`) з `shared`.
+Пакет `shared` ([index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/index.ts)) експортує `schemas` (вхідні схеми, напр. `VerifyEmailInputSchema`), `responses` (схеми відповідей, напр. `InitResponseSchema`), `enums`, `errors`, `brands`, `utils`. Маршрути імпортують їх як `shared/schemas` і `shared/responses`, а контролери — типи відповідей (`InitResponse`, `PingResponse`) з `shared`.
 
 ## Наскрізний приклад: GET /api/main/init
 
@@ -71,7 +71,7 @@ defineRoute({
 2. **Middleware.** `executeMiddlewares` бере функції з [kernel.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/middlewares/kernel.ts). `auth_guard` ([auth-guard.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/auth-guard.ts)) за відсутності автентифікації ставить `responseData.status = 401` і не викликає `next()`.
 3. **Controller.** `MainController.init` ([main-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/core/main-controller.ts)) викликає `mainService.init(session.sessionInfo ?? null)`; при помилці — `mapControllerError`, інакше повертає `{ status: "ok", ...result.value }`.
 4. **Service.** `mainService.init` ([main-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts)) перевіряє сесію, завантажує користувача через `userRepository.findById(BigInt(userId))`, генерує WS-токен (`generateWsToken`) і повертає CSRF-токен, дані користувача, `wsUrl`, `wsToken` і конфіг сховища.
-5. **Repository.** `userRepository.findById` ([user-repository.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/user/user-repository.ts)) читає рядок `users`. Цей ендпоінт формує DTO користувача вручну в сервісі; трансформер `userTransformer.serialize` використовується, наприклад, у `mainService.saveUser` того ж файлу.
+5. **Repository.** `userRepository.findById` ([user-repository.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/user/user-repository.ts)) читає рядок `users`. Цей ендпоінт формує DTO користувача вручну в сервісі; трансформер `userTransformer.serialize` використовується, наприклад, в [auth-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts) (див. [Репозиторії та трансформери](/backend/repositories-transformers)).
 6. **Відповідь.** Повернуте значення handler-а записується в `responseData.payload` і серіалізується в JSON у `sendResponse` ([server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)). Деталі — на сторінці [«Життєвий цикл запиту»](/backend/request-lifecycle).
 
 Найпростіший маршрут — `GET /api/ping` (`MainController.ping` → `mainService.ping()` → `{ status: "ok" }`) — проходить той самий шлях, але без middleware і БД. Як додати власний ресурс за цими шарами — див. [/backend/adding-a-feature](/backend/adding-a-feature).

@@ -40,8 +40,6 @@ export {
   type ChangePasswordInput,
 } from "./auth/change-password.js";
 
-export { SaveUserInputSchema, type SaveUserInput } from "./main/save-user.js";
-
 export {
   CreateSubscriptionInputSchema,
   type CreateSubscriptionInput,
@@ -55,10 +53,6 @@ export {
   WSAdminUserOnlineUpsertPayloadSchema,
   type WSAdminUserOnlineUpsertPayload,
 } from "./ws/ws-admin-user-online-upsert.js";
-export {
-  WSSaveUserPayloadSchema,
-  type WSSaveUserPayload,
-} from "./ws/ws-save-user.js";
 
 export {
   PositiveIntFromString,

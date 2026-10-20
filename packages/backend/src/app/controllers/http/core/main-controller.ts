@@ -1,5 +1,4 @@
 import type { HttpContext } from "#vendor/types/types.js";
-import { getTypedPayload } from "#vendor/utils/validation/get-typed-payload.js";
 import { mainService } from "#app/services/core/main-service.js";
 import { mapControllerError } from "#app/controllers/shared/controller-error.js";
 import type {
@@ -12,7 +11,6 @@ import type {
   TestMiddlewareResponse,
   UpdateWsTokenResponse,
 } from "shared";
-import type { SaveUserInput } from "shared/schemas";
 import { Result } from "better-result";
 
 export default {
@@ -100,13 +98,5 @@ export default {
   }: HttpContext): TestMiddlewareResponse {
     logger.info("testMiddleware3 controller");
     return mainService.testMiddleware(responseData);
-  },
-
-  async saveUser(
-    context: HttpContext<SaveUserInput>,
-  ): Promise<Awaited<ReturnType<typeof mainService.saveUser>>> {
-    context.logger.info("saveUser");
-    const payload = getTypedPayload(context);
-    return mainService.saveUser(payload);
   },
 };

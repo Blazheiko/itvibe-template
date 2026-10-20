@@ -106,6 +106,16 @@
       ],
       "status": "done",
       "evidence": "Stage 6 pages merged via PRs #9, #10, #13, #14, #15, #16, #17, #18; Pages deploy run 39391819578; evidence in progress.md"
+    },
+    {
+      "id": "feat-012",
+      "name": "Remove save-user Endpoint",
+      "description": "Remove the anonymous POST /api/main/save-user endpoint (created users with an unhashed password, bypassing registration) and related code: controller/service methods, SaveUserInput/SaveUserResponse/WSSaveUserPayload schemas, frontend api.saveUser; update docs and requirements. Issue 65 in docs/plan/code-issues-found-during-docs.md",
+      "owner": "Blazheiko",
+      "branch": "fix/remove-save-user",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "This PR: shared build, pnpm typecheck/lint/test (backend 268/268), backend build, no save-user references in packages; docs:build + docs:verify"
     }
   ]
 }

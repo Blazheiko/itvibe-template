@@ -4,12 +4,10 @@ import type {
   SessionInfo,
 } from "#vendor/types/types.js";
 import { userRepository } from "#app/repositories/index.js";
-import { userTransformer } from "#app/transformers/index.js";
 import { generateWsToken } from "#app/services/auth/generate-ws-token-service.js";
 import { getWsUrl } from "#app/services/communication/get-ws-url-service.js";
 import diskConfig from "#config/disk.js";
 import appConfig from "#config/app.js";
-import type { SaveUserInput } from "shared/schemas";
 import logger from "#vendor/utils/logger.js";
 import { Result } from "better-result";
 import {
@@ -218,28 +216,5 @@ export const mainService = {
       middlewares: responseData.middlewareData as unknown as string[],
       status: "ok",
     };
-  },
-
-  async saveUser(payload: SaveUserInput): Promise<{
-    status: "ok" | "error";
-    message?: string;
-    user?: ReturnType<typeof userTransformer.serialize>;
-  }> {
-    const userResult = await tryInternal(
-      () =>
-        userRepository.create({
-          name: payload.name,
-          email: payload.email.toLowerCase(),
-          password: payload.password,
-        }),
-      "Failed to create user",
-    );
-
-    if (Result.isError(userResult)) {
-      logger.warn({ err: userResult.error }, "Failed to create user");
-      return Result.err(userResult.error);
-    }
-
-    return { status: "ok", user: userTransformer.serialize(userResult.value) };
   },
 };
