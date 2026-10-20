@@ -56,6 +56,9 @@ const KEY_PAGES = [
     { page: 'backend/ai.md', h1: 'AI-інтеграції' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
+    { page: 'shared/index.md', h1: 'Пакет shared' },
+    { page: 'frontend/index.md', h1: 'Фронтенд' },
+    { page: 'playground/index.md', h1: 'API Playground' },
 ]
 
 /** Home page (layout: home) checks (T2.3a). */

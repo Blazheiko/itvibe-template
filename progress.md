@@ -29,9 +29,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 - [x] T6.5a–c — storage, mail-push, ai (one PR, sidebar group «Інтеграції»)
 
+- [x] T6.9a–c — `shared/index.md`, `frontend/index.md`, `playground/index.md` (nav «Пакети»)
+
 ### What's In Progress
 
-- [ ] T6.9a — `documentation/shared/index.md`
+- [ ] T6.10a–d — workflow, toolchain, glossary, roles-capabilities
 
 ### What's Next
 
@@ -131,6 +133,15 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
   `langNative = 'ru'` in `support-service.ts`.
 - New issues 44–55; items 46–48 → security-hardening.
 - Note: `npx web-push generate-vapid-keys` on the page is the web-push library CLI (no repo script) — stated on the page.
+
+**T6.9a–c Пакети** (`docs/t6-9-packages`):
+
+- Re-checked: `shared/test/languages.test.js` has only imports (explains `pass 1` in every run);
+  `shared/src/guards/index.ts` is `export {}` and commented out in `index.ts`; frontend
+  `base-api.ts` fallback `https://itvibe-template.example`; `App.vue:130` `console.log(data)`;
+  playground `fetch('/api/doc/routes')`; `TestFormWs.vue` `https` → `ws://`.
+- Nav menu «Пакети» + shared sidebar for `/shared/`, `/frontend/`, `/playground/`; 3 pages in `KEY_PAGES`.
+- New issues 56–64; item 60 → security-hardening.
 
 ## Notes for Next Session
 

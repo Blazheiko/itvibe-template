@@ -65,6 +65,15 @@
 | 53  | Неповний облік використання AI (переклад, тест промпту, embeddings, Mistral без usage) | Низька       | AI                           |
 | 54  | Embeddings: `vector(1536)` зашито, `reindexAll` без батчів, пошук без порогу           | Низька       | AI / БД                      |
 | 55  | `llm_text_usage.final_prompt` безстроково зберігає повні тексти (PII)                  | Середня      | AI / приватність             |
+| 56  | Тест shared не містить жодного тесту (`pass 1` — порожній файл)                        | Середня      | Тести / shared               |
+| 57  | `guards` у shared порожні й закоментовані в `index.ts`                                 | Низька       | shared                       |
+| 58  | `EntityIdSchema` без `.brand()` — не брендований тип                                   | Низька       | shared                       |
+| 59  | Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`                | Середня      | Frontend / DX                |
+| 60  | Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`                        | Середня      | Frontend / безпека           |
+| 61  | Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі                            | Низька       | Frontend                     |
+| 62  | Playground: `/api/doc/routes` зашито, ігнорує `baseUrl` і `API_PATH_PREFIX`            | Низька       | Playground                   |
+| 63  | Playground: `https://` → `ws://` замість `wss://`                                      | Низька       | Playground                   |
+| 64  | Playground: «message queued», хоча повідомлення відкидається                           | Низька       | Playground                   |
 
 ## Безпека
 
@@ -409,11 +418,48 @@
 - **Наслідок:** персональні дані без політики зберігання.
 - **Пропозиція:** retention-політика, маскування, або зберігати лише метадані.
 
+## Пакети shared, frontend, playground (знайдено під час T6.9a–c, feat-011)
+
+### 56. Тест shared не містить жодного тесту
+
+- **Що:** `packages/shared/test/languages.test.js` має лише два імпорти (`node:test`, `node:assert/strict`) без жодного тест-кейсу. Тому `pnpm test` для shared показує `pass 1`: це «пройдений» файл, а не реальний тест.
+- **Пропозиція:** тести для schemas/utils (наприклад, `utils/phone`, enums мов) або прибрати скрипт.
+
+### 57. `guards` у shared порожні
+
+- **Що:** `packages/shared/src/guards/index.ts` містить лише `export {}`; реекспорт закоментовано в `src/index.ts`, але `./guards` є в `exports` `package.json`.
+- **Пропозиція:** видалити з `exports` або наповнити.
+
+### 58. `EntityIdSchema` не брендований
+
+- **Що:** `packages/shared/src/brands/ids.ts` описує `EntityIdSchema` як regex-тип без `.brand(...)`, тож тека `brands` не дає брендованих типів.
+
+### 59. Фронтенд: fallback `VITE_BASE_URL`
+
+- **Що:** `packages/frontend/src/utils/base-api.ts` без `VITE_BASE_URL` бере `https://itvibe-template.example`, тож у dev запити оминають Vite proxy, доки змінну не задано.
+- **Пропозиція:** fallback на відносний шлях (same-origin через proxy).
+
+### 60. Фронтенд: `console.log(data)` з `wsToken`
+
+- **Що:** `packages/frontend/src/App.vue` → `initializeApp` має `console.log(data)`, що друкує всю відповідь init, зокрема користувача і `wsToken`, у консоль браузера (і, можливо, в Sentry breadcrumbs).
+- **Пропозиція:** прибрати; доповнює п. 3 (токени в логах).
+
+### 61. Фронтенд: нетипізовані змінні та застарілі коментарі
+
+- **Що:** `packages/frontend/src/env.d.ts` типізує лише `VITE_BASE_URL`, а не `VITE_AUTH_PHONE_ENABLED` і `VITE_SENTRY_*`. У `main.ts` закоментований код push-дозволів і коментар про перевірку оновлень «щохвилини», хоча вона одноразова.
+
+### 62–64. API Playground
+
+- **62:** `packages/api-playground/src/stores/api-doc.ts` викликає `fetch('/api/doc/routes')`, ігноруючи `baseUrl` і `API_PATH_PREFIX`; Vite proxy теж обмежений `/api`.
+- **63:** `src/components/api/TestFormWs.vue` перетворює `https://` на `ws://` замість `wss://`.
+- **64:** `src/composables/useWebSocketConnection.ts` → `sendMessage` без з'єднання логує «message queued», але черги немає, і повідомлення губиться.
+- Також: у playground немає скрипта `test`.
+
 ## Що варто зробити далі
 
 Пропоную оформити окремі записи в `feature_list.json` (через PR у `main`):
 
-1. **security-hardening** — п. 1, 2, 3, 9, 18, 32, 42, 46, 47, 48.
+1. **security-hardening** — п. 1, 2, 3, 9, 18, 32, 42, 46, 47, 48, 60.
 2. **env-example-sync** — п. 4, 5, 6, 8 (+ README).
 3. **db-dx** — п. 7, 10, 11.
 4. **http-body-fixes** — п. 12, 13, 14.
@@ -427,3 +473,4 @@
 11. Окремої фічі поки немає: п. 36–38 — кандидати в новий запис (CI для застосунку + coverage).
 12. Окремої фічі поки немає: п. 39–41, 43 — кандидати в новий запис (static/caching).
 13. Окремої фічі поки немає: п. 44, 45, 49 — storage/push cleanup; п. 50–55 — AI reliability & privacy.
+14. Окремої фічі поки немає: п. 56–58 — shared cleanup + тести; п. 59, 61 — frontend; п. 62–64 — playground.
