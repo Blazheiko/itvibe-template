@@ -3,6 +3,12 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const repoUrl = 'https://github.com/Blazheiko/itvibe-template'
 
+const packagesItems = [
+    { text: 'Пакет shared', link: '/shared/' },
+    { text: 'Фронтенд', link: '/frontend/' },
+    { text: 'API Playground', link: '/playground/' },
+]
+
 export default withMermaid(
     defineConfig({
         base: '/itvibe-template/',
@@ -19,6 +25,14 @@ export default withMermaid(
             nav: [
                 { text: 'Гайд', link: '/guide/introduction' },
                 { text: 'Бекенд', link: '/backend/' },
+                {
+                    text: 'Пакети',
+                    items: [
+                        { text: 'shared', link: '/shared/' },
+                        { text: 'Фронтенд', link: '/frontend/' },
+                        { text: 'API Playground', link: '/playground/' },
+                    ],
+                },
                 { text: 'Довідник', link: '/reference/scripts' },
             ],
             sidebar: {
@@ -75,6 +89,9 @@ export default withMermaid(
                         items: [{ text: 'Як додати фічу', link: '/backend/adding-a-feature' }],
                     },
                 ],
+                '/shared/': [{ text: 'Пакети', items: packagesItems }],
+                '/frontend/': [{ text: 'Пакети', items: packagesItems }],
+                '/playground/': [{ text: 'Пакети', items: packagesItems }],
                 '/reference/': [
                     {
                         text: 'Довідник',
