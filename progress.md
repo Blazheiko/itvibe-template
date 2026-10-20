@@ -43,7 +43,7 @@ CSP plan: [docs/plan/csp-fix-plan.md](docs/plan/csp-fix-plan.md). Start PR: #21 
 - `pnpm typecheck` — clean
 - `pnpm lint` — 0 errors (pre-existing warnings only)
 - `pnpm test` — pass (backend 54 files / 338 tests, incl. `csp.spec.ts`, `static-server-csp.spec.ts` 33 cases, `server-csp.spec.ts` 15 cases)
-- `pnpm --filter frontend test:e2e:csp` — enforce 5/5, report-only 5/5; with `CSP_ENABLED=false` the header, inline-script and fetch tests fail (proves they test CSP)
+- `pnpm --filter frontend test:e2e:csp` — enforce 7/7, report-only 7/7 (WS confirmed by a `pong` frame, CDN image `naturalWidth > 0`, image outside `img-src` blocked/reported); earlier 5/5; with `CSP_ENABLED=false` the header, inline-script and fetch tests fail (proves they test CSP)
 - `pnpm docs:build && pnpm docs:verify` — pass
 - `pnpm --filter frontend test:e2e` — `mobile-layout.spec.ts` fails on `.modal.register-modal`, a selector that no longer exists in `src`; pre-existing, unrelated to CSP
 
@@ -83,3 +83,4 @@ OPTIONS /api/main/init (Origin http://app.test)
 
 - Continue with item 2 (rate limit on WS upgrade), then 3 and 9, on this branch.
 - `feature_list.json` → `done` only after all four items.
+- Open: CSP is not browser-tested on the production branch (HTTPS/WSS, `upgrade-insecure-requests`) or against real S3/CDN (avatar upload, screenshot redirect). Needs a staging check.

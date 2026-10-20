@@ -3,6 +3,8 @@ import type { AddressInfo } from 'node:net'
 
 import { expect, test, type Page } from '@playwright/test'
 
+import { CDN_URL } from '../playwright.csp.config'
+
 /**
  * Runs twice (playwright.csp.config.ts): project `enforce` against a backend with
  * CSP_REPORT_ONLY=false and project `report-only` against one with CSP_REPORT_ONLY=true.
@@ -66,6 +68,7 @@ test('the HTML document carries exactly the policy of the current mode', async (
 })
 
 test('registration, WebSocket and fonts work without violations', async ({ page }) => {
+    test.setTimeout(60_000)
     const websocket = page.waitForEvent('websocket', { timeout: 15_000 })
     await page.goto('/')
     await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible()
@@ -86,7 +89,14 @@ test('registration, WebSocket and fonts work without violations', async ({ page 
 
     const ws = await websocket
     expect(ws.url()).toMatch(/^ws:\/\/localhost:\d+\//)
-    await expect.poll(() => ws.isClosed()).toBe(false)
+    // A created socket proves nothing until the handshake succeeds: wait for the app's own
+    // heartbeat round trip (it sends `ping` every 10 s and the server answers `pong`).
+    const pong = await ws.waitForEvent('framereceived', {
+        predicate: (frame) => frame.payload === 'pong',
+        timeout: 20_000,
+    })
+    expect(pong.payload).toBe('pong')
+    expect(ws.isClosed()).toBe(false)
     await expect.poll(() => page.evaluate(() => document.fonts.check('16px Inter'))).toBe(true)
 
     expect(await violations(page)).toEqual([])
@@ -154,5 +164,40 @@ test('fetch to an origin outside connect-src is blocked (enforce) or only report
         item.blockedURI.startsWith(probeOrigin),
     )
     expect(violation?.effectiveDirective).toBe('connect-src')
+    expect(violation?.disposition).toBe(isReportOnly() ? 'report' : 'enforce')
+})
+
+const loadImage = (page: Page, src: string) =>
+    page.evaluate(
+        (url) =>
+            new Promise<number>((resolve) => {
+                const img = new Image()
+                img.onload = () => resolve(img.naturalWidth)
+                img.onerror = () => resolve(0)
+                img.src = url
+                document.body.appendChild(img)
+            }),
+        src,
+    )
+
+test('media from CDN_URL loads without violations', async ({ page }) => {
+    await page.goto('/')
+    // Same URL shape as avatars and support screenshots: CDN_URL + full object key.
+    expect(await loadImage(page, `${CDN_URL}/app/uploads/knowledge-base/1/shot.png`)).toBe(1)
+    expect(await violations(page)).toEqual([])
+})
+
+test('an image from an origin outside img-src is blocked (enforce) or only reported', async ({
+    page,
+}) => {
+    await page.goto('/')
+    // The probe answers text, so in report-only the load fails on decoding, not on CSP.
+    await loadImage(page, `${probeOrigin}/image.png`)
+
+    const imgViolation = async () =>
+        (await violations(page)).find((item) => item.blockedURI.startsWith(probeOrigin))
+    await expect.poll(imgViolation).toBeDefined()
+    const violation = await imgViolation()
+    expect(violation?.effectiveDirective).toBe('img-src')
     expect(violation?.disposition).toBe(isReportOnly() ? 'report' : 'enforce')
 })

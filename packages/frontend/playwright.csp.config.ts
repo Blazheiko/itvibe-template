@@ -10,6 +10,9 @@ import { defineConfig, devices } from '@playwright/test'
  * Requires PostgreSQL and Redis from packages/backend/.env.
  */
 const PORT = 3000
+// The CDN stub plays CDN_URL, the only media origin allowed by img-src.
+const CDN_PORT = 3901
+export const CDN_URL = `http://127.0.0.1:${CDN_PORT}/cdn`
 const MODE = process.env.CSP_E2E_MODE === 'report-only' ? 'report-only' : 'enforce'
 
 export default defineConfig({
@@ -26,16 +29,25 @@ export default defineConfig({
         screenshot: 'only-on-failure',
     },
     projects: [{ name: MODE }],
-    webServer: {
-        command: '../../scripts/prod-local.sh',
-        env: {
-            PROD_LOCAL_SKIP_BUILD: 'true',
-            PORT: String(PORT),
-            CSP_REPORT_ONLY: String(MODE === 'report-only'),
+    webServer: [
+        {
+            command: 'node e2e-csp/cdn-stub.mjs',
+            env: { CDN_STUB_PORT: String(CDN_PORT) },
+            url: `${CDN_URL}/health.png`,
+            reuseExistingServer: false,
         },
-        url: `http://localhost:${PORT}/`,
-        // Never reuse: a server started in the other mode would send the wrong header.
-        reuseExistingServer: false,
-        timeout: 60 * 1000,
-    },
+        {
+            command: '../../scripts/prod-local.sh',
+            env: {
+                PROD_LOCAL_SKIP_BUILD: 'true',
+                PORT: String(PORT),
+                CSP_REPORT_ONLY: String(MODE === 'report-only'),
+                CDN_URL,
+            },
+            url: `http://localhost:${PORT}/`,
+            // Never reuse: a server started in the other mode would send the wrong header.
+            reuseExistingServer: false,
+            timeout: 60 * 1000,
+        },
+    ],
 })
