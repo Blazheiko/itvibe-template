@@ -43,6 +43,7 @@ export default withMermaid(
                             { text: 'Вступ', link: '/guide/introduction' },
                             { text: 'Швидкий старт', link: '/guide/getting-started' },
                             { text: 'Структура проєкту', link: '/guide/project-structure' },
+                            { text: 'Процес роботи', link: '/guide/workflow' },
                         ],
                     },
                 ],
@@ -95,7 +96,12 @@ export default withMermaid(
                 '/reference/': [
                     {
                         text: 'Довідник',
-                        items: [{ text: 'Скрипти', link: '/reference/scripts' }],
+                        items: [
+                            { text: 'Скрипти', link: '/reference/scripts' },
+                            { text: 'Toolchain', link: '/reference/toolchain' },
+                            { text: 'Глосарій', link: '/reference/glossary' },
+                            { text: 'Ролі та можливості', link: '/reference/roles-capabilities' },
+                        ],
                     },
                 ],
             },
