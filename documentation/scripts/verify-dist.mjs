@@ -50,6 +50,7 @@ const KEY_PAGES = [
     { page: 'backend/deployment.md', h1: 'Деплой' },
     { page: 'backend/observability.md', h1: 'Observability' },
     { page: 'backend/testing.md', h1: 'Тестування' },
+    { page: 'backend/caching-etag.md', h1: 'Кешування та ETag' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
 ]
