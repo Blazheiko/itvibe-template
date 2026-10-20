@@ -31,9 +31,11 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 - [x] T6.9a–c — `shared/index.md`, `frontend/index.md`, `playground/index.md` (nav «Пакети»)
 
+- [x] T6.10a–d — workflow, toolchain, glossary, roles-capabilities. **Stage 6 complete.**
+
 ### What's In Progress
 
-- [ ] T6.10a–d — workflow, toolchain, glossary, roles-capabilities
+- [ ] Close feat-011 after this PR merges (status `done` via PR to `main`).
 
 ### What's Next
 
@@ -142,6 +144,18 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
   playground `fetch('/api/doc/routes')`; `TestFormWs.vue` `https` → `ws://`.
 - Nav menu «Пакети» + shared sidebar for `/shared/`, `/frontend/`, `/playground/`; 3 pages in `KEY_PAGES`.
 - New issues 56–64; item 60 → security-hardening.
+
+**T6.10a–d Процес, toolchain, глосарій, ролі** (`docs/t6-10-reference`):
+
+- Glossary and role matrix from `docs/reference/*` verified against code; non-existent roles
+  (Developer/QA, Operator) explained, not shown as enforced; unenforced rows marked.
+- **Critical finding re-checked:** `POST /<prefix>/main/save-user` — group `main` has only
+  `session_web` + `csrf_guard` (CSRF log-only by default); `mainService.saveUser` →
+  `userRepository.create({ …, password: payload.password })` with no hashing (registration uses
+  `hashPassword` from `metautil`). Item 65, marked critical; `::: danger` on the roles page.
+- `users.isAdmin` unused next to `role` (guards check `role`) — item 66.
+- `docs:verify` caught a broken anchor `#сесії` (real id `сесіі`) — fixed.
+- New issues 65–69. `pnpm docs:build` + `pnpm docs:verify` — all checks passed; stateDiagram renders.
 
 ## Notes for Next Session
 
