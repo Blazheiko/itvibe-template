@@ -53,14 +53,6 @@ test.afterAll(async () => {
 
 const violations = (page: Page) => page.evaluate(() => window.__cspViolations)
 
-// ArkType probes whether JIT is allowed with `new Function("return false")` in a
-// try/catch and falls back to jitless mode under CSP: an expected, harmless report.
-const isArkTypeJitProbe = (violation: Violation) =>
-    violation.blockedURI === 'eval' && violation.effectiveDirective === 'script-src'
-
-const unexpectedViolations = async (page: Page) =>
-    (await violations(page)).filter((violation) => !isArkTypeJitProbe(violation))
-
 const isReportOnly = () => test.info().project.name === 'report-only'
 const expectedHeader = () => (isReportOnly() ? CSP_REPORT_ONLY : CSP)
 const otherHeader = () => (isReportOnly() ? CSP : CSP_REPORT_ONLY)
@@ -97,7 +89,7 @@ test('registration, WebSocket and fonts work without violations', async ({ page 
     await expect.poll(() => ws.isClosed()).toBe(false)
     await expect.poll(() => page.evaluate(() => document.fonts.check('16px Inter'))).toBe(true)
 
-    expect(await unexpectedViolations(page)).toEqual([])
+    expect(await violations(page)).toEqual([])
 })
 
 test('the service worker registers and serves the shell offline', async ({ page, context }) => {
@@ -116,7 +108,7 @@ test('the service worker registers and serves the shell offline', async ({ page,
     await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible()
     await context.setOffline(false)
 
-    expect(await unexpectedViolations(page)).toEqual([])
+    expect(await violations(page)).toEqual([])
 })
 
 test('an injected inline script is blocked (enforce) or only reported (report-only)', async ({

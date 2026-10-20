@@ -1,6 +1,6 @@
 import { useEventBus } from '@/utils/event-bus'
 import { reportValidationFailure } from '@/utils/sentry-payload-summary'
-import { WSAdminUserOnlineUpsertPayloadSchema } from 'shared/schemas'
+import { isWSAdminUserOnlineUpsertPayload } from '@/utils/ws-payload-guards'
 import type { WebsocketMessage } from '@/utils/websocket-base'
 
 export const useBroadcastHandler = () => {
@@ -25,7 +25,9 @@ export const useBroadcastHandler = () => {
             eventBus.emit('support_chat_complete', {
                 content: event.payload.content,
                 screenshots: Array.isArray(event.payload.screenshots)
-                    ? event.payload.screenshots.filter((item): item is string => typeof item === 'string')
+                    ? event.payload.screenshots.filter(
+                          (item): item is string => typeof item === 'string',
+                      )
                     : [],
             })
         },
@@ -37,19 +39,19 @@ export const useBroadcastHandler = () => {
             eventBus.emit('support_chat_error', { message: event.payload.message })
         },
         admin_user_online_upsert: (event) => {
-            try {
-                const payload = WSAdminUserOnlineUpsertPayloadSchema.assert(event.payload)
-                eventBus.emit('admin_user_online_upsert', {
-                    id: payload.id,
-                    name: payload.name,
-                    email: payload.email,
-                    appType: payload.appType,
-                    userAgent: payload.userAgent,
-                    connectionsCount: payload.connectionsCount,
-                })
-            } catch {
-                reportValidationFailure('admin_user_online_upsert', 'schema_assert', event.payload)
+            const payload = event.payload
+            if (!isWSAdminUserOnlineUpsertPayload(payload)) {
+                reportValidationFailure('admin_user_online_upsert', 'payload_shape', payload)
+                return
             }
+            eventBus.emit('admin_user_online_upsert', {
+                id: payload.id,
+                name: payload.name,
+                email: payload.email,
+                appType: payload.appType,
+                userAgent: payload.userAgent,
+                connectionsCount: payload.connectionsCount,
+            })
         },
         admin_user_online_remove: (event) => {
             if (!isObject(event.payload) || typeof event.payload.id !== 'string') {

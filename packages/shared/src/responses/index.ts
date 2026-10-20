@@ -1,3 +1,4 @@
+export { ErrorCodeSchema } from "./error-code-schema.js";
 export {
   BaseResponseSchema,
   CanonicalErrorResponseSchema,

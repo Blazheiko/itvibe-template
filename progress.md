@@ -35,7 +35,7 @@ CSP plan: [docs/plan/csp-fix-plan.md](docs/plan/csp-fix-plan.md). Start PR: #21 
 - Enforce and report-only run sequentially on one port: the bundle has `VITE_BASE_URL` baked in, so a second instance on another port would call the wrong API origin.
 - `prod:local` runs `APP_ENV=local`, `APP_IS_PRODUCTION=false`: on plain http `getWsUrl()` would return `wss://` and `upgrade-insecure-requests` would break all requests. Hence `upgrade-insecure-requests` is covered by unit tests only, not e2e (needs HTTPS).
 - Media origin = `CDN_URL` only (the client receives `cdnUrl` from the API); no S3 origin is added because the browser never talks to S3 directly.
-- ArkType's JIT probe (`new Function`) produces one expected `script-src` / `eval` violation; e2e ignores exactly that one.
+- ArkType removed from the frontend runtime bundle: its JIT probe (`new Function`) was a CSP `eval` violation on every page load. `useBroadcastHandler` uses `ws-payload-guards.ts` (parity-tested against the ArkType schema); `ErrorCodeSchema` moved from `shared/errors` to `shared/responses/error-code-schema.ts`. `index.js` 1 042 259 → 873 428 bytes. e2e now fails on any CSP violation.
 - The feat-005 item 4 dependency is gone: `prod:local` creates `backend/public` before start.
 
 ## Evidence of Completion (item 1)
