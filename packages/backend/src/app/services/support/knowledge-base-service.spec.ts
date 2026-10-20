@@ -25,7 +25,8 @@ const loggerMock = {
   warn: vi.fn(),
 };
 
-const presignUrlMock = vi.fn();
+const uploadToS3Mock = vi.fn(() => Promise.resolve(undefined));
+const appConfigMock = { cdnUrl: "https://cdn.test/" };
 
 vi.mock("#app/repositories/support/support-knowledge-repository.js", () => ({
   supportKnowledgeRepository: supportKnowledgeRepositoryMock,
@@ -40,9 +41,12 @@ vi.mock("#logger", () => ({
 }));
 
 vi.mock("#vendor/utils/storage/s3.js", () => ({
-  uploadToS3: vi.fn(() => Promise.resolve(undefined)),
+  uploadToS3: uploadToS3Mock,
   deleteFromS3: vi.fn(() => Promise.resolve(undefined)),
-  presignUrl: presignUrlMock,
+}));
+
+vi.mock("#config/app.js", () => ({
+  default: appConfigMock,
 }));
 
 async function loadKnowledgeBaseService() {
@@ -50,6 +54,7 @@ async function loadKnowledgeBaseService() {
 }
 
 afterEach(() => {
+  appConfigMock.cdnUrl = "https://cdn.test/";
   vi.resetModules();
   vi.clearAllMocks();
 });
@@ -202,6 +207,12 @@ describe("knowledgeBaseService", () => {
     });
 
     expect(Result.isOk(result)).toBe(true);
+    expect(uploadToS3Mock).toHaveBeenCalledWith(
+      expect.stringContaining("knowledge-base/11/"),
+      expect.any(Buffer),
+      "image/png",
+      { publicRead: true },
+    );
     expect(supportKnowledgeRepositoryMock.setScreenshot).toHaveBeenCalledWith(
       11n,
       expect.stringContaining("knowledge-base/11/"),
@@ -232,7 +243,7 @@ describe("knowledgeBaseService", () => {
     }
   });
 
-  it("returns a presigned screenshot url", async () => {
+  it("returns the CDN url of the screenshot", async () => {
     supportKnowledgeRepositoryMock.findById.mockResolvedValue({
       id: 11n,
       title: "Article",
@@ -244,22 +255,20 @@ describe("knowledgeBaseService", () => {
       createdAt: new Date("2026-05-08T10:00:00.000Z"),
       updatedAt: new Date("2026-05-08T10:00:00.000Z"),
     });
-    presignUrlMock.mockResolvedValue("https://signed-url");
 
     const { knowledgeBaseService } = await loadKnowledgeBaseService();
     const result = await knowledgeBaseService.getScreenshotUrl(11n);
 
     expect(Result.isOk(result)).toBe(true);
-    expect(presignUrlMock).toHaveBeenCalledWith(
-      "kb/11/screenshot.png",
-      300,
-    );
     if (Result.isOk(result)) {
-      expect(result.value).toEqual({ signedUrl: "https://signed-url" });
+      expect(result.value.url).toMatch(
+        /^https:\/\/cdn\.test\/[^/].*\/kb\/11\/screenshot\.png$/,
+      );
     }
   });
 
-  it("returns internal error when screenshot presign fails", async () => {
+  it("returns no url when CDN_URL is not set", async () => {
+    appConfigMock.cdnUrl = "";
     supportKnowledgeRepositoryMock.findById.mockResolvedValue({
       id: 11n,
       title: "Article",
@@ -271,18 +280,11 @@ describe("knowledgeBaseService", () => {
       createdAt: new Date("2026-05-08T10:00:00.000Z"),
       updatedAt: new Date("2026-05-08T10:00:00.000Z"),
     });
-    presignUrlMock.mockRejectedValue(new Error("presign failed"));
 
     const { knowledgeBaseService } = await loadKnowledgeBaseService();
     const result = await knowledgeBaseService.getScreenshotUrl(11n);
 
-    expect(Result.isError(result)).toBe(true);
-    if (Result.isError(result)) {
-      expect(result.error).toEqual({
-        _tag: "Internal",
-        publicMessage: "Failed to presign screenshot URL",
-        cause: expect.any(Error),
-      });
-    }
+    expect(result).toEqual(Result.ok({ url: null }));
+    expect(loggerMock.warn).toHaveBeenCalled();
   });
 });

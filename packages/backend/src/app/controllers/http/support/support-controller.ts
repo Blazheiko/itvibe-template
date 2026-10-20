@@ -79,8 +79,9 @@ export default {
       return mapControllerError(context, screenshotKeyResult.error);
     }
 
-    const signedUrl = screenshotKeyResult.value.signedUrl;
-    if (signedUrl === null) {
+    // Always a CDN_URL address: support images must come only from our own CDN.
+    const url = screenshotKeyResult.value.url;
+    if (url === null) {
       return mapControllerError(
         context,
         notFound("Screenshot", "Screenshot not found"),
@@ -88,7 +89,7 @@ export default {
     }
 
     context.responseData.status = 302;
-    context.responseData.setHeader("Location", signedUrl);
+    context.responseData.setHeader("Location", url);
     return { status: "redirect" };
   },
 };
