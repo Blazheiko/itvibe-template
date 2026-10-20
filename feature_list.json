@@ -38,11 +38,11 @@
     {
       "id": "feat-005",
       "name": "Security Hardening",
-      "description": "Apply CSP from config/csp.ts to API/static responses; rate-limit WebSocket upgrade and add a global per-IP limit; stop logging WS/session tokens; runtime guard for broadcastToChannel channels (items 1, 2, 3, 9). Details: docs/plan/code-issues-found-during-docs.md",
-      "owner": "",
-      "branch": "",
+      "description": "Apply CSP from config/csp.ts to API/static responses; rate-limit WebSocket upgrade and add a global per-IP limit; stop logging WS/session tokens; runtime guard for broadcastToChannel channels (items 1, 2, 3, 9). Details: docs/plan/code-issues-found-during-docs.md; CSP plan: docs/plan/csp-fix-plan.md",
+      "owner": "Blazheiko",
+      "branch": "feat/security-hardening",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     },
     {
