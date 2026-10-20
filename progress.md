@@ -3,7 +3,7 @@
 ## Current State
 
 **Last Updated:** 2026-10-19
-**Active Feature:** feat-011 - Documentation v2
+**Active Feature:** feat-011 - Documentation v2 (done)
 **Branch:** `feat/docs-v2`
 
 Plan: [docs/plan/vitepress-documentation-plan.md](docs/plan/vitepress-documentation-plan.md) (rev. 3)
@@ -35,9 +35,13 @@ Previous feature feat-003 (docs v1) is done; its log is in git history of this f
 
 ### What's In Progress
 
-- [ ] Close feat-011 after this PR merges (status `done` via PR to `main`).
+- [x] feat-011 closed (`done`).
 
 ### What's Next
+
+- Item 65 (`POST /main/save-user`, anonymous user creation with plaintext password) — fix first.
+- Register follow-up features for issue groups listed at the end of
+  `docs/plan/code-issues-found-during-docs.md`.
 
 Order (backend first): T6.4 websocket → T6.1 controllers-services → T6.2 repositories-transformers →
 T6.3 validation → T6.8b deployment → T6.6 observability → T6.8a testing → T6.7 caching-etag →
@@ -156,6 +160,15 @@ Each page = one PR to `main`: code → page → sidebar → `KEY_PAGES` → `doc
 - `users.isAdmin` unused next to `role` (guards check `role`) — item 66.
 - `docs:verify` caught a broken anchor `#сесії` (real id `сесіі`) — fixed.
 - New issues 65–69. `pnpm docs:build` + `pnpm docs:verify` — all checks passed; stateDiagram renders.
+
+**Release of v2** (`main` @ `8515b09`):
+
+- Deploy run 39391819578 — success; live pages `guide/workflow`, `reference/roles-capabilities`,
+  `reference/glossary`, `backend/websocket`, `backend/ai`, `shared/`, `frontend/`, `playground/` → 200.
+- `pnpm typecheck`, `pnpm lint` clean; `pnpm test`: documentation 26/26, shared 1 (empty file, item 56),
+  frontend 27/27, backend 268/268; `pnpm docs:build` + `pnpm docs:verify` — all checks passed.
+- Process note: stacked PRs #11/#12 merged into intermediate branches; landed via #13. Afterwards
+  all page PRs were based on `main`.
 
 ## Notes for Next Session
 

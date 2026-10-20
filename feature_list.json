@@ -104,8 +104,8 @@
       "dependencies": [
         "feat-003"
       ],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "Stage 6 pages merged via PRs #9, #10, #13, #14, #15, #16, #17, #18; Pages deploy run 39391819578; evidence in progress.md"
     }
   ]
 }
