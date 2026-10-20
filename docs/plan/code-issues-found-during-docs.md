@@ -8,35 +8,43 @@
 
 ## Зведення
 
-| #   | Проблема                                                              | Серйозність  | Область               |
-| --- | --------------------------------------------------------------------- | ------------ | --------------------- |
-| 1   | CSP ніде не застосовується                                            | Висока       | Безпека               |
-| 2   | Немає rate limit на WebSocket upgrade і глобального per-IP ліміту     | Висока       | Безпека               |
-| 3   | WS-токен і `userToken` потрапляють у логи                             | Середня      | Безпека               |
-| 4   | `SERVE_STATIC=true` у `.env.example` ламає запуск                     | Середня      | DX / конфігурація     |
-| 5   | Fallback `PGSQL_PORT` не працює → `NaN`                               | Середня      | Конфігурація          |
-| 6   | Розбіжності `.env.example` з кодом                                    | Середня      | Конфігурація          |
-| 7   | Потрібен pgvector, ніде не задокументовано                            | Низька       | DX / БД               |
-| 8   | Різні PostgreSQL defaults у застосунку та скриптах                    | Низька       | Конфігурація          |
-| 9   | `broadcastToChannel` без runtime-перевірки каналу (L-4)               | Низька       | Безпека               |
-| 10  | `db:seed` — порожня заглушка                                          | Низька       | DX / БД               |
-| 11  | `src/drizzle/schema/index.ts` порожній                                | Низька       | Структура             |
-| 12  | Тіло запиту читається лише для `post`/`put`                           | Низька       | HTTP                  |
-| 13  | `sendResponse` при `payload === null` віддає `String(status)` як JSON | Низька       | HTTP                  |
-| 14  | Прогалини плану body limits: тести, `.env.example`, playground        | Низька       | HTTP / тести          |
-| 15  | Застарілі внутрішні документи                                         | Низька       | Документація          |
-| 16  | Стиль коду бекенду не відповідає `AGENTS.md`                          | Інформаційна | Стиль                 |
-| 17  | Фронтенд вшиває префікс `api/` у WS-події                             | Середня      | WebSocket / frontend  |
-| 18  | WS upgrade без валідної сесії не відхиляється                         | Низька       | WebSocket / безпека   |
-| 19  | Мертвий код у WebSocket-шарі                                          | Низька       | WebSocket / структура |
-| 20  | Сервіси push-нотифікацій звертаються до БД напряму                    | Середня      | Шари / БД             |
-| 21  | N+1 у `findByUserIdWithLogs` і статистика в JS                        | Середня      | Продуктивність        |
-| 22  | Контролери та middleware оминають сервіси                             | Низька       | Шари                  |
-| 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`               | Середня      | Шари / помилки        |
-| 24  | Repositories barrel неповний, змішані стилі імпорту                   | Низька       | Структура             |
-| 25  | `clearEmbedding` — два запити без транзакції, сирий SQL з назвами     | Низька       | БД                    |
-| 26  | ArkType-адаптер віддає лише `summary`, без помилок по полях           | Низька       | Валідація             |
-| 27  | Мертвий і застарілий код валідації та контролерів                     | Низька       | Структура             |
+| #   | Проблема                                                              | Серйозність  | Область                      |
+| --- | --------------------------------------------------------------------- | ------------ | ---------------------------- |
+| 1   | CSP ніде не застосовується                                            | Висока       | Безпека                      |
+| 2   | Немає rate limit на WebSocket upgrade і глобального per-IP ліміту     | Висока       | Безпека                      |
+| 3   | WS-токен і `userToken` потрапляють у логи                             | Середня      | Безпека                      |
+| 4   | `SERVE_STATIC=true` у `.env.example` ламає запуск                     | Середня      | DX / конфігурація            |
+| 5   | Fallback `PGSQL_PORT` не працює → `NaN`                               | Середня      | Конфігурація                 |
+| 6   | Розбіжності `.env.example` з кодом                                    | Середня      | Конфігурація                 |
+| 7   | Потрібен pgvector, ніде не задокументовано                            | Низька       | DX / БД                      |
+| 8   | Різні PostgreSQL defaults у застосунку та скриптах                    | Низька       | Конфігурація                 |
+| 9   | `broadcastToChannel` без runtime-перевірки каналу (L-4)               | Низька       | Безпека                      |
+| 10  | `db:seed` — порожня заглушка                                          | Низька       | DX / БД                      |
+| 11  | `src/drizzle/schema/index.ts` порожній                                | Низька       | Структура                    |
+| 12  | Тіло запиту читається лише для `post`/`put`                           | Низька       | HTTP                         |
+| 13  | `sendResponse` при `payload === null` віддає `String(status)` як JSON | Низька       | HTTP                         |
+| 14  | Прогалини плану body limits: тести, `.env.example`, playground        | Низька       | HTTP / тести                 |
+| 15  | Застарілі внутрішні документи                                         | Низька       | Документація                 |
+| 16  | Стиль коду бекенду не відповідає `AGENTS.md`                          | Інформаційна | Стиль                        |
+| 17  | Фронтенд вшиває префікс `api/` у WS-події                             | Середня      | WebSocket / frontend         |
+| 18  | WS upgrade без валідної сесії не відхиляється                         | Низька       | WebSocket / безпека          |
+| 19  | Мертвий код у WebSocket-шарі                                          | Низька       | WebSocket / структура        |
+| 20  | Сервіси push-нотифікацій звертаються до БД напряму                    | Середня      | Шари / БД                    |
+| 21  | N+1 у `findByUserIdWithLogs` і статистика в JS                        | Середня      | Продуктивність               |
+| 22  | Контролери та middleware оминають сервіси                             | Низька       | Шари                         |
+| 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`               | Середня      | Шари / помилки               |
+| 24  | Repositories barrel неповний, змішані стилі імпорту                   | Низька       | Структура                    |
+| 25  | `clearEmbedding` — два запити без транзакції, сирий SQL з назвами     | Низька       | БД                           |
+| 26  | ArkType-адаптер віддає лише `summary`, без помилок по полях           | Низька       | Валідація                    |
+| 27  | Мертвий і застарілий код валідації та контролерів                     | Низька       | Структура                    |
+| 28  | Немає `.dockerignore`                                                 | Середня      | Docker / безпека             |
+| 29  | Контейнер працює від root, без `HEALTHCHECK`                          | Середня      | Docker / безпека             |
+| 30  | `CMD` через `sh -c`: міграції на кожному старті, сигнали              | Середня      | Docker / експлуатація        |
+| 31  | Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`                   | Низька       | Docker / конфігурація        |
+| 32  | `corsS3.xml`: `AllowedOrigin *` разом з `PUT`                         | Середня      | Безпека / S3                 |
+| 33  | `handleError` логує без `requestId`, контекст без `userId`            | Низька       | Observability                |
+| 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                | Низька       | Observability                |
+| 35  | Немає readiness-перевірки (DB/Redis)                                  | Середня      | Observability / експлуатація |
 
 ## Безпека
 
@@ -220,11 +228,60 @@
 - `packages/backend/README.md` (~рядок 343) пише `ValidationError → 400`, а код повертає `422` (`validation-error.ts`).
 - `src/docs/VALIDATOR_ABSTRACTION_PLAN.md`: не зроблено §3.6 (`InputSchema` export), §9 (`nativeValidator(predicate)`), §5.6 (`ResponseSchema`/`BaseType` у `vendor/types`).
 
+## Деплой (знайдено під час T6.8b, feat-011)
+
+Перевірено реальним `docker build` (успішно, ~206 с, образ 817 MB) і `docker run` (без БД падає на `db:create:prod` з `ECONNREFUSED`, exit 1).
+
+### 28. Немає `.dockerignore`
+
+- **Що:** у корені немає `.dockerignore`, а `Dockerfile` робить `COPY . .`.
+- **Наслідок:** у build context і builder-шар потрапляють локальні `.env`, `node_modules`, `dist`. Збірка повільніша, і є ризик витоку секретів у шари образу.
+- **Пропозиція:** додати `.dockerignore` (`**/node_modules`, `**/dist`, `**/.env*` крім `.env.example`, `.git`, `documentation/.vitepress/{cache,dist}`).
+
+### 29. Контейнер працює від root, без `HEALTHCHECK`
+
+- **Що:** у `Dockerfile` немає `USER` і `HEALTHCHECK`.
+- **Пропозиція:** `USER node`; `HEALTHCHECK` через `GET /api/ping`.
+
+### 30. `CMD` через `sh -c`
+
+- **Що:** `CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]`.
+- **Наслідок:** міграції виконуються на кожному старті контейнера, і при кількох репліках виникає гонка. PID 1 тут — shell, тому SIGTERM може не дійти до Node, і graceful shutdown з `src/index.ts` не спрацює.
+- **Пропозиція:** окремий одноразовий job для `db:create:prod`/`db:migrate`; `CMD ["node", "dist/index.js"]` (або `exec`/`tini`).
+
+### 31. Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`
+
+- **Що:** `Dockerfile` копіює фронтенд у `public`, але не встановлює `SERVE_STATIC=true`, тож за замовчуванням контейнер фронтенд не роздає. Задано `NODE_ENV=production`, але не `APP_ENV`, а саме його читають `secure` у cookie і конфіг CSP.
+- **Пропозиція:** задати `SERVE_STATIC=true` і `APP_ENV=production` в образі або явно описати їх як обов'язкові при запуску.
+
+### 32. `corsS3.xml`: `AllowedOrigin *` разом з `PUT`
+
+- **Що:** CORS-конфіг бакета дозволяє будь-яке джерело для `GET`/`POST`/`PUT`.
+- **Пропозиція:** обмежити `AllowedOrigin` доменами застосунку; для продакшну тримати окремий файл.
+
+## Observability (знайдено під час T6.6, feat-011)
+
+### 33. `handleError` логує без `requestId`, контекст без `userId`
+
+- **Що:** `handleError` у `src/vendor/start/server.ts` пише через глобальний `logger`, а не через дочірній logger запиту. Тому warn-записи (413/415/422) не мають `requestId`. Дочірні логери в `src/vendor/utils/context/http-context.ts` і `ws-context.ts` отримують лише `requestId`, без `userId`.
+- **Пропозиція:** передавати request logger у `handleError`; додати `userId` (коли відомий) у child-контекст.
+
+### 34. Рівень логування не налаштовується
+
+- **Що:** `src/vendor/utils/logger.ts` створює pino без `level` (діє default `info`), змінної `LOG_LEVEL` немає. Увімкнути `debug` без зміни коду неможливо.
+- **Пропозиція:** `level: env.LOG_LEVEL ?? 'info'` і документування в `.env.example`.
+
+### 35. Немає readiness-перевірки
+
+- **Що:** `GET /api/ping` повертає статичний `{status:"ok"}` (liveness) і не перевіряє PostgreSQL, Redis, S3 чи SMTP. Окремого readiness-маршруту немає.
+- **Наслідок:** оркестратор/балансувальник спрямує трафік на інстанс без доступу до БД чи Redis.
+- **Пропозиція:** `GET /api/ready` з перевіркою DB і Redis (таймаути, без деталей у відповіді). Вимоги — шаблон `docs/requirements/operations/template-health-readiness-observability.md`.
+
 ## Що варто зробити далі
 
 Пропоную оформити окремі записи в `feature_list.json` (через PR у `main`):
 
-1. **security-hardening** — п. 1, 2, 3, 9, 18.
+1. **security-hardening** — п. 1, 2, 3, 9, 18, 32.
 2. **env-example-sync** — п. 4, 5, 6, 8 (+ README).
 3. **db-dx** — п. 7, 10, 11.
 4. **http-body-fixes** — п. 12, 13, 14.
@@ -233,3 +290,5 @@
 7. Окремої фічі поки немає: п. 17 і 19 — кандидати в новий запис (WebSocket cleanup).
 8. Окремої фічі поки немає: п. 20–25 — кандидати в новий запис (layering & data access cleanup);
    п. 26 — до feat-008 або окремо; п. 27 — до feat-009.
+9. Окремої фічі поки немає: п. 28–31 — кандидати в новий запис (Docker hardening).
+10. Окремої фічі поки немає: п. 33–35 — кандидати в новий запис (observability: логування та readiness).
