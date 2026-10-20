@@ -138,7 +138,11 @@ const routes = [
 ];
 
 const loadServer = async (
-  options: { pathPrefix?: string; serveStatic?: boolean } = {},
+  options: {
+    pathPrefix?: string;
+    serveStatic?: boolean;
+    docPage?: boolean;
+  } = {},
 ) => {
   vi.resetModules();
   handlers.clear();
@@ -149,6 +153,9 @@ const loadServer = async (
       default: {
         ...actual.default,
         serveStatic: options.serveStatic ?? false,
+        ...(options.docPage === true
+          ? { env: "manual-test", docPage: true }
+          : {}),
         unixPath: undefined,
         pathPrefix,
       },
@@ -275,5 +282,15 @@ describe("L1 coverage with other settings", () => {
     for (let i = 0; i < 10; i++) await call("any /*", "/assets/app.js", "get");
     expect(staticHandler).toHaveBeenCalledTimes(10);
     expect((await notFound()).status).toBe("404 Not Found");
+  });
+
+  it("counts the doc routes page (manual-test) in L1", async () => {
+    await loadServer({ serveStatic: true, docPage: true });
+    // The page answers only while the server is listening (initServer sets the socket).
+    const doc = () => call("get /api/doc/routes", "/api/doc/routes", "get");
+    for (let i = 0; i < 3; i++) expect((await doc()).status).toBe("200 OK");
+    const blocked = await doc();
+    expect(blocked.status).toBe("429 Too Many Requests");
+    expect(header(blocked, "retry-after")).toHaveLength(1);
   });
 });

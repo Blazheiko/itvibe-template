@@ -558,6 +558,15 @@ const configureHttp = async (
     configApp.serveStatic
   ) {
     server.get(`/${appConfig.pathPrefix}/doc/routes`, async (res, req) => {
+      // An API path like any other: it spends the same L1 budget.
+      const responseData = createResponseData();
+      if (!checkGlobalRateLimit(getIP(req, res), responseData)) {
+        const origin = req.getHeader("origin");
+        res.cork(() => {
+          sendResponse(res, responseData, origin);
+        });
+        return;
+      }
       await docRoutesHandler(res, req, routes);
     });
   }
