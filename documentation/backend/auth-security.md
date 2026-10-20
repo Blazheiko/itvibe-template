@@ -101,12 +101,63 @@ sequenceDiagram
 
 ## Заголовки безпеки та CSP
 
-[`http-response-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts) додає до кожної JSON-відповіді API та до HTML-оболонки SPA такі заголовки: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` і `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Статичні ресурси отримують лише `X-Content-Type-Options: nosniff`.
+[`http-response-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts) (`setSecurityHeaders`) додає до кожної відповіді — JSON API, помилок, CORS `OPTIONS`, HTML-оболонки SPA і статики — такі заголовки: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` і `Strict-Transport-Security: max-age=31536000; includeSubDomains`, а також CSP за правилами нижче.
 
 Статика ([`static-server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts)) завантажується в пам'ять під час старту з білого списку розширень, без файлів, що починаються з крапки. Запити з `..`, `%2e%2e`, `\0` або `%00` отримують `400`.
 
-::: danger CSP не застосовується
-[`config/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts) описує директиви CSP, але в коді його ніде не імпортують: побудова і запис заголовка `Content-Security-Policy` у `static-server.ts` закоментовані. Тому відповіді зараз приходять **без** CSP.
+### Content-Security-Policy
+
+Політику будує [`config/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts) з функцій [`vendor/utils/network/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/csp.ts). Значення заголовків обчислюються **один раз на старті**.
+
+| Відповідь                                            | Політика                                                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| HTML: `/`, `/index.html`, SPA fallback, і 200, і 304 | повна політика документа (нижче)                                        |
+| SVG зі статики, 200 і 304                            | `default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'` |
+| `/service-worker.js`                                 | **без CSP**                                                             |
+| інші JS, CSS, шрифти, картинки                       | без CSP (для підресурсів браузер її ігнорує)                            |
+| API JSON, помилки, статичні 400/404, CORS `OPTIONS`  | `default-src 'none'; frame-ancestors 'none'`                            |
+
+Політика документа:
+
+```text
+default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none';
+form-action 'self'; script-src 'self';
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
+img-src 'self' data: blob: <CDN_URL origin> <CSP_EXTRA_IMG_SRC>;
+font-src 'self' data: https://fonts.gstatic.com;
+connect-src 'self' <API origin> <WS origin> <CSP_SENTRY_ORIGIN> <CSP_EXTRA_CONNECT_SRC>;
+upgrade-insecure-requests          # лише в production-like режимі
+report-uri <CSP_REPORT_URI>        # якщо задано
+```
+
+Поза production-like режимом `connect-src` додатково дозволяє `ws://localhost:*` і `ws://127.0.0.1:*` (Vite HMR).
+
+**Режими.** Один режим діє на всі типи відповідей:
+
+| `CSP_ENABLED` | `CSP_REPORT_ONLY` | Результат                                                                           |
+| ------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| `false`       | будь-яке          | глобальна CSP не надсилається ніде                                                  |
+| `true`        | `false`           | `Content-Security-Policy`                                                           |
+| `true`        | `true`            | `Content-Security-Policy-Report-Only` для всіх відповідей, без глобальної enforcing |
+
+Кілька політик діють незалежно ([CSP3, multiple policies](https://www.w3.org/TR/CSP3/#multiple-policies)), тому в report-only режимі жодна глобальна enforcing-політика не надсилається — інакше вона блокувала б застосунок попри режим спостереження. Без `CSP_REPORT_URI` порушення видно лише в DevTools; для централізованого збору потрібен зовнішній отримувач. `upgrade-insecure-requests` у Report-Only ігнорується.
+
+**Власна політика маршруту.** Якщо контролер сам задає `Content-Security-Policy` або `Content-Security-Policy-Report-Only` (`responseData.setHeader`), глобальна політика для цієї відповіді не пишеться. Заголовок контролера надсилається як є, навіть при `CSP_ENABLED=false` і в report-only режимі: прапорці керують лише глобальними політиками.
+
+**Origins.** Беруться з тих адрес, які браузер реально використовує:
+
+- API — `CSP_API_ORIGIN`, за замовчуванням origin `APP_URL`. Має збігатися з `VITE_BASE_URL` фронтенду.
+- WebSocket — origin результату `getWsUrl()` ([`get-ws-url-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/communication/get-ws-url-service.ts): `DOMAIN`, `APP_ENV`, `API_PATH_PREFIX`), саме цю адресу API віддає клієнту як `wsUrl`. Перевизначення — `CSP_WS_ORIGIN`.
+- Медіа — origin `CDN_URL` (клієнт отримує його як `cdnUrl`). Запити до S3, які робить лише бекенд, у `connect-src` не потрібні.
+- Sentry — `CSP_SENTRY_ORIGIN` (origin з `VITE_SENTRY_DSN`).
+
+Невалідне значення (не origin, неправильна схема, `;`, `,` або пробіл) зупиняє старт через `validateRuntimeConfig()`.
+
+**Чому немає `'unsafe-inline'` у `script-src`.** Vite-збірка не має inline-скриптів; єдиний inline-блок в `index.html` — `application/ld+json`, на який `script-src` не діє. ArkType перевіряє доступність JIT через `new Function(...)` у `try/catch`: під CSP це дає одне порушення `script-src` з `blockedURI: eval`, після чого бібліотека працює без JIT. Це очікувано.
+
+::: warning HTML без бекенда
+Коли `SERVE_STATIC=false`, HTML віддає reverse proxy або CDN, і CSP для документа треба налаштувати там (див. [Деплой](/backend/deployment#csp-коли-фронтенд-віддає-проксі)). Бекенд у такому разі ставить лише жорстку політику на API.
 :::
 
 ## Trust proxy і визначення IP
@@ -141,11 +192,11 @@ sequenceDiagram
 - За реверс-проксі: `TRUST_PROXY=true` і точний `TRUSTED_PROXY_CIDRS`.
 - Телефонний вхід: справжній `AUTH_SMS_PROVIDER` і `AUTH_OTP_HMAC_KEY` довжиною щонайменше 32 символи. `fake` у production заборонено кодом.
 - Ключі OAuth (`GOOGLE_CLIENT_SECRET=<secret>` тощо) і `*_REDIRECT_URI` на https.
+- CSP: залиште `CSP_ENABLED=true`. Задайте `CSP_API_ORIGIN`, `CSP_WS_ORIGIN` (за проксі), `CSP_SENTRY_ORIGIN`, якщо адреси відрізняються від `APP_URL` / `getWsUrl()`. Перший деплой можна зробити з `CSP_REPORT_ONLY=true` і `CSP_REPORT_URI`.
 - `DOC_PAGE` не вмикайте: ендпоінт `/doc/routes` реєструється лише при `APP_ENV=manual-test`.
 
 ::: danger Відомі відкриті питання
 
-- CSP не застосовується (див. вище).
 - Для WebSocket upgrade немає rate limit за IP, як і глобального ліміту за IP для всіх маршрутів.
 - `verifyUpgradeToken` записує в лог сам WS-токен (`{ token }`), а `wsSessionHandler` записує `userToken`.
 - `broadcastToChannel` у `server.ts` приймає довільний рядок каналу без runtime-перевірки.

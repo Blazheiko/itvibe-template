@@ -49,7 +49,7 @@
 ## Інші пакети
 
 - **shared** — `"test": "pnpm build && node --test test/*.test.js"` ([package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/package.json)): спочатку збірка, потім `node:test` над [test/languages.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/languages.test.js).
-- **frontend** — Vitest у `jsdom` поверх `vite.config`, з виключенням `e2e/**` ([vitest.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vitest.config.ts)); unit-тести в `src/**/__tests__`. Скрипти: `test` (`vitest run`), `test:unit` (`vitest`), `test:e2e` (`playwright test`). Playwright ([playwright.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.config.ts)) бере тести з `e2e/`, проєкти chromium, firefox, webkit і Mobile Safari, а `webServer` сам піднімає `npm run dev` на 5173 (на CI — `npm run preview` на 4173) або перевикористовує запущений. Backend Playwright не запускає.
+- **frontend** — Vitest у `jsdom` поверх `vite.config`, з виключенням `e2e/**` і `e2e-csp/**` ([vitest.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vitest.config.ts)); unit-тести в `src/**/__tests__`. Скрипти: `test` (`vitest run`), `test:unit` (`vitest`), `test:e2e` (`playwright test`). Playwright ([playwright.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.config.ts)) бере тести з `e2e/`, проєкти chromium, firefox, webkit і Mobile Safari, а `webServer` сам піднімає `npm run dev` на 5173 (на CI — `npm run preview` на 4173) або перевикористовує запущений. Backend Playwright не запускає. CSP перевіряє окремий конфіг [playwright.csp.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.csp.config.ts) з тестами в `e2e-csp/`: `test:e2e:csp` збирає production-статику (`scripts/prod-local.sh --build-only`) і двічі запускає бекенд з `SERVE_STATIC=true` — у режимі enforce і report-only. Перевіряються дозволені сценарії (реєстрація, WebSocket, шрифти, service worker offline) і заборонені: inline-скрипт (`effectiveDirective` `script-src-elem`) та `fetch` на локальний probe-origin поза `connect-src`, з перевіркою `disposition` (`enforce` / `report`). Потрібні PostgreSQL і Redis.
 - **documentation** — `node --test "scripts/verify/*.test.mjs"` ([package.json](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/package.json)) перевіряє хелпери скрипта verify-dist ([lib.test.mjs](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/scripts/verify/lib.test.mjs)).
 
 ## CI і локальний запуск
@@ -70,6 +70,7 @@ pnpm --filter backend test:watch               # watch-режим
 pnpm --filter backend test csrf-guard          # фільтр за шляхом файлу (аргумент vitest)
 pnpm --filter backend exec vitest run -t "422" # фільтр за назвою тесту (через `test -t` pnpm не передає прапорець)
 pnpm --filter frontend test:e2e                # Playwright
+pnpm --filter frontend test:e2e:csp            # CSP на production-збірці через бекенд
 ```
 
 ::: warning Прогалини

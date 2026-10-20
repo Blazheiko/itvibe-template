@@ -18,6 +18,28 @@
 `Dockerfile` копіює фронтенд у `public`, але не задає `SERVE_STATIC`. Без `-e SERVE_STATIC=true` контейнер фронтенд не віддає. І навпаки: `SERVE_STATIC=true` без каталогу `public` ламає старт (проблема 4 у `docs/plan/code-issues-found-during-docs.md`).
 :::
 
+### CSP, коли фронтенд віддає проксі
+
+При `SERVE_STATIC=true` бекенд сам ставить CSP на HTML (див. [Content-Security-Policy](/backend/auth-security#content-security-policy)). Якщо HTML віддає nginx або CDN, політику документа треба задати там, з тим самим винятком для service worker:
+
+```nginx
+location = /service-worker.js {
+    # CSP у відповіді зі скриптом worker'а діяла б на сам worker
+    add_header Cache-Control "no-cache";
+}
+
+location / {
+    try_files $uri /index.html;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://cdn.example.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.example.com wss://api.example.com; upgrade-insecure-requests" always;
+}
+```
+
+Значення можна взяти з відповіді бекенда: `curl -sS -D - -o /dev/null https://<backend>/` при `SERVE_STATIC=true`.
+
+### Локальний production-like запуск
+
+`pnpm prod:local` ([`scripts/prod-local.sh`](https://github.com/Blazheiko/itvibe-template/blob/main/scripts/prod-local.sh)) збирає `shared`, frontend (з `VITE_BASE_URL=http://localhost:<PORT>`, без Sentry) і backend, копіює `frontend/dist` у `backend/public`, як `Dockerfile`, і стартує бекенд з `SERVE_STATIC=true`. Потрібні PostgreSQL і Redis з `packages/backend/.env`. Оскільки це plain http, скрипт задає `APP_ENV=local` і `APP_IS_PRODUCTION=false` (інакше `getWsUrl()` видав би `wss://`, а `upgrade-insecure-requests` зламав би всі запити). `PROD_LOCAL_SKIP_BUILD=true` пропускає збірку.
+
 ## Dockerfile
 
 ```mermaid
