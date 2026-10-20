@@ -141,7 +141,7 @@ location /api/ {
 ::: danger Перезаписуйте forwarding-заголовки
 Без `proxy_set_header` nginx пересилає `X-Forwarded-For` клієнта як є. Бекенд довіряє nginx і бере з ланцюжка найправіший недовірений IP, тобто значення, яке клієнт вписав сам. Ротацією підробленого `X-Forwarded-For` можна обійти всі per-IP ліміти бекенду, зокрема ліміт логіну. Edge-ліміт nginx при цьому лишається чинним.
 
-- Якщо nginx — перший вузол, що приймає клієнта, задавайте `X-Forwarded-For $remote_addr` і `X-Real-IP $remote_addr`, як у прикладі. `$proxy_add_x_forwarded_for` тут не підходить: він дописує до значення клієнта, а не замінює його.
+- Якщо nginx — перший вузол, що приймає клієнта, найпростіше задати `X-Forwarded-For $remote_addr` і `X-Real-IP $remote_addr`, як у прикладі. `$proxy_add_x_forwarded_for` теж безпечний: він дописує справжній IP праворуч, а `getIP()` обходить ланцюжок справа наліво і пропускає лише довірені проксі, тож підроблений префікс клієнта ігнорується. Але для цього кожен довірений проксі має коректно дописувати ланцюжок, а `TRUSTED_PROXY_CIDRS` має точно відповідати адресам цих проксі.
 - `proxy_set_header` успадковується з батьківського рівня лише тоді, коли в `location` немає жодного власного `proxy_set_header` ([документація nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header)). Тому в WS-блоці, де задано `Upgrade` і `Connection`, forwarding-заголовки треба повторити.
 - Якщо перед nginx стоїть ще один довірений балансувальник, використовуйте `$proxy_add_x_forwarded_for` і додайте адресу балансувальника в `TRUSTED_PROXY_CIDRS`. Або `set_real_ip_from` + `real_ip_header` у nginx.
 :::
