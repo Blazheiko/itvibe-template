@@ -26,7 +26,8 @@ const SHELL_B =
 
 interface CapturedResponse {
   status: string;
-  headers: Record<string, string>;
+  // Every writeHeader call in order, so a duplicated header is not silently overwritten.
+  headers: { name: string; value: string }[];
   body: string | undefined;
 }
 
@@ -38,12 +39,23 @@ const createRes = (captured: CapturedResponse) => ({
     captured.status = status;
   },
   writeHeader: (name: string, value: string): void => {
-    captured.headers[name.toLowerCase()] = value;
+    captured.headers.push({ name, value });
   },
   end: (body?: string | Buffer): void => {
     captured.body = body === undefined ? undefined : body.toString();
   },
 });
+
+const header = (
+  response: CapturedResponse,
+  name: string,
+): string | undefined => {
+  const matches = response.headers.filter(
+    (item) => item.name.toLowerCase() === name,
+  );
+  expect(matches.length).toBeLessThanOrEqual(1);
+  return matches[0]?.value;
+};
 
 const requestHtml = async (
   data: string,
@@ -51,7 +63,7 @@ const requestHtml = async (
 ): Promise<CapturedResponse> => {
   const captured: CapturedResponse = {
     status: "",
-    headers: {},
+    headers: [],
     body: undefined,
   };
   const req = {
@@ -81,18 +93,18 @@ describe("staticCacheHandler HTML validators", () => {
 
     expect(response.status).toBe("200 OK");
     expect(response.body).toBe(SHELL_A);
-    expect(response.headers["cache-control"]).toBe(
+    expect(header(response, "cache-control")).toBe(
       "public, max-age=0, must-revalidate",
     );
-    expect(response.headers["etag"]).toBeDefined();
+    expect(header(response, "etag")).toBeDefined();
   });
 
   it("answers 304 when the client already has this exact shell", async () => {
     await fs.writeFile(HTML_PATH, SHELL_A, "utf8");
     await cacheFile(HTML_PATH);
-    const { headers } = await requestHtml(SHELL_A, "");
+    const first = await requestHtml(SHELL_A, "");
 
-    const response = await requestHtml(SHELL_A, headers["etag"] ?? "");
+    const response = await requestHtml(SHELL_A, header(first, "etag") ?? "");
 
     expect(response.status).toBe("304 Not Modified");
     expect(response.body).toBeUndefined();
@@ -101,7 +113,7 @@ describe("staticCacheHandler HTML validators", () => {
   it("does not validate a redeployed shell of identical byte length", async () => {
     await fs.writeFile(HTML_PATH, SHELL_A, "utf8");
     await cacheFile(HTML_PATH);
-    const staleEtag = (await requestHtml(SHELL_A, "")).headers["etag"] ?? "";
+    const staleEtag = header(await requestHtml(SHELL_A, ""), "etag") ?? "";
 
     // Redeploy: same length, different asset hash.
     expect(SHELL_B.length).toBe(SHELL_A.length);
@@ -112,6 +124,6 @@ describe("staticCacheHandler HTML validators", () => {
 
     expect(response.status).toBe("200 OK");
     expect(response.body).toBe(SHELL_B);
-    expect(response.headers["etag"]).not.toBe(staleEtag);
+    expect(header(response, "etag")).not.toBe(staleEtag);
   });
 });

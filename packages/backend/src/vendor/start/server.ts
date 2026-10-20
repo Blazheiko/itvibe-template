@@ -130,7 +130,6 @@ const configureWebsockets = (
   });
 };
 
-// CSP header is applied from staticServer for HTML responses
 // getResponseData is now a thin wrapper around the shared response-data builder.
 const getResponseData = createResponseData;
 
@@ -395,6 +394,7 @@ const docRoutesHandler = async (
 
         res.cork(() => {
           writeHttpStatus(res, 200);
+          setSecurityHeaders(res);
           res.writeHeader("content-type", "application/json");
           res.end(
             makeJson({
@@ -569,8 +569,9 @@ const configureHttp = async (
     if (corsConfig.enabled && method === "options") {
       //'OPTIONS' method === 'OPTIONS'
       res.cork(() => {
-        setCorsHeader(res, origin);
         writeHttpStatus(res, 200);
+        setSecurityHeaders(res);
+        setCorsHeader(res, origin);
         res.end();
       });
     } else if (

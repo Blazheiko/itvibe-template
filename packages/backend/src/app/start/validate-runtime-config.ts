@@ -1,8 +1,13 @@
 import appConfig from '#config/app.js';
 import { authConfig } from '#config/auth.js';
+import cspConfig from '#config/csp.js';
 import sessionConfig from '#config/session.js';
 
 export function validateRuntimeConfig(): void {
+  if (cspConfig.configError !== null) {
+    throw new Error(`Invalid CSP configuration: ${cspConfig.configError}`);
+  }
+
   if (sessionConfig.useHostPrefix) {
     if (!sessionConfig.cookie.secure) {
       throw new Error(

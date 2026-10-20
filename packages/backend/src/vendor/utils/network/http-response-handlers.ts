@@ -1,6 +1,12 @@
 import { STATUS_CODES } from "node:http";
 import type { Cookie, Header } from "#vendor/types/types.js";
 import type { HttpResponse } from "#vendor/start/server.js";
+import cspConfig from "#config/csp.js";
+import {
+  hasCspHeader,
+  resolveCspHeaders,
+  type CspKind,
+} from "#vendor/utils/network/csp.js";
 
 const DEFAULT_SECURITY_HEADERS: readonly Header[] = [
   { name: "x-content-type-options", value: "nosniff" },
@@ -11,6 +17,9 @@ const DEFAULT_SECURITY_HEADERS: readonly Header[] = [
     value: "max-age=31536000; includeSubDomains",
   },
 ];
+
+// Resolved once at startup: one mode (disabled / enforcing / report-only) for every response type.
+const CSP_HEADERS = resolveCspHeaders(cspConfig);
 
 const hasHeader = (headers: Header[], name: string): boolean =>
   headers.some((header) => header.name.toLowerCase() === name);
@@ -42,15 +51,26 @@ export const setHeaders = (res: HttpResponse, headers: Header[]): void => {
   });
 };
 
+/**
+ * `headers` are the ones the caller writes itself; a controller-provided CSP (either
+ * header name) replaces the global one. `cspKind` picks the global policy; `null`
+ * writes none (assets such as the service worker script, whose CSP would apply to
+ * the worker itself).
+ */
 export const setSecurityHeaders = (
   res: HttpResponse,
   headers: Header[] = [],
+  cspKind: CspKind | null = "strict",
 ): void => {
   DEFAULT_SECURITY_HEADERS.forEach((header) => {
     if (!hasHeader(headers, header.name)) {
       res.writeHeader(header.name, header.value);
     }
   });
+  const csp = cspKind === null ? null : CSP_HEADERS[cspKind];
+  if (csp !== null && !hasCspHeader(headers)) {
+    res.writeHeader(csp.name, csp.value);
+  }
 };
 
 /*  example responseData.cookies
