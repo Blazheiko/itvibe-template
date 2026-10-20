@@ -39,7 +39,9 @@ import {
   writeHttpStatus,
 } from "#vendor/utils/network/http-response-handlers.js";
 import executeMiddlewares from "#vendor/utils/middlewares/core/execute-httpMiddlewares.js";
-import checkRateLimit from "#vendor/utils/rate-limit/http-rate-limit.js";
+import checkRateLimit, {
+  checkGlobalRateLimit,
+} from "#vendor/utils/rate-limit/http-rate-limit.js";
 import type {
   HttpData,
   MyWebSocket,
@@ -459,12 +461,10 @@ const setHttpHandler = async (
     // Sync by design: если здесь будет `await`, uWS может доставить тело
     // маленьких POST-запросов до того, как readData зарегистрирует
     // res.onData(), и хендлер навсегда зависнет в pending.
-    const rateLimitPassed = checkRateLimit(
-      meta.ip,
-      responseData,
-      route,
-      route.groupRateLimit,
-    );
+    // L1 (per IP, all API requests) first, then the stricter per-route limit.
+    const rateLimitPassed =
+      checkGlobalRateLimit(meta.ip, responseData) &&
+      checkRateLimit(meta.ip, responseData, route, route.groupRateLimit);
 
     if (!rateLimitPassed) {
       if (abortSignal.aborted) return;
@@ -566,6 +566,18 @@ const configureHttp = async (
     const url = req.getUrl();
     const method = req.getMethod();
     const origin = req.getHeader("origin");
+    const isApiPath = url.startsWith(`/${appConfig.pathPrefix}/`);
+    // Unmatched API requests (404, preflight, plain HTTP on the WebSocket path) share
+    // the L1 budget. Real upgrades never get here: handleUpgrade has its own budget.
+    if (isApiPath) {
+      const responseData = createResponseData();
+      if (!checkGlobalRateLimit(getIP(req, res), responseData)) {
+        res.cork(() => {
+          sendResponse(res, responseData, origin);
+        });
+        return;
+      }
+    }
     if (corsConfig.enabled && method === "options") {
       //'OPTIONS' method === 'OPTIONS'
       res.cork(() => {
@@ -574,10 +586,7 @@ const configureHttp = async (
         setCorsHeader(res, origin);
         res.end();
       });
-    } else if (
-      url.startsWith(`/${appConfig.pathPrefix}/`) &&
-      method !== "options"
-    ) {
+    } else if (isApiPath && method !== "options") {
       sendErrorResponse(res, 404, {
         status: "error",
         code: "not_found",

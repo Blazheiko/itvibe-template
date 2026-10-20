@@ -71,13 +71,29 @@ sequenceDiagram
 
 ## Обмеження частоти запитів
 
-Захист працює на двох рівнях:
+Захист працює на кількох рівнях. HTTP і WebSocket мають окремі гілки й незалежні бюджети:
 
-1. **Rate limit маршрутів**: [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts) і [`ws-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/ws-rate-limit.ts). Ліміт задається полем `rateLimit: { windowMs, maxRequests }` на маршруті або групі, і ліміт маршруту має пріоритет над лімітом групи. Лічильник ([`rate-limit-counter.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-counter.ts)) використовує ковзне вікно, синхронний і зберігається **в пам'яті процесу** (`Map`, не більше 100 000 ключів, GC раз на 60 с). Ключ складається з IP і URL маршруту. HTTP-відповідь містить заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining` і `X-RateLimit-Reset`. Коли ліміт перевищено, повертається `429` з `Retry-After` і кодом `rate_limited`. Якщо сама перевірка падає з помилкою, повертається `503 rate_limit_unavailable`, тобто система працює за принципом fail-closed. У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) перевірка ліміту виконується **до** читання і парсингу тіла запиту.
-2. **Throttling auth-дій у Redis**: [`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts) атомарно виконує `INCR` і `EXPIRE` через Lua-скрипт для ключа `auth:throttle:<scope>:<key>`. Ліміти задаються в `config/auth.ts` змінними `AUTH_SMS_*`, `AUTH_EMAIL_REGISTER_*` і `AUTH_EMAIL_LINK_*`. Серед них: кількість SMS на телефон і на IP за годину, кількість невдалих підтверджень, cooldown між повторними відправками.
+```
+HTTP API:  L1 global per-IP  →  per-route limit  →  handler
+WebSocket: upgrade per-IP    →  auth (onUpgrade)  →  per-message limits
+```
+
+1. **L1, глобальний ліміт HTTP за IP** (`checkGlobalRateLimit` у [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)). Один fixed-window бюджет на IP для всіх API-запитів: зареєстровані маршрути, API-404, preflight `OPTIONS` і звичайні HTTP-запити на `/<API_PATH_PREFIX>/websocket`. Кожен запит рахується рівно один раз. Статика не рахується. За замовчуванням 600 запитів на хвилину (`HTTP_GLOBAL_RATE_LIMIT_*`). На успішній відповіді L1 заголовків не пише. На 429 він віддає `X-RateLimit-*` і `Retry-After` саме для себе, і per-route перевірка тоді не виконується.
+2. **Rate limit маршрутів**: [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts) і [`ws-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/ws-rate-limit.ts). Ліміт задається полем `rateLimit: { windowMs, maxRequests }` на маршруті або групі, і ліміт маршруту має пріоритет над лімітом групи. Ключ складається з IP і URL маршруту. HTTP-відповідь містить заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining` і `X-RateLimit-Reset`. Коли ліміт перевищено, повертається `429` з `Retry-After` і кодом `rate_limited`. Якщо сама перевірка падає з помилкою, повертається `503 rate_limit_unavailable`, тобто система працює за принципом fail-closed. У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) обидві HTTP-перевірки виконуються синхронно і **до** читання тіла запиту.
+3. **Ліміт WebSocket upgrade за IP** ([`upgrade-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/upgrade-rate-limit.ts)). `handleUpgrade` перевіряє його першим: до формату токена і до пошуку сесії. Тому флуд upgrade-запитами не коштує I/O, а невалідні токени теж витрачають бюджет. Перевищення дає `429` з `Retry-After`, помилка лічильника дає `503`. За замовчуванням 60 спроб на хвилину (`WS_UPGRADE_RATE_LIMIT_*`). Цього вистачає на кілька вкладок за одним NAT, які перепідключаються кожні 5 с.
+4. **Throttling auth-дій у Redis**: [`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts) атомарно виконує `INCR` і `EXPIRE` через Lua-скрипт для ключа `auth:throttle:<scope>:<key>`. Ліміти задаються в `config/auth.ts` змінними `AUTH_SMS_*`, `AUTH_EMAIL_REGISTER_*` і `AUTH_EMAIL_LINK_*`. Серед них: кількість SMS на телефон і на IP за годину, кількість невдалих підтверджень, cooldown між повторними відправками.
+
+**Лічильник** ([`rate-limit-store.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-store.ts)) синхронний і живе в пам'яті процесу:
+
+- **Відхилені спроби квоту не витрачають і не зберігаються.** Тому `Retry-After` точний: повтор через вказаний час проходить. Стан на ключ обмежений: sliding log довжиною не більше `max`, для L1 fixed window з одним лічильником.
+- **Межа ключів жорстка, 100 000.** На новий ключ перевіряються максимум 64 найстаріші ключі, і прострочені видаляються. Якщо місця досі немає, витісняється найстаріший ключ. Повний GC запускається раз на 60 с таймером.
+
+::: warning Переповнення store
+Коли ключів більше за межу, **строгість квот не гарантується**. FIFO-витіснення може скинути навіть активний лічильник, зокрема маршрутний ліміт логіну. Так пам'ять лишається обмеженою під атакою з великої кількості IP. Витіснення пише `warn` у лог не частіше разу на хвилину.
+:::
 
 ::: warning Масштабування
-Лічильник rate limit маршрутів зберігається в пам'яті кожного процесу окремо. Якщо запустити кілька інстансів, фактичний ліміт множиться на їх кількість. Throttling auth-дій зберігається в Redis, тому діє спільно для всіх інстансів.
+Лічильники L1, маршрутів і upgrade зберігаються в пам'яті кожного процесу окремо. Якщо запустити кілька інстансів, фактичний ліміт множиться на їх кількість. Redis тут не використовується, бо HTTP-перевірка мусить бути синхронною. Для кількох інстансів ставте edge-ліміт, див. [Розгортання](/backend/deployment#rate-limit-на-edge). Throttling auth-дій зберігається в Redis, тому діє спільно для всіх інстансів.
 :::
 
 ## CSRF
@@ -166,7 +182,7 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 
 - `TRUST_PROXY` за замовчуванням дорівнює `false`. Тоді IP клієнта — це remote address сокета, а заголовки ігноруються.
 - Якщо `TRUST_PROXY=true`, заголовкам довіряють лише тоді, коли remote address входить у `TRUSTED_PROXY_CIDRS` (підтримуються IPv4, IPv6 і IPv4-mapped адреси). Ланцюжок `X-Forwarded-For` разом із remote address обходиться справа наліво, і клієнтом вважається перша адреса, яка не належить довіреному проксі. Якщо такої немає, використовується `X-Real-IP`, а потім remote address.
-- Цей IP використовують rate limit і throttling. Якщо `TRUST_PROXY` за реверс-проксі неправильно налаштовано, усі клієнти отримують спільний ліміт за IP проксі.
+- Цей IP використовують rate limit і throttling. Якщо `TRUST_PROXY` за реверс-проксі неправильно налаштовано, усі клієнти отримують спільний ліміт за IP проксі. У production-like режимі старт пише `warn`, якщо `TRUST_PROXY=false` або `TRUST_PROXY=true` з порожнім `TRUSTED_PROXY_CIDRS` ([validate-runtime-config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)).
 
 ## Авторизація WebSocket
 
@@ -197,7 +213,7 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 
 ::: danger Відомі відкриті питання
 
-- Для WebSocket upgrade немає rate limit за IP, як і глобального ліміту за IP для всіх маршрутів.
+- Rate limit не спільний між інстансами (немає Redis-лічильника). Обхід: edge-ліміт у nginx.
 - `verifyUpgradeToken` записує в лог сам WS-токен (`{ token }`), а `wsSessionHandler` записує `userToken`.
 - `broadcastToChannel` у `server.ts` приймає довільний рядок каналу без runtime-перевірки.
   :::

@@ -2,23 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MyWebSocket, RouteItem } from "#vendor/types/types.js";
 
-const updateRateLimitCounterMock = vi.fn();
-const logRateLimitInfoMock = vi.fn();
-
 vi.mock("#vendor/utils/logger.js", () => ({
   default: {
     debug: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
   },
-}));
-
-vi.mock("./rate-limit-counter.js", () => ({
-  updateRateLimitCounter: updateRateLimitCounterMock,
-  getRateLimitKey: (clientId: string, route: string) => `${clientId}:${route}`,
-  getClientIdentifier: (ip: string) =>
-    `rate_limit:${ip === "" ? "unknown" : ip}`,
-  logRateLimitInfo: logRateLimitInfoMock,
 }));
 
 const createRoute = (rateLimit?: RouteItem["rateLimit"]): RouteItem =>
@@ -29,22 +18,15 @@ const createRoute = (rateLimit?: RouteItem["rateLimit"]): RouteItem =>
     handler: vi.fn(),
   }) as unknown as RouteItem;
 
-const createWs = (): MyWebSocket =>
+const createWs = (ip = "127.0.0.1"): MyWebSocket =>
   ({
-    getUserData: () => ({
-      ip: "127.0.0.1",
-    }),
+    getUserData: () => ({ ip }),
   }) as unknown as MyWebSocket;
 
 describe("checkRateLimitWs", () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
-    updateRateLimitCounterMock.mockReturnValue({
-      windowMs: 60_000,
-      maxRequests: 0,
-      requests: 1,
-      resetTime: Date.now() + 60_000,
-    });
   });
 
   it("leaves routes without configured limits unrestricted", async () => {
@@ -53,11 +35,25 @@ describe("checkRateLimitWs", () => {
     const result = checkRateLimitWs(createWs(), createRoute());
 
     expect(result).toEqual({ allowed: true });
-    expect(updateRateLimitCounterMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects over the limit with retryAfter in seconds", async () => {
+    const checkRateLimitWs = (await import("./ws-rate-limit.js")).default;
+    const route = createRoute({ windowMs: 60_000, maxRequests: 1 });
+
+    expect(checkRateLimitWs(createWs("10.0.0.9"), route)).toEqual({
+      allowed: true,
+    });
+    expect(checkRateLimitWs(createWs("10.0.0.9"), route)).toEqual({
+      allowed: false,
+      retryAfter: 60,
+      errorMessage: "Rate limit exceeded for message_send",
+    });
   });
 
   it("fails closed when the configured limit cannot be checked", async () => {
-    updateRateLimitCounterMock.mockImplementationOnce(() => {
+    const { rateLimitStore } = await import("./rate-limit-store.js");
+    vi.spyOn(rateLimitStore, "consume").mockImplementationOnce(() => {
       throw new Error("counter unavailable");
     });
 

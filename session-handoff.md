@@ -23,4 +23,4 @@ See `progress.md` → Evidence of Completion (item 1).
 
 ## Next Step
 
-- Item 2: rate limit for WebSocket upgrade (`handleUpgrade` in `vendor/utils/network/ws-handlers.ts`) and a global per-IP limit.
+- Item 2: done (see progress.md, Item 2). Redis counter left open.

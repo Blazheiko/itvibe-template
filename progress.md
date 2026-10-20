@@ -7,19 +7,53 @@
 **Branch:** `feat/security-hardening`
 
 Scope (items from [docs/plan/code-issues-found-during-docs.md](docs/plan/code-issues-found-during-docs.md)): 1 (CSP), 2 (WS upgrade / per-IP rate limit), 3 (tokens in logs), 9 (`broadcastToChannel` runtime guard).
-CSP plan: [docs/plan/csp-fix-plan.md](docs/plan/csp-fix-plan.md). Start PR: #21 (feat-005 → in_progress).
+CSP plan: [docs/plan/csp-fix-plan.md](docs/plan/csp-fix-plan.md). Rate-limit plan: [docs/plan/ws-upgrade-rate-limit-plan.md](docs/plan/ws-upgrade-rate-limit-plan.md). Start PR: #21 (feat-005 → in_progress).
 
 ## Status
 
 ### What's Done
 
 - [x] Item 1 — CSP applied to every response type (plan steps 1–8)
+- [x] Item 2 — HTTP L1 per-IP limit, WS upgrade per-IP limit, bounded rate-limit store (Redis counter left open)
 
 ### In Progress / Next
 
-- [ ] Item 2 — rate limit on WebSocket upgrade + global per-IP limit
 - [ ] Item 3 — stop logging WS token / `userToken`
 - [ ] Item 9 — runtime channel check in `broadcastToChannel`
+
+## Item 2 (rate limit) — summary
+
+- `vendor/utils/rate-limit/rate-limit-store.ts` (new, replaces `rate-limit-counter.ts`): rejected attempts are not stored, exact `retryAfterMs`, sliding log ≤ `max` per key, fixed window for L1, hard key cap (scan ≤ 64 oldest, then FIFO eviction), GC only on a 60 s timer.
+- `http-rate-limit.ts`: `checkGlobalRateLimit` (L1, headers only on reject) + per-route limit on the store. `ws-rate-limit.ts` ported, contract unchanged.
+- `upgrade-rate-limit.ts` (new) → `handleUpgrade` checks it first: 429 + `Retry-After` / 503, before token and session lookup.
+- `server.ts`: L1 before the route limit in `setHttpHandler`; in `server.any("/*")` for API 404, preflight and plain HTTP on the WS path (`appConfig.pathPrefix`).
+- `config/rate-limit.ts` (new): `HTTP_GLOBAL_RATE_LIMIT_*` (600/60 s), `WS_UPGRADE_RATE_LIMIT_*` (60/60 s), strict integer validation → `validateRuntimeConfig()`; proxy warning (`getProxyWarning`) in production-like mode.
+- Docs: `auth-security.md` (two branches of layers, store semantics, overflow warning), `configuration.md`, `deployment.md` (nginx edge limit), `.env.example`.
+
+### Decisions
+
+- Upgrade default raised from 30 to 60/min: one tab reconnects every 5 s (12/min); tested with 3 tabs.
+- Redis counter not done: the HTTP check must stay synchronous (before `res.onData`). Documented, edge limit recommended.
+- Item 18 (refuse upgrade without a live session) stays out of scope: invalid-format tokens still get 401, valid-format ones without a session still upgrade and are closed with 4001.
+
+## Evidence of Completion (item 2)
+
+- `pnpm typecheck` — clean; `pnpm lint` — 0 errors; `pnpm test` — pass (backend 59 files / 387 tests)
+- New tests: `rate-limit-store.spec.ts` (bounded state, recovery exactly at Retry-After after 50 rejections, key cap with `maxKeys: 4`, scan bound), `http-rate-limit.spec.ts`, `upgrade-rate-limit.spec.ts` (incl. 3-tab reconnect), `ws-upgrade-rate-limit.spec.ts`, `server-rate-limit.spec.ts` (one bucket for route/404/preflight/WS-path HTTP, counted once, `API_PATH_PREFIX`, static not counted), `validate-runtime-config.spec.ts` (invalid values, proxy warning)
+- `rate-limit.transport.spec.ts` on a real uWS server: small POST keeps its body, blocked POST never reaches the handler, real handshake 101 → 429 + `Retry-After` → 101 after the window. Mutation check: an `await` before the body read makes the POST tests hang and fail.
+- `pnpm docs:build && pnpm docs:verify` — pass
+
+Manual check, `pnpm prod:local` with `HTTP_GLOBAL_RATE_LIMIT_MAX=5 WS_UPGRADE_RATE_LIMIT_MAX=3 WS_UPGRADE_RATE_LIMIT_WINDOW_MS=5000` (handshake via `node:http.request` with full upgrade headers):
+
+```text
+GET /api/main/init ×6
+  1–5: HTTP/1.1 401 Unauthorized
+  6:   HTTP/1.1 429 Too Many Requests  X-RateLimit-Limit: 5  Retry-After: 60
+WS /api/websocket
+  1–3: upgrade 101
+  4:   response 429 retry-after=5
+  after 5.1 s: upgrade 101
+```
 
 ## Item 1 (CSP) — summary
 
@@ -81,6 +115,6 @@ OPTIONS /api/main/init (Origin http://app.test)
 
 ## Notes for Next Session
 
-- Continue with item 2 (rate limit on WS upgrade), then 3 and 9, on this branch.
+- Continue with items 3 and 9 on this branch.
 - `feature_list.json` → `done` only after all four items.
 - Open: CSP is not browser-tested on the production branch (HTTPS/WSS, `upgrade-insecure-requests`) or against real S3/CDN (avatar upload, screenshot redirect). Needs a staging check.

@@ -82,6 +82,17 @@
 | `CSP_EXTRA_CONNECT_SRC` | Додаткові origins для `connect-src` через кому (`http(s)`/`ws(s)`)          | `""`                | Ні                                                            | [csp.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts)         |
 | `CSP_EXTRA_IMG_SRC`     | Додаткові origins для `img-src` через кому (`http(s)`)                      | `""`                | Ні                                                            | [csp.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts)         |
 
+## Rate limit
+
+Дробові, від'ємні, `Infinity`, `NaN` і нечислові значення валять старт (`Invalid rate limit configuration`). Деталі в розділі [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
+
+| Змінна | Призначення | Default | Обов'язковість | Джерело |
+| --- | --- | --- | --- | --- |
+| `HTTP_GLOBAL_RATE_LIMIT_MAX`       | L1: максимум API-запитів з одного IP за вікно; `0` вимикає | `600`   | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| `HTTP_GLOBAL_RATE_LIMIT_WINDOW_MS` | Вікно L1 (fixed window), мс, ціле > 0                      | `60000` | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| `WS_UPGRADE_RATE_LIMIT_MAX`        | Максимум WebSocket upgrade з одного IP за вікно; `0` вимикає | `60`    | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| `WS_UPGRADE_RATE_LIMIT_WINDOW_MS`  | Вікно upgrade-ліміту (sliding log), мс, ціле > 0           | `60000` | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+
 ## Сесія і cookies
 
 | Змінна                       | Призначення                         | Default                     | Обов'язковість (умова)                                                                                            | Читає файл                                                                                                  |
