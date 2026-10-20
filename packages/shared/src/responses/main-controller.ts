@@ -87,38 +87,6 @@ export const TestSessionResponseSchema = type({
 });
 export type TestSessionResponse = typeof TestSessionResponseSchema.infer;
 
-export const SaveUserResponseSchema = type({
-  status: "'ok' | 'error'",
-  "code?": "string",
-  "reason?": "string",
-  "details?": "unknown",
-  "message?": "string",
-  "user?": {
-    id: "string",
-    name: "string",
-    email: "string",
-    "phone?": "string | null",
-    emailVerified: "boolean",
-    "emailVerifiedAt?": "string | null",
-    "avatar?": "string | null",
-  },
-});
-export interface SaveUserResponse extends Record<string, unknown> {
-  status: "ok" | "error";
-  code?: string;
-  reason?: string;
-  details?: unknown;
-  message?: string;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string | null;
-    emailVerified: boolean;
-    emailVerifiedAt?: string | null;
-    avatar?: string | null;
-  };
-}
 
 export const TestApiSessionResponseSchema = type({
   status: "string",

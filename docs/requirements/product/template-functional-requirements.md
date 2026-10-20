@@ -296,20 +296,16 @@ details, and the CSRF token needed by the frontend. The `/api/main/init` route
 shall be protected by `session_web`, `csrf_guard`, and `auth_guard`, so it
 requires a valid authenticated session before returning application state.
 
-The related `/api/main/save-user` route is intentionally different: it belongs to
-the same `main` route group and therefore uses `session_web` and `csrf_guard`,
-but it is not route-protected by `auth_guard`. It accepts a validated
-`SaveUserInput` payload and creates a user record rather than loading the current
-authenticated session user.
-
 ### FR-API-014 WebSocket Token Refresh
 
 The backend shall provide an authenticated endpoint for refreshing the WebSocket
 token.
 
-### FR-API-015 User Save
+### FR-API-015 User Save (removed)
 
-The backend shall provide an endpoint for saving user profile data.
+Removed. The anonymous `/api/main/save-user` endpoint created users with an
+unhashed password and bypassed registration (email verification, throttling).
+Users are created only through the registration and OAuth flows (FR-AUTH-*).
 
 ### FR-API-016 Push Subscription Management
 

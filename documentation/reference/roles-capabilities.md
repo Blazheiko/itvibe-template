@@ -37,10 +37,8 @@
 | API playground                                | —         | —    | —     | Не залежить від ролі. `/doc/routes` доступний будь-кому, але лише при `APP_ENV=manual-test`, `DOC_PAGE=true`, `SERVE_STATIC=true` ([`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)). Див. [API Playground](/playground/)                                                   |
 | Міграції БД, конфігурація, деплой             | Ні        | Ні   | Ні    | Не HTTP-можливості: CLI-скрипти (`db:*`, див. [Скрипти](/reference/scripts)) і `.env`. Доступ визначається доступом до сервера/репозиторію (Developer/QA локально, Operator у production)                                                                                                                                                    |
 
-::: danger Анонімний `POST /main/save-user` — критична вразливість
-Маршрут `/main/save-user` у групі `main` не має `auth_guard` і через `mainService.saveUser` напряму створює користувача з `name`, `email` і `password` з тіла запиту. У [`main-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts) і [`user-repository.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/user/user-repository.ts) хешування пароля не видно. Вихідна матриця цього маршруту не згадує. Його слід або закрити `admin_guard`, або видалити.
-
-Пароль записується в БД **без хешування** (`user-repository.ts` вставляє значення як є), а звичайна реєстрація хешує його через `hashPassword` ([auth-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts)). Деталі та рекомендації — п. 65 у [списку проблем](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
+::: info Видалений маршрут `POST /main/save-user`
+Раніше в групі `main` був анонімний маршрут `/main/save-user`, який створював користувача з паролем без хешування (п. 65 у [списку проблем](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)). Його видалено разом зі схемами `SaveUserInput`/`SaveUserResponse`, `WSSaveUserPayload` і клієнтським `api.saveUser`. Користувачі створюються лише через реєстрацію (email або телефон) та OAuth — див. [Автентифікація та безпека](/backend/auth-security).
 :::
 
 ::: warning Не підтверджено
