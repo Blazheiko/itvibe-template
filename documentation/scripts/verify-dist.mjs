@@ -51,6 +51,9 @@ const KEY_PAGES = [
     { page: 'backend/observability.md', h1: 'Observability' },
     { page: 'backend/testing.md', h1: 'Тестування' },
     { page: 'backend/caching-etag.md', h1: 'Кешування та ETag' },
+    { page: 'backend/storage.md', h1: 'Сховище файлів (S3)' },
+    { page: 'backend/mail-push.md', h1: 'Пошта та push-нотифікації' },
+    { page: 'backend/ai.md', h1: 'AI-інтеграції' },
     { page: 'backend/adding-a-feature.md', h1: 'Як додати фічу в бекенд' },
     { page: 'reference/scripts.md', h1: 'Скрипти' },
 ]
