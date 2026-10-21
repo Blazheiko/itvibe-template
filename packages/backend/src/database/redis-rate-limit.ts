@@ -13,7 +13,8 @@ import logger from "#logger";
 const ERROR_LOG_INTERVAL_MS = 60_000;
 const MAX_RECONNECT_DELAY_MS = 2_000;
 
-const { password, ...baseConfig } = config;
+const { host, port, keyPrefix, password } = config;
+const baseConfig = { host, port, keyPrefix };
 
 export const rateLimitRedisOptions = {
   ...baseConfig,

@@ -159,7 +159,12 @@ beforeAll(async () => {
   const wsHandlers = await import("#vendor/utils/network/ws-handlers.js");
   wsHandlers.registerWsAppHooks({
     onUpgrade: () =>
-      Promise.resolve({ sessionId: "s", userId: "1", userToken: "u" }),
+      Promise.resolve({
+        kind: "ok" as const,
+        sessionId: "s",
+        userId: "1",
+        userToken: "u",
+      }),
     onConnected: () => Promise.resolve(),
     onDisconnected: () => Promise.resolve(),
     onRefreshToken: () => Promise.resolve(),

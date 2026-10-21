@@ -225,3 +225,35 @@ describe('getProxyWarning', () => {
     expect(await load()).toBeNull();
   });
 });
+
+describe('Redis main client configuration', () => {
+  it('uses the defaults when the variables are not set', async () => {
+    delete process.env['REDIS_COMMAND_TIMEOUT_MS'];
+    delete process.env['REDIS_LOGOUT_ALL_DEADLINE_MS'];
+    const { default: redisConfig } = await import('#config/redis.js');
+    expect(redisConfig.commandTimeoutMs).toBe(500);
+    expect(redisConfig.logoutAllDeadlineMs).toBe(2000);
+    expect(redisConfig.configError).toBeNull();
+  });
+
+  it('reads valid values', async () => {
+    process.env['REDIS_COMMAND_TIMEOUT_MS'] = '250';
+    process.env['REDIS_LOGOUT_ALL_DEADLINE_MS'] = '5000';
+    const { default: redisConfig } = await import('#config/redis.js');
+    expect(redisConfig.commandTimeoutMs).toBe(250);
+    expect(redisConfig.logoutAllDeadlineMs).toBe(5000);
+  });
+
+  it.each([
+    ['REDIS_COMMAND_TIMEOUT_MS', '0'],
+    ['REDIS_COMMAND_TIMEOUT_MS', 'abc'],
+    ['REDIS_LOGOUT_ALL_DEADLINE_MS', '-1'],
+    ['REDIS_LOGOUT_ALL_DEADLINE_MS', '1.5'],
+  ])('rejects %s=%s at startup', async (name, value) => {
+    process.env[name] = value;
+    const { validateRuntimeConfig } = await import('./validate-runtime-config.js');
+    expect(() => {
+      validateRuntimeConfig();
+    }).toThrow(`Invalid Redis configuration: ${name} must be an integer >= 1`);
+  });
+});

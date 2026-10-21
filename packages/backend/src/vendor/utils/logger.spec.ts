@@ -129,4 +129,36 @@ describe("logger sentry forwarding", () => {
     expect(captureExceptionMock).not.toHaveBeenCalled();
     expect(captureMessageMock).not.toHaveBeenCalled();
   });
+
+  describe("Redis unavailability", () => {
+    const write = async (entry: object): Promise<void> => {
+      const { __loggerTestHooks } = await import("./logger.js");
+      __loggerTestHooks.sentryStream.write(
+        JSON.stringify({ level: 50, ...entry }) + "\n",
+      );
+    };
+
+    it("skips per-request logs with err.type RedisUnavailableError", async () => {
+      await write({
+        msg: "Redis unavailable",
+        err: { type: "RedisUnavailableError", message: "Command timed out" },
+      });
+      expect(captureExceptionMock).not.toHaveBeenCalled();
+      expect(captureMessageMock).not.toHaveBeenCalled();
+    });
+
+    it("still captures other errors", async () => {
+      await write({ msg: "Handle Error", err: { type: "Error", message: "x" } });
+      expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("passes the redis-health incident event (sentryCapture, no err)", async () => {
+      await write({ msg: "Redis unavailable", sentryCapture: true });
+      expect(captureMessageMock).toHaveBeenCalledWith(
+        "Redis unavailable",
+        "error",
+        expect.anything(),
+      );
+    });
+  });
 });

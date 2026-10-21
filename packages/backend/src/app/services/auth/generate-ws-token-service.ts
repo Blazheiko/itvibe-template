@@ -1,5 +1,5 @@
 import { generateKey } from 'metautil';
-import redis from '#database/redis.js';
+import redis, { withRedis } from '#database/redis.js';
 import type { SessionInfo } from '#vendor/types/types.js';
 import configApp from '#config/app.js';
 import { isCanonicalEntityId } from '#vendor/utils/helpers/entity-id.js';
@@ -18,15 +18,12 @@ export async function generateWsToken(
     }
 
     const wsToken = generateKey(configApp.characters, 16);
-    await redis.setex(
-        `auth:ws:${wsToken}`,
-        60,
-        JSON.stringify({
-            sessionId: sessionInfo.id,
-            userId,
-            userToken,
-        }),
-    );
+    const tokenData = JSON.stringify({
+        sessionId: sessionInfo.id,
+        userId,
+        userToken,
+    });
+    await withRedis(() => redis.setex(`auth:ws:${wsToken}`, 60, tokenData));
 
     return wsToken;
 }
