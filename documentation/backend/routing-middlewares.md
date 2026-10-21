@@ -50,7 +50,7 @@ defineRoute({
 
 - префікс групи додається до `url` маршруту, а до всього — глобальний префікс `appConfig.pathPrefix` з env `API_PATH_PREFIX` (за замовчуванням `api`, [`src/config/app.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts)). Отже `/logout` у групі `auth` стає `/api/auth/logout`;
 - middleware групи йдуть **перед** middleware маршруту (`middlewares.concat(route.middlewares)`);
-- `rateLimit` маршруту має пріоритет над `rateLimit` групи (`route.rateLimit ?? groupRateLimit`).
+- `rateLimit` маршруту має пріоритет над `rateLimit` групи (`route.rateLimit ?? groupRateLimit`). Лічильник ведеться окремо для кожного маршруту (ключ IP + URL), тож ліміт групи діє на кожен її маршрут окремо, а не на групу в сумі. Поверх цього всі API-запити з IP обмежує глобальний L1, див. [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
 
 У репозиторії, наприклад, група `auth` має ліміт `{ windowMs: 60_000, maxRequests: 10 }`, а окремі маршрути всередині — суворіший `maxRequests: 3`. Ліміт перевіряється до читання тіла запиту ([`src/vendor/start/server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)).
 
@@ -95,7 +95,8 @@ WS-маршрути визначаються через [`src/app/routing/define
 
 ```mermaid
 flowchart LR
-  A[Запит] --> B[rate limit]
+  A[Запит] --> L1[L1 per-IP]
+  L1 --> B[rate limit маршруту]
   B --> C[query validator]
   C --> D[читання тіла]
   D --> E[middleware 1..N]

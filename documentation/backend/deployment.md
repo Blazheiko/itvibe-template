@@ -121,15 +121,39 @@ location /api/websocket {
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
+    # Any proxy_set_header here cancels inherited ones: repeat the forwarding headers.
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Real-IP       $remote_addr;
 }
 
 location /api/ {
     limit_req zone=api burst=50 nodelay;
     proxy_pass http://backend;
+    # uWebSockets.js answers 505 to HTTP/1.0, nginx's default for upstreams.
+    proxy_http_version 1.1;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Real-IP       $remote_addr;
 }
 ```
 
 Зона `limit_req_zone` спільна лише в межах одного nginx. Якщо незалежних edge-вузлів кілька, кожен рахує свою квоту. Деталі в [документації nginx](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html). Щоб бекенд бачив справжній IP клієнта, потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`.
+
+::: danger Перезаписуйте forwarding-заголовки
+Без `proxy_set_header` nginx пересилає `X-Forwarded-For` клієнта як є. Бекенд довіряє nginx і бере з ланцюжка найправіший недовірений IP, тобто значення, яке клієнт вписав сам. Ротацією підробленого `X-Forwarded-For` можна обійти всі per-IP ліміти бекенду, зокрема ліміт логіну. Edge-ліміт nginx при цьому лишається чинним.
+
+- Якщо nginx — перший вузол, що приймає клієнта, найпростіше задати `X-Forwarded-For $remote_addr` і `X-Real-IP $remote_addr`, як у прикладі. `$proxy_add_x_forwarded_for` теж безпечний: він дописує справжній IP праворуч, а `getIP()` обходить ланцюжок справа наліво і пропускає лише довірені проксі, тож підроблений префікс клієнта ігнорується. Але для цього кожен довірений проксі має коректно дописувати ланцюжок, а `TRUSTED_PROXY_CIDRS` має точно відповідати адресам цих проксі.
+- `proxy_set_header` успадковується з батьківського рівня лише тоді, коли в `location` немає жодного власного `proxy_set_header` ([документація nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header)). Тому в WS-блоці, де задано `Upgrade` і `Connection`, forwarding-заголовки треба повторити.
+- Якщо перед nginx стоїть ще один довірений балансувальник, використовуйте `$proxy_add_x_forwarded_for` і додайте адресу балансувальника в `TRUSTED_PROXY_CIDRS`. Або `set_real_ip_from` + `real_ip_header` у nginx.
+:::
+
+Перевірка: з низьким лімітом бекенду надішліть кілька запитів, кожен з іншим підробленим `X-Forwarded-For`. Квота має вичерпатися так само, як без заголовка:
+
+```sh
+for i in 1 2 3 4 5 6; do
+  curl -s -o /dev/null -w '%{http_code}\n' -H "X-Forwarded-For: 203.0.113.$i" https://<host>/api/main/init
+done
+```
+
 
 ## База даних у production
 

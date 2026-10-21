@@ -55,6 +55,16 @@ WS /api/websocket
   after 5.1 s: upgrade 101
 ```
 
+Review fixes (REQUEST CHANGES on `afd539a`):
+
+- `/api/doc/routes` (manual-test) now spends L1; regression test in `server-rate-limit.spec.ts` (fails without the fix).
+- nginx example: `X-Forwarded-For`/`X-Real-IP $remote_addr` in both locations (WS block repeats them, `proxy_set_header` is not inherited there), `proxy_http_version 1.1` on `/api/` (uWS answers 505 to HTTP/1.0). Checked on a real nginx 127.0.0.1 → backend (`TRUST_PROXY=true`, `TRUSTED_PROXY_CIDRS=127.0.0.1/32`, L1 max 5, upgrade max 3), every request with a different spoofed `X-Forwarded-For`:
+
+```text
+fixed config   HTTP: 401 401 401 401 401 429   WS: 401 401 401 429
+no proxy_set_header  HTTP: 401 ×6 (never limited)   WS: 401 ×4 (never limited)
+```
+
 ## Item 1 (CSP) — summary
 
 - `packages/backend/src/vendor/utils/network/csp.ts` (new): policy building, origin/report-URI validation, single-mode resolution.

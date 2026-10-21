@@ -15,7 +15,7 @@
 
 ### Upgrade
 
-`handleUpgrade` у [ws-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-handlers.ts) розбирає `Sec-WebSocket-Protocol` через кому: перший елемент — токен, другий — тип застосунку (`app-web` → `web`, `app-pwa` → `pwa`, інше → `web` з попередженням). Токен перевіряється за форматом (`accessTokenLength` = 16, лише `[a-zA-Z0-9]`), інакше `401 Invalid token format`. Далі викликається хук `onUpgrade`, тобто `wsSessionAuth.verifyUpgradeToken` з [ws-session-auth.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/websocket/ws-session-auth.ts), і сервер повертає клієнту як обраний subprotocol сам токен.
+`handleUpgrade` у [ws-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-handlers.ts) спершу перевіряє ліміт upgrade за IP ([upgrade-rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/upgrade-rate-limit.ts), за замовчуванням 60 на хвилину): перевищення дає `429` з `Retry-After`, збій лічильника — `503`. Потім він розбирає `Sec-WebSocket-Protocol` через кому: перший елемент — токен, другий — тип застосунку (`app-web` → `web`, `app-pwa` → `pwa`, інше → `web` з попередженням). Токен перевіряється за форматом (`accessTokenLength` = 16, лише `[a-zA-Z0-9]`), інакше `401 Invalid token format`. Далі викликається хук `onUpgrade`, тобто `wsSessionAuth.verifyUpgradeToken` з [ws-session-auth.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/websocket/ws-session-auth.ts), і сервер повертає клієнту як обраний subprotocol сам токен.
 
 ```ts
 const token = protocols[0] ?? ''
@@ -173,11 +173,14 @@ Presence публікується лише якщо в каналі `admin` є �
 ## Обмеження та безпека
 
 - **Розмір повідомлення**: `maxPayloadLength` 1 MB на рівні uWS; окремого налаштування для WS немає (див. [Життєвий цикл запиту](/backend/request-lifecycle)).
-- **Rate limit повідомлень**: per-route/per-group через `checkRateLimitWs`, лічильник у пам'яті, ключ IP + URL. При збої перевірки — відмова (`allowed: false`, `retryAfter: 1`).
+- **Rate limit повідомлень**: per-route/per-group через `checkRateLimitWs`, лічильник у пам'яті, ключ IP + URL маршруту. Ліміт групи діє на кожен маршрут групи окремо, а не на всю групу разом. При збої перевірки — відмова (`allowed: false`, `retryAfter: 1`).
 - **Авторизація маршрутів**: усі WS-маршрути вимагають валідну сесію (перевірка в `onMessage`); ролі перевіряються в сервісах (наприклад, `admin` для каналу). Детальніше — [Автентифікація та безпека](/backend/auth-security).
 
-::: danger Немає rate limit на upgrade
-`handleUpgrade` не має ліміту за IP, а кожен upgrade з валідним за форматом токеном робить запити в Redis. Див. [code-issues, п. 2](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
+- **Rate limit upgrade**: окремий бюджет за IP (`WS_UPGRADE_RATE_LIMIT_*`), незалежний від HTTP L1. Перевіряється до формату токена і до запиту в Redis, тож невалідні токени теж витрачають бюджет. Звичайні HTTP-запити на `/<pathPrefix>/websocket` рахуються в HTTP L1. Деталі — [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
+- **`ping`/`pong`** (heartbeat) обробляється в `onMessage` до диспетчера і під rate limit повідомлень не потрапляє.
+
+::: warning Upgrade без живої сесії
+Upgrade з токеном правильного формату, для якого `onUpgrade` повернув `null`, все одно виконується, а з'єднання закривається в `onOpen` кодом `4001`. Ліміт upgrade обмежує частоту таких спроб, але саме відхилення до `res.upgrade` не реалізоване. Див. [code-issues, п. 18](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
 :::
 
 ::: danger Токени в логах

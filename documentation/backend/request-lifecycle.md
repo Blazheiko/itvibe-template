@@ -31,14 +31,14 @@ sequenceDiagram
   participant Client
   participant UWS as "uWS route handler"
   participant H as "setHttpHandler"
-  participant RL as "checkRateLimit"
+  participant RL as "checkGlobalRateLimit + checkRateLimit"
   participant B as "readAndParseBody"
   participant MW as "executeMiddlewares"
   participant Ctl as "route.handler"
   Client->>UWS: HTTP request
   UWS->>H: res, req, route
   H->>H: res.onAborted, collectRequestMetadata (sync)
-  H->>RL: ip, route
+  H->>RL: ip, route (L1, then route limit)
   alt rate limit exceeded
     RL-->>Client: sendResponse (status from responseData)
   end
@@ -57,7 +57,7 @@ sequenceDiagram
 1. **Відмова під час зупинки.** Якщо `state.listenSocket === undefined`, з'єднання закривається (`res.close()`).
 2. **onAborted.** Реєструється один раз; прапорець передається в `readData` через об'єкт `RequestAbortSignal`, бо в uWS `onAborted` — один слот. Після abort відповідь не пишеться.
 3. **Метадані синхронно.** `collectRequestMetadata` до першого `await` збирає cookies (`parseCookies`), query, заголовки (`getHeaders`, без `cookie`, з валідацією `validateHeader`), параметри маршруту (`extractParameters` з `validateParameter`), IP (`getIP`), `content-type` і `bodyKind`. `hasBody` дорівнює `true` лише для `post` і `put`.
-4. **Rate limit до читання тіла.** `checkRateLimit` ([http-rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)) бере ліміт маршруту, інакше групи; без ліміту — пропускає. Перевірка синхронна, щоб не пропустити `onData`.
+4. **Rate limit до читання тіла.** Спершу `checkGlobalRateLimit` (L1: один бюджет на IP для всіх API-запитів, за замовчуванням 600 на хвилину), потім `checkRateLimit` ([http-rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)): ліміт маршруту, інакше групи, без ліміту — пропускає. Обидві перевірки синхронні, щоб не пропустити `onData`. API-404, preflight `OPTIONS` і `/<pathPrefix>/doc/routes` не проходять через `setHttpHandler`, але L1 для них викликається окремо. Деталі — [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
 5. **Query.** `validateQuery` валідує query лише якщо в маршруті є `queryValidator`, інакше `httpData.query === null`.
 6. **Тіло.** `readAndParseBody` (деталі нижче).
 7. **Контекст і middleware.** Формується `HttpData`, `contextHandler` створює контекст; `executeMiddlewares` ([execute-httpMiddlewares.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/execute-httpMiddlewares.ts)) виконує ланцюжок. Handler викликається, лише якщо всі middleware викликали `next()` і `responseData.status` у діапазоні 2xx.
@@ -109,6 +109,10 @@ sequenceDiagram
   participant M as "onMessage"
   participant D as "ws-api-dispatcher"
   Client->>U: GET websocket, Sec-WebSocket-Protocol: token, appType
+  U->>U: checkUpgradeRateLimit(ip)
+  alt over the limit / limiter failed
+    U-->>Client: 429 + Retry-After / 503
+  end
   U->>U: checkToken(token)
   alt invalid format
     U-->>Client: 401 Unauthorized
@@ -124,7 +128,7 @@ sequenceDiagram
   D-->>Client: JSON response
 ```
 
-- **Upgrade** ([ws-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-handlers.ts), `handleUpgrade`): токен передається першим значенням `Sec-WebSocket-Protocol`, друге — тип застосунку (`web`/`pwa`). Невалідний формат → `401`. Хук `onUpgrade` (у [app/start/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/index.ts) це `wsSessionAuth.verifyUpgradeToken`) повертає дані доступу, які кладуться в `userData`.
+- **Upgrade** ([ws-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-handlers.ts), `handleUpgrade`): спершу ліміт upgrade за IP (`429`/`503`), потім токен: він передається першим значенням `Sec-WebSocket-Protocol`, друге — тип застосунку (`web`/`pwa`). Невалідний формат → `401`. Хук `onUpgrade` (у [app/start/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/index.ts) це `wsSessionAuth.verifyUpgradeToken`) повертає дані доступу, які кладуться в `userData`.
 - **Повідомлення** (`onMessage`): бінарні повідомлення ігноруються; рядок `ping` → `pong`; інакше JSON валідується зареєстрованим валідатором, перевіряється сесія (`wsSessionHandler`; без сесії — `closeExpiredSession`), і повідомлення передається в [ws-api-dispatcher.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/ws-api-dispatcher.ts).
 - **Диспетчер**: маршрут шукається за частиною `event` до `:`, далі `checkRateLimitWs`, `validateRoutePayload` (якщо є `validator`), middleware і handler. Невідома подія → помилка `not_found` («Route not found», [ws-api-dispatcher.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/ws-api-dispatcher.ts); детальніше — [WebSocket](/backend/websocket)), помилки валідації → `validation_failed`, решта → `internal_error`.
 
