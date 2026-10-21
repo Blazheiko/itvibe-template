@@ -49,6 +49,8 @@ const rateLimitConfig = Object.freeze({
     { windowMs: 60_000, max: 60 },
     errors,
   ),
+  /** Command timeout of the dedicated Redis connection for shared limits. */
+  redisTimeoutMs: readInteger("RATE_LIMIT_REDIS_TIMEOUT_MS", 50, 1, errors),
   configError: errors.length > 0 ? errors.join("; ") : null,
 });
 
