@@ -2,7 +2,7 @@ import process from "node:process";
 import path from "node:path";
 import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
-// import logger from '#vendor/utils/logger.js';
+import logger from "#vendor/utils/logger.js";
 import appConfig from "#config/app.js";
 import type { HttpRequest, HttpResponse } from "#vendor/start/server.js";
 import { MIME_TYPES } from "#vendor/constants/index.js";
@@ -99,7 +99,14 @@ const cacheStaticSource = async (): Promise<Map<
 > | null> => {
   // logger.info('cachStaticSource');
   if (appConfig.serveStatic) {
-    // logger.info('cache Directory ' + STATIC_PATH);
+    const stats = await fs.stat(STATIC_PATH).catch(() => null);
+    if (stats === null || !stats.isDirectory()) {
+      logger.warn(
+        { staticPath: STATIC_PATH },
+        "SERVE_STATIC=true, but the static directory is missing: static files are not served",
+      );
+      return null;
+    }
     await cacheDirectory(STATIC_PATH);
     // logger.info('Success cache Directory ' + STATIC_PATH);
     const indexHtml = cache.get("/index.html");

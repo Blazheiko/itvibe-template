@@ -82,7 +82,9 @@ COPY packages/frontend/package.json ./packages/frontend/
 # create-database запускается из dist, поэтому tsx и прочие devDependencies не нужны
 RUN pnpm install --frozen-lockfile --prod --filter backend...
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    APP_ENV=production \
+    SERVE_STATIC=true
 
 # Копируем собранный код backend и shared
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist

@@ -13,7 +13,7 @@
 | 1   | ~~CSP ніде не застосовується~~ ✅                                                                                  | Висока       | Безпека                      |
 | 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅ (Redis — відкрито)                        | Висока       | Безпека                      |
 | 3   | WS-токен і `userToken` потрапляють у логи                                                                         | Середня      | Безпека                      |
-| 4   | `SERVE_STATIC=true` у `.env.example` ламає запуск                                                                 | Середня      | DX / конфігурація            |
+| 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                           | Середня      | DX / конфігурація            |
 | 5   | Fallback `PGSQL_PORT` не працює → `NaN`                                                                           | Середня      | Конфігурація                 |
 | 6   | Розбіжності `.env.example` з кодом                                                                                | Середня      | Конфігурація                 |
 | 7   | Потрібен pgvector, ніде не задокументовано                                                                        | Низька       | DX / БД                      |
@@ -40,7 +40,7 @@
 | 28  | Немає `.dockerignore`                                                                                             | Середня      | Docker / безпека             |
 | 29  | Контейнер працює від root, без `HEALTHCHECK`                                                                      | Середня      | Docker / безпека             |
 | 30  | `CMD` через `sh -c`: міграції на кожному старті, сигнали                                                          | Середня      | Docker / експлуатація        |
-| 31  | Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`                                                               | Низька       | Docker / конфігурація        |
+| 31  | ~~Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`~~ ✅                                                         | Низька       | Docker / конфігурація        |
 | 32  | `corsS3.xml`: `AllowedOrigin *` разом з `PUT`                                                                     | Середня      | Безпека / S3                 |
 | 33  | `handleError` логує без `requestId`, контекст без `userId`                                                        | Низька       | Observability                |
 | 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                                                            | Низька       | Observability                |
@@ -112,6 +112,8 @@
 ## Конфігурація та запуск
 
 ### 4. `SERVE_STATIC=true` у `.env.example` ламає запуск
+
+> **Виправлено** у feat-006 (гілка `feat/env-example-sync`): у `.env.example` `SERVE_STATIC=false`; без каталогу `public` `cacheStaticSource` пише `logger.warn` і сервер стартує без статики; `Dockerfile` задає `SERVE_STATIC=true` і `APP_ENV=production` (закриває і п. 31).
 
 - **Що:** `.env.example` містить `SERVE_STATIC=true`. Тоді бекенд на старті сканує `packages/backend/public`, якого в репозиторії немає, і падає. Default у коді — `false` (`src/config/app.ts`).
 - **Відтворення:** чистий клон → `cp .env.example .env` → `pnpm dev`, результат — `ENOENT: no such file or directory, scandir '.../packages/backend/public'`.
@@ -288,6 +290,8 @@
 - **Пропозиція:** окремий одноразовий job для `db:create:prod`/`db:migrate`; `CMD ["node", "dist/index.js"]` (або `exec`/`tini`).
 
 ### 31. Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`
+
+> **Виправлено** у feat-006 разом з п. 4.
 
 - **Що:** `Dockerfile` копіює фронтенд у `public`, але не встановлює `SERVE_STATIC=true`, тож за замовчуванням контейнер фронтенд не роздає. Задано `NODE_ENV=production`, але не `APP_ENV`, а саме його читають `secure` у cookie і конфіг CSP.
 - **Пропозиція:** задати `SERVE_STATIC=true` і `APP_ENV=production` в образі або явно описати їх як обов'язкові при запуску.
