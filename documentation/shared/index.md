@@ -37,7 +37,7 @@ Backend і frontend підключають пакет як `"shared": "workspace
 
 ::: warning Розбіжності в коді
 
-- [src/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/index.ts) реекспортує всі розділи, крім `guards` (рядок закоментовано), хоча підшлях `shared/guards` є в `exports`. Type guards у пакеті поки немає.
+- [src/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/index.ts) реекспортує всі розділи, крім `guards` (рядок закоментовано), хоча підшлях `shared/guards` є в `exports`.
 - `EntityIdSchema` лежить у `brands`, але це рядковий regex `/^[1-9]\d*$/` без `.brand(...)`, тобто фактично не branded-тип.
   :::
 
