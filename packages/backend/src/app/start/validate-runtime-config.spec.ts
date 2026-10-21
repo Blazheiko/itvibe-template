@@ -170,6 +170,8 @@ describe('rate limit configuration', () => {
     ['HTTP_GLOBAL_RATE_LIMIT_WINDOW_MS', '0'],
     ['WS_UPGRADE_RATE_LIMIT_WINDOW_MS', '1e3'],
     ['WS_UPGRADE_RATE_LIMIT_MAX', 'NaN'],
+    ['RATE_LIMIT_REDIS_TIMEOUT_MS', '0'],
+    ['RATE_LIMIT_REDIS_TIMEOUT_MS', '50ms'],
   ])('rejects %s=%s at startup', async (name, value) => {
     process.env[name] = value;
     const { validateRuntimeConfig } = await import('./validate-runtime-config.js');
@@ -185,6 +187,12 @@ describe('rate limit configuration', () => {
     expect(rateLimitConfig.configError).toBeNull();
     expect(rateLimitConfig.httpGlobal.max).toBe(0);
     expect(rateLimitConfig.wsUpgrade.windowMs).toBe(1000);
+  });
+
+  it('defaults RATE_LIMIT_REDIS_TIMEOUT_MS to 50', async () => {
+    delete process.env['RATE_LIMIT_REDIS_TIMEOUT_MS'];
+    const { default: rateLimitConfig } = await import('#config/rate-limit.js');
+    expect(rateLimitConfig.redisTimeoutMs).toBe(50);
   });
 });
 

@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const userRepositoryMock = {
   findById: vi.fn(),
@@ -31,6 +31,11 @@ const loggerMock = {
 
 const originalEnv = { ...process.env };
 
+const consumeAuthThrottleMock = vi.fn();
+vi.mock("#app/services/auth/auth-throttle-service.js", () => ({
+  consumeAuthThrottle: consumeAuthThrottleMock,
+}));
+
 vi.mock("#app/repositories/index.js", () => ({
   userRepository: userRepositoryMock,
   emailVerificationRepository: emailVerificationRepositoryMock,
@@ -60,6 +65,11 @@ async function loadEmailVerificationService() {
   process.env["APP_URL"] = "https://app.example.com";
   return import("./email-verification-service.js");
 }
+
+beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+});
 
 afterEach(() => {
   vi.resetModules();
@@ -137,7 +147,7 @@ describe("emailVerificationService", () => {
     emailVerificationRepositoryMock.markUsed.mockResolvedValue({ id: 11n });
 
     const { emailVerificationService } = await loadEmailVerificationService();
-    const result = await emailVerificationService.verifyEmail("expired-token");
+    const result = await emailVerificationService.verifyEmail("expired-token", { ipAddress: "127.0.0.1" });
 
     expect(Result.isError(result)).toBe(true);
     if (Result.isError(result)) {
@@ -172,7 +182,7 @@ describe("emailVerificationService", () => {
     });
 
     const { emailVerificationService } = await loadEmailVerificationService();
-    const result = await emailVerificationService.verifyEmail("valid-token");
+    const result = await emailVerificationService.verifyEmail("valid-token", { ipAddress: "127.0.0.1" });
 
     expect(Result.isOk(result)).toBe(true);
     if (Result.isOk(result)) {
@@ -270,7 +280,7 @@ describe("emailVerificationService", () => {
     });
 
     const { emailVerificationService } = await loadEmailVerificationService();
-    const result = await emailVerificationService.verifyEmail("link-token");
+    const result = await emailVerificationService.verifyEmail("link-token", { ipAddress: "127.0.0.1" });
 
     expect(Result.isOk(result)).toBe(true);
     expect(userRepositoryMock.update).toHaveBeenCalledWith(
@@ -303,7 +313,7 @@ describe("emailVerificationService", () => {
     userRepositoryMock.update.mockRejectedValue({ code: '23505' });
 
     const { emailVerificationService } = await loadEmailVerificationService();
-    const result = await emailVerificationService.verifyEmail("link-token");
+    const result = await emailVerificationService.verifyEmail("link-token", { ipAddress: "127.0.0.1" });
 
     expect(Result.isError(result)).toBe(true);
     if (Result.isError(result)) {
@@ -314,3 +324,39 @@ describe("emailVerificationService", () => {
     }
     expect(emailLinkVerificationRepositoryMock.markUsed).not.toHaveBeenCalled();
   });
+
+describe("verification throttles", () => {
+  it.each([
+    ["the budget is spent", () => consumeAuthThrottleMock.mockResolvedValue({ allowed: false, count: 21 })],
+    ["Redis fails", () => consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"))],
+  ])("verify email: rejected without checking the token when %s", async (_n, arrange) => {
+    arrange();
+    const { emailVerificationService } = await loadEmailVerificationService();
+    const result = await emailVerificationService.verifyEmail("some-token", {
+      ipAddress: "10.0.0.5",
+    });
+    expect(Result.isError(result)).toBe(true);
+    expect(emailVerificationRepositoryMock.findByTokenHash).not.toHaveBeenCalled();
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "verify_email_ip" }),
+      "10.0.0.5",
+    );
+  });
+
+  it.each([
+    ["the budget is spent", () => consumeAuthThrottleMock.mockResolvedValue({ allowed: false, count: 4 })],
+    ["Redis fails", () => consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"))],
+  ])("resend verification: no email queued when %s", async (_n, arrange) => {
+    arrange();
+    const { emailVerificationService } = await loadEmailVerificationService();
+    const result = await emailVerificationService.queueVerificationEmail(7n);
+    expect(Result.isError(result)).toBe(true);
+    expect(userRepositoryMock.findById).not.toHaveBeenCalled();
+    expect(emailVerificationRepositoryMock.create).not.toHaveBeenCalled();
+    expect(emailServiceMock.send).not.toHaveBeenCalled();
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "resend_verification_user" }),
+      "7",
+    );
+  });
+});

@@ -43,12 +43,17 @@ const rateLimitConfig = Object.freeze({
     { windowMs: 60_000, max: 600 },
     errors,
   ),
-  /** WebSocket upgrade requests from one IP (sliding log). */
+  /**
+   * WebSocket upgrade level 1: per-process flood filter before any I/O
+   * (sliding log). The cluster-wide budget is wsUpgradeShared in throttle-policies.
+   */
   wsUpgrade: read(
     "WS_UPGRADE_RATE_LIMIT",
-    { windowMs: 60_000, max: 60 },
+    { windowMs: 60_000, max: 120 },
     errors,
   ),
+  /** Command timeout of the dedicated Redis connection for shared limits. */
+  redisTimeoutMs: readInteger("RATE_LIMIT_REDIS_TIMEOUT_MS", 50, 1, errors),
   configError: errors.length > 0 ? errors.join("; ") : null,
 });
 

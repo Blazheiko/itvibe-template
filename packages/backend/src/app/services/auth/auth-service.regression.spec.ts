@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const userRepositoryMock = {
   findByEmail: vi.fn(),
@@ -31,6 +31,7 @@ const hashPasswordMock = vi.fn();
 const validatePasswordMock = vi.fn();
 const generateWsTokenMock = vi.fn();
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 
 vi.mock("#app/repositories/index.js", () => ({
   userRepository: userRepositoryMock,
@@ -69,11 +70,19 @@ vi.mock("#app/services/auth/email-verification-service.js", () => ({
 
 vi.mock('#app/services/auth/auth-throttle-service.js', () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 async function loadAuthService() {
   return import("./auth-service.js");
 }
+
+beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+  resetAuthThrottleMock.mockReset();
+  resetAuthThrottleMock.mockResolvedValue(undefined);
+});
 
 afterEach(() => {
   vi.resetModules();
@@ -124,18 +133,12 @@ describe("authService legacy regressions", () => {
     expect(userRepositoryMock.findByEmail).toHaveBeenCalledWith(
       "user@example.com",
     );
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(1, {
-      scope: 'register_email_ip',
-      key: '127.0.0.1',
-      limit: 10,
-      windowSeconds: 60 * 60,
-    });
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(2, {
-      scope: 'register_email_identifier',
-      key: 'user@example.com',
-      limit: 3,
-      windowSeconds: 60 * 60,
-    });
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(1, expect.objectContaining({ scope: 'register_email_ip', limit: 10, windowMs: (60 * 60) * 1000 }),
+      '127.0.0.1',
+    );
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ scope: 'register_email_identifier', limit: 3, windowMs: (60 * 60) * 1000 }),
+      'user@example.com',
+    );
     expect(userRepositoryMock.create).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "user@example.com",
@@ -183,6 +186,7 @@ describe("authService legacy regressions", () => {
   });
 
   it("logs in with a case-insensitive email identifier and returns websocket details", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -204,6 +208,7 @@ describe("authService legacy regressions", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(userRepositoryMock.findByEmail).toHaveBeenCalledWith(
@@ -229,7 +234,8 @@ describe("authService legacy regressions", () => {
     }
   });
 
-  it("rejects password login for accounts that do not have a local password", async () => {
+  it("answers a login to an account without a local password like a wrong password", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -247,13 +253,14 @@ describe("authService legacy regressions", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
     if (Result.isError(result)) {
       expect(result.error).toEqual({
-        _tag: "BadRequest",
-        message: "Please use social login for this account",
+        _tag: "Unauthorized",
+        message: "Invalid email or password",
       });
     }
     expect(validatePasswordMock).not.toHaveBeenCalled();
@@ -305,5 +312,65 @@ describe("authService legacy regressions", () => {
     if (Result.isOk(result)) {
       expect(result.value).toEqual({ status: "success" });
     }
+  });
+});
+
+describe("auth throttle fail-closed (email registration)", () => {
+  it("rejects registration without looking up or creating the user", async () => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+
+    const { authService } = await loadAuthService();
+    const result = await authService.registerByEmail(
+      { name: "Jane", email: "user@example.com", password: "secret123", token: "" },
+      authMock as any,
+      sessionMock as any,
+      loggerMock as any,
+      { ipAddress: "127.0.0.1" },
+    );
+
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(userRepositoryMock.findByEmail).not.toHaveBeenCalled();
+    expect(userRepositoryMock.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("change password throttle", () => {
+  it.each([
+    ["the budget is spent", () => consumeAuthThrottleMock.mockResolvedValue({ allowed: false, count: 11 })],
+    ["Redis fails", () => consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"))],
+  ])("rejects without checking the current password when %s", async (_name, arrange) => {
+    arrange();
+    userRepositoryMock.findById.mockResolvedValue({ id: 7n, password: "stored-password-hash" });
+    const { authService } = await loadAuthService();
+    const result = await authService.changePassword(7n, {
+      currentPassword: "guess",
+      newPassword: "new-password-123",
+    });
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "change_password_user", limit: 10, windowMs: 900_000 }),
+      "7",
+    );
+    expect(validatePasswordMock).not.toHaveBeenCalled();
+    expect(userRepositoryMock.update).not.toHaveBeenCalled();
+  });
+
+  it("resets the budget after a successful change", async () => {
+    userRepositoryMock.findById.mockResolvedValue({ id: 7n, password: "stored-password-hash" });
+    validatePasswordMock.mockResolvedValue(true);
+    hashPasswordMock.mockResolvedValue("new-password-hash");
+    userRepositoryMock.update.mockResolvedValue({ id: 7n });
+    const { authService } = await loadAuthService();
+    const result = await authService.changePassword(7n, {
+      currentPassword: "secret123",
+      newPassword: "new-password-123",
+    });
+    expect(Result.isOk(result)).toBe(true);
+    expect(resetAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "change_password_user" }),
+      "7",
+    );
   });
 });

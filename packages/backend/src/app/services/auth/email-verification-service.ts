@@ -18,6 +18,8 @@ import {
   appErrorMessage,
 } from "#app/services/shared/errors.js";
 import { tryInternal } from "#app/services/shared/result-helpers.js";
+import { consumeAuthThrottle } from "#app/services/auth/auth-throttle-service.js";
+import { throttlePolicies } from "#config/throttle-policies.js";
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const EMAIL_BRAND = {
@@ -311,7 +313,27 @@ export const emailVerificationService = {
     return Result.ok({ message: "Verification email sent" });
   },
 
-  async verifyEmail(token: string): Promise<AppResult<{ message: string }>> {
+  async verifyEmail(
+    token: string,
+    requestMeta: { ipAddress: string },
+  ): Promise<AppResult<{ message: string }>> {
+    const throttle = await tryInternal(
+      () =>
+        consumeAuthThrottle(
+          throttlePolicies.verifyEmailIp,
+          requestMeta.ipAddress,
+        ),
+      "Failed to enforce email verification throttle",
+    );
+    if (Result.isError(throttle)) {
+      return Result.err(throttle.error);
+    }
+    if (!throttle.value.allowed) {
+      return Result.err(
+        badRequest("Too many verification attempts. Please try again later."),
+      );
+    }
+
     const normalizedToken = token.trim();
     if (normalizedToken === "") {
       return Result.err(badRequest("Verification token is required"));
@@ -495,6 +517,25 @@ export const emailVerificationService = {
   async queueVerificationEmail(
     userId: bigint,
   ): Promise<AppResult<{ message: string }>> {
+    const throttle = await tryInternal(
+      () =>
+        consumeAuthThrottle(
+          throttlePolicies.resendVerificationUser,
+          String(userId),
+        ),
+      "Failed to enforce verification email throttle",
+    );
+    if (Result.isError(throttle)) {
+      return Result.err(throttle.error);
+    }
+    if (!throttle.value.allowed) {
+      return Result.err(
+        badRequest(
+          "Too many verification emails requested. Please try again later.",
+        ),
+      );
+    }
+
     const userResult = await tryInternal(
       () => userRepository.findById(userId),
       "Failed to load user",

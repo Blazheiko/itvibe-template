@@ -3,145 +3,65 @@
 ## Current State
 
 **Last Updated:** 2026-10-21
-**Active Feature:** feat-005 - Security Hardening (in_progress)
-**Branch:** `feat/security-hardening`
+**Active Feature:** feat-013 - Shared Rate-Limit Counter (in_progress, ready for review)
+**Branch:** `feat/redis-rate-limit`
 
-Scope (items from [docs/plan/code-issues-found-during-docs.md](docs/plan/code-issues-found-during-docs.md)): 1 (CSP), 2 (WS upgrade / per-IP rate limit), 3 (tokens in logs), 9 (`broadcastToChannel` runtime guard).
-CSP plan: [docs/plan/csp-fix-plan.md](docs/plan/csp-fix-plan.md). Rate-limit plan: [docs/plan/ws-upgrade-rate-limit-plan.md](docs/plan/ws-upgrade-rate-limit-plan.md). Start PR: #21 (feat-005 → in_progress).
+Plan: [docs/plan/redis-rate-limit-plan.md](docs/plan/redis-rate-limit-plan.md) (rev. 10). Tasks: [docs/plan/redis-rate-limit-tasks.md](docs/plan/redis-rate-limit-tasks.md). Start PR: #31.
+
+Goal: HTTP and WS-message limits stay in-memory (process protection); WS upgrade gets a Redis level 2; sensitive auth actions use Redis through the `config/throttle-policies.ts` registry; close login / change-password / forgot-password gaps; document both levels.
 
 ## Status
 
-### What's Done
+### Done
 
-- [x] Item 1 — CSP applied to every response type (plan steps 1–8)
-- [x] Item 2 — HTTP L1 per-IP limit, WS upgrade per-IP limit, bounded rate-limit store (Redis counter left open)
-- [x] Item 3 — session tokens masked in logs (PR #26, merged)
-- [x] Item 9 — channel whitelist + runtime guard in `broadcastToChannel`
+- [x] Stage 0 — PR #30 merged, PR #31 opened, branch + progress, `./init.sh` green
+- [x] Stage 1 — dedicated Redis connection for limits (`database/redis-rate-limit.ts`)
+- [x] Stage 2 — policy registry, `consumeAuthThrottle(policy, key)`, 14 call sites migrated, fail-closed tests
+- [x] Stage 3 — WS upgrade level 2 (Lua sliding log), level 1 default 60 → 120
+- [x] Stage 4 — login throttle, unified login response, frontend hint
+- [x] Stage 5 — change-password, forgot-password, resend-verification, reset-password, verify-email
+- [x] Stage 6 — `.env.example`
+- [x] Stage 7 — `test:redis` suite + `redis-tests.yml` CI job
+- [x] Stage 8 — documentation
+- [x] Stage 9 — manual verification, latency measurement, evidence
 
-### In Progress / Next
+### Next
 
-- [ ] Review and merge the item 9 PR, then flip feat-005 to `done` via PR to `main`
+- [ ] Review and merge the feat-013 PR, then flip feat-013 to `done` in `feature_list.json` via PR to `main`
+- [ ] After #31 merges: rebase on `main` (branch was cut from `chore/feat-013-start`)
 
-## Item 9 (channel guard) — summary
+## Files Modified
 
-- `packages/shared/src/guards/ws-channels.ts` (new): `WS_CHANNELS = ["admin"]`, type `WsChannel`, `isWsChannel(value: unknown)`. Plain TS, no dependencies, exported from `shared/guards`, so the frontend can import it without extra weight.
-- `server.ts` → `broadcastToChannel(channel: WsChannel, …): boolean`: an unknown value that bypassed the type is not published; `warn` (channel cut to 64 chars) and `false`.
-- `broadcast-service.ts` and `admin-ws-channel-service.ts` use `WsChannel`.
-- Docs: `documentation/backend/websocket.md`, `auth-security.md` (open issues: items 3 and 9 removed), plan doc item 9 marked fixed.
+- Backend: `config/throttle-policies.ts` (new), `config/rate-limit.ts`, `database/redis-rate-limit.ts` (new), `index.ts`, `app/start/validate-runtime-config.ts`, `app/services/auth/{auth-throttle-service,auth-service,password-reset-service,email-verification-service,sms-auth-challenge-constants}.ts`, `app/controllers/http/auth/auth-controller.ts`, `vendor/utils/rate-limit/{redis-sliding-log,upgrade-rate-limit}.ts`, `vendor/utils/network/ws-handlers.ts`, `.env.example`, `vitest.config.ts`, `vitest.redis.config.ts` (new), `package.json` (`test:redis`)
+- Tests: unit specs for every stage; `*.redis.test.ts` (3 files) + `test-support/redis-test-client.ts`
+- Frontend: `locales/en.ts` (login error hint)
+- CI: `.github/workflows/redis-tests.yml`; `eslint.config.ts` (ignore `vitest.redis.config.ts`)
+- Docs: `documentation/backend/{auth-security,configuration,websocket,deployment}.md`; plan (thresholds, failure table, latency); code-issues item 2 closed, item 70 added
 
-## Evidence of Completion (item 9)
+## Evidence of Completion
 
-- `pnpm typecheck` clean, `pnpm lint` clean
-- `pnpm test`: backend 405/405 (new `server-broadcast.spec.ts`: publishes to `admin`, drops `user:1`, `admin#`, `*`, `""`), frontend 41/41, shared 3/3 (new `ws-channels.test.js`)
-- `pnpm docs:build && pnpm docs:verify` pass
-
-## Item 3 (tokens in logs) — summary
-
-- `maskTokenForLogs` (`abcd…`, short/missing → `[redacted-token]`) in `verifyUpgradeToken`, `wsSessionHandler`, `token-handler.ts`, `destroyAllSessions`; `parseCookies` no longer prints the Cookie header. Evidence: PR #26 (typecheck, lint, 393/393, regression tests fail on the old code).
-
-## Item 2 (rate limit) — summary
-
-- `vendor/utils/rate-limit/rate-limit-store.ts` (new, replaces `rate-limit-counter.ts`): rejected attempts are not stored, exact `retryAfterMs`, sliding log ≤ `max` per key, fixed window for L1, hard key cap (scan ≤ 64 oldest, then FIFO eviction), GC only on a 60 s timer.
-- `http-rate-limit.ts`: `checkGlobalRateLimit` (L1, headers only on reject) + per-route limit on the store. `ws-rate-limit.ts` ported, contract unchanged.
-- `upgrade-rate-limit.ts` (new) → `handleUpgrade` checks it first: 429 + `Retry-After` / 503, before token and session lookup.
-- `server.ts`: L1 before the route limit in `setHttpHandler`; in `server.any("/*")` for API 404, preflight and plain HTTP on the WS path (`appConfig.pathPrefix`).
-- `config/rate-limit.ts` (new): `HTTP_GLOBAL_RATE_LIMIT_*` (600/60 s), `WS_UPGRADE_RATE_LIMIT_*` (60/60 s), strict integer validation → `validateRuntimeConfig()`; proxy warning (`getProxyWarning`) in production-like mode.
-- Docs: `auth-security.md` (two branches of layers, store semantics, overflow warning), `configuration.md`, `deployment.md` (nginx edge limit), `.env.example`.
-
-### Decisions
-
-- Upgrade default raised from 30 to 60/min: one tab reconnects every 5 s (12/min); tested with 3 tabs.
-- Redis counter not done: the HTTP check must stay synchronous (before `res.onData`). Documented, edge limit recommended.
-- Item 18 (refuse upgrade without a live session) stays out of scope: invalid-format tokens still get 401, valid-format ones without a session still upgrade and are closed with 4001.
-
-## Evidence of Completion (item 2)
-
-- `pnpm typecheck` — clean; `pnpm lint` — 0 errors; `pnpm test` — pass (backend 59 files / 387 tests)
-- New tests: `rate-limit-store.spec.ts` (bounded state, recovery exactly at Retry-After after 50 rejections, key cap with `maxKeys: 4`, scan bound), `http-rate-limit.spec.ts`, `upgrade-rate-limit.spec.ts` (incl. 3-tab reconnect), `ws-upgrade-rate-limit.spec.ts`, `server-rate-limit.spec.ts` (one bucket for route/404/preflight/WS-path HTTP, counted once, `API_PATH_PREFIX`, static not counted), `validate-runtime-config.spec.ts` (invalid values, proxy warning)
-- `rate-limit.transport.spec.ts` on a real uWS server: small POST keeps its body, blocked POST never reaches the handler, real handshake 101 → 429 + `Retry-After` → 101 after the window. Mutation check: an `await` before the body read makes the POST tests hang and fail.
-- `pnpm docs:build && pnpm docs:verify` — pass
-
-Manual check, `pnpm prod:local` with `HTTP_GLOBAL_RATE_LIMIT_MAX=5 WS_UPGRADE_RATE_LIMIT_MAX=3 WS_UPGRADE_RATE_LIMIT_WINDOW_MS=5000` (handshake via `node:http.request` with full upgrade headers):
-
-```text
-GET /api/main/init ×6
-  1–5: HTTP/1.1 401 Unauthorized
-  6:   HTTP/1.1 429 Too Many Requests  X-RateLimit-Limit: 5  Retry-After: 60
-WS /api/websocket
-  1–3: upgrade 101
-  4:   response 429 retry-after=5
-  after 5.1 s: upgrade 101
-```
-
-Review fixes (REQUEST CHANGES on `afd539a`):
-
-- `/api/doc/routes` (manual-test) now spends L1; regression test in `server-rate-limit.spec.ts` (fails without the fix).
-- nginx example: `X-Forwarded-For`/`X-Real-IP $remote_addr` in both locations (WS block repeats them, `proxy_set_header` is not inherited there), `proxy_http_version 1.1` on `/api/` (uWS answers 505 to HTTP/1.0). Checked on a real nginx 127.0.0.1 → backend (`TRUST_PROXY=true`, `TRUSTED_PROXY_CIDRS=127.0.0.1/32`, L1 max 5, upgrade max 3), every request with a different spoofed `X-Forwarded-For`:
-
-```text
-fixed config   HTTP: 401 401 401 401 401 429   WS: 401 401 401 429
-no proxy_set_header  HTTP: 401 ×6 (never limited)   WS: 401 ×4 (never limited)
-```
-
-## Item 1 (CSP) — summary
-
-- `packages/backend/src/vendor/utils/network/csp.ts` (new): policy building, origin/report-URI validation, single-mode resolution.
-- `packages/backend/src/config/csp.ts`: directives from `APP_URL`, `getWsUrl()`, `CDN_URL`, `CSP_*`; config errors surface in `validateRuntimeConfig()`.
-- `setSecurityHeaders(res, headers, cspKind)` writes the CSP; wired into HTML (200/304, SPA fallback), SVG, static 400/404, CORS `OPTIONS`, doc page. `/service-worker.js` gets none.
-- `scripts/prod-local.sh` / `pnpm prod:local`; `pnpm --filter frontend test:e2e:csp` (Playwright, `e2e-csp/`).
-- Docs: `documentation/backend/{auth-security,configuration,deployment,testing}.md`.
-
-### Decisions / deviations from the plan
-
-- Playwright CSP checks use a separate config (`playwright.csp.config.ts`) instead of a project in `playwright.config.ts`: its `webServer` is the backend, not Vite.
-- Enforce and report-only run sequentially on one port: the bundle has `VITE_BASE_URL` baked in, so a second instance on another port would call the wrong API origin.
-- `prod:local` runs `APP_ENV=local`, `APP_IS_PRODUCTION=false`: on plain http `getWsUrl()` would return `wss://` and `upgrade-insecure-requests` would break all requests. Hence `upgrade-insecure-requests` is covered by unit tests only, not e2e (needs HTTPS).
-- Media origin = `CDN_URL` only (the client receives `cdnUrl` from the API); no S3 origin is added because the browser never talks to S3 directly.
-- ArkType removed from the frontend runtime bundle: its JIT probe (`new Function`) was a CSP `eval` violation on every page load. `useBroadcastHandler` uses `ws-payload-guards.ts` (parity-tested against the ArkType schema); `ErrorCodeSchema` moved from `shared/errors` to `shared/responses/error-code-schema.ts`. `index.js` 1 042 259 → 873 428 bytes. e2e now fails on any CSP violation.
-- The feat-005 item 4 dependency is gone: `prod:local` creates `backend/public` before start.
-
-## Evidence of Completion (item 1)
-
-- `pnpm typecheck` — clean
-- `pnpm lint` — 0 errors (pre-existing warnings only)
-- `pnpm test` — pass (backend 54 files / 338 tests, incl. `csp.spec.ts`, `static-server-csp.spec.ts` 33 cases, `server-csp.spec.ts` 15 cases)
-- `pnpm --filter frontend test:e2e:csp` — enforce 7/7, report-only 7/7 (WS confirmed by a `pong` frame, CDN image `naturalWidth > 0`, image outside `img-src` blocked/reported); earlier 5/5; with `CSP_ENABLED=false` the header, inline-script and fetch tests fail (proves they test CSP)
-- `pnpm docs:build && pnpm docs:verify` — pass
-- `pnpm --filter frontend test:e2e` — `mobile-layout.spec.ts` fails on `.modal.register-modal`, a selector that no longer exists in `src`; pre-existing, unrelated to CSP
-
-Manual check, `pnpm prod:local` with `ENABLED_CORS=true` (GET via `curl -sS -D - -o /dev/null`):
-
-```text
-GET /
-  HTTP/1.1 200 OK
-  content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://stage-lfl-s3.fra1.cdn.digitaloceanspaces.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 ws://localhost:3000 ws://localhost:* ws://127.0.0.1:*
-GET /index.html
-  HTTP/1.1 200 OK
-  content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://stage-lfl-s3.fra1.cdn.digitaloceanspaces.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 ws://localhost:3000 ws://localhost:* ws://127.0.0.1:*
-GET /settings
-  HTTP/1.1 200 OK
-  content-security-policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://stage-lfl-s3.fra1.cdn.digitaloceanspaces.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 ws://localhost:3000 ws://localhost:* ws://127.0.0.1:*
-GET /favicon.svg
-  HTTP/1.1 200 OK
-  content-security-policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'
-GET /service-worker.js
-  HTTP/1.1 200 OK
-GET /missing.js
-  HTTP/1.1 404 Not Found
-  content-security-policy: default-src 'none'; frame-ancestors 'none'
-GET /api/nope
-  HTTP/1.1 404 Not Found
-  content-security-policy: default-src 'none'; frame-ancestors 'none'
-GET /api/main/init
-  HTTP/1.1 401 Unauthorized
-  content-security-policy: default-src 'none'; frame-ancestors 'none'
-OPTIONS /api/main/init (Origin http://app.test)
-  HTTP/1.1 200 OK
-  content-security-policy: default-src 'none'; frame-ancestors 'none'
-  Access-Control-Allow-Origin: http://app.test
-```
+- `pnpm typecheck` clean
+- `pnpm lint` clean
+- `pnpm test`: backend 466/466, frontend 41/41, shared 3/3, documentation 26/26
+- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 16/16, no keys left behind; a deliberately broken Lua (`count <= max`) fails 7 tests
+- Production client contract against a real server (`redis-rate-limit.redis.test.ts`, uses `rateLimitRedisOptions` as is): `commandTimeout` 50 ms fires under `CLIENT PAUSE WRITE` (< 300 ms); an in-flight command killed with `CLIENT KILL` is not resent after reconnect and commands fail fast while reconnecting; the client reconnects by itself (no manual `connect()`). With `autoResendUnfulfilledCommands: true` the resend test fails, so it discriminates
+- `pnpm docs:build && pnpm docs:verify`: all checks passed; shared-limits table rows match the registry 21/21
+- Manual (two backend processes on 3101/3102 from `dist`, separate `redis-server --port 6390`, `REDIS_PREFIX=ft013:`):
+  - startup: 5 Redis clients (2 per backend — main + rate-limit — plus redis-cli)
+  - WS upgrade loop alternating ports, invalid token: `60 × 401`, first `429` at attempt 61 (each process saw only 32, below its level 1 of 120), `ZCARD rl:upgrade:127.0.0.1 = 60`, `Retry-After: 60`
+  - login with a wrong password alternating ports: 12 × `401 Invalid email or password`; Redis `login_ip = 12`, `login_identifier = 12`, PTTL ≈ 900 000 ms (one shared budget)
+  - too-short password → `422` from the validator, identifier counter not created (an invalid body does not consume)
+  - temporary user: 1 wrong attempt (`login_identifier = 1`), then correct login `200` → identifier key deleted, `login_ip` kept counting (14 → 15); the user was deleted from the local DB afterwards
+  - whole Redis stopped: upgrade with an invalid token still `401` (level 2 skipped, one `warn` "relying on the local limit"); upgrade with a valid-format token and login hang ~45 s and end with `500 MaxRetriesPerRequestError` from the **main** client (session read) — pre-existing behaviour, documented, filed as code-issues item 70
+  - Redis back: login and upgrade are counted in Redis again without restarting the backends
+- Latency (local Redis, 2000 `EVAL` of the throttle script): p50 0.37 ms, p99 1.6 ms, max 24 ms → default `RATE_LIMIT_REDIS_TIMEOUT_MS=50` kept
+- Not tested:
+  - scenario «only the rate-limit connection fails» end to end through running backends (the connection drop itself is covered by `redis-rate-limit.redis.test.ts` with `CLIENT KILL`, the limiter fallback by `upgrade-rate-limit.redis.test.ts`)
+  - login hint in the browser and `pnpm --filter frontend test:e2e` (only the i18n string changed; no e2e test references it)
+  - production timeout value (needs the target network)
+  - `redis-tests.yml` on GitHub (runs on the PR)
 
 ## Notes for Next Session
 
-- `feature_list.json` → `done` only after all four items.
-- Open: CSP is not browser-tested on the production branch (HTTPS/WSS, `upgrade-insecure-requests`) or against real S3/CDN (avatar upload, screenshot redirect). Needs a staging check.
+- code-issues item 70 (main Redis client without timeout) is a good follow-up feature.
+- `src/config/turn.ts` is still unused (unrelated).

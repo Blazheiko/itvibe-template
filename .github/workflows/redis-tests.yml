@@ -1,0 +1,57 @@
+name: Redis tests
+
+# Integration tests of the shared rate limits against a real Redis
+# (packages/backend/src/**/*.redis.test.ts). Without REDIS_TEST_URL they skip,
+# so this job is what actually exercises the Lua scripts.
+on:
+  pull_request:
+    paths: &redis_paths
+      - "packages/backend/src/**"
+      - "packages/backend/package.json"
+      - "packages/backend/vitest*.config.ts"
+      - "packages/shared/src/**"
+      - "pnpm-lock.yaml"
+      - ".nvmrc"
+      - ".github/workflows/redis-tests.yml"
+  push:
+    branches: [main]
+    paths: *redis_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: redis-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-redis:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      REDIS_TEST_URL: redis://127.0.0.1:6379/15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter shared build
+
+      - run: pnpm --filter backend test:redis

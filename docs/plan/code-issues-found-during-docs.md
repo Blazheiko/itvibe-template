@@ -11,7 +11,7 @@
 | #   | Проблема                                                                                                          | Серйозність  | Область                      |
 | --- | ----------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
 | 1   | ~~CSP ніде не застосовується~~ ✅                                                                                  | Висока       | Безпека                      |
-| 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅ (Redis — відкрито)                        | Висока       | Безпека                      |
+| 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅                                           | Висока       | Безпека                      |
 | 3   | ~~WS-токен і `userToken` потрапляють у логи~~ ✅                                                                   | Середня      | Безпека                      |
 | 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                           | Середня      | DX / конфігурація            |
 | 5   | ~~Fallback `PGSQL_PORT` не працює → `NaN`~~ ✅                                                                     | Середня      | Конфігурація                 |
@@ -79,6 +79,7 @@
 | 67  | Push-група без `auth_guard`, перевірка в контролері                                                               | Низька       | Безпека / ролі               |
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
 | 69  | `AGENTS.md`: застаріле «checkout does not include .git history»                                                   | Інформаційна | Документація                 |
+| 70  | Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с                                   | Середня      | Надійність / Redis           |
 
 ## Безпека
 
@@ -92,7 +93,7 @@
 
 ### 2. Немає rate limit на WebSocket upgrade і глобального per-IP ліміту
 
-> **Виправлено** у feat-005 (гілка `feat/security-hardening`) за планом [`ws-upgrade-rate-limit-plan.md`](./ws-upgrade-rate-limit-plan.md): L1 per-IP для HTTP API, окремий ліміт upgrade, лічильник з обмеженою пам'яттю. **Відкрита підзадача:** Redis-лічильник для кількох інстансів, винесено у feat-013. Поки що замість нього рекомендовано edge-ліміт у nginx, його описано в `deployment.md`.
+> **Виправлено** у feat-005 (гілка `feat/security-hardening`) за планом [`ws-upgrade-rate-limit-plan.md`](./ws-upgrade-rate-limit-plan.md): L1 per-IP для HTTP API, окремий ліміт upgrade, лічильник з обмеженою пам'яттю. Підзадачу для кількох інстансів закрито у feat-013 за планом [`redis-rate-limit-plan.md`](./redis-rate-limit-plan.md): HTTP і WS-повідомлення свідомо лишаються в пам'яті (захист процесу), WS upgrade отримав другий рівень у Redis, а чутливі auth-дії (зокрема вхід, зміна й скидання пароля) обмежує спільний реєстр `config/throttle-policies.ts`. Поки що замість нього рекомендовано edge-ліміт у nginx, його описано в `deployment.md`.
 
 - **Що:** rate limiting є лише per-route для HTTP (`src/vendor/utils/rate-limit/*`), перевірка виконується до читання body. Upgrade-запит WebSocket ліміту не має. Глобального L1-ліміту за IP також немає. Лічильник зберігається в пам'яті процесу, а не в Redis.
 - **Наслідок:** при кількох інстансах ліміт не спільний. Upgrade можна флудити. Це залишок finding C-2.
@@ -512,6 +513,14 @@
 ### 69. `AGENTS.md`: застарілий опис
 
 - **Що:** розділ «Commit & Pull Request Guidelines» стверджує, що «this checkout does not include .git history», хоча історія є.
+
+### 70. Основний Redis-клієнт без таймауту
+
+Знайдено під час ручної перевірки feat-013.
+
+- **Що:** `src/database/redis.ts` створює ioredis без `commandTimeout` і з offline queue за замовчуванням (`maxRetriesPerRequest: 20`). Коли Redis недоступний, кожен запит, що читає сесію (HTTP-middleware сесії, `verifyUpgradeToken`), чекає ~45 с і завершується `500 MaxRetriesPerRequestError`.
+- **Наслідок:** під час збою Redis запити накопичуються замість швидкої відмови; у `APP_ENV=local` текст помилки ioredis потрапляє у відповідь.
+- **Пропозиція:** `commandTimeout` і менший `maxRetriesPerRequest` для основного клієнта (з урахуванням того, що сесії мають переживати короткі збої), швидка `503` при недоступному Redis; readiness-перевірка (п. 35).
 
 ## Що варто зробити далі
 

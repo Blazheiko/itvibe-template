@@ -1,7 +1,7 @@
 import { Result } from "better-result";
 import { createHmac } from "node:crypto";
 import { PENDING_SMS_CODE_HASH_PLACEHOLDER } from "./sms-auth-challenge-constants.js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const userRepositoryMock = {
   findByEmail: vi.fn(),
@@ -35,6 +35,7 @@ const destroyAllSessionsMock = vi.fn();
 const hashPasswordMock = vi.fn();
 const nanoidMock = vi.fn(() => "new-session-token");
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 const issueVerificationCodeMock = vi.fn();
 const loggerMock = {
   warn: vi.fn(),
@@ -59,6 +60,7 @@ vi.mock("#vendor/utils/session/redis-session-storage.js", () => ({
 
 vi.mock("#app/services/auth/auth-throttle-service.js", () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 vi.mock("#app/services/auth/sms-verification-provider.js", () => ({
@@ -101,6 +103,11 @@ function hashOtp(code: string): string {
   return createHmac("sha256", "a".repeat(32)).update(code).digest("hex");
 }
 
+beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+});
+
 afterEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
@@ -114,6 +121,7 @@ describe("passwordResetService", () => {
     const { passwordResetService } = await loadPasswordResetService();
     const result = await passwordResetService.requestPasswordReset(
       "missing@example.com",
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isOk(result)).toBe(true);
@@ -139,7 +147,7 @@ describe("passwordResetService", () => {
       .mockResolvedValue();
 
     const result =
-      await passwordResetService.requestPasswordReset("User@example.com");
+      await passwordResetService.requestPasswordReset("User@example.com", { ipAddress: "127.0.0.1" });
 
     expect(Result.isOk(result)).toBe(true);
     expect(userRepositoryMock.findByEmail).toHaveBeenCalledWith(
@@ -153,7 +161,7 @@ describe("passwordResetService", () => {
 
     const { passwordResetService } = await loadPasswordResetService();
     const result =
-      await passwordResetService.requestPasswordReset("User@example.com");
+      await passwordResetService.requestPasswordReset("User@example.com", { ipAddress: "127.0.0.1" });
 
     expect(Result.isOk(result)).toBe(true);
     if (Result.isOk(result)) {
@@ -228,6 +236,7 @@ describe("passwordResetService", () => {
       "expired-token",
       "new-password",
       "new-password",
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -256,6 +265,7 @@ describe("passwordResetService", () => {
       "used-token",
       "new-password",
       "new-password",
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -275,6 +285,7 @@ describe("passwordResetService", () => {
       "valid-token",
       "new-password",
       "different-password",
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -320,6 +331,7 @@ describe("passwordResetService", () => {
       "valid-token",
       "new-password",
       "new-password",
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(hashPasswordMock).toHaveBeenCalledWith("new-password");
@@ -835,3 +847,113 @@ describe("passwordResetService", () => {
     expect(smsAuthChallengeRepositoryMock.create).not.toHaveBeenCalled();
     expect(issueVerificationCodeMock).not.toHaveBeenCalled();
   });
+
+describe("auth throttle fail-closed (phone reset)", () => {
+  const redisDown = (): void => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+  };
+
+  it("rejects phone reset start without issuing a code", async () => {
+    redisDown();
+    const { passwordResetService } = await loadPasswordResetService();
+    const result = await passwordResetService.startPhonePasswordReset(
+      "+1 415 555 0123",
+      "US",
+      { ipAddress: "127.0.0.1", sessionId: "session-id" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.create).not.toHaveBeenCalled();
+    expect(issueVerificationCodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects phone reset completion without loading the challenge", async () => {
+    redisDown();
+    const { passwordResetService } = await loadPasswordResetService();
+    const result = await passwordResetService.completePhonePasswordReset(
+      "reset-challenge-1",
+      "123456",
+      "new-password",
+      "new-password",
+      { ipAddress: "127.0.0.1" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
+  });
+});
+
+describe("forgot password and reset password throttles", () => {
+  const GENERIC = { message: expect.any(String) as unknown };
+
+  it("throttles by IP and email before looking up the address", async () => {
+    userRepositoryMock.findByEmail.mockResolvedValue(undefined);
+    const { passwordResetService } = await loadPasswordResetService();
+    await passwordResetService.requestPasswordReset("User@Example.com", {
+      ipAddress: "10.0.0.1",
+    });
+    const scopes = consumeAuthThrottleMock.mock.calls.map(
+      (call) => (call[0] as { scope: string }).scope,
+    );
+    expect(scopes).toEqual(["forgot_password_ip", "forgot_password_email"]);
+    expect(consumeAuthThrottleMock.mock.calls[1]?.[1]).toBe("user@example.com");
+    expect(consumeAuthThrottleMock.mock.invocationCallOrder[1]).toBeLessThan(
+      userRepositoryMock.findByEmail.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("answers the same for a known and an unknown address", async () => {
+    const { passwordResetService } = await loadPasswordResetService();
+    userRepositoryMock.findByEmail.mockResolvedValue(undefined);
+    const unknown = await passwordResetService.requestPasswordReset("a@example.com", {
+      ipAddress: "10.0.0.2",
+    });
+    userRepositoryMock.findByEmail.mockResolvedValue({ id: 1n, email: "b@example.com" });
+    const spy = vi
+      .spyOn(passwordResetService, "sendPasswordResetEmailInBackground")
+      .mockResolvedValue(undefined);
+    const known = await passwordResetService.requestPasswordReset("b@example.com", {
+      ipAddress: "10.0.0.2",
+    });
+    expect(known).toEqual(unknown);
+    spy.mockRestore();
+  });
+
+  it.each([
+    ["the budget is spent", () => consumeAuthThrottleMock.mockResolvedValue({ allowed: false, count: 11 })],
+    ["Redis fails", () => consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"))],
+  ])("forgot password: no lookup and no email when %s, same generic answer", async (_n, arrange) => {
+    arrange();
+    const { passwordResetService } = await loadPasswordResetService();
+    const spy = vi.spyOn(passwordResetService, "sendPasswordResetEmailInBackground");
+    const result = await passwordResetService.requestPasswordReset("user@example.com", {
+      ipAddress: "10.0.0.3",
+    });
+    expect(Result.isOk(result) && result.value).toEqual(GENERIC);
+    expect(userRepositoryMock.findByEmail).not.toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
+    expect(emailServiceMock.send).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it.each([
+    ["the budget is spent", () => consumeAuthThrottleMock.mockResolvedValue({ allowed: false, count: 21 })],
+    ["Redis fails", () => consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"))],
+  ])("reset password: rejected without checking the token when %s", async (_n, arrange) => {
+    arrange();
+    const { passwordResetService } = await loadPasswordResetService();
+    const result = await passwordResetService.resetPassword(
+      "some-token",
+      "new-password",
+      "new-password",
+      { ipAddress: "10.0.0.4" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(passwordResetRepositoryMock.findByTokenHash).not.toHaveBeenCalled();
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "reset_password_ip" }),
+      "10.0.0.4",
+    );
+  });
+});

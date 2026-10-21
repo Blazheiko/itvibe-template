@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -34,6 +34,7 @@ const hashPasswordMock = vi.fn();
 const validatePasswordMock = vi.fn();
 const generateWsTokenMock = vi.fn();
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 const sendVerificationEmailAfterRegistrationMock = vi.fn();
 const sendLinkVerificationEmailMock = vi.fn();
 const ROTATED_LOGOUT_CSRF_TOKEN = "b".repeat(43);
@@ -75,6 +76,7 @@ vi.mock("#app/services/auth/email-verification-service.js", () => ({
 
 vi.mock("#app/services/auth/auth-throttle-service.js", () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 async function loadAuthService() {
@@ -90,6 +92,13 @@ function restoreEnv(): void {
 
   Object.assign(process.env, ORIGINAL_ENV);
 }
+
+beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+  resetAuthThrottleMock.mockReset();
+  resetAuthThrottleMock.mockResolvedValue(undefined);
+});
 
 afterEach(() => {
   vi.resetModules();
@@ -222,6 +231,7 @@ describe("authService", () => {
   });
 
   it("returns internal error when login session establishment fails", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -241,6 +251,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -276,24 +287,33 @@ describe("authService", () => {
     });
 
     expect(Result.isOk(result)).toBe(true);
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(1, {
-      scope: "link_email_target",
-      key: "phone-only@example.com",
-      limit: 3,
-      windowSeconds: 60 * 60,
-    });
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(2, {
-      scope: "link_email_user",
-      key: "9",
-      limit: 3,
-      windowSeconds: 60 * 60,
-    });
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(3, {
-      scope: "link_email_user_cooldown",
-      key: "9",
-      limit: 1,
-      windowSeconds: 60,
-    });
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        scope: "link_email_target",
+        limit: 3,
+        windowMs: 60 * 60 * 1000,
+      }),
+      "phone-only@example.com",
+    );
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        scope: "link_email_user",
+        limit: 3,
+        windowMs: 60 * 60 * 1000,
+      }),
+      "9",
+    );
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        scope: "link_email_user_cooldown",
+        limit: 1,
+        windowMs: 60 * 1000,
+      }),
+      "9",
+    );
     expect(sendLinkVerificationEmailMock).toHaveBeenCalledWith(
       9n,
       "phone-only@example.com",
@@ -354,6 +374,7 @@ describe("authService", () => {
   });
 
   it("returns unauthorized when login email is unknown", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue(undefined);
 
     const { authService } = await loadAuthService();
@@ -365,6 +386,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -378,6 +400,7 @@ describe("authService", () => {
   });
 
   it("returns unauthorized when login password is invalid", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -396,6 +419,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -409,6 +433,7 @@ describe("authService", () => {
   });
 
   it("blocks email password login for unverified users when strict registration is enabled", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -427,6 +452,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -440,6 +466,7 @@ describe("authService", () => {
   });
 
   it("allows email password login for unverified users when strict registration is disabled", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     process.env["AUTH_STRICT_REGISTRATION"] = "false";
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
@@ -461,6 +488,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isOk(result)).toBe(true);
@@ -534,5 +562,28 @@ describe("authService", () => {
       });
     }
     expect(userRepositoryMock.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("auth throttle fail-closed (email link)", () => {
+  it("rejects email linking without sending the verification email", async () => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+    userRepositoryMock.findById.mockResolvedValue({
+      id: 9n,
+      email: null,
+      password: "stored-password-hash",
+    });
+    validatePasswordMock.mockResolvedValue(true);
+
+    const { authService } = await loadAuthService();
+    const result = await authService.startEmailLink(9n, {
+      email: "phone-only@example.com",
+      currentPassword: "secret123",
+    });
+
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(sendLinkVerificationEmailMock).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,9 @@ import { validateRuntimeConfig } from "#app/start/validate-runtime-config.js";
 import { sentryService } from "#app/services/observability/sentry-service.js";
 import { pool } from "#database/db.js";
 import redis from "#database/redis.js";
+import rateLimitRedis, {
+  connectRateLimitRedis,
+} from "#database/redis-rate-limit.js";
 
 // logger.info(configApp);
 
@@ -52,6 +55,7 @@ const start = async (): Promise<void> => {
         ".node",
     );
 
+    connectRateLimitRedis();
     await promptService.load();
     const processedHttpRoutes = routesHandler(httpRoutes);
     const processedWsRoutes = routesHandler(wsRoutes);
@@ -97,7 +101,7 @@ const stopGracefully = async (type: string): Promise<void> => {
   try {
     await stopHandler(type);
     await sentryService.flush(2000);
-    await Promise.allSettled([pool.end(), redis.quit()]);
+    await Promise.allSettled([pool.end(), redis.quit(), rateLimitRedis.quit()]);
   } catch (error: unknown) {
     console.error(error);
   } finally {

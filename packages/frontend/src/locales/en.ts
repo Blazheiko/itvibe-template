@@ -119,7 +119,8 @@ export default {
         errorTooManyResetRequests: 'Too many reset attempts. Please wait a minute and try again.',
         errorServer: 'Server error. Please try again later.',
         errorTerms: 'You must accept the terms of service to create an account',
-        errorInvalidLogin: 'Invalid login credentials',
+        errorInvalidLogin:
+            'Invalid login credentials. If you signed up with Google or Facebook, sign in with that button instead.',
         errorPhone: 'Phone is required',
         errorPhoneInvalid: 'Enter a valid phone number',
         errorVerificationCode: 'Verification code is required',

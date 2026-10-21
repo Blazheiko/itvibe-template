@@ -25,7 +25,11 @@ import {
   smsVerificationProvider,
   type SmsVerificationFlow,
 } from "#app/services/auth/sms-verification-provider.js";
-import { consumeAuthThrottle } from "#app/services/auth/auth-throttle-service.js";
+import {
+  consumeAuthThrottle,
+  resetAuthThrottle,
+} from "#app/services/auth/auth-throttle-service.js";
+import { throttlePolicies } from "#config/throttle-policies.js";
 import {
   hashOtpVerificationCode,
   verifyOtpVerificationCode,
@@ -35,10 +39,7 @@ import {
   extractChallengeSessionId,
   extractChallengeUserId,
 } from "#app/services/auth/sms-auth-challenge-metadata.js";
-import {
-  PHONE_SMS_SEND_THROTTLE_SCOPE,
-  PENDING_SMS_CODE_HASH_PLACEHOLDER,
-} from "./sms-auth-challenge-constants.js";
+import { PENDING_SMS_CODE_HASH_PLACEHOLDER } from "./sms-auth-challenge-constants.js";
 import { looksLikePhoneNumber, normalizePhoneNumber } from "shared/utils";
 import type {
   ChangePasswordInput,
@@ -89,6 +90,26 @@ function assertPhoneAuthEnabled(): AppResult<never> | undefined {
 
 function resolveLoginIdentifier(payload: LoginInput): string {
   return "identifier" in payload ? payload.identifier : payload.email;
+}
+
+type LoginKey =
+  { kind: "email"; value: string } | { kind: "phone"; value: string };
+
+/**
+ * The normalized login identifier, shared by the user lookup and the login
+ * throttle so both see the same key. null when it cannot identify an account
+ * (not an email or phone, phone auth disabled, unparsable phone).
+ */
+export function resolveLoginKey(identifier: string): LoginKey | null {
+  const trimmed = identifier.trim();
+  if (trimmed.includes("@")) {
+    return { kind: "email", value: normalizeEmail(trimmed) };
+  }
+  if (!looksLikePhoneNumber(trimmed) || !authConfig.phoneAuthEnabled) {
+    return null;
+  }
+  const phone = normalizePhone(trimmed);
+  return Result.isError(phone) ? null : { kind: "phone", value: phone.value };
 }
 
 function normalizeEmail(email: string): string {
@@ -306,12 +327,10 @@ async function registerEmailFlow(
 
   const ipThrottle = await tryInternal(
     () =>
-      consumeAuthThrottle({
-        scope: "register_email_ip",
-        key: requestMeta.ipAddress,
-        limit: authConfig.emailRegisterMaxAttemptsPerIpPerHour,
-        windowSeconds: 60 * 60,
-      }),
+      consumeAuthThrottle(
+        throttlePolicies.registerEmailIp,
+        requestMeta.ipAddress,
+      ),
     "Failed to enforce email registration IP throttle",
   );
   if (Result.isError(ipThrottle)) {
@@ -324,13 +343,7 @@ async function registerEmailFlow(
   }
 
   const emailThrottle = await tryInternal(
-    () =>
-      consumeAuthThrottle({
-        scope: "register_email_identifier",
-        key: email,
-        limit: authConfig.emailRegisterMaxAttemptsPerEmailPerHour,
-        windowSeconds: 60 * 60,
-      }),
+    () => consumeAuthThrottle(throttlePolicies.registerEmailIdentifier, email),
     "Failed to enforce email registration identifier throttle",
   );
   if (Result.isError(emailThrottle)) {
@@ -452,12 +465,10 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "register_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxSendsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(
+          throttlePolicies.registerPhoneIp,
+          requestMeta.ipAddress,
+        ),
       "Failed to enforce auth IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -470,13 +481,7 @@ export const authService = {
     }
 
     const phoneThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle({
-          scope: PHONE_SMS_SEND_THROTTLE_SCOPE,
-          key: phone,
-          limit: authConfig.smsMaxSendsPerPhonePerHour,
-          windowSeconds: 60 * 60,
-        }),
+      () => consumeAuthThrottle(throttlePolicies.smsSendPhone, phone),
       "Failed to enforce auth phone throttle",
     );
     if (Result.isError(phoneThrottle)) {
@@ -629,12 +634,10 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "confirm_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxConfirmAttemptsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(
+          throttlePolicies.confirmPhoneIp,
+          requestMeta.ipAddress,
+        ),
       "Failed to enforce phone confirmation IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -833,12 +836,10 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "link_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxSendsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(
+          throttlePolicies.linkPhoneIp,
+          requestMeta.ipAddress,
+        ),
       "Failed to enforce phone linking IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -851,13 +852,7 @@ export const authService = {
     }
 
     const phoneThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle({
-          scope: PHONE_SMS_SEND_THROTTLE_SCOPE,
-          key: phone,
-          limit: authConfig.smsMaxSendsPerPhonePerHour,
-          windowSeconds: 60 * 60,
-        }),
+      () => consumeAuthThrottle(throttlePolicies.smsSendPhone, phone),
       "Failed to enforce phone linking identifier throttle",
     );
     if (Result.isError(phoneThrottle)) {
@@ -1000,12 +995,10 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "confirm_link_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxConfirmAttemptsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(
+          throttlePolicies.confirmLinkPhoneIp,
+          requestMeta.ipAddress,
+        ),
       "Failed to enforce phone linking confirmation IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -1156,13 +1149,7 @@ export const authService = {
     const email = normalizeEmail(payload.email);
 
     const targetThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle({
-          scope: "link_email_target",
-          key: email,
-          limit: authConfig.emailLinkMaxAttemptsPerTargetPerHour,
-          windowSeconds: 60 * 60,
-        }),
+      () => consumeAuthThrottle(throttlePolicies.linkEmailTarget, email),
       "Failed to enforce email linking target throttle",
     );
     if (Result.isError(targetThrottle)) {
@@ -1175,13 +1162,7 @@ export const authService = {
     }
 
     const userThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle({
-          scope: "link_email_user",
-          key: String(userId),
-          limit: authConfig.emailLinkMaxAttemptsPerUserPerHour,
-          windowSeconds: 60 * 60,
-        }),
+      () => consumeAuthThrottle(throttlePolicies.linkEmailUser, String(userId)),
       "Failed to enforce email linking user throttle",
     );
     if (Result.isError(userThrottle)) {
@@ -1195,12 +1176,10 @@ export const authService = {
 
     const userCooldown = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "link_email_user_cooldown",
-          key: String(userId),
-          limit: 1,
-          windowSeconds: authConfig.emailLinkCooldownSeconds,
-        }),
+        consumeAuthThrottle(
+          throttlePolicies.linkEmailUserCooldown,
+          String(userId),
+        ),
       "Failed to enforce email linking cooldown",
     );
     if (Result.isError(userCooldown)) {
@@ -1241,47 +1220,61 @@ export const authService = {
     payload: LoginInput,
     auth: Auth,
     session: Session,
+    requestMeta: { ipAddress: string },
   ): Promise<AppResult<AuthSuccessPayload>> {
     const { password } = payload;
-    const identifier = resolveLoginIdentifier(payload).trim();
-    const isEmailIdentifier = identifier.includes("@");
+    const invalidCredentials = (): AppResult<never> =>
+      Result.err(unauthorized("Invalid email or password"));
+    const loginKey = resolveLoginKey(resolveLoginIdentifier(payload));
 
-    let userResult;
-    if (isEmailIdentifier) {
-      userResult = await tryInternal(
-        () => userRepository.findByEmail(normalizeEmail(identifier)),
-        "Failed to load user by email",
-      );
-    } else if (looksLikePhoneNumber(identifier)) {
-      const gateResult = assertPhoneAuthEnabled();
-      if (gateResult !== undefined) {
-        return Result.err(unauthorized("Invalid email or password"));
-      }
-
-      const normalizedPhoneResult = normalizePhone(identifier);
-      if (Result.isError(normalizedPhoneResult)) {
-        return Result.err(unauthorized("Invalid email or password"));
-      }
-
-      userResult = await tryInternal(
-        () => userRepository.findByPhone(normalizedPhoneResult.value),
-        "Failed to load user by phone",
-      );
-    } else {
-      return Result.err(unauthorized("Invalid email or password"));
+    // Consume before the lookup: same cost for every outcome, no check/increment race.
+    const ipThrottle = await tryInternal(
+      () =>
+        consumeAuthThrottle(throttlePolicies.loginIp, requestMeta.ipAddress),
+      "Failed to enforce login IP throttle",
+    );
+    if (Result.isError(ipThrottle)) {
+      return Result.err(ipThrottle.error);
+    }
+    if (!ipThrottle.value.allowed) {
+      return invalidCredentials();
     }
 
+    if (loginKey === null) {
+      return invalidCredentials();
+    }
+
+    const identifierThrottle = await tryInternal(
+      () =>
+        consumeAuthThrottle(throttlePolicies.loginIdentifier, loginKey.value),
+      "Failed to enforce login identifier throttle",
+    );
+    if (Result.isError(identifierThrottle)) {
+      return Result.err(identifierThrottle.error);
+    }
+    if (!identifierThrottle.value.allowed) {
+      return invalidCredentials();
+    }
+
+    const userResult = await tryInternal(
+      () =>
+        loginKey.kind === "email"
+          ? userRepository.findByEmail(loginKey.value)
+          : userRepository.findByPhone(loginKey.value),
+      `Failed to load user by ${loginKey.kind}`,
+    );
     if (Result.isError(userResult)) {
       return Result.err(userResult.error);
     }
 
     const user = userResult.value;
     if (user === undefined) {
-      return Result.err(unauthorized("Invalid email or password"));
+      return invalidCredentials();
     }
 
+    // Same answer as a wrong password: do not reveal that an OAuth-only account exists.
     if (user.password === null || user.password === "") {
-      return Result.err(badRequest("Please use social login for this account"));
+      return invalidCredentials();
     }
 
     const validResult = await tryInternal(
@@ -1293,11 +1286,20 @@ export const authService = {
     }
 
     if (!validResult.value) {
-      return Result.err(unauthorized("Invalid email or password"));
+      return invalidCredentials();
+    }
+
+    // The correct password resets the per-account budget; the IP budget stays.
+    const resetResult = await tryInternal(
+      () => resetAuthThrottle(throttlePolicies.loginIdentifier, loginKey.value),
+      "Failed to reset login identifier throttle",
+    );
+    if (Result.isError(resetResult)) {
+      logger.warn({ err: resetResult.error }, "Login throttle reset failed");
     }
 
     if (
-      isEmailIdentifier &&
+      loginKey.kind === "email" &&
       authConfig.strictRegistration &&
       user.emailVerifiedAt === null
     ) {
@@ -1364,6 +1366,26 @@ export const authService = {
     userId: bigint,
     payload: ChangePasswordInput,
   ): Promise<AppResult<{ status: "success" }>> {
+    // Consumed before the current-password check, same scheme as login.
+    const throttle = await tryInternal(
+      () =>
+        consumeAuthThrottle(
+          throttlePolicies.changePasswordUser,
+          String(userId),
+        ),
+      "Failed to enforce change password throttle",
+    );
+    if (Result.isError(throttle)) {
+      return Result.err(throttle.error);
+    }
+    if (!throttle.value.allowed) {
+      return Result.err(
+        badRequest(
+          "Too many password change attempts. Please try again later.",
+        ),
+      );
+    }
+
     const userResult = await tryInternal(
       () => userRepository.findById(userId),
       "Failed to load user",
@@ -1422,6 +1444,18 @@ export const authService = {
 
     if (updatedResult.value === undefined) {
       return Result.err(internalMessage("Failed to update password"));
+    }
+
+    const resetResult = await tryInternal(
+      () =>
+        resetAuthThrottle(throttlePolicies.changePasswordUser, String(userId)),
+      "Failed to reset change password throttle",
+    );
+    if (Result.isError(resetResult)) {
+      logger.warn(
+        { err: resetResult.error },
+        "Change password throttle reset failed",
+      );
     }
 
     return Result.ok({ status: "success" });

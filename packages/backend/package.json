@@ -25,7 +25,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "mail:test": "tsx src/scripts/send-test-email.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:redis": "vitest run --config vitest.redis.config.ts"
   },
   "dependencies": {
     "@ai-sdk/xai": "5.0.24",

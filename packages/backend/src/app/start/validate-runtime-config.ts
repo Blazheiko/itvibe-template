@@ -3,6 +3,7 @@ import { authConfig } from '#config/auth.js';
 import cspConfig from '#config/csp.js';
 import { networkConfig } from '#config/network.js';
 import rateLimitConfig from '#config/rate-limit.js';
+import { throttlePolicyConfigError } from '#config/throttle-policies.js';
 import sessionConfig from '#config/session.js';
 import logger from '#logger';
 
@@ -26,6 +27,12 @@ export function validateRuntimeConfig(): void {
   if (rateLimitConfig.configError !== null) {
     throw new Error(
       `Invalid rate limit configuration: ${rateLimitConfig.configError}`,
+    );
+  }
+
+  if (throttlePolicyConfigError !== null) {
+    throw new Error(
+      `Invalid throttle policy configuration: ${throttlePolicyConfigError}`,
     );
   }
 
