@@ -52,8 +52,8 @@
       "owner": "Blazheiko",
       "branch": "feat/env-example-sync",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #24 (942212600f) items 4, 31; PR #27 (b8a0719) items 5, 6, 8; evidence in progress.md on feat/env-example-sync; review approved PR #27 incl. docker build + db:create:prod/db:migrate"
     },
     {
       "id": "feat-007",
