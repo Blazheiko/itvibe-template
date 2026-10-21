@@ -38,6 +38,9 @@ test.describe('mobile layout regression', () => {
         // choice step first; the email form holds the submit button.
         const emailChoice = modal.getByRole('button', { name: 'Continue with email' })
         await expect(submitButton.or(emailChoice)).toBeVisible()
+        // The step depends on the build-time env of the dev server, not on the
+        // test: one spec covers both configurations.
+        // eslint-disable-next-line playwright/no-conditional-in-test
         if (await emailChoice.isVisible()) {
             await emailChoice.click()
         }
