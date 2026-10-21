@@ -359,11 +359,11 @@ Done, coding style, and testing guidelines before contributing.
 
 ## Troubleshooting
 
-| Symptom                    | Things to check                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm install` fails       | Node `^24.15.0` and pnpm `9.15.0` (`node -v`, `pnpm -v`; `corepack enable`)                                                    |
-| Backend won't start        | `APP_KEY` and `PGSQL_*` are set in `packages/backend/.env`, and PostgreSQL is reachable                                   |
-| E2E tests fail             | Make sure frontend and backend are running (`pnpm dev`) before `pnpm --filter frontend test:e2e`                               |
+| Symptom                    | Things to check                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm install` fails       | Node `^24.15.0` and pnpm `9.15.0` (`node -v`, `pnpm -v`; `corepack enable`)                                   |
+| Backend won't start        | `APP_KEY` and `PGSQL_*` are set in `packages/backend/.env`, and PostgreSQL is reachable                       |
+| E2E tests fail             | Make sure frontend and backend are running (`pnpm dev`) before `pnpm --filter frontend test:e2e`              |
 | Drizzle / migration errors | Verify the database settings in `packages/backend/.env` (`PGSQL_*`) and that the DB exists (`pnpm db:create`) |
 
 ## Further reading
