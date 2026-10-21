@@ -413,12 +413,14 @@ describe("authService phone foundation", () => {
 
     expect(Result.isError(result)).toBe(true);
     expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
-    expect(consumeAuthThrottleMock).toHaveBeenCalledWith({
-      scope: "confirm_phone_ip",
-      key: "127.0.0.1",
-      limit: 20,
-      windowSeconds: 60 * 60,
-    });
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: "confirm_phone_ip",
+        limit: 20,
+        windowMs: 60 * 60 * 1000,
+      }),
+      "127.0.0.1",
+    );
   });
 
   it("invalidates a phone registration challenge after the fifth wrong code attempt", async () => {
@@ -722,12 +724,14 @@ describe("authService phone foundation", () => {
 
     expect(Result.isError(result)).toBe(true);
     expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
-    expect(consumeAuthThrottleMock).toHaveBeenCalledWith({
-      scope: "confirm_link_phone_ip",
-      key: "127.0.0.1",
-      limit: 20,
-      windowSeconds: 60 * 60,
-    });
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: "confirm_link_phone_ip",
+        limit: 20,
+        windowMs: 60 * 60 * 1000,
+      }),
+      "127.0.0.1",
+    );
   });
 
   it("confirms a linked phone and updates the user account", async () => {
@@ -933,5 +937,72 @@ describe("authService phone foundation", () => {
       smsAuthChallengeRepositoryMock.invalidatePendingForPhoneFlow,
     ).not.toHaveBeenCalled();
     expect(issueVerificationCodeMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("auth throttle fail-closed (phone flows)", () => {
+  const redisDown = (): void => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+  };
+
+  it("rejects phone registration start without issuing a code", async () => {
+    redisDown();
+    const { authService } = await loadAuthService();
+    const result = await authService.startPhoneRegistration(
+      { phone: "+1 415 555 0123" },
+      { ipAddress: "127.0.0.1", sessionId: "session-id" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.create).not.toHaveBeenCalled();
+    expect(issueVerificationCodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects phone registration confirmation without loading the challenge", async () => {
+    redisDown();
+    const { authService } = await loadAuthService();
+    const result = await authService.confirmPhoneRegistration(
+      { challengeId: "challenge-1", code: "000000" },
+      { ipAddress: "127.0.0.1" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
+  });
+
+  it("rejects phone link start without issuing a code", async () => {
+    redisDown();
+    userRepositoryMock.findById.mockResolvedValue({
+      id: 7n,
+      email: "user@example.com",
+      phone: null,
+      password: "hashed-password",
+      sessionToken: "session-token",
+    });
+    validatePasswordMock.mockResolvedValue(true);
+    const { authService } = await loadAuthService();
+    const result = await authService.startPhoneLink(
+      7n,
+      { phone: "+1 415 555 0123", currentPassword: "secret123" },
+      { ipAddress: "127.0.0.1", sessionId: "session-id" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.create).not.toHaveBeenCalled();
+    expect(issueVerificationCodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects phone link confirmation without loading the challenge", async () => {
+    redisDown();
+    const { authService } = await loadAuthService();
+    const result = await authService.confirmPhoneLink(
+      7n,
+      { challengeId: "link-challenge-1", code: "123456" },
+      { ipAddress: "127.0.0.1", sessionId: "session-id" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
   });
 });

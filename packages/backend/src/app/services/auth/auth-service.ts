@@ -26,6 +26,7 @@ import {
   type SmsVerificationFlow,
 } from "#app/services/auth/sms-verification-provider.js";
 import { consumeAuthThrottle } from "#app/services/auth/auth-throttle-service.js";
+import { throttlePolicies } from "#config/throttle-policies.js";
 import {
   hashOtpVerificationCode,
   verifyOtpVerificationCode,
@@ -36,7 +37,6 @@ import {
   extractChallengeUserId,
 } from "#app/services/auth/sms-auth-challenge-metadata.js";
 import {
-  PHONE_SMS_SEND_THROTTLE_SCOPE,
   PENDING_SMS_CODE_HASH_PLACEHOLDER,
 } from "./sms-auth-challenge-constants.js";
 import { looksLikePhoneNumber, normalizePhoneNumber } from "shared/utils";
@@ -306,12 +306,7 @@ async function registerEmailFlow(
 
   const ipThrottle = await tryInternal(
     () =>
-      consumeAuthThrottle({
-        scope: "register_email_ip",
-        key: requestMeta.ipAddress,
-        limit: authConfig.emailRegisterMaxAttemptsPerIpPerHour,
-        windowSeconds: 60 * 60,
-      }),
+      consumeAuthThrottle(throttlePolicies.registerEmailIp, requestMeta.ipAddress),
     "Failed to enforce email registration IP throttle",
   );
   if (Result.isError(ipThrottle)) {
@@ -325,12 +320,7 @@ async function registerEmailFlow(
 
   const emailThrottle = await tryInternal(
     () =>
-      consumeAuthThrottle({
-        scope: "register_email_identifier",
-        key: email,
-        limit: authConfig.emailRegisterMaxAttemptsPerEmailPerHour,
-        windowSeconds: 60 * 60,
-      }),
+      consumeAuthThrottle(throttlePolicies.registerEmailIdentifier, email),
     "Failed to enforce email registration identifier throttle",
   );
   if (Result.isError(emailThrottle)) {
@@ -452,12 +442,7 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "register_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxSendsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.registerPhoneIp, requestMeta.ipAddress),
       "Failed to enforce auth IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -471,12 +456,7 @@ export const authService = {
 
     const phoneThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: PHONE_SMS_SEND_THROTTLE_SCOPE,
-          key: phone,
-          limit: authConfig.smsMaxSendsPerPhonePerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.smsSendPhone, phone),
       "Failed to enforce auth phone throttle",
     );
     if (Result.isError(phoneThrottle)) {
@@ -629,12 +609,7 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "confirm_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxConfirmAttemptsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.confirmPhoneIp, requestMeta.ipAddress),
       "Failed to enforce phone confirmation IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -833,12 +808,7 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "link_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxSendsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.linkPhoneIp, requestMeta.ipAddress),
       "Failed to enforce phone linking IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -852,12 +822,7 @@ export const authService = {
 
     const phoneThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: PHONE_SMS_SEND_THROTTLE_SCOPE,
-          key: phone,
-          limit: authConfig.smsMaxSendsPerPhonePerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.smsSendPhone, phone),
       "Failed to enforce phone linking identifier throttle",
     );
     if (Result.isError(phoneThrottle)) {
@@ -1000,12 +965,7 @@ export const authService = {
 
     const ipThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "confirm_link_phone_ip",
-          key: requestMeta.ipAddress,
-          limit: authConfig.smsMaxConfirmAttemptsPerIpPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.confirmLinkPhoneIp, requestMeta.ipAddress),
       "Failed to enforce phone linking confirmation IP throttle",
     );
     if (Result.isError(ipThrottle)) {
@@ -1157,12 +1117,7 @@ export const authService = {
 
     const targetThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "link_email_target",
-          key: email,
-          limit: authConfig.emailLinkMaxAttemptsPerTargetPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.linkEmailTarget, email),
       "Failed to enforce email linking target throttle",
     );
     if (Result.isError(targetThrottle)) {
@@ -1176,12 +1131,7 @@ export const authService = {
 
     const userThrottle = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "link_email_user",
-          key: String(userId),
-          limit: authConfig.emailLinkMaxAttemptsPerUserPerHour,
-          windowSeconds: 60 * 60,
-        }),
+        consumeAuthThrottle(throttlePolicies.linkEmailUser, String(userId)),
       "Failed to enforce email linking user throttle",
     );
     if (Result.isError(userThrottle)) {
@@ -1195,12 +1145,7 @@ export const authService = {
 
     const userCooldown = await tryInternal(
       () =>
-        consumeAuthThrottle({
-          scope: "link_email_user_cooldown",
-          key: String(userId),
-          limit: 1,
-          windowSeconds: authConfig.emailLinkCooldownSeconds,
-        }),
+        consumeAuthThrottle(throttlePolicies.linkEmailUserCooldown, String(userId)),
       "Failed to enforce email linking cooldown",
     );
     if (Result.isError(userCooldown)) {

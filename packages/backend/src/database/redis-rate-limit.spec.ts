@@ -21,9 +21,8 @@ vi.mock("ioredis", () => ({
 const warn = vi.fn();
 vi.mock("#logger", () => ({ default: { warn } }));
 
-const { rateLimitRedisOptions, __rateLimitRedisTestHooks } = await import(
-  "./redis-rate-limit.js"
-);
+const { rateLimitRedisOptions, __rateLimitRedisTestHooks } =
+  await import("./redis-rate-limit.js");
 
 describe("rate-limit Redis client", () => {
   it("is created with strict, no-resend options on the shared server", () => {

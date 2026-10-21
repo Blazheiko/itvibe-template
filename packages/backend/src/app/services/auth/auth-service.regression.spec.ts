@@ -124,18 +124,12 @@ describe("authService legacy regressions", () => {
     expect(userRepositoryMock.findByEmail).toHaveBeenCalledWith(
       "user@example.com",
     );
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(1, {
-      scope: 'register_email_ip',
-      key: '127.0.0.1',
-      limit: 10,
-      windowSeconds: 60 * 60,
-    });
-    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(2, {
-      scope: 'register_email_identifier',
-      key: 'user@example.com',
-      limit: 3,
-      windowSeconds: 60 * 60,
-    });
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(1, expect.objectContaining({ scope: 'register_email_ip', limit: 10, windowMs: (60 * 60) * 1000 }),
+      '127.0.0.1',
+    );
+    expect(consumeAuthThrottleMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ scope: 'register_email_identifier', limit: 3, windowMs: (60 * 60) * 1000 }),
+      'user@example.com',
+    );
     expect(userRepositoryMock.create).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "user@example.com",
@@ -305,5 +299,26 @@ describe("authService legacy regressions", () => {
     if (Result.isOk(result)) {
       expect(result.value).toEqual({ status: "success" });
     }
+  });
+});
+
+describe("auth throttle fail-closed (email registration)", () => {
+  it("rejects registration without looking up or creating the user", async () => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+
+    const { authService } = await loadAuthService();
+    const result = await authService.registerByEmail(
+      { name: "Jane", email: "user@example.com", password: "secret123", token: "" },
+      authMock as any,
+      sessionMock as any,
+      loggerMock as any,
+      { ipAddress: "127.0.0.1" },
+    );
+
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(userRepositoryMock.findByEmail).not.toHaveBeenCalled();
+    expect(userRepositoryMock.create).not.toHaveBeenCalled();
   });
 });

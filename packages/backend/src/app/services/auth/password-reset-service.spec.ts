@@ -835,3 +835,39 @@ describe("passwordResetService", () => {
     expect(smsAuthChallengeRepositoryMock.create).not.toHaveBeenCalled();
     expect(issueVerificationCodeMock).not.toHaveBeenCalled();
   });
+
+describe("auth throttle fail-closed (phone reset)", () => {
+  const redisDown = (): void => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+  };
+
+  it("rejects phone reset start without issuing a code", async () => {
+    redisDown();
+    const { passwordResetService } = await loadPasswordResetService();
+    const result = await passwordResetService.startPhonePasswordReset(
+      "+1 415 555 0123",
+      "US",
+      { ipAddress: "127.0.0.1", sessionId: "session-id" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.create).not.toHaveBeenCalled();
+    expect(issueVerificationCodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects phone reset completion without loading the challenge", async () => {
+    redisDown();
+    const { passwordResetService } = await loadPasswordResetService();
+    const result = await passwordResetService.completePhonePasswordReset(
+      "reset-challenge-1",
+      "123456",
+      "new-password",
+      "new-password",
+      { ipAddress: "127.0.0.1" },
+    );
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
+  });
+});
