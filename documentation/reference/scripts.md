@@ -52,21 +52,21 @@
 
 Джерело: [packages/frontend/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/package.json).
 
-| Скрипт       | Команда                                                    | Що робить                                                                                                                               |
-| ------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev`        | `vite`                                                     | Dev-сервер Vite                                                                                                                         |
-| `build`      | `run-p type-check "build-only {@}" -- && npm run build-sw` | Паралельно typecheck і збірка, потім збірка service worker                                                                              |
-| `preview`    | `vite preview`                                             | Перегляд зібраного застосунку                                                                                                           |
-| `test:unit`  | `vitest`                                                   | Vitest у watch-режимі                                                                                                                   |
-| `test:e2e`   | `playwright test`                                          | Playwright e2e-тести                                                                                                                    |
-| `build-only` | `vite build`                                               | Лише збірка Vite                                                                                                                        |
-| `build-sw`   | `vite build --config vite.sw.config.ts`                    | Збірка service worker ([vite.sw.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vite.sw.config.ts)) |
-| `type-check` | `vue-tsc --build`                                          | Перевірка типів (інкрементальна)                                                                                                        |
-| `typecheck`  | `vue-tsc --build --force`                                  | Повна перевірка типів                                                                                                                   |
-| `lint`       | `eslint . --fix`                                           | ESLint з автовиправленням                                                                                                               |
-| `lint:check` | `eslint .`                                                 | ESLint без змін (викликається кореневим `lint`)                                                                                         |
-| `format`     | `prettier --write src/`                                    | Форматує `src/`                                                                                                                         |
-| `test`       | `vitest run`                                               | Одноразовий прогін Vitest                                                                                                               |
+| Скрипт       | Команда                                                        | Що робить                                                                                                                               |
+| ------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev`        | `vite`                                                         | Dev-сервер Vite                                                                                                                         |
+| `build`      | `run-p type-check "build-only {@}" -- && npm run build-sw`     | Паралельно typecheck і збірка, потім збірка service worker                                                                              |
+| `preview`    | `vite preview`                                                 | Перегляд зібраного застосунку                                                                                                           |
+| `test:unit`  | `vitest`                                                       | Vitest у watch-режимі                                                                                                                   |
+| `test:e2e`   | `playwright test`                                              | Playwright e2e-тести                                                                                                                    |
+| `build-only` | `vite build`                                                   | Лише збірка Vite                                                                                                                        |
+| `build-sw`   | `vite build --config vite.sw.config.ts`                        | Збірка service worker ([vite.sw.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vite.sw.config.ts)) |
+| `type-check` | `vue-tsc --build`                                              | Перевірка типів (інкрементальна)                                                                                                        |
+| `typecheck`  | `vue-tsc --build --force && tsc --noEmit -p e2e/tsconfig.json` | Повна перевірка типів, разом з e2e-тестами Playwright                                                                                   |
+| `lint`       | `eslint . --fix`                                               | ESLint з автовиправленням                                                                                                               |
+| `lint:check` | `eslint .`                                                     | ESLint без змін (викликається кореневим `lint`)                                                                                         |
+| `format`     | `prettier --write src/`                                        | Форматує `src/`                                                                                                                         |
+| `test`       | `vitest run`                                                   | Одноразовий прогін Vitest                                                                                                               |
 
 ## shared
 
