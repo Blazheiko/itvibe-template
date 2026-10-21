@@ -79,6 +79,7 @@
 | 67  | Push-група без `auth_guard`, перевірка в контролері                                                               | Низька       | Безпека / ролі               |
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
 | 69  | `AGENTS.md`: застаріле «checkout does not include .git history»                                                   | Інформаційна | Документація                 |
+| 70  | Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с                                   | Середня      | Надійність / Redis           |
 
 ## Безпека
 
@@ -512,6 +513,14 @@
 ### 69. `AGENTS.md`: застарілий опис
 
 - **Що:** розділ «Commit & Pull Request Guidelines» стверджує, що «this checkout does not include .git history», хоча історія є.
+
+### 70. Основний Redis-клієнт без таймауту
+
+Знайдено під час ручної перевірки feat-013.
+
+- **Що:** `src/database/redis.ts` створює ioredis без `commandTimeout` і з offline queue за замовчуванням (`maxRetriesPerRequest: 20`). Коли Redis недоступний, кожен запит, що читає сесію (HTTP-middleware сесії, `verifyUpgradeToken`), чекає ~45 с і завершується `500 MaxRetriesPerRequestError`.
+- **Наслідок:** під час збою Redis запити накопичуються замість швидкої відмови; у `APP_ENV=local` текст помилки ioredis потрапляє у відповідь.
+- **Пропозиція:** `commandTimeout` і менший `maxRetriesPerRequest` для основного клієнта (з урахуванням того, що сесії мають переживати короткі збої), швидка `503` при недоступному Redis; readiness-перевірка (п. 35).
 
 ## Що варто зробити далі
 
