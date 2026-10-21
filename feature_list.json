@@ -161,10 +161,10 @@
       "id": "feat-017",
       "name": "Fix Mobile Layout E2E",
       "description": "8 Playwright tests in packages/frontend/e2e/mobile-layout.spec.ts fail on main on all 4 browsers (\"registration submit button is not hidden behind bottom browser UI\", \"support input stays visible above bottom browser UI\": toBeVisible, element not found). Found during feat-016 T10.2; blocks the E2E part of Definition of Done for UI features",
-      "owner": "",
-      "branch": "",
+      "owner": "Blazheiko",
+      "branch": "fix/mobile-layout-e2e",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     }
   ]
