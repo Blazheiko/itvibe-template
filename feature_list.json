@@ -42,8 +42,8 @@
       "owner": "Blazheiko",
       "branch": "feat/security-hardening",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "Item 1 CSP: PR #22 (70bb473); item 2 rate limits: PRs #22, #23 (e774d15); item 3 tokens in logs: PR #26 (906b436); item 9 channel guard: PR #29 (f564de0). Evidence in progress.md. Redis rate-limit counter split out to feat-013"
     },
     {
       "id": "feat-006",
@@ -116,6 +116,16 @@
       "dependencies": [],
       "status": "done",
       "evidence": "This PR: shared build, pnpm typecheck/lint/test (backend 268/268), backend build, no save-user references in packages; docs:build + docs:verify"
+    },
+    {
+      "id": "feat-013",
+      "name": "Shared Rate-Limit Counter",
+      "description": "Redis-backed rate-limit store so HTTP L1, per-route and WS upgrade limits are shared across instances (leftover of item 2 / finding C-2). Today the counter lives in process memory; the nginx edge limit in documentation/backend/deployment.md is the workaround. Details: docs/plan/code-issues-found-during-docs.md item 2, docs/plan/ws-upgrade-rate-limit-plan.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-005"],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }
