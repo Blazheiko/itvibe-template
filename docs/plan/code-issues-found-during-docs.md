@@ -20,7 +20,7 @@
 | 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                         | Низька       | Конфігурація                 |
 | 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                    | Низька       | Безпека                      |
 | 10  | ~~`db:seed` — порожня заглушка~~ ✅                                                                               | Низька       | DX / БД                      |
-| 11  | `src/drizzle/schema/index.ts` порожній                                                                            | Низька       | Структура                    |
+| 11  | ~~`src/drizzle/schema/index.ts` порожній~~ ✅                                                                     | Низька       | Структура                    |
 | 12  | Тіло запиту читається лише для `post`/`put`                                                                       | Низька       | HTTP                         |
 | 13  | `sendResponse` при `payload === null` віддає `String(status)` як JSON                                             | Низька       | HTTP                         |
 | 14  | Прогалини плану body limits: тести, `.env.example`, playground                                                    | Низька       | HTTP / тести                 |
@@ -166,6 +166,8 @@
 - **Пропозиція:** додати мінімальні seed-дані (тестовий користувач/адмін) або прибрати скрипт.
 
 ### 11. `src/drizzle/schema/index.ts` порожній
+
+> **Виправлено** у feat-007 (гілка `feat/db-dx`): видалено порожні `src/drizzle/schema/index.ts`, а також такі самі порожні й ніде не імпортовані `src/drizzle/schema-validator.ts`, `type-guards.ts`, `types.ts`. У `src/drizzle/` лишилися тільки міграції; схема — `src/database/schema.ts`. Аліас `#drizzle/*` залишено, хоча зараз його ніхто не імпортує.
 
 - **Що:** реальна схема лежить у `src/database/schema.ts` (на неї вказує `drizzle.config.js`), а `src/drizzle/schema/index.ts` порожній. Це вводить в оману.
 - **Пропозиція:** видалити порожній файл або реекспортувати з нього схему.

@@ -32,7 +32,7 @@ packages:
 │   │   │   ├── config/     # конфігурація (app, auth, cors, csp, csrf, database, mail, redis…)
 │   │   │   ├── database/   # db.ts, redis.ts, schema.ts, relations.ts
 │   │   │   ├── db/         # create-database.ts, seed.ts
-│   │   │   ├── drizzle/    # migrations/, schema/, типи та guards
+│   │   │   ├── drizzle/    # migrations/ (згенеровані drizzle-kit)
 │   │   │   ├── openapi/    # невикористані заготовки (OpenAPI не генерується)
 │   │   │   ├── scripts/    # службові скрипти (send-test-email.ts тощо)
 │   │   │   ├── vendor/     # «ядро»: start/ (server, router), utils/, contracts/, types/

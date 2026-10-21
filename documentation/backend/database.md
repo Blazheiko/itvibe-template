@@ -37,7 +37,7 @@ SQL-логування вмикається для всіх середовищ, 
 
 ## Схема та relations
 
-Таблиці описано в одному файлі [`src/database/schema.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts) (`pgTable`, `pgEnum`, індекси, `customType`), наприклад `export const users = pgTable('users', { ... })`. Каталог `src/drizzle/schema/` містить лише порожній `index.ts` — справжня схема саме в `src/database`.
+Таблиці описано в одному файлі [`src/database/schema.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts) (`pgTable`, `pgEnum`, індекси, `customType`), наприклад `export const users = pgTable('users', { ... })`. Каталог `src/drizzle/` містить лише міграції; схема і relations живуть у `src/database`.
 
 Зв'язки задаються через Relational Queries v2 у [`src/database/relations.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/relations.ts):
 

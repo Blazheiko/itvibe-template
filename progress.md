@@ -6,7 +6,7 @@
 **Active Feature:** feat-007 - Database DX (items 7, 10, 11 of `docs/plan/code-issues-found-during-docs.md`)
 **Branch:** `feat/db-dx`
 
-Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. Item 7 (pgvector) is done. Item 11 (empty `src/drizzle/schema/index.ts`) is not started.
+Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. Item 7 (pgvector) is done. Item 11 is done. All three items of feat-007 are complete; next: feature PR.
 
 ## Status
 
@@ -26,9 +26,7 @@ Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. I
   - new section `documentation/backend/database.md#pgvector`: why (Support AI knowledge-base search: `vector(1536)` embeddings, cosine distance `<=>`, RAG), required even without AI (the schema uses the type), where it is used in code, what fails without it, how to install (Docker image, Homebrew/apt, managed services, privileges), how to check, limits (hard-coded 1536, no HNSW index)
   - links from `README.md` (services table + note), `packages/backend/README.md`, `guide/getting-started.md`, `backend/ai.md`, `backend/deployment.md`; stale "not documented" warning removed from `backend/repositories-transformers.md`
 
-### Not started
-
-- [ ] Item 11: empty `src/drizzle/schema/index.ts`
+- [x] Item 11: removed the empty `src/drizzle/schema/index.ts` and the equally empty, unimported `src/drizzle/{schema-validator,type-guards,types}.ts`; `src/drizzle/` now holds only migrations. Docs: `backend/database.md`, `guide/project-structure.md`. The `#drizzle/*` alias is kept (nothing imports it)
 
 ## Files Modified
 
@@ -37,6 +35,7 @@ Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. I
 - `packages/backend/src/config/support.ts`, `src/app/services/support/support-llm-service.ts`, `support-query-translation-service.ts`
 - `packages/backend/package.json`, `packages/backend/.env.example`
 - `documentation/backend/database.md`, `documentation/backend/configuration.md`, `documentation/guide/getting-started.md`, `documentation/reference/scripts.md`
+- deleted: `packages/backend/src/drizzle/schema/index.ts`, `src/drizzle/{schema-validator,type-guards,types}.ts`; `documentation/guide/project-structure.md`
 - `docs/plan/db-seed-plan.md` (new), `docs/plan/code-issues-found-during-docs.md` (item 10 marked fixed)
 
 ## Evidence of Completion (item 10)
@@ -62,7 +61,16 @@ Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. I
 - `pnpm docs:build && pnpm docs:verify`: all checks passed; anchors `#pgvector`, `#support-ai-і-база-знань`, `#postgresql-і-redis-через-docker` exist in the built HTML
 - documentation tests 26/26, `pnpm lint` clean
 
+## Evidence of Completion (item 11)
+
+- `rg` for `drizzle/schema`, `schema-validator`, `type-guards`, `#drizzle/` imports: no code references
+- `pnpm typecheck`, `pnpm lint` clean; clean `rm -rf dist && pnpm build` for backend
+- `pnpm test`: backend 564, frontend 45, shared 3, documentation 26
+- `drizzle-kit check`: Everything's fine
+- `pnpm docs:build && pnpm docs:verify`: all checks passed
+
 ## Notes for Next Session
 
-- Merge PR #42, then do item 11 on this branch, then PR `feat/db-dx` → `main` and flip feat-007 to `done`.
+- Merge PR #42, then PR `feat/db-dx` → `main`, then flip feat-007 to `done` via PR to `main`.
+- Possible follow-up: drop the unused `#drizzle/*` alias (tsconfig, package.json `imports`, vitest, 5 docs pages).
 - Out of scope, possible follow-ups: `promptRepository.update` → upsert; demo knowledge-base articles; running `db:seed:prod` in the migration job (item 30).

@@ -3,7 +3,7 @@
 ## Current Objective
 
 - Goal: feat-007 Database DX (items 7, 10, 11)
-- Current status: items 10 (`db:seed`) and 7 (pgvector docs) done; item 11 not started
+- Current status: items 7, 10, 11 done and verified; feature PR not opened yet
 - Branch: `feat/db-dx`
 
 ## Completed This Session
@@ -12,7 +12,7 @@
 
 ## Verification Evidence
 
-See `progress.md` → Evidence of Completion (item 10).
+See `progress.md` → Evidence of Completion (items 10, 7, 11).
 
 ## Blockers / Risks
 
@@ -20,4 +20,4 @@ See `progress.md` → Evidence of Completion (item 10).
 
 ## Next Step
 
-- Item 11: delete `packages/backend/src/drizzle/schema/index.ts` or re-export `src/database/schema.ts`.
+- Open PR `feat/db-dx` → `main` (after #42), then flip feat-007 to `done`.
