@@ -6,6 +6,7 @@ import pg from "pg";
 
 import appConfig from "../config/app.js";
 import { resolveDatabaseConfig } from "../config/database.js";
+import { reportSeedFailure } from "./seed/describe-error.js";
 import { createDrizzleSeedStore } from "./seed/drizzle-seed-store.js";
 import { runSeed } from "./seed/run-seed.js";
 import type { SeedOutcome, SeedReport } from "./seed/run-seed.js";
@@ -56,6 +57,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error("Seed failed, nothing was written:", err);
+  reportSeedFailure(err);
   process.exitCode = 1;
 });

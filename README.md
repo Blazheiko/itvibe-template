@@ -269,13 +269,18 @@ Useful package-level scripts (run from `packages/backend`):
 pnpm db:create     # create the database
 pnpm db:generate   # generate migrations from schema
 pnpm db:migrate    # apply migrations
-pnpm db:seed       # run the seed script
+pnpm db:seed       # seed default LLM prompts (add --demo for demo accounts)
+pnpm db:seed:prod  # same, from the built dist/
 pnpm db:studio     # open Drizzle Studio
 ```
 
-> `pnpm db:seed` is a hook reserved for project-specific seed data. The template
-> does not ship default demo users or fixtures — add your own in
-> `packages/backend/src/db/seed.ts`.
+> `pnpm db:seed` is safe to re-run: it inserts the three support LLM prompts
+> (the same texts the services fall back to) and never overwrites prompts edited
+> in the admin panel. With `--demo` it also creates an admin and, optionally, a
+> regular user from `SEED_ADMIN_*` / `SEED_USER_*`; existing users are never
+> modified. Run it before starting the backend, which caches prompts at startup.
+> Logic and tests live in `packages/backend/src/db/seed/`; see the
+> [database docs](https://blazheiko.github.io/itvibe-template/backend/database#seed).
 
 ## Configuration
 

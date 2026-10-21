@@ -436,7 +436,8 @@ src/
 │   └── schema.ts            # all table definitions
 ├── db/
 │   ├── create-database.ts   # bootstrap empty database
-│   └── seed.ts              # seed script
+│   ├── seed.ts              # seed CLI: prompts, demo accounts with --demo
+│   └── seed/                # seed logic and tests
 ├── drizzle/
 │   └── migrations/          # generated SQL migrations
 ├── docs/                    # internal architecture / feature notes
@@ -1391,7 +1392,7 @@ pnpm db:create     # create the database if it does not yet exist
 pnpm db:generate   # generate SQL migration from schema changes
 pnpm db:migrate    # apply pending migrations
 pnpm db:studio     # open Drizzle Studio in browser
-pnpm db:seed       # run seed script
+pnpm db:seed       # seed LLM prompts; --demo adds demo accounts
 ```
 
 Migrations are stored in `src/drizzle/migrations/`. Configuration is in `drizzle.config.ts` — it reads `PGSQL_*` via `resolveDatabaseConfig()` from `src/config/database.ts`.
@@ -1525,5 +1526,6 @@ pnpm db:generate                    # drizzle-kit generate
 pnpm db:migrate                     # drizzle-kit migrate
 pnpm db:studio                      # drizzle-kit studio
 pnpm db:seed                        # tsx src/db/seed.ts
+pnpm db:seed:prod                   # node dist/db/seed.js
 pnpm mail:test                      # send a test email; requires recipient argument
 ```

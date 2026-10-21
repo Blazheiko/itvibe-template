@@ -96,6 +96,8 @@ async findById(id) {
 - Від `APP_ENV` seed не залежить: без `--demo` акаунти не створюються в жодному середовищі. З `--demo` у production-like середовищі виводиться попередження.
 - Email нормалізується (`trim().toLowerCase()`), пароль хешується `hashPassword` з `metautil`, `email_verified_at` = поточний час.
 - Якщо `SEED_ADMIN_EMAIL` уже належить користувачу з `role = 'user'`, seed завершується успішно з попередженням `exists_without_admin_role`: роль автоматично не підвищується.
+- Ідемпотентність гарантована для послідовних запусків. Наявність користувача перевіряється `SELECT` перед `INSERT`, тому з двох одночасних запусків `--demo` один може впасти на unique-індексі email. Транзакція тоді відкочується, і повторний запуск завершується успішно.
+- Помилка виводиться без SQL-параметрів, `detail` і тексту pg-помилки, бо там можуть бути email, хеш пароля й `session_token`. Виводяться лише назва помилки та поля `code`, `constraint`, `table`, `column`; текст лишається тільки для системних помилок на кшталт `ECONNREFUSED` ([`describe-error.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed/describe-error.ts)).
 - Звіт виводить для кожного запису `inserted` або `skipped (<причина>)`: `already_exists`, `exists_without_admin_role`, `missing_credentials`, `demo_disabled`.
 
 ::: warning Кеш промптів
