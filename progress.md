@@ -6,7 +6,7 @@
 **Active Feature:** feat-007 - Database DX (items 7, 10, 11 of `docs/plan/code-issues-found-during-docs.md`)
 **Branch:** `feat/db-dx`
 
-Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. Items 7 (pgvector in README) and 11 (empty `src/drizzle/schema/index.ts`) are not started.
+Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. Item 7 (pgvector) is done. Item 11 (empty `src/drizzle/schema/index.ts`) is not started.
 
 ## Status
 
@@ -22,9 +22,12 @@ Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. I
   - review fix: root and backend README describe the real seed; idempotency limit (concurrent `--demo` runs) documented
   - docs: `backend/database.md` (Seed section, first production admin, prompt cache warning), `backend/configuration.md` (`SEED_*`), `guide/getting-started.md`, `reference/scripts.md`; `.env.example`
 
+- [x] Item 7: pgvector documented
+  - new section `documentation/backend/database.md#pgvector`: why (Support AI knowledge-base search: `vector(1536)` embeddings, cosine distance `<=>`, RAG), required even without AI (the schema uses the type), where it is used in code, what fails without it, how to install (Docker image, Homebrew/apt, managed services, privileges), how to check, limits (hard-coded 1536, no HNSW index)
+  - links from `README.md` (services table + note), `packages/backend/README.md`, `guide/getting-started.md`, `backend/ai.md`, `backend/deployment.md`; stale "not documented" warning removed from `backend/repositories-transformers.md`
+
 ### Not started
 
-- [ ] Item 7: pgvector in README
 - [ ] Item 11: empty `src/drizzle/schema/index.ts`
 
 ## Files Modified
@@ -53,7 +56,13 @@ Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. I
   7. backend started on that DB logs `PromptService: loaded 3 prompts`
 - Not tested: logging in as the seeded admin through the UI and opening `/admin`
 
+## Evidence of Completion (item 7)
+
+- Error texts checked on `postgres:17-alpine` (no pgvector): `CREATE EXTENSION IF NOT EXISTS vector` → `extension "vector" is not available`; a `vector(3)` column → `type "vector" does not exist`
+- `pnpm docs:build && pnpm docs:verify`: all checks passed; anchors `#pgvector`, `#support-ai-і-база-знань`, `#postgresql-і-redis-через-docker` exist in the built HTML
+- documentation tests 26/26, `pnpm lint` clean
+
 ## Notes for Next Session
 
-- Merge PR #42, then do items 7 and 11 on this branch, then PR `feat/db-dx` → `main` and flip feat-007 to `done`.
+- Merge PR #42, then do item 11 on this branch, then PR `feat/db-dx` → `main` and flip feat-007 to `done`.
 - Out of scope, possible follow-ups: `promptRepository.update` → upsert; demo knowledge-base articles; running `db:seed:prod` in the migration job (item 30).

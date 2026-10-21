@@ -89,7 +89,7 @@ build on (or strip out):
 
 | Service                                   | Required?                  | Used for                                   |
 | ----------------------------------------- | -------------------------- | ------------------------------------------ |
-| **PostgreSQL**                            | Required                   | Primary database (Drizzle ORM)             |
+| **PostgreSQL** + **pgvector**             | Required                   | Primary database (Drizzle ORM)             |
 | **Redis**                                 | Required for auth/realtime | Sessions, WebSocket coordination, presence |
 | **S3 / MinIO**                            | Required for storage flows | File upload / object storage               |
 | **SMTP**                                  | Optional                   | Transactional / auth email                 |
@@ -101,6 +101,15 @@ To boot the database layer you need **PostgreSQL**; **Redis** is required as soo
 as you exercise full auth/realtime behavior (sessions, WebSocket, presence). The
 remaining services are optional and unlock the corresponding feature areas as you
 enable them.
+
+> **pgvector is required**, even if you never enable AI. The support knowledge
+> base stores OpenAI embeddings in a `vector(1536)` column and finds relevant
+> articles by cosine distance (`<=>`) in SQL, so the schema itself depends on the
+> extension: `db:create` runs `CREATE EXTENSION IF NOT EXISTS vector`, and the
+> initial migration fails with `type "vector" does not exist` without it. The
+> stock `postgres` Docker image does not include it; use `pgvector/pgvector:pg16`
+> (or install pgvector for your PostgreSQL). Details:
+> [Database → pgvector](https://blazheiko.github.io/itvibe-template/backend/database#pgvector).
 
 ### Feature prerequisites
 

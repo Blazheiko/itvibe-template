@@ -16,7 +16,7 @@
 | 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                          | Середня      | DX / конфігурація            |
 | 5   | ~~Fallback `PGSQL_PORT` не працює → `NaN`~~ ✅                                                                    | Середня      | Конфігурація                 |
 | 6   | ~~Розбіжності `.env.example` з кодом~~ ✅                                                                         | Середня      | Конфігурація                 |
-| 7   | Потрібен pgvector, ніде не задокументовано                                                                        | Низька       | DX / БД                      |
+| 7   | ~~Потрібен pgvector, ніде не задокументовано~~ ✅                                                                 | Низька       | DX / БД                      |
 | 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                         | Низька       | Конфігурація                 |
 | 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                    | Низька       | Безпека                      |
 | 10  | ~~`db:seed` — порожня заглушка~~ ✅                                                                               | Низька       | DX / БД                      |
@@ -142,6 +142,8 @@
 - **Пропозиція:** синхронізувати `.env.example` з кодом; повний перелік із призначенням і default-значеннями є на сторінці `documentation/backend/configuration.md`.
 
 ### 7. Потрібен pgvector, ніде не задокументовано
+
+> **Виправлено** у feat-007 (гілка `feat/db-dx`): розділ [«pgvector»](https://blazheiko.github.io/itvibe-template/backend/database#pgvector) у `documentation/backend/database.md` пояснює, навіщо потрібне розширення (пошук у базі знань Support AI), що буде без нього, як його встановити й перевірити; на нього посилаються `README.md`, `packages/backend/README.md`, `getting-started`, `ai`, `deployment`, `repositories-transformers`.
 
 - **Що:** `src/db/create-database.ts` виконує `CREATE EXTENSION IF NOT EXISTS vector`. На звичайному образі `postgres` команда `db:create` падає.
 - **Пропозиція:** згадати pgvector у README (у документації вже є, образ `pgvector/pgvector:pg16`).

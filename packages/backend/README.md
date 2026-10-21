@@ -17,7 +17,11 @@ pnpm dev
 ## Local Development Setup
 
 The backend requires a configured `.env` file and a reachable **PostgreSQL**
-database before it can start successfully. **Redis** is required for session
+database with the **pgvector** extension before it can start successfully: the
+support knowledge base keeps embeddings in a `vector(1536)` column (locally use
+the `pgvector/pgvector:pg16` image; see
+[Database → pgvector](https://blazheiko.github.io/itvibe-template/backend/database#pgvector)).
+**Redis** is required for session
 storage, WebSocket coordination, and presence-related flows. S3-compatible
 storage, SMTP, Sentry, push notifications, and AI providers are optional
 integrations unless the feature you are testing depends on them.

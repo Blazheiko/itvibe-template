@@ -50,7 +50,7 @@
 
 ## Support AI і база знань
 
-Статті лежать у `support_knowledge_base`: `title`, `content`, `category`, `is_active`, скріншот і колонка `embedding vector(1536)`, яку описує `customType` у [`schema.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts). Про розширення pgvector див. [Базу даних](/backend/database) і проблему №7. Розмірність колонки зашита як 1536, тому зміна `OPENAI_EMBEDDING_DIMENSIONS` без міграції зламає запис.
+Статті лежать у `support_knowledge_base`: `title`, `content`, `category`, `is_active`, скріншот і колонка `embedding vector(1536)`, яку описує `customType` у [`schema.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts). Навіщо потрібне розширення pgvector і як його встановити, див. [База даних → pgvector](/backend/database#pgvector). Розмірність колонки зашита як 1536, тому зміна `OPENAI_EMBEDDING_DIMENSIONS` без міграції зламає запис.
 
 **Індексація** відбувається в [`support-embedding-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/support-embedding-service.ts). Текст `${title}\n\n${content}` відправляється в OpenAI embeddings, а результат записує `setEmbedding()` сирим SQL `::vector`. Індексацію запускають:
 

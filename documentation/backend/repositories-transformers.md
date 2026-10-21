@@ -64,11 +64,7 @@ sql`
 `
 ```
 
-Результат `db.execute` вручну мапиться в camelCase і нормалізує `id`/`distance`, які можуть прийти рядками. Для роботи потрібне розширення pgvector.
-
-::: warning
-Розширення pgvector ніде не задокументоване як вимога — див. п. 7 у [code-issues-found-during-docs.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
-:::
+Результат `db.execute` вручну мапиться в camelCase і нормалізує `id`/`distance`, які можуть прийти рядками. Для роботи потрібне розширення pgvector, див. [База даних → pgvector](/backend/database#pgvector).
 
 ### Redis
 

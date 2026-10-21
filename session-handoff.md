@@ -3,7 +3,7 @@
 ## Current Objective
 
 - Goal: feat-007 Database DX (items 7, 10, 11)
-- Current status: item 10 (`db:seed`) done and verified; items 7 and 11 not started
+- Current status: items 10 (`db:seed`) and 7 (pgvector docs) done; item 11 not started
 - Branch: `feat/db-dx`
 
 ## Completed This Session
@@ -20,5 +20,4 @@ See `progress.md` → Evidence of Completion (item 10).
 
 ## Next Step
 
-- Item 7: mention pgvector (`pgvector/pgvector:pg16`) in README and `packages/backend/README.md`.
 - Item 11: delete `packages/backend/src/drizzle/schema/index.ts` or re-export `src/database/schema.ts`.

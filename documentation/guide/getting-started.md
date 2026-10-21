@@ -15,7 +15,7 @@
 
 ### PostgreSQL і Redis через Docker
 
-Звичайний образ `postgres` не містить pgvector, тому `db:create` на ньому впаде. Використовуйте образ `pgvector/pgvector`:
+pgvector потрібен для пошуку в базі знань Support AI, і тип `vector` є в самій схемі, тому розширення обов'язкове навіть без AI. Звичайний образ `postgres` його не містить, і `db:create` на ньому впаде. Використовуйте образ `pgvector/pgvector`. Пояснення та інші способи встановлення: [База даних → pgvector](/backend/database#pgvector).
 
 ```bash
 docker run -d --name itvibe-pg \

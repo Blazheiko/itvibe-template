@@ -156,7 +156,7 @@ done
 
 ## База даних у production
 
-- `pnpm db:create:prod` (`node dist/db/create-database.js`) створює БД і виконує `CREATE EXTENSION IF NOT EXISTS vector`, тому PostgreSQL має містити pgvector (проблема 7). Докладніше див. [База даних](/backend/database).
+- `pnpm db:create:prod` (`node dist/db/create-database.js`) створює БД і виконує `CREATE EXTENSION IF NOT EXISTS vector`, тому PostgreSQL має містити pgvector. Що це за вимога і як її виконати на керованому PostgreSQL, див. [База даних → pgvector](/backend/database#pgvector).
 - `pnpm db:migrate` (`drizzle-kit migrate`) працює в образі, бо там є `drizzle-kit`, `drizzle.config.ts`, `src/config/database.ts` і `src/drizzle/migrations`. Застосунок, `db:create:prod` і `db:migrate` беруть `PGSQL_*` з однаковими defaults; у продакшні все одно задавайте їх явно.
 - Міграції запускаються при кожному старті контейнера. Якщо реплік кілька, вони запустять міграції паралельно.
 
