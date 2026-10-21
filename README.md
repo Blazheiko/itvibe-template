@@ -162,7 +162,7 @@ pnpm install
 
 # 2. Configure the backend environment
 cp packages/backend/.env.example packages/backend/.env
-# then edit packages/backend/.env (DATABASE_URL, APP_KEY, S3_*, etc.)
+# then edit packages/backend/.env (PGSQL_*, APP_KEY, S3_*, etc.)
 
 # 3. Build shared, then run backend + frontend dev servers in parallel
 pnpm dev
@@ -179,7 +179,6 @@ FRONTEND_URL=http://localhost:5173
 LANDING_URL=http://localhost:5173
 
 # PostgreSQL
-DATABASE_URL=postgres://postgres:password@127.0.0.1:5432/itvibe_template
 DB_CONNECTION=pg
 PGSQL_HOST=127.0.0.1
 PGSQL_PORT=5432
@@ -363,9 +362,9 @@ Done, coding style, and testing guidelines before contributing.
 | Symptom                    | Things to check                                                                                                                |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `pnpm install` fails       | Node `^24.15.0` and pnpm `9.15.0` (`node -v`, `pnpm -v`; `corepack enable`)                                                    |
-| Backend won't start        | `APP_KEY` and `DATABASE_URL` are set in `packages/backend/.env`, and PostgreSQL is reachable                                   |
+| Backend won't start        | `APP_KEY` and `PGSQL_*` are set in `packages/backend/.env`, and PostgreSQL is reachable                                   |
 | E2E tests fail             | Make sure frontend and backend are running (`pnpm dev`) before `pnpm --filter frontend test:e2e`                               |
-| Drizzle / migration errors | Verify the database settings in `packages/backend/.env` (`DATABASE_URL` / `PGSQL_*`) and that the DB exists (`pnpm db:create`) |
+| Drizzle / migration errors | Verify the database settings in `packages/backend/.env` (`PGSQL_*`) and that the DB exists (`pnpm db:create`) |
 
 ## Further reading
 
