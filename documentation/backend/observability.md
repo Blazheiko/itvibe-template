@@ -27,6 +27,7 @@
 | Помилка                                       | Рівень  | Поля                                                        |
 | --------------------------------------------- | ------- | ----------------------------------------------------------- |
 | `PayloadTooLargeError`                        | `warn`  | `limit`, `contentType`                                      |
+| `MalformedBodyError`                          | `warn`  | `bodyKind` (без тіла запиту й тексту помилки парсера)       |
 | `UnsupportedMediaTypeError`                   | `warn`  | `receivedContentType`, `allowedKinds`                       |
 | `ValidationError`, `ParameterValidationError` | `warn`  | `err`                                                       |
 | інше (відповідь 500)                          | `error` | `err` + `requestId`, `userId`, `route`, `method` (контекст) |
@@ -86,7 +87,7 @@ logger.error({ err, sentrySkip: true }, 'event uncaughtException')
 ```mermaid
 flowchart TD
     A[Помилка в обробнику] --> B[handleError]
-    B -->|413, 415, валідація| C[logger.warn]
+    B -->|400 невалідне тіло, 413, 415, валідація| C[logger.warn]
     B -->|інше| D["logger.error з err і контекстом"]
     C --> R1[Відповідь 4xx]
     D --> S[sentryStream]

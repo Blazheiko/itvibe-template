@@ -82,7 +82,7 @@ sequenceDiagram
 2. `bodyKind` має бути в `route.allowedContentTypes` (за замовчуванням `["json"]`), інакше `UnsupportedMediaTypeError` → **415**. Наприклад, завантаження аватара оголошує `allowedContentTypes: ["multipart"]`.
 3. Ранній відказ: якщо `Content-Length` — ціле число і більше ліміту, кидається `PayloadTooLargeError` → **413** без читання тіла.
 4. `readData` збирає чанки з `res.onData` і перериває читання з `PayloadTooLargeError`, щойно сума перевищить ліміт (захист від chunked-тіл і неправдивого `Content-Length`).
-5. Парсинг: `json` → `JSON.parse` (тільки об'єкт, порожнє тіло → `{}`), `multipart` → `getParts` з uWS (поля в payload, файли в `files`), `urlencoded` → `URLSearchParams`, `text` → рядок, `octet` → один файл (ім'я з `content-disposition` або `x-filename`).
+5. Парсинг: `json` → `JSON.parse` (тільки об'єкт, порожнє тіло → `{}`; невалідний JSON або не-об'єкт → `MalformedBodyError`, без уривка тіла в повідомленні), `multipart` → `getParts` з uWS (поля в payload, файли в `files`), `urlencoded` → `URLSearchParams`, `text` → рядок, `octet` → один файл (ім'я з `content-disposition` або `x-filename`).
 6. Якщо є `route.validator` і payload — `validateRoutePayload`. Якщо валідатора немає, `payload` стає `null` (файли зберігаються).
 
 ## Обробка помилок (handleError)
@@ -90,12 +90,13 @@ sequenceDiagram
 | Помилка                     | Статус             | `code`                                                         |
 | --------------------------- | ------------------ | -------------------------------------------------------------- |
 | `PayloadTooLargeError`      | 413                | `payload_too_large` (+ `details.limit`, `details.contentType`) |
+| `MalformedBodyError`        | 400                | `bad_request` (`message: "Malformed json body"`)               |
 | `UnsupportedMediaTypeError` | 415                | `unsupported_media_type`                                       |
 | `ValidationError`           | `error.statusCode` | `error.code`, `details.kind: "validation"`                     |
 | `ParameterValidationError`  | `error.statusCode` | `error.code`, `details.kind: "parameter_validation"`           |
 | інше                        | 500                | `internal_error` (текст помилки лише при `env === "local"`)    |
 
-413 і 415 логуються як `warn`, невідомі помилки — як `error` з контекстом для Sentry. Формат тіла — `{ status: "error", code, message, details? }` (`sendErrorResponse`).
+400, 413 і 415 логуються як `warn`, невідомі помилки — як `error` з контекстом для Sentry. Формат тіла — `{ status: "error", code, message, details? }` (`sendErrorResponse`).
 
 ## WebSocket: upgrade і повідомлення
 

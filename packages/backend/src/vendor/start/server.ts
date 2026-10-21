@@ -30,6 +30,7 @@ import {
 import { ParameterValidationError } from "#app/validate/checkers/parameter-checker.js";
 import { ValidationError } from "#app/validate/errors/validation-error.js";
 import { PayloadTooLargeError } from "#vendor/utils/network/errors/payload-too-large-error.js";
+import { MalformedBodyError } from "#vendor/utils/network/errors/malformed-body-error.js";
 import { UnsupportedMediaTypeError } from "#vendor/utils/network/errors/unsupported-media-type-error.js";
 import logger from "#vendor/utils/logger.js";
 import { isWsChannel, type WsChannel } from "shared/guards";
@@ -69,7 +70,6 @@ import {
 } from "#vendor/utils/helpers/json-handlers.js";
 import { validateRoutePayload } from "#vendor/utils/validation/validate-route-payload.js";
 import { flattenQuery } from "#vendor/utils/validation/flatten-query.js";
-import * as console from "node:console";
 
 export type {
   HttpRequest,
@@ -139,7 +139,7 @@ const configureWebsockets = (
       message: ArrayBuffer,
     ): void => {
       onClose(ws as MyWebSocket, code, message).catch((error: unknown) => {
-        console.error(error);
+        logger.error({ err: error }, "WebSocket close handler failed");
       });
     },
   });
@@ -337,6 +337,14 @@ export const handleError = (
         limit: error.limit,
         contentType: error.contentType,
       },
+    });
+  } else if (error instanceof MalformedBodyError) {
+    // A client error: warn without the body, keep it out of Sentry.
+    logger.warn({ bodyKind: error.bodyKind }, "Malformed request body");
+    sendErrorResponse(res, error.statusCode, {
+      status: "error",
+      code: error.code,
+      message: error.message,
     });
   } else if (error instanceof UnsupportedMediaTypeError) {
     logger.warn(
@@ -722,7 +730,7 @@ const stopServer = async (type = "handle"): Promise<void> => {
     }
     state["listenSocket"] = undefined;
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Server stop failed");
   }
 };
 

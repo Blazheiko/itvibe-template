@@ -7,6 +7,7 @@ import { validateCookie } from "#app/validate/checkers/cookie-checker.js";
 import config from "#config/app.js";
 import { getParts } from "uWebSockets.js";
 import { PayloadTooLargeError } from "#vendor/utils/network/errors/payload-too-large-error.js";
+import { MalformedBodyError } from "#vendor/utils/network/errors/malformed-body-error.js";
 
 // ─── Body kind detection ──────────────────────────────────────────────────────
 
@@ -152,15 +153,16 @@ const readData = (
 
 const readJson = (body: string): Record<string, unknown> => {
   if (body === "") return {};
+  let result: unknown;
   try {
-    const result = JSON.parse(body) as unknown;
-    if (result !== null && !Array.isArray(result) && typeof result === "object")
-      return result as Record<string, unknown>;
-    throw new Error("error parse json");
-  } catch (e) {
-    console.error(e);
-    throw new Error(`error parse json: ${String(e)}`, { cause: e });
+    result = JSON.parse(body);
+  } catch {
+    // No cause: the SyntaxError message can quote the body.
+    throw new MalformedBodyError("json");
   }
+  if (result !== null && !Array.isArray(result) && typeof result === "object")
+    return result as Record<string, unknown>;
+  throw new MalformedBodyError("json");
 };
 
 interface FormDataResult {

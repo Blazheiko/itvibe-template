@@ -136,6 +136,16 @@
       "dependencies": [],
       "status": "done",
       "evidence": "This PR: pnpm --filter frontend build (dist: console.log 45 -> 0, info 4 -> 0, debug 1 -> 0; warn/error kept), dev server keeps logs, frontend tests 41, typecheck, lint, docs:build + docs:verify"
+    },
+    {
+      "id": "feat-015",
+      "name": "Backend Console To Pino",
+      "description": "Route runtime console.error calls in the backend through pino (WS close handler, server stop); malformed JSON bodies become MalformedBodyError -> 400 bad_request logged as warn without the body (previously 500 + logger.error to Sentry with a parser message that can quote the body); drop console.log(\"start\")",
+      "owner": "Blazheiko",
+      "branch": "fix/backend-console-to-pino",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "This PR: backend tests 471 (new malformed-body.spec.ts), typecheck, lint, docs:build + docs:verify"
     }
   ]
 }
