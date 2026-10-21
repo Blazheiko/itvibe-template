@@ -92,7 +92,7 @@
 
 ### 2. Немає rate limit на WebSocket upgrade і глобального per-IP ліміту
 
-> **Виправлено** у feat-005 (гілка `feat/security-hardening`) за планом [`ws-upgrade-rate-limit-plan.md`](./ws-upgrade-rate-limit-plan.md): L1 per-IP для HTTP API, окремий ліміт upgrade, лічильник з обмеженою пам'яттю. **Відкрита підзадача:** Redis-лічильник для кількох інстансів. Поки що замість нього рекомендовано edge-ліміт у nginx, його описано в `deployment.md`.
+> **Виправлено** у feat-005 (гілка `feat/security-hardening`) за планом [`ws-upgrade-rate-limit-plan.md`](./ws-upgrade-rate-limit-plan.md): L1 per-IP для HTTP API, окремий ліміт upgrade, лічильник з обмеженою пам'яттю. **Відкрита підзадача:** Redis-лічильник для кількох інстансів, винесено у feat-013. Поки що замість нього рекомендовано edge-ліміт у nginx, його описано в `deployment.md`.
 
 - **Що:** rate limiting є лише per-route для HTTP (`src/vendor/utils/rate-limit/*`), перевірка виконується до читання body. Upgrade-запит WebSocket ліміту не має. Глобального L1-ліміту за IP також немає. Лічильник зберігається в пам'яті процесу, а не в Redis.
 - **Наслідок:** при кількох інстансах ліміт не спільний. Upgrade можна флудити. Це залишок finding C-2.
