@@ -87,7 +87,7 @@ logger.error({ err, sentrySkip: true }, 'event uncaughtException')
 ```mermaid
 flowchart TD
     A[Помилка в обробнику] --> B[handleError]
-    B -->|413, 415, валідація| C[logger.warn]
+    B -->|400 невалідне тіло, 413, 415, валідація| C[logger.warn]
     B -->|інше| D["logger.error з err і контекстом"]
     C --> R1[Відповідь 4xx]
     D --> S[sentryStream]
