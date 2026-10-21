@@ -32,6 +32,7 @@ import { ValidationError } from "#app/validate/errors/validation-error.js";
 import { PayloadTooLargeError } from "#vendor/utils/network/errors/payload-too-large-error.js";
 import { UnsupportedMediaTypeError } from "#vendor/utils/network/errors/unsupported-media-type-error.js";
 import logger from "#vendor/utils/logger.js";
+import { isWsChannel, type WsChannel } from "shared/guards";
 import {
   setHeaders,
   setCookies,
@@ -90,12 +91,24 @@ interface ServerRoutes {
   sourceWsRoutes: routeList;
 }
 
+// The type limits callers at compile time; the runtime check covers values that
+// bypass it (casts, untyped data), so nothing is published to an arbitrary topic.
+// Returns true when the channel is allowed and publish was called; it does not
+// confirm delivery (the uWS publish result is ignored).
 const broadcastToChannel = (
-  channel: string,
+  channel: WsChannel,
   event: string,
   payload: Payload,
-): void => {
+): boolean => {
+  if (!isWsChannel(channel)) {
+    logger.warn(
+      { channel: String(channel).slice(0, 64), event },
+      "broadcastToChannel: unknown channel, message dropped",
+    );
+    return false;
+  }
   server.publish(channel, makeBroadcastJson(event, 200, payload));
+  return true;
 };
 
 const configureWebsockets = (

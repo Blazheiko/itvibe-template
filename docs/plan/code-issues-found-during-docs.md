@@ -18,7 +18,7 @@
 | 6   | ~~Розбіжності `.env.example` з кодом~~ ✅                                                                          | Середня      | Конфігурація                 |
 | 7   | Потрібен pgvector, ніде не задокументовано                                                                        | Низька       | DX / БД                      |
 | 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                          | Низька       | Конфігурація                 |
-| 9   | `broadcastToChannel` без runtime-перевірки каналу (L-4)                                                           | Низька       | Безпека                      |
+| 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                     | Низька       | Безпека                      |
 | 10  | `db:seed` — порожня заглушка                                                                                      | Низька       | DX / БД                      |
 | 11  | `src/drizzle/schema/index.ts` порожній                                                                            | Низька       | Структура                    |
 | 12  | Тіло запиту читається лише для `post`/`put`                                                                       | Низька       | HTTP                         |
@@ -107,6 +107,8 @@
 - **Пропозиція:** прибрати значення з логів або маскувати (`abcd…`).
 
 ### 9. `broadcastToChannel` без runtime-перевірки каналу
+
+> **Виправлено** у feat-005: whitelist `WS_CHANNELS` і guard `isWsChannel` у `packages/shared/src/guards/ws-channels.ts` (без залежностей); `broadcastToChannel` приймає `WsChannel` і в runtime відкидає невідомі канали з `warn`. Заодно `shared/guards` перестав бути порожнім (частково п. 57).
 
 - **Що:** `broadcastToChannel(channel: string, …)` приймає будь-який рядок, перевірка є лише на рівні типів. Finding L-4 зі `SECURITY_ANALYSIS.md` досі відкритий.
 - **Пропозиція:** whitelist/шаблон допустимих каналів або перевірка формату перед publish.
