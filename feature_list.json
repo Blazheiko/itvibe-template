@@ -164,8 +164,8 @@
       "owner": "Blazheiko",
       "branch": "fix/mobile-layout-e2e",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #40: test:e2e 12/12 on 4 browsers (36/36 with --repeat-each=3), geometry check fails at a 300 px viewport, frontend typecheck now includes e2e/, lint, pnpm test, docs:build + docs:verify; evidence in progress.md on fix/mobile-layout-e2e"
     }
   ]
 }
