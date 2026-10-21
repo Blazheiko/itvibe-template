@@ -587,3 +587,109 @@ describe("auth throttle fail-closed (email link)", () => {
     expect(sendLinkVerificationEmailMock).not.toHaveBeenCalled();
   });
 });
+
+describe("authService while Redis is unavailable", () => {
+  const LOGIN_INPUT = { email: "user@example.com", password: "secret", token: "" };
+  const LOGIN_CONTEXT = { ipAddress: "127.0.0.1" };
+
+  const arrangeLogin = (): void => {
+    userRepositoryMock.findByEmail.mockResolvedValue({
+      id: 7n,
+      email: "user@example.com",
+      emailVerifiedAt: new Date("2026-05-30T00:00:00.000Z"),
+      password: "hashed-password",
+      sessionToken: "session-token",
+    });
+    validatePasswordMock.mockResolvedValue(true);
+  };
+
+  /** What the controller answers for this AppError (status, headers, body). */
+  const toResponse = async (error: unknown) => {
+    const { mapControllerError } = await import(
+      "#app/controllers/shared/controller-error.js"
+    );
+    const headers = new Map<string, string>();
+    const responseData = {
+      status: 200,
+      setHeader: (name: string, value: string) => {
+        headers.set(name, value);
+      },
+    };
+    const payload = mapControllerError({ responseData } as never, error as never);
+    return { status: responseData.status, headers, payload };
+  };
+
+  const operations: [string, () => void, (s: Awaited<ReturnType<typeof loadAuthService>>["authService"]) => Promise<unknown>][] = [
+    [
+      "login",
+      () => {
+        arrangeLogin();
+      },
+      (s) => s.login(LOGIN_INPUT, authMock as any, sessionMock as any, LOGIN_CONTEXT),
+    ],
+    [
+      "WS token generation during login",
+      () => {
+        arrangeLogin();
+        authMock.login.mockResolvedValue(true);
+      },
+      (s) => s.login(LOGIN_INPUT, authMock as any, sessionMock as any, LOGIN_CONTEXT),
+    ],
+    ["logout", () => {}, (s) => s.logout(authMock as any, sessionMock as any)],
+    ["logoutAll", () => {}, (s) => s.logoutAll(authMock as any, sessionMock as any)],
+  ];
+
+  const failWith = (name: string, err: Error): void => {
+    if (name.startsWith("WS token")) generateWsTokenMock.mockRejectedValue(err);
+    else if (name === "login") authMock.login.mockRejectedValue(err);
+    else if (name === "logout") authMock.logout.mockRejectedValue(err);
+    else authMock.logoutAll.mockRejectedValue(err);
+  };
+
+  it.each(operations)(
+    "%s: RedisUnavailableError → 503 service_unavailable with Retry-After",
+    async (name, arrange, run) => {
+      const { RedisUnavailableError } = await import(
+        "#vendor/utils/network/errors/redis-unavailable-error.js"
+      );
+      arrange();
+      failWith(
+        name,
+        new RedisUnavailableError("Redis command failed", {
+          cause: new Error("Command timed out"),
+        }),
+      );
+      const { authService } = await loadAuthService();
+
+      const result = (await run(authService)) as Result<unknown, unknown>;
+
+      expect(Result.isError(result)).toBe(true);
+      if (!Result.isError(result)) return;
+      const response = await toResponse(result.error);
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Retry-After")).toBe("1");
+      expect(response.payload).toEqual({
+        status: "error",
+        code: "service_unavailable",
+        message: "Service temporarily unavailable. Try again later.",
+      });
+      expect(JSON.stringify(response.payload)).not.toMatch(/timed out|Failed to/);
+      // A partial logoutAll never reports success or a deletedCount.
+      expect(JSON.stringify(response.payload)).not.toContain("deletedCount");
+    },
+  );
+
+  it.each(operations)("%s: any other error → 500 as before", async (name, arrange, run) => {
+    arrange();
+    failWith(name, new Error("boom"));
+    const { authService } = await loadAuthService();
+
+    const result = (await run(authService)) as Result<unknown, unknown>;
+
+    expect(Result.isError(result)).toBe(true);
+    if (!Result.isError(result)) return;
+    const response = await toResponse(result.error);
+    expect(response.status).toBe(500);
+    expect(response.headers.has("Retry-After")).toBe(false);
+  });
+});

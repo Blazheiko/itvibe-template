@@ -4,7 +4,9 @@ const info = vi.fn();
 vi.mock("#vendor/utils/logger.js", () => ({
   default: { info, warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
-vi.mock("#config/redis.js", () => ({ default: { keyPrefix: "test:" } }));
+vi.mock("#config/redis.js", () => ({
+  default: { keyPrefix: "test:", commandTimeoutMs: 500, logoutAllDeadlineMs: 2000 },
+}));
 vi.mock("#database/redis.js", () => ({
   default: {
     scan: vi.fn(async () => [
@@ -12,7 +14,10 @@ vi.mock("#database/redis.js", () => ({
       ["test:session:tok:1", "test:session:tok:2"],
     ]),
     del: vi.fn(async () => 2),
+    get: vi.fn(async () => null),
+    setex: vi.fn(async () => "OK"),
   },
+  withRedis: async <T>(op: () => Promise<T>): Promise<T> => op(),
 }));
 
 const { destroyAllSessions } = await import("./redis-session-storage.js");

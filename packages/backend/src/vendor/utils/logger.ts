@@ -54,6 +54,18 @@ function buildSentryContext(entry: LogEntry): SentryLogContext {
   return context;
 }
 
+// One Sentry event per Redis incident comes from database/redis-health.ts; the
+// per-request logs of the same incident (pino writes the class name to err.type)
+// stay in stdout only.
+function isRedisUnavailableEntry(entry: LogEntry): boolean {
+  const err = entry.err;
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { type?: unknown }).type === "RedisUnavailableError"
+  );
+}
+
 const sentryStream = {
   level: "error",
   write(chunk: string): boolean {
@@ -68,7 +80,7 @@ const sentryStream = {
         return true;
       }
 
-      if (entry.sentrySkip === true) {
+      if (entry.sentrySkip === true || isRedisUnavailableEntry(entry)) {
         return true;
       }
 

@@ -1,14 +1,15 @@
 import { Redis } from 'ioredis';
-import type { RedisOptions } from 'ioredis';
-import config from '#config/redis.js';
+import logger from '#logger';
+import { createRedisHealth, createWithRedis } from '#database/redis-health.js';
+import { mainRedisOptions } from '#database/redis-main-options.js';
 
-const { password, ...baseConfig } = config;
+export { mainRedisOptions };
 
-// `satisfies` (not an annotation): ioredis 6 constructor types reject an object
-// typed as RedisOptions under exactOptionalPropertyTypes (optional `replyMapping`).
-const redisConfig = {
-    ...baseConfig,
-    ...(password !== null ? { password } : {}),
-} satisfies RedisOptions;
+const client = new Redis(mainRedisOptions);
 
-export default new Redis(redisConfig);
+/** Also the client's `error` listener: no "Unhandled error event" output. */
+export const redisHealth = createRedisHealth(client, { logger });
+
+export const withRedis = createWithRedis(client, redisHealth);
+
+export default client;

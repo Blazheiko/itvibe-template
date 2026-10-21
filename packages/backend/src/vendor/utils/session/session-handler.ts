@@ -19,6 +19,7 @@ import {
   destroyAllSessions,
 } from "#vendor/utils/session/redis-session-storage.js";
 import logger from "#vendor/utils/logger.js";
+import { RedisUnavailableError } from "#vendor/utils/network/errors/redis-unavailable-error.js";
 import { maskTokenForLogs } from "#vendor/utils/helpers/mask-sensitive.js";
 import {
   createSignedToken,
@@ -282,7 +283,12 @@ export const sessionHandler = async (
           : undefined;
       if (currentUserToken === undefined) return 0;
 
-      const deletedCount = await destroyAllSessions(currentUserToken);
+      // The current session survives a stopped run, so the client can repeat
+      // logoutAll while still authenticated; it is deleted last.
+      const deletedCount = await destroyAllSessions(
+        currentUserToken,
+        sessionInfo?.id,
+      );
       logger.info(
         {
           userId: sessionInfo?.data.userId,
@@ -308,21 +314,28 @@ export const sessionHandler = async (
   };
 };
 
+export type WsSessionResult =
+  | { kind: "ok"; session: Session }
+  | { kind: "missing" }
+  | { kind: "unavailable" };
+
+const MISSING: WsSessionResult = { kind: "missing" };
+
 export const wsSessionHandler = async (
   sessionId: string,
   userToken: string,
-): Promise<Session | null> => {
+): Promise<WsSessionResult> => {
   try {
     if (!isValidUserToken(userToken)) {
       logger.warn({ sessionId }, "wsSessionHandler: invalid userToken format");
-      return null;
+      return MISSING;
     }
 
     const sessionInfo = await getSession(sessionId, userToken);
 
     if (sessionInfo === null) {
       logger.warn({ sessionId, userToken: maskTokenForLogs(userToken) }, "Session not found");
-      return null;
+      return MISSING;
     }
 
     if (
@@ -333,10 +346,10 @@ export const wsSessionHandler = async (
         { sessionId, userToken: maskTokenForLogs(userToken) },
         "wsSessionHandler: session has no userId — not authenticated",
       );
-      return null;
+      return MISSING;
     }
 
-    return {
+    const session: Session = {
       sessionInfo,
       updateSessionData: async (newData: SessionData) =>
         await updateSessionData(sessionInfo.id, newData, userToken),
@@ -349,9 +362,12 @@ export const wsSessionHandler = async (
         return await destroyAllSessions(userToken);
       },
     };
+    return { kind: "ok", session };
   } catch (err) {
+    // Not an expired session: the caller keeps the connection open.
+    if (err instanceof RedisUnavailableError) return { kind: "unavailable" };
     logger.error({ err, sessionId, userToken: maskTokenForLogs(userToken) }, "wsSessionHandler error");
-    return null;
+    return MISSING;
   }
 };
 

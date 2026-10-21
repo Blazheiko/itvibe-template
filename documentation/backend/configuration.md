@@ -183,14 +183,16 @@
 
 ## Redis
 
-У цьому модулі використовується `||`, тому порожній рядок теж замінюється на default.
+Для `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` і `REDIS_PREFIX` використовується `||`, тому порожній рядок теж замінюється на default. `REDIS_COMMAND_TIMEOUT_MS` і `REDIS_LOGOUT_ALL_DEADLINE_MS` валідуються інакше: значення має бути цілим числом `>= 1`; інше значення (зокрема порожній рядок) — помилка старту `Invalid Redis configuration: ...` з `validateRuntimeConfig`. Як основний клієнт використовує ці значення — [Відмова Redis](/backend/auth-security#відмова-redis).
 
-| Змінна           | Призначення                     | Default       | Обов'язковість (умова) | Читає файл                                                                                              |
-| ---------------- | ------------------------------- | ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| `REDIS_HOST`     | Хост Redis                      | `127.0.0.1`   | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
-| `REDIS_PORT`     | Порт Redis                      | `6379`        | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
-| `REDIS_PASSWORD` | Пароль Redis                    | `null`        | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
-| `REDIS_PREFIX`   | Префікс ключів (до 16 символів) | `uwebsocket:` | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
+| Змінна                         | Призначення                                              | Default       | Обов'язковість (умова) | Читає файл                                                                                              |
+| ------------------------------ | -------------------------------------------------------- | ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `REDIS_HOST`                   | Хост Redis                                               | `127.0.0.1`   | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
+| `REDIS_PORT`                   | Порт Redis                                               | `6379`        | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
+| `REDIS_PASSWORD`               | Пароль Redis                                             | `null`        | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
+| `REDIS_PREFIX`                 | Префікс ключів (до 16 символів)                          | `uwebsocket:` | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
+| `REDIS_COMMAND_TIMEOUT_MS`     | Таймаут команди основного клієнта (сесії, WS-токени), мс | `500`         | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
+| `REDIS_LOGOUT_ALL_DEADLINE_MS` | Дедлайн усього циклу `SCAN`/`DEL` у `logoutAll`, мс      | `2000`        | Ні                     | [redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts) |
 
 ## Сховище S3
 

@@ -85,7 +85,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   local.mockReturnValue({ kind: "allowed" });
   shared.mockResolvedValue({ kind: "allowed" });
-  onUpgrade.mockResolvedValue({ sessionId: "s", userId: "1", userToken: "u" });
+  onUpgrade.mockResolvedValue({
+    kind: "ok",
+    sessionId: "s",
+    userId: "1",
+    userToken: "u",
+  });
 });
 
 describe("handleUpgrade: level 1 → level 2 → auth", () => {

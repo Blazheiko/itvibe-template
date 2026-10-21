@@ -30,6 +30,7 @@
 | `MalformedBodyError`                          | `warn`  | `bodyKind` (без тіла запиту й тексту помилки парсера)       |
 | `UnsupportedMediaTypeError`                   | `warn`  | `receivedContentType`, `allowedKinds`                       |
 | `ValidationError`, `ParameterValidationError` | `warn`  | `err`                                                       |
+| `RedisUnavailableError` (відповідь 503)       | `error` | `err` + контекст; у Sentry не йде (див. нижче)              |
 | інше (відповідь 500)                          | `error` | `err` + `requestId`, `userId`, `route`, `method` (контекст) |
 
 Для маршрутів API контекст містить `requestId`, `userId`, `route.url`, `route.method`; для службового обробника документації маршрутів — лише `route` і `method`. Коди відповідей — у [Життєвому циклі запиту](/backend/request-lifecycle).
@@ -70,7 +71,7 @@ SENTRY_TRACES_SAMPLE_RATE=0
 Логи пересилає `sentryStream` у [logger.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/logger.ts). Правила:
 
 1. Рівень нижче `error` (50) ігнорується — `warn` (4xx у `handleError`) у Sentry не йде.
-2. `sentrySkip: true` — пропустити (використовується, коли помилку відправлено вручну).
+2. `sentrySkip: true` — пропустити (використовується, коли помилку відправлено вручну). Так само пропускаються записи з `err.type === "RedisUnavailableError"`: інцидент уже зафіксовано модулем здоров'я Redis, див. [Відмова Redis](#відмова-redis).
 3. Є поле `err` або `error` → `captureException`.
 4. Інакше лише при `sentryCapture: true` → `captureMessage(msg, "error")`.
 
@@ -88,14 +89,28 @@ logger.error({ err, sentrySkip: true }, 'event uncaughtException')
 flowchart TD
     A[Помилка в обробнику] --> B[handleError]
     B -->|400 невалідне тіло, 413, 415, валідація| C[logger.warn]
+    B -->|RedisUnavailableError| U["logger.error, err.type RedisUnavailableError"]
     B -->|інше| D["logger.error з err і контекстом"]
     C --> R1[Відповідь 4xx]
+    U --> SU[sentryStream: пропуск за err.type]
+    SU --> R3["Відповідь 503 service_unavailable, Retry-After: 1"]
     D --> S[sentryStream]
     S -->|sentrySkip| X[Пропуск]
     S -->|є err| E[captureException]
     E --> R2["Відповідь 500 internal_error"]
     X --> R2
 ```
+
+### Відмова Redis
+
+Стан основного Redis-клієнта тримає [redis-health.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/redis-health.ts): `healthy` або `unavailable`.
+
+- **Одна подія на інцидент.** Перехід `healthy → unavailable` (перша подія `error`/`close` клієнта або перша `RedisUnavailableError` з `withRedis`) пише один `logger.error({ sentryCapture: true }, "Redis unavailable")` — це єдина подія Sentry за інцидент.
+- **Поки інцидент триває**, модуль пише `warn` `"Redis still unavailable"` не частіше разу на хвилину і раз на 2 с шле фоновий `PING`.
+- **Відновлення** — за першим із сигналів: успішна команда через `withRedis`, успішний фоновий `PING` або подія `ready` після reconnect. Тоді пишеться `info` `"Redis recovered"` з `downMs`, стан стає `healthy`, і наступний збій знову дасть одну подію.
+- **На процес, а не на кластер.** Кожен процес має власний стан, тож N інстансів дадуть N подій; групує їх сам Sentry.
+- **Інші записи не дублюють подію.** `sentryStream` пропускає записи, де `err.type === "RedisUnavailableError"` (поле, яке пише серіалізатор pino), — одне правило в транспорті замість правок у кожному місці.
+- **Свідоме рішення щодо stdout.** `logger.error` із `handleError` і з login/logout/`logoutAll` під час збою лишаються в stdout на кожен запит: це діагностика конкретних запитів, і їхній обсяг обмежений самими запитами. Обмеження «раз на хвилину» діє лише для модуля здоров'я. Якщо обсяг логів стане проблемою, наступний крок — понизити ці записи до `warn`, а не прибирати.
 
 ### Сервіси observability
 

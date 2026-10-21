@@ -31,6 +31,7 @@ import { ParameterValidationError } from "#app/validate/checkers/parameter-check
 import { ValidationError } from "#app/validate/errors/validation-error.js";
 import { PayloadTooLargeError } from "#vendor/utils/network/errors/payload-too-large-error.js";
 import { MalformedBodyError } from "#vendor/utils/network/errors/malformed-body-error.js";
+import { RedisUnavailableError } from "#vendor/utils/network/errors/redis-unavailable-error.js";
 import { UnsupportedMediaTypeError } from "#vendor/utils/network/errors/unsupported-media-type-error.js";
 import logger from "#vendor/utils/logger.js";
 import { isWsChannel, type WsChannel } from "shared/guards";
@@ -298,10 +299,14 @@ const sendErrorResponse = (
   res: HttpResponse,
   status: number,
   body: CanonicalErrorBody,
+  headers: Readonly<Record<string, string>> = {},
 ): void => {
   res.cork(() => {
     writeHttpStatus(res, status);
     setSecurityHeaders(res);
+    for (const [name, value] of Object.entries(headers)) {
+      res.writeHeader(name, value);
+    }
     res.writeHeader("content-type", "application/json");
     res.end(makeJson(body));
   });
@@ -338,6 +343,20 @@ export const handleError = (
         contentType: error.contentType,
       },
     });
+  } else if (error instanceof RedisUnavailableError) {
+    // Still error level for stdout; the Sentry transport skips this type
+    // (redis-health reports one event per incident). No ioredis text in the body.
+    logger.error({ err: error, ...sentryContext }, "Request failed: Redis unavailable");
+    sendErrorResponse(
+      res,
+      error.statusCode,
+      {
+        status: "error",
+        code: error.code,
+        message: "Service temporarily unavailable. Try again later.",
+      },
+      { "Retry-After": "1" },
+    );
   } else if (error instanceof MalformedBodyError) {
     // A client error: warn without the body, keep it out of Sentry.
     logger.warn({ bodyKind: error.bodyKind }, "Malformed request body");

@@ -13,6 +13,7 @@ export const ErrorCode = {
   RateLimited: "rate_limited",
   CsrfInvalid: "csrf_invalid",
   InternalError: "internal_error",
+  ServiceUnavailable: "service_unavailable",
 } as const;
 
 export const ErrorCodeValues = [
@@ -27,6 +28,7 @@ export const ErrorCodeValues = [
   "rate_limited",
   "csrf_invalid",
   "internal_error",
+  "service_unavailable",
 ] as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

@@ -25,15 +25,20 @@ import { makeJson } from "#vendor/utils/helpers/json-handlers.js";
 import configApp from "#config/app.js";
 import type { Validator } from "#vendor/contracts/validator.js";
 import { ValidationError } from "#app/validate/errors/validation-error.js";
+import { RedisUnavailableError } from "#vendor/utils/network/errors/redis-unavailable-error.js";
 
 // ---------------------------------------------------------------------------
 // App hooks — registered at startup from app/start/index.ts
 // ---------------------------------------------------------------------------
 
+export type UpgradeTokenResult =
+  | { kind: "ok"; sessionId: string; userId: string; userToken: string }
+  | { kind: "missing" }
+  | { kind: "unavailable" };
+
 export interface WsAppHooks {
-  onUpgrade: (
-    token: string,
-  ) => Promise<{ sessionId: string; userId: string; userToken: string } | null>;
+  onUpgrade: (token: string) => Promise<UpgradeTokenResult>;
+  /** Rejects with RedisUnavailableError while Redis is down. */
   onConnected: (ws: MyWebSocket, userData: UserConnection) => Promise<void>;
   onDisconnected: (
     ws: MyWebSocket,
@@ -135,6 +140,20 @@ const unAuthorizedMessage = (): WsResponseData => ({
   ),
 });
 
+// Redis is down: the connection stays open, only this request fails. Same shape
+// as createWsRateLimitErrorResponse, with the request's event so the client
+// rejects the matching promise at once.
+const serviceUnavailableMessage = (event: string): WsResponseData => ({
+  event,
+  status: "error",
+  data: null,
+  timestamp: Date.now(),
+  error: createWsErrorEnvelope(
+    "service_unavailable",
+    "Service temporarily unavailable. Try again later.",
+  ),
+});
+
 const ab2str = (
   buffer: ArrayBuffer,
   encoding: BufferEncoding | undefined = "utf8",
@@ -196,6 +215,17 @@ const closeAllWs = async (): Promise<void> => {
 // uWS callbacks
 // ---------------------------------------------------------------------------
 
+/** Resolves false when Redis is unavailable; other errors are logged as before. */
+const refreshToken = async (token: string): Promise<boolean> => {
+  try {
+    await getAppHooks().onRefreshToken(token);
+  } catch (error: unknown) {
+    if (error instanceof RedisUnavailableError) return false;
+    logger.error({ err: error }, "Error refresh token");
+  }
+  return true;
+};
+
 const onMessage = async (
   ws: MyWebSocket,
   wsMessage: ArrayBuffer,
@@ -210,22 +240,21 @@ const onMessage = async (
   const userData = ws.getUserData();
 
   const token = userData.token;
-  if (token !== "") {
-    await getAppHooks()
-      .onRefreshToken(token)
-      .catch((error: unknown) => {
-        logger.error({ err: error }, "Error refresh token");
-      });
-  }
 
+  // Heartbeat confirms the transport, not Redis: pong first, with no Redis
+  // command before it; the token refresh for ping runs after and is not awaited.
   if (jsonMessage === "ping") {
     try {
       ws.send("pong");
     } catch (e) {
       logger.error({ err: e }, "Error ws send pong");
     }
+    if (token !== "") void refreshToken(token);
     return;
   }
+
+  // false: Redis is unavailable (already reported by redis-health, no log here).
+  const refreshed = token === "" ? true : await refreshToken(token);
 
   let event = "";
   let timestamp = 0;
@@ -254,15 +283,23 @@ const onMessage = async (
     }
     const message = validatedMessage.value;
 
-    let session = null;
-    const { sessionId, userToken } = userData;
-    if (sessionId !== undefined && userToken !== undefined) {
-      session = await wsSessionHandler(sessionId, userToken);
+    if (!refreshed) {
+      sendJson(ws, serviceUnavailableMessage(message.event));
+      return;
     }
 
-    if (session === null) {
+    const { sessionId, userToken } = userData;
+    const sessionResult =
+      sessionId !== undefined && userToken !== undefined
+        ? await wsSessionHandler(sessionId, userToken)
+        : ({ kind: "missing" } as const);
+
+    if (sessionResult.kind === "unavailable") {
+      sendJson(ws, serviceUnavailableMessage(message.event));
+    } else if (sessionResult.kind === "missing") {
       closeExpiredSession(ws);
     } else {
+      const { session } = sessionResult;
       event = message.event;
       timestamp = message.timestamp;
       const result = await wsApiHandler(
@@ -472,32 +509,43 @@ const handleUpgrade = async (
     return;
   }
 
-  const dataAccess = await getAppHooks().onUpgrade(token);
+  const tokenResult = await getAppHooks().onUpgrade(token);
+  if (aborted) return;
 
-  if (!aborted) {
+  if (tokenResult.kind === "unavailable") {
     res.cork(() => {
-      const userData: UserData = {
-        ip,
-        ip2: ab2str(res.getProxiedRemoteAddressAsText()),
-        token,
-        user: null,
-        uuid: generateUUID(),
-        sessionId: dataAccess !== null ? dataAccess.sessionId : undefined,
-        userId: dataAccess !== null ? dataAccess.userId : undefined,
-        userToken: dataAccess !== null ? dataAccess.userToken : undefined,
-        timeStart: Date.now(),
-        userAgent,
-        appType,
-      };
-      res.upgrade(
-        userData,
-        secWebsocketKey,
-        token,
-        secWebsocketExtensions,
-        context,
-      );
+      res
+        .writeStatus("503 Service Unavailable")
+        .writeHeader("Retry-After", "1")
+        .end("Service temporarily unavailable");
     });
+    return;
   }
+
+  // "missing" still upgrades and is closed in onOpen with 4001 (item 18).
+  const dataAccess = tokenResult.kind === "ok" ? tokenResult : null;
+  res.cork(() => {
+    const userData: UserData = {
+      ip,
+      ip2: ab2str(res.getProxiedRemoteAddressAsText()),
+      token,
+      user: null,
+      uuid: generateUUID(),
+      sessionId: dataAccess !== null ? dataAccess.sessionId : undefined,
+      userId: dataAccess !== null ? dataAccess.userId : undefined,
+      userToken: dataAccess !== null ? dataAccess.userToken : undefined,
+      timeStart: Date.now(),
+      userAgent,
+      appType,
+    };
+    res.upgrade(
+      userData,
+      secWebsocketKey,
+      token,
+      secWebsocketExtensions,
+      context,
+    );
+  });
 };
 
 export { onMessage, onOpen, onClose, handleUpgrade, closeAllWs };

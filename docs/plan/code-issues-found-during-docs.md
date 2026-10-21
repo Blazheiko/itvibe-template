@@ -10,15 +10,15 @@
 
 | #   | Проблема                                                                                                          | Серйозність  | Область                      |
 | --- | ----------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
-| 1   | ~~CSP ніде не застосовується~~ ✅                                                                                  | Висока       | Безпека                      |
-| 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅                                           | Висока       | Безпека                      |
-| 3   | ~~WS-токен і `userToken` потрапляють у логи~~ ✅                                                                   | Середня      | Безпека                      |
-| 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                           | Середня      | DX / конфігурація            |
-| 5   | ~~Fallback `PGSQL_PORT` не працює → `NaN`~~ ✅                                                                     | Середня      | Конфігурація                 |
-| 6   | ~~Розбіжності `.env.example` з кодом~~ ✅                                                                          | Середня      | Конфігурація                 |
+| 1   | ~~CSP ніде не застосовується~~ ✅                                                                                 | Висока       | Безпека                      |
+| 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅                                          | Висока       | Безпека                      |
+| 3   | ~~WS-токен і `userToken` потрапляють у логи~~ ✅                                                                  | Середня      | Безпека                      |
+| 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                          | Середня      | DX / конфігурація            |
+| 5   | ~~Fallback `PGSQL_PORT` не працює → `NaN`~~ ✅                                                                    | Середня      | Конфігурація                 |
+| 6   | ~~Розбіжності `.env.example` з кодом~~ ✅                                                                         | Середня      | Конфігурація                 |
 | 7   | Потрібен pgvector, ніде не задокументовано                                                                        | Низька       | DX / БД                      |
-| 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                          | Низька       | Конфігурація                 |
-| 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                     | Низька       | Безпека                      |
+| 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                         | Низька       | Конфігурація                 |
+| 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                    | Низька       | Безпека                      |
 | 10  | `db:seed` — порожня заглушка                                                                                      | Низька       | DX / БД                      |
 | 11  | `src/drizzle/schema/index.ts` порожній                                                                            | Низька       | Структура                    |
 | 12  | Тіло запиту читається лише для `post`/`put`                                                                       | Низька       | HTTP                         |
@@ -40,7 +40,7 @@
 | 28  | Немає `.dockerignore`                                                                                             | Середня      | Docker / безпека             |
 | 29  | Контейнер працює від root, без `HEALTHCHECK`                                                                      | Середня      | Docker / безпека             |
 | 30  | `CMD` через `sh -c`: міграції на кожному старті, сигнали                                                          | Середня      | Docker / експлуатація        |
-| 31  | ~~Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`~~ ✅                                                         | Низька       | Docker / конфігурація        |
+| 31  | ~~Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`~~ ✅                                                        | Низька       | Docker / конфігурація        |
 | 32  | `corsS3.xml`: `AllowedOrigin *` разом з `PUT`                                                                     | Середня      | Безпека / S3                 |
 | 33  | `handleError` логує без `requestId`, контекст без `userId`                                                        | Низька       | Observability                |
 | 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                                                            | Низька       | Observability                |
@@ -69,7 +69,7 @@
 | 57  | `guards` у shared порожні й закоментовані в `index.ts`                                                            | Низька       | shared                       |
 | 58  | `EntityIdSchema` без `.brand()` — не брендований тип                                                              | Низька       | shared                       |
 | 59  | Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`                                           | Середня      | Frontend / DX                |
-| 60  | ~~Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`~~ ✅                                             | Середня      | Frontend / безпека           |
+| 60  | ~~Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`~~ ✅                                            | Середня      | Frontend / безпека           |
 | 61  | Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі                                                       | Низька       | Frontend                     |
 | 62  | Playground: `/api/doc/routes` зашито, ігнорує `baseUrl` і `API_PATH_PREFIX`                                       | Низька       | Playground                   |
 | 63  | Playground: `https://` → `ws://` замість `wss://`                                                                 | Низька       | Playground                   |
@@ -79,7 +79,7 @@
 | 67  | Push-група без `auth_guard`, перевірка в контролері                                                               | Низька       | Безпека / ролі               |
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
 | 69  | `AGENTS.md`: застаріле «checkout does not include .git history»                                                   | Інформаційна | Документація                 |
-| 70  | Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с                                   | Середня      | Надійність / Redis           |
+| 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
 
 ## Безпека
 
@@ -523,6 +523,8 @@
 - **Що:** `src/database/redis.ts` створює ioredis без `commandTimeout` і з offline queue за замовчуванням (`maxRetriesPerRequest: 20`). Коли Redis недоступний, кожен запит, що читає сесію (HTTP-middleware сесії, `verifyUpgradeToken`), чекає ~45 с і завершується `500 MaxRetriesPerRequestError`.
 - **Наслідок:** під час збою Redis запити накопичуються замість швидкої відмови; у `APP_ENV=local` текст помилки ioredis потрапляє у відповідь.
 - **Пропозиція:** `commandTimeout` і менший `maxRetriesPerRequest` для основного клієнта (з урахуванням того, що сесії мають переживати короткі збої), швидка `503` при недоступному Redis; readiness-перевірка (п. 35).
+
+> **Виправлено** у feat-016 (гілка `feat/redis-main-client-timeout`) за планом [`redis-main-client-timeout-plan.md`](./redis-main-client-timeout-plan.md): основний клієнт без offline queue і повторів, з таймаутом `REDIS_COMMAND_TIMEOUT_MS` (500 мс); недоступний Redis дає `503 service_unavailable` з `Retry-After: 1` без тексту ioredis; одна подія Sentry на інцидент (`redis-health.ts`); WS-з'єднання не закриваються, heartbeat не залежить від Redis, upgrade — `503`; `logoutAll` обмежений `REDIS_LOGOUT_ALL_DEADLINE_MS`. Readiness-перевірка (п. 35) — окремо.
 
 ## Що варто зробити далі
 

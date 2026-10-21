@@ -8,11 +8,13 @@ export type AppError =
   | { _tag: "NotFound"; resource: string; message: string }
   | { _tag: "Conflict"; message: string; reason?: string }
   | { _tag: "RateLimited"; message: string; reason?: string; retryAfterSeconds?: number }
-  | { _tag: "Internal"; publicMessage: string; cause?: unknown };
+  | { _tag: "Internal"; publicMessage: string; cause?: unknown }
+  // A dependency (Redis) is temporarily down; answered with Retry-After.
+  | { _tag: "ServiceUnavailable"; message: string; retryAfterSeconds: number; cause?: unknown };
 
 export type AppErrorCode = Extract<
   ErrorCode,
-  "bad_request" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "rate_limited" | "internal_error"
+  "bad_request" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "rate_limited" | "internal_error" | "service_unavailable"
 >;
 
 export type AppResult<T> = ResultType<T, AppError>;
@@ -25,6 +27,7 @@ const APP_ERROR_CODE_MAP: Record<AppError["_tag"], AppErrorCode> = {
   Conflict: "conflict",
   RateLimited: "rate_limited",
   Internal: "internal_error",
+  ServiceUnavailable: "service_unavailable",
 };
 
 const APP_ERROR_STATUS_MAP: Record<AppError["_tag"], number> = {
@@ -35,6 +38,7 @@ const APP_ERROR_STATUS_MAP: Record<AppError["_tag"], number> = {
   Conflict: 409,
   RateLimited: 429,
   Internal: 500,
+  ServiceUnavailable: 503,
 };
 
 export function badRequest(message: string, reason?: string): AppError {
@@ -90,6 +94,15 @@ export function internal(
   return {
     _tag: "Internal",
     publicMessage,
+    ...(cause !== undefined ? { cause } : {}),
+  };
+}
+
+export function serviceUnavailable(cause?: unknown): AppError {
+  return {
+    _tag: "ServiceUnavailable",
+    message: "Service temporarily unavailable. Try again later.",
+    retryAfterSeconds: 1,
     ...(cause !== undefined ? { cause } : {}),
   };
 }

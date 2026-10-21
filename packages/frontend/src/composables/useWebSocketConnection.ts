@@ -2,8 +2,7 @@
 import { useWebSocket } from '@vueuse/core'
 import { createHeartbeatOptions } from '@/utils/websocket-heartbeat'
 import { ref, computed } from 'vue'
-import { buildApiError } from '@/utils/websocket-base'
-import type { ApiError, WebsocketMessage, WebsocketPayload } from '@/utils/websocket-base'
+import type { WebsocketMessage, WebsocketPayload } from '@/utils/websocket-base'
 import { getResponseMessage, getTransportCode, hasResponseError, isUnauthorizedError } from '@/utils/response-normalizer'
 import { useBroadcastHandler } from '@/composables/useBroadcastHandler'
 import { reportValidationFailure } from '@/utils/sentry-payload-summary'
@@ -11,13 +10,7 @@ import { useEventBus } from '@/utils/event-bus'
 import { mainApi } from '@/utils/api'
 import { getCurrentAppType } from '@/utils/app-type'
 import { sentryService } from '@/utils/sentry-service'
-
-// Interfaces for API resolve
-interface ApiResolveItem {
-    resolve: (data: WebsocketMessage) => void
-    reject: (error?: ApiError) => void
-    timeout: number
-}
+import { settleApiResponse, type ApiResolveItem } from '@/utils/ws-api-response'
 
 interface SendPayload {
     event: string
@@ -187,17 +180,7 @@ const handleWebSocketClose = (event: CloseEvent): void => {
 // API response handling
 const messageHandler = (data: WebsocketMessage): void => {
     console.log('message handler')
-    const cb = apiResolve.value[data.event]
-    if (!cb) return
-
-    window.clearTimeout(cb.timeout)
-    delete apiResolve.value[data.event]
-
-    if (!hasResponseError(data) && cb.resolve) {
-        cb.resolve(data)
-    } else if (cb.reject) {
-        cb.reject(buildApiError(data))
-    }
+    settleApiResponse(apiResolve.value, data)
 }
 
 const handleMessage = async (messageData: string | Blob | ArrayBuffer) => {

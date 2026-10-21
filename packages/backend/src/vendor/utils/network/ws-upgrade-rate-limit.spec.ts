@@ -84,6 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
   onUpgrade.mockResolvedValue({
+    kind: "ok",
     sessionId: "s",
     userId: "1",
     userToken: "u",
