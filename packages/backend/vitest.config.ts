@@ -7,7 +7,8 @@ const packageRoot = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   test: {
     environment: "node",
-    exclude: [...configDefaults.exclude, "dist/**"],
+    // *.redis.test.ts need a real Redis: run them with `pnpm test:redis`.
+    exclude: [...configDefaults.exclude, "dist/**", "**/*.redis.test.ts"],
   },
   resolve: {
     alias: {

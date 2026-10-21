@@ -107,7 +107,8 @@ describe("consumeAuthThrottle call sites", () => {
   it("pass a registry policy, never an inline options object", async () => {
     const dir = path.join(import.meta.dirname, "../app/services");
     const files = (await fs.readdir(dir, { recursive: true })).filter(
-      (f) => f.endsWith(".ts") && !f.endsWith(".spec.ts"),
+      (f) =>
+        f.endsWith(".ts") && !f.endsWith(".spec.ts") && !f.endsWith(".test.ts"),
     );
     const offenders: string[] = [];
     for (const file of files) {
