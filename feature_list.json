@@ -146,6 +146,16 @@
       "dependencies": [],
       "status": "done",
       "evidence": "This PR: backend tests 471 (new malformed-body.spec.ts), typecheck, lint, docs:build + docs:verify"
+    },
+    {
+      "id": "feat-016",
+      "name": "Redis Main Client Fast Failure",
+      "description": "Main Redis client fails fast instead of hanging ~45 s when Redis is down: no offline queue or resend, commandTimeout, RedisUnavailableError -> 503 service_unavailable with Retry-After, one Sentry event per incident (redis-health), WS heartbeat independent of Redis, logoutAll deadline (code-issues item 70). Plan: docs/plan/redis-main-client-timeout-plan.md; tasks: docs/plan/redis-main-client-timeout-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/redis-main-client-timeout",
+      "dependencies": [],
+      "status": "in_progress",
+      "evidence": ""
     }
   ]
 }
