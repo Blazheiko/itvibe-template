@@ -142,7 +142,6 @@ const stopUncaughtException = async (
   }
 };
 
-console.log("start");
 start()
   .then(() => {
     logger.info("start success");
