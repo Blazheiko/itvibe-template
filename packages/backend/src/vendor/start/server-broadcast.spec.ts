@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// token-handler refuses to load without a 32+ char APP_KEY.
-vi.hoisted(() => {
-  process.env["APP_KEY"] ??= "test-app-key-0123456789abcdef0123456789";
-});
-
 const publish = vi.fn();
 vi.mock("uWebSockets.js", () => ({
   App: () => ({ publish }),
@@ -23,6 +18,10 @@ vi.mock("#vendor/utils/network/ws-handlers.js", () => ({
   onClose: vi.fn(),
   handleUpgrade: vi.fn(),
   closeAllWs: vi.fn(),
+}));
+// Keeps the session middleware chain (and token-handler's APP_KEY check) out of the import.
+vi.mock("#vendor/utils/middlewares/core/execute-httpMiddlewares.js", () => ({
+  default: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("#vendor/start/static-server.js", () => ({
   cacheStaticSource: vi.fn().mockResolvedValue(null),

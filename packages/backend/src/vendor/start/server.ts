@@ -93,6 +93,8 @@ interface ServerRoutes {
 
 // The type limits callers at compile time; the runtime check covers values that
 // bypass it (casts, untyped data), so nothing is published to an arbitrary topic.
+// Returns true when the channel is allowed and publish was called; it does not
+// confirm delivery (the uWS publish result is ignored).
 const broadcastToChannel = (
   channel: WsChannel,
   event: string,
