@@ -169,31 +169,35 @@ describe.skipIf(!hasRedis)("logoutAll repeated after a stopped run", () => {
   it("password reset after a stopped logoutAll still revokes the skipped session", async () => {
     // Enough keys for several SCAN pages (COUNT 100).
     for (let i = 0; i < 300; i++) await save(`s${String(i)}`);
-    await save("current");
 
-    // The state a stopped interactive run leaves: the pages up to the one with
-    // "current" are deleted except "current", and its cursor points past it.
+    // The state a stopped interactive run leaves. Redis does not say which
+    // page a key lands on, so the skipped ("current") session is picked from
+    // the first non-last page that has user sessions: the other keys of that
+    // page are deleted, the cursor points past it.
+    const sessionPrefix = `${PREFIX}session:${USER_TOKEN}:`;
     let cursor = "0";
-    let found: boolean;
+    let skippedId: string | undefined;
     do {
       const [next, keys] = await admin.scan(
         cursor,
         "MATCH",
-        `${PREFIX}session:${USER_TOKEN}:*`,
+        `${sessionPrefix}*`,
         "COUNT",
         100,
       );
-      const others = keys
-        .filter((k) => !k.endsWith(":current"))
-        .map((k) => k.slice(PREFIX.length));
-      if (others.length > 0) await admin.del(...others);
-      found = keys.some((k) => k.endsWith(":current"));
+      if (next !== "0" && keys.length > 0) {
+        skippedId = keys[0]?.slice(sessionPrefix.length);
+        const others = keys.slice(1).map((k) => k.slice(PREFIX.length));
+        if (others.length > 0) await admin.del(...others);
+      }
       cursor = next;
-    } while (!found);
-    expect(cursor, "setup: current must not be on the last SCAN page").not.toBe("0");
+    } while (skippedId === undefined && cursor !== "0");
+    if (skippedId === undefined) {
+      throw new Error("setup: SCAN returned all sessions on its last page");
+    }
     // Both the per-session key and the shared one 813c3f6 used: full
     // revocation must ignore any saved cursor.
-    await admin.setex(`logout_all:cursor:${USER_TOKEN}:current`, 600, cursor);
+    await admin.setex(`logout_all:cursor:${USER_TOKEN}:${skippedId}`, 600, cursor);
     await admin.setex(`logout_all:cursor:${USER_TOKEN}`, 600, cursor);
 
     // What password-reset-service calls: full revocation, no kept session.
