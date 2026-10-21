@@ -12,7 +12,7 @@
 | --- | ----------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
 | 1   | ~~CSP ніде не застосовується~~ ✅                                                                                  | Висока       | Безпека                      |
 | 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅ (Redis — відкрито)                        | Висока       | Безпека                      |
-| 3   | WS-токен і `userToken` потрапляють у логи                                                                         | Середня      | Безпека                      |
+| 3   | ~~WS-токен і `userToken` потрапляють у логи~~ ✅                                                                   | Середня      | Безпека                      |
 | 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                           | Середня      | DX / конфігурація            |
 | 5   | Fallback `PGSQL_PORT` не працює → `NaN`                                                                           | Середня      | Конфігурація                 |
 | 6   | Розбіжності `.env.example` з кодом                                                                                | Середня      | Конфігурація                 |
@@ -99,6 +99,8 @@
 - **Пропозиція:** додати ліміт на `upgrade` за IP (`src/vendor/utils/rate-limit/ws-rate-limit.ts` або в `handleUpgrade`), розглянути Redis-лічильник для multi-instance.
 
 ### 3. WS-токен і `userToken` потрапляють у логи
+
+> **Виправлено** у feat-005 (гілка `feat/security-hardening`): хелпер `maskTokenForLogs` (`src/vendor/utils/helpers/mask-sensitive.ts`) лишає в логах лише префікс `abcd…`. Його застосовано в `verifyUpgradeToken` (WS-токен; замість `sessionKey` логуються `sessionId` і маскований `userToken`), `wsSessionHandler` (`userToken`) `verifyToken` у `token-handler.ts` (`cookieUserToken`; підпис більше не логується) і `destroyAllSessions` у `redis-session-storage.ts` (`userToken`; Redis-pattern більше не логується). `parseCookies` при помилці декодування більше не друкує весь заголовок `Cookie`. Префікс із 4 символів годиться для локального зіставлення разом із `sessionId`, але не унікальний; для кореляції в масштабі потрібен стабільний HMAC-fingerprint (не зроблено).
 
 - **Що:** `verifyUpgradeToken` логує WS-токен; `wsSessionHandler` логує `userToken`.
 - **Наслідок:** секрети сесії потрапляють у логи та Sentry breadcrumbs.

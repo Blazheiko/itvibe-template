@@ -54,3 +54,12 @@ export function maskEmailForLogs(email: string): string {
 
   return `${maskedLocal}@${maskedDomain}${tldSuffix}`;
 }
+
+// Keeps a short prefix so log lines can be correlated without exposing the secret.
+export function maskTokenForLogs(token: string | undefined): string {
+  if (token === undefined || token.length < 12) {
+    return "[redacted-token]";
+  }
+
+  return `${token.slice(0, 4)}…`;
+}
