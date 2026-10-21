@@ -14,6 +14,8 @@ vi.mock("#database/redis.js", () => ({
       ["test:session:tok:1", "test:session:tok:2"],
     ]),
     del: vi.fn(async () => 2),
+    get: vi.fn(async () => null),
+    setex: vi.fn(async () => "OK"),
   },
   withRedis: async <T>(op: () => Promise<T>): Promise<T> => op(),
 }));

@@ -25,6 +25,9 @@ Goal: while Redis is down or slow, the main client (sessions, WS tokens) fails f
 - [x] T8 integration tests (`redis-main.redis.test.ts`, `test-support/redis-postponed.ts`)
 - [x] T9 `.env.example`, docs (configuration, request-lifecycle, observability, websocket, auth-security, database), code-issues item 70 closed
 - [x] T10.1 manual verification (below)
+- [x] Review of 97c4e91 (REQUEST CHANGES, both about logoutAll), fixed:
+  - [HIGH] a stopped run deleted the caller's own session, so the repeat got 401/403: the current session is now skipped and deleted last, together with the cursor key in one `MULTI`
+  - [MEDIUM] every repeat restarted SCAN at 0: the cursor is saved in `logout_all:cursor:<userToken>` (TTL 600 s) after each batch and a repeat resumes from it
 
 ### Not done
 
@@ -43,8 +46,10 @@ Goal: while Redis is down or slow, the main client (sessions, WS tokens) fails f
 ## Evidence of Completion
 
 - `pnpm typecheck`, `pnpm lint` clean
-- `pnpm test`: backend 549/549, frontend 45/45, shared 3/3, documentation 26/26
-- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 29/29 on Redis 7.4.11 (16 existing + 13 new)
+- `pnpm test`: backend 550/550, frontend 45/45, shared 3/3, documentation 26/26
+- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 30/30 on Redis 7.4.11 (16 existing + 14 new)
+  - `logout-all-retry.redis.test.ts`: the route chain `session_web → csrf_guard → auth_guard → AuthController.logoutAll` (CSRF enforced); the first run stopped by `CLIENT PAUSE WRITE` answers 503 without `deletedCount` and keeps the current session; the repeat passes the guards, succeeds, and leaves no sessions and no cursor key. With the old call (`destroyAllSessions(token)` without the kept session) the test fails
+  - unit (`redis-session-storage.spec.ts`, in-memory keyspace with real cursors): a stopped run keeps the session and saves a cursor, the repeat starts from it; on 404 keys (41 pages) with each attempt cut after a few pages, repeats finish, SCAN starts at 0 only once and rescans at most the interrupted page per attempt. This test also caught a full rescan when the stop fell between deleting the cursor key and the kept session, now one `MULTI`
   - postponed-command signal confirmed: `flags=b … qbuf=0 … cmd=setex`, `blocked_clients:1`; the fallback signal has its own test
   - control runs with default ioredis retries (offline queue, resend, `maxRetriesPerRequest: null`) **do** resend SETEX/DEL after `CLIENT KILL` (asserted in the suite)
   - with `enableOfflineQueue: true`, `autoResendUnfulfilledCommands: true`, `maxRetriesPerRequest: null` patched into `redis-main-options.ts`, 4 tests fail (contract + 3 no-resend tests), so they discriminate; reverted
@@ -57,7 +62,8 @@ Goal: while Redis is down or slow, the main client (sessions, WS tokens) fails f
   - after this run the per-request log of `handleError` was renamed to `Request failed: Redis unavailable` so it is not confused with the incident event
 - E2E `pnpm --filter frontend test:e2e` (backend on 3000): 4 passed, 8 failed — `mobile-layout.spec.ts` "registration submit button…" and "support input stays visible…" on all 4 browsers (`toBeVisible` not found). The same 8 fail on a clean `main` worktree with the same setup, so they are not caused by this branch
 - Not tested:
-  - `logoutAll` through a running backend during the outage (needs a signed session cookie; covered by unit tests of storage, service and controller mapping)
+  - `logoutAll` against a running server during an outage (the route chain is covered by `logout-all-retry.redis.test.ts`)
+  - resumed SCAN across a real large keyspace (unit test with an in-memory keyspace)
   - `redis-tests.yml` on GitHub (runs on the PR)
   - production timeout value (needs the target network)
 

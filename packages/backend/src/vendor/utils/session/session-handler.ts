@@ -283,7 +283,12 @@ export const sessionHandler = async (
           : undefined;
       if (currentUserToken === undefined) return 0;
 
-      const deletedCount = await destroyAllSessions(currentUserToken);
+      // The current session survives a stopped run, so the client can repeat
+      // logoutAll while still authenticated; it is deleted last.
+      const deletedCount = await destroyAllSessions(
+        currentUserToken,
+        sessionInfo?.id,
+      );
       logger.info(
         {
           userId: sessionInfo?.data.userId,
