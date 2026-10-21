@@ -124,8 +124,8 @@
       "owner": "Blazheiko",
       "branch": "feat/redis-rate-limit",
       "dependencies": ["feat-005"],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #32 (feat/redis-rate-limit, review fixes 94c6963): typecheck, lint, backend 466, frontend 41, test:redis 16 (CI job redis-tests green), docs:build + docs:verify, manual check with two backends on one Redis; evidence in progress.md on feat/redis-rate-limit"
     }
   ]
 }
