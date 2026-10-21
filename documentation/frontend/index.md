@@ -95,6 +95,8 @@
 
 `pnpm --filter frontend build` запускає паралельно `vue-tsc --build` і `vite build`, а потім `build-sw`. Результат лежить у `packages/frontend/dist`. У Docker-образі [`Dockerfile`](https://github.com/Blazheiko/itvibe-template/blob/main/Dockerfile) копіює `dist` у `packages/backend/public`, звідки його віддає бекенд. Подробиці: [/backend/deployment](/backend/deployment).
 
+У production-збірці (застосунок і Service Worker) виклики `console.log`, `console.info`, `console.debug` і `console.trace` вирізаються мінифікатором: [`vite.console.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vite.console.ts) передає їх у `esbuild.pure`. Так у консоль браузера не потрапляють токени й дані користувача, зокрема зі сторонніх залежностей. `console.warn` і `console.error` лишаються. У dev-режимі (`pnpm dev`) код не мінифікується, тож усі логи на місці. Не покладайтеся на це вирізання як на захист: секрети не варто логувати й у dev.
+
 Unit-тести (Vitest, `src/**/__tests__`) і e2e (Playwright, `e2e/`) описані в [/backend/testing](/backend/testing). Відома проблема №38: Playwright `webServer` запускається через `npm`.
 
 ## Старт застосунку

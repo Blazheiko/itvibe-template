@@ -69,7 +69,7 @@
 | 57  | `guards` у shared порожні й закоментовані в `index.ts`                                                            | Низька       | shared                       |
 | 58  | `EntityIdSchema` без `.brand()` — не брендований тип                                                              | Низька       | shared                       |
 | 59  | Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`                                           | Середня      | Frontend / DX                |
-| 60  | Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`                                                   | Середня      | Frontend / безпека           |
+| 60  | ~~Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`~~ ✅                                             | Середня      | Frontend / безпека           |
 | 61  | Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі                                                       | Низька       | Frontend                     |
 | 62  | Playground: `/api/doc/routes` зашито, ігнорує `baseUrl` і `API_PATH_PREFIX`                                       | Низька       | Playground                   |
 | 63  | Playground: `https://` → `ws://` замість `wss://`                                                                 | Низька       | Playground                   |
@@ -464,6 +464,8 @@
 - **Пропозиція:** fallback на відносний шлях (same-origin через proxy).
 
 ### 60. Фронтенд: `console.log(data)` з `wsToken`
+
+> **Виправлено** у feat-014: `console.log(data)` прибрано з `App.vue`; у production-збірці `console.log/info/debug/trace` вирізаються через `esbuild.pure` (`packages/frontend/vite.console.ts`).
 
 - **Що:** `packages/frontend/src/App.vue` → `initializeApp` має `console.log(data)`, що друкує всю відповідь init, зокрема користувача і `wsToken`, у консоль браузера (і, можливо, в Sentry breadcrumbs).
 - **Пропозиція:** прибрати; доповнює п. 3 (токени в логах).
