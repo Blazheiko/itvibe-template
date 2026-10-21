@@ -37,7 +37,7 @@ packages:
 │   │   │   ├── scripts/    # службові скрипти (send-test-email.ts тощо)
 │   │   │   ├── vendor/     # «ядро»: start/ (server, router), utils/, contracts/, types/
 │   │   │   └── index.ts    # точка входу
-│   │   └── drizzle.config.js
+│   │   └── drizzle.config.ts
 │   ├── frontend/           # src/, public/, e2e/ (Playwright), vite.sw.config.ts
 │   ├── shared/             # src/{brands,enums,errors,guards,responses,schemas,utils}, test/
 │   └── api-playground/     # src/{components,composables,router,stores,views}

@@ -112,7 +112,7 @@ export const notes = pgTable(
 )
 ```
 
-Згенеруйте міграцію ([drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js) пише їх у `src/drizzle/migrations` у форматі «тека на міграцію»):
+Згенеруйте міграцію ([drizzle.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts) пише їх у `src/drizzle/migrations` у форматі «тека на міграцію»):
 
 ```bash
 pnpm --filter backend db:generate --name add_notes

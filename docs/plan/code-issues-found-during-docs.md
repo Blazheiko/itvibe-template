@@ -14,10 +14,10 @@
 | 2   | ~~Немає rate limit на WebSocket upgrade і глобального per-IP ліміту~~ ✅ (Redis — відкрито)                        | Висока       | Безпека                      |
 | 3   | ~~WS-токен і `userToken` потрапляють у логи~~ ✅                                                                   | Середня      | Безпека                      |
 | 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                           | Середня      | DX / конфігурація            |
-| 5   | Fallback `PGSQL_PORT` не працює → `NaN`                                                                           | Середня      | Конфігурація                 |
-| 6   | Розбіжності `.env.example` з кодом                                                                                | Середня      | Конфігурація                 |
+| 5   | ~~Fallback `PGSQL_PORT` не працює → `NaN`~~ ✅                                                                     | Середня      | Конфігурація                 |
+| 6   | ~~Розбіжності `.env.example` з кодом~~ ✅                                                                          | Середня      | Конфігурація                 |
 | 7   | Потрібен pgvector, ніде не задокументовано                                                                        | Низька       | DX / БД                      |
-| 8   | Різні PostgreSQL defaults у застосунку та скриптах                                                                | Низька       | Конфігурація                 |
+| 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                          | Низька       | Конфігурація                 |
 | 9   | `broadcastToChannel` без runtime-перевірки каналу (L-4)                                                           | Низька       | Безпека                      |
 | 10  | `db:seed` — порожня заглушка                                                                                      | Низька       | DX / БД                      |
 | 11  | `src/drizzle/schema/index.ts` порожній                                                                            | Низька       | Структура                    |
@@ -123,11 +123,15 @@
 
 ### 5. Fallback `PGSQL_PORT` не працює
 
+> **Виправлено** у feat-006: `resolveDatabaseConfig()` у `src/config/database.ts` дає порт `5432`, коли `PGSQL_PORT` не задано або порожній, а на невалідне значення кидає помилку на старті.
+
 - **Що:** у `src/config/database.ts` написано `Number(env["PGSQL_PORT"]) ?? 5432`. `Number(undefined)` повертає `NaN`, а не `null`/`undefined`, тому `??` ніколи не спрацьовує.
 - **Наслідок:** без `PGSQL_PORT` застосунок отримує порт `NaN`.
 - **Пропозиція:** `Number(env["PGSQL_PORT"] ?? 5432)` або парсинг з перевіркою.
 
 ### 6. Розбіжності `.env.example` з кодом
+
+> **Виправлено** у feat-006: `.env.example` синхронізовано з кодом. Прибрано `UNIX_PATH` (замінено на `APP_UNIX_PATH`), `DATABASE_URL`, `TELEGRAM_*`, `XAI_IMAGE_*`; додано `API_PATH_PREFIX`, `APP_MAX_*_BODY_SIZE`, OAuth-змінні, `AI_TEXT_DRIVER`, `MISTRAL_*`, `TURN_*`; `REDIS_PREFIX` = `uwebsocket:`. `NODE_ENV` навмисно не додано (запасне джерело для `APP_ENV`). `config/turn.ts` поки ніхто не імпортує.
 
 - **Є в `.env.example`, але код не читає (8):** `UNIX_PATH` (код читає `APP_UNIX_PATH`), `DATABASE_URL` (діють `PGSQL_*`), `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `XAI_IMAGE_API_URL`, `XAI_IMAGE_EDIT_API_URL`, `XAI_IMAGE_MODEL`, `XAI_IMAGE_FORMAT`.
 - **Код читає, але немає в `.env.example` (26):** `AI_TEXT_DRIVER`, `API_PATH_PREFIX`, `APP_MAX_BODY_SIZE`, `APP_MAX_JSON_BODY_SIZE`, `APP_MAX_MULTIPART_BODY_SIZE`, `APP_MAX_OCTET_BODY_SIZE`, `APP_UNIX_PATH`, по три змінні `CLIENT_ID`/`CLIENT_SECRET`/`REDIRECT_URI` для `GOOGLE_`, `FACEBOOK_`, `GITHUB_`, `GITLAB_` (12), `OAUTH_FRONTEND_SUCCESS_URL`, `OAUTH_FRONTEND_ERROR_URL`, `MISTRAL_API_KEY`, `MISTRAL_TEXT_MODEL`, `NODE_ENV`, `TURN_SECRET`, `TURN_HOST`.
@@ -140,6 +144,8 @@
 - **Пропозиція:** згадати pgvector у README (у документації вже є, образ `pgvector/pgvector:pg16`).
 
 ### 8. Різні PostgreSQL defaults у застосунку та скриптах
+
+> **Виправлено** у feat-006: застосунок, `db:create` і `drizzle.config.ts` (перейменовано з `.js`) беруть налаштування з однієї `resolveDatabaseConfig()`.
 
 - **Що:** `drizzle.config.js` і `src/db/create-database.ts` мають defaults (`127.0.0.1`, `5432`, `postgres`, `itvibe_template`). `src/config/database.ts` defaults не має (див. також п. 5).
 - **Наслідок:** міграції можуть піти в одну БД, а застосунок не стартувати або підключитися не туди.

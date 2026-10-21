@@ -95,7 +95,9 @@ COPY --from=builder /app/packages/backend/public ./packages/backend/public
 COPY --from=builder /app/packages/backend/public-test ./packages/backend/public-test
 
 # Копируем конфигурационные файлы для drizzle-kit
-COPY --from=builder /app/packages/backend/drizzle.config.js ./packages/backend/drizzle.config.js
+COPY --from=builder /app/packages/backend/drizzle.config.ts ./packages/backend/drizzle.config.ts
+# drizzle.config.ts reads DB settings from this module (shared with the app and db:create)
+COPY --from=builder /app/packages/backend/src/config/database.ts ./packages/backend/src/config/database.ts
 # Копируем миграции drizzle
 COPY --from=builder /app/packages/backend/src/drizzle/migrations ./packages/backend/src/drizzle/migrations
 

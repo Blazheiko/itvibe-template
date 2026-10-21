@@ -63,12 +63,12 @@ SERVE_STATIC=false
 
 Пояснення:
 
-- **База даних** читається лише зі змінних `PGSQL_*` ([config/database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), [drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js)). `DATABASE_URL` з `.env.example` ніде не використовується.
+- **База даних** читається лише зі змінних `PGSQL_*` ([config/database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts)); ті самі значення бере drizzle-kit ([`drizzle.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts)). Незадані змінні отримують defaults `127.0.0.1:5432`, `postgres`, база `itvibe_template`.
 - **Redis**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_PREFIX` ([config/redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts)). Якщо Redis запущено без пароля, залиште `REDIS_PASSWORD` порожнім.
-- **`SERVE_STATIC`**: у `.env.example` стоїть `true`, але тоді backend на старті сканує `packages/backend/public`, якого в репозиторії немає. Запуск падає з `ENOENT: no such file or directory, scandir '.../packages/backend/public'`. За замовчуванням у коді це значення `false` ([config/app.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts)).
+- **`SERVE_STATIC`**: у `.env.example` стоїть `false`, бо в dev фронтенд віддає Vite. `true` потрібне лише тоді, коли в `packages/backend/public` лежить зібраний фронтенд; без цього каталогу сервер пише попередження і стартує без статики.
 - **`APP_KEY`** потрібен для хешування OTP, коли ввімкнено phone-auth (мінімум 32 символи, див. [validate-runtime-config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)). Із `AUTH_PHONE_ENABLED=false` сервер стартує і без нього, але краще задати його одразу.
 
-Решта розбіжностей між `.env.example` і кодом (`APP_UNIX_PATH` замість `UNIX_PATH`, `API_PATH_PREFIX`, `APP_MAX_*_BODY_SIZE`) описана в [backend README](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/README.md) та на сторінці [Конфігурація](/backend/configuration).
+Повний перелік змінних з defaults наведено на сторінці [Конфігурація](/backend/configuration).
 
 ## 3. База даних
 
@@ -137,7 +137,7 @@ content-type: application/json
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `ENOENT ... scandir '.../packages/backend/public'` під час старту | Увімкнено `SERVE_STATIC=true`. Встановіть `SERVE_STATIC=false` або створіть каталог `packages/backend/public`.                           |
 | `db:create` падає на `CREATE EXTENSION ... vector`                | У PostgreSQL немає pgvector. Візьміть образ `pgvector/pgvector` або встановіть розширення.                                               |
-| `ECONNREFUSED` / помилка автентифікації під час `db:*`            | Перевірте `PGSQL_HOST`, `PGSQL_PORT`, `PGSQL_USER`, `PGSQL_PASSWORD`. `DATABASE_URL` ігнорується.                                        |
+| `ECONNREFUSED` / помилка автентифікації під час `db:*`            | Перевірте `PGSQL_HOST`, `PGSQL_PORT`, `PGSQL_USER`, `PGSQL_PASSWORD`.                                                                    |
 | Помилки Redis (`NOAUTH`, `ECONNREFUSED`)                          | `REDIS_PASSWORD` і `REDIS_PORT` мають збігатися з налаштуваннями сервера Redis.                                                          |
 | `bind: address already in use` для 5432/6379/3000/5173            | Порт уже зайнятий. Звільніть його або змініть порт (`-p <host-port>:5432` у Docker плюс відповідна змінна в `.env`, `PORT` для backend). |
 | `pnpm install` скаржиться на engines                              | Перемкніться на Node із `.nvmrc` (`nvm use`) і pnpm `>=9`.                                                                               |
