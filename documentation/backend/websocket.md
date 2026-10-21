@@ -137,7 +137,7 @@ Support-контролери ([support-controller.ts](https://github.com/Blazhei
 - `broadcastMessageToUser(userId, …)` — на всі з'єднання користувача (через реєстр);
 - `broadcastMessageToUserExcept(userId, excludeUuid, …)` — на всі, крім одного;
 - `broadcastMessageToUserConnection(userId, uuid, …)` — на конкретне з'єднання;
-- `broadcastMessageToChannel(channel, …)` → `broadcastToChannel` у `server.ts` (`server.publish`).
+- `broadcastMessageToChannel(channel: WsChannel, …)` → `broadcastToChannel` у `server.ts` (`isWsChannel`, потім `server.publish`).
 
 Події, які реально надсилаються:
 
@@ -183,13 +183,9 @@ Presence публікується лише якщо в каналі `admin` є �
 Upgrade з токеном правильного формату, для якого `onUpgrade` повернув `null`, все одно виконується, а з'єднання закривається в `onOpen` кодом `4001`. Ліміт upgrade обмежує частоту таких спроб, але саме відхилення до `res.upgrade` не реалізоване. Див. [code-issues, п. 18](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
 :::
 
-::: danger Токени в логах
-`verifyUpgradeToken` логує WS-токен (`{ token }`), а `wsSessionHandler` — `userToken`; вони потрапляють у логи та Sentry breadcrumbs. Див. [code-issues, п. 3](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
-:::
+Токени сесії в логах маскуються: `maskTokenForLogs` ([`mask-sensitive.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/helpers/mask-sensitive.ts)) лишає лише перші 4 символи (`abcd…`). Так логуються WS-токен у `verifyUpgradeToken`, `userToken` у `wsSessionHandler` і `destroyAllSessions`, `cookieUserToken` у `token-handler.ts`.
 
-::: warning Канал без runtime-перевірки
-`broadcastToChannel(channel: string, …)` публікує в будь-який рядок; whitelist каналів немає (finding L-4). Зараз викликається лише з константою `'admin'`, але нові виклики з даними користувача небезпечні. Див. [code-issues, п. 9](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
-:::
+Канали обмежено whitelist'ом `WS_CHANNELS` у [`shared/src/guards/ws-channels.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/guards/ws-channels.ts) (зараз лише `admin`). `broadcastToChannel` приймає тип `WsChannel`, а в runtime додатково перевіряє значення через `isWsChannel`: невідомий канал не публікується, сервер пише `warn` і повертає `false`. Новий канал додається в `WS_CHANNELS`. Guard без залежностей, тож його можна імпортувати й на фронтенді (`shared/guards`).
 
 ## Діаграма послідовності
 

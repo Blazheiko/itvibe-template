@@ -1,8 +1,9 @@
 import { Result } from "better-result";
 import type { MyWebSocket, UserConnection } from "#vendor/types/types.js";
 import { forbidden, type AppResult } from "#app/services/shared/errors.js";
+import type { WsChannel } from "shared/guards";
 
-const ADMIN_CHANNEL = "admin";
+const ADMIN_CHANNEL: WsChannel = "admin";
 let adminSubscriberCount = 0;
 
 function getUserData(ws: MyWebSocket): UserConnection {

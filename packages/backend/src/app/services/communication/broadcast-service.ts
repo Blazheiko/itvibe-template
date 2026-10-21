@@ -3,6 +3,7 @@ import { broadcastToChannel } from "#vendor/start/server.js";
 import { makeBroadcastJson } from "#vendor/utils/helpers/json-handlers.js";
 import { wsConnectionRegistry } from "#app/websocket/ws-connection-registry.js";
 import type { Payload } from "#vendor/types/types.js";
+import type { WsChannel } from "shared/guards";
 
 export const broadcastService = {
   broadcastMessageToUser(
@@ -78,11 +79,11 @@ export const broadcastService = {
   },
 
   broadcastMessageToChannel(
-    channel: string,
+    channel: WsChannel,
     event: string,
     payload: Payload,
-  ): void {
-    logger.info(`broadcastMessageToChannel: ${channel} ${event}`);
-    broadcastToChannel(channel, event, payload);
+  ): boolean {
+    logger.info({ channel, event }, "broadcastMessageToChannel");
+    return broadcastToChannel(channel, event, payload);
   },
 };

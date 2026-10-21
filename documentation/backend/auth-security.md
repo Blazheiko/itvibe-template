@@ -214,6 +214,4 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 ::: danger Відомі відкриті питання
 
 - Rate limit не спільний між інстансами (немає Redis-лічильника). Обхід: edge-ліміт у nginx.
-- `verifyUpgradeToken` записує в лог сам WS-токен (`{ token }`), а `wsSessionHandler` записує `userToken`.
-- `broadcastToChannel` у `server.ts` приймає довільний рядок каналу без runtime-перевірки.
   :::
