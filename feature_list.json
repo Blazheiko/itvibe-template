@@ -120,11 +120,11 @@
     {
       "id": "feat-013",
       "name": "Shared Rate-Limit Counter",
-      "description": "Redis-backed rate-limit store so HTTP L1, per-route and WS upgrade limits are shared across instances (leftover of item 2 / finding C-2). Today the counter lives in process memory; the nginx edge limit in documentation/backend/deployment.md is the workaround. Details: docs/plan/code-issues-found-during-docs.md item 2, docs/plan/ws-upgrade-rate-limit-plan.md",
-      "owner": "",
-      "branch": "",
+      "description": "Redis-backed rate-limit store so HTTP L1, per-route and WS upgrade limits are shared across instances (leftover of item 2 / finding C-2). Today the counter lives in process memory; the nginx edge limit in documentation/backend/deployment.md is the workaround. Details: docs/plan/code-issues-found-during-docs.md item 2, docs/plan/ws-upgrade-rate-limit-plan.md; plan: docs/plan/redis-rate-limit-plan.md; tasks: docs/plan/redis-rate-limit-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/redis-rate-limit",
       "dependencies": ["feat-005"],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     }
   ]
