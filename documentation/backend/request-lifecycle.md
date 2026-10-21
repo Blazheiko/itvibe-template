@@ -94,9 +94,12 @@ sequenceDiagram
 | `UnsupportedMediaTypeError` | 415                | `unsupported_media_type`                                       |
 | `ValidationError`           | `error.statusCode` | `error.code`, `details.kind: "validation"`                     |
 | `ParameterValidationError`  | `error.statusCode` | `error.code`, `details.kind: "parameter_validation"`           |
+| `RedisUnavailableError`     | 503                | `service_unavailable`, заголовок `Retry-After: 1`              |
 | інше                        | 500                | `internal_error` (текст помилки лише при `env === "local"`)    |
 
-400, 413 і 415 логуються як `warn`, невідомі помилки — як `error` з контекстом для Sentry. Формат тіла — `{ status: "error", code, message, details? }` (`sendErrorResponse`).
+400, 413 і 415 логуються як `warn`, невідомі помилки — як `error` з контекстом для Sentry.
+
+`RedisUnavailableError` ([redis-unavailable-error.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/errors/redis-unavailable-error.ts)) означає, що основний Redis-клієнт недоступний (з'єднання не `ready` або команда не вклалася в `REDIS_COMMAND_TIMEOUT_MS`). Відповідь — `503 service_unavailable` з `message: "Service temporarily unavailable. Try again later."` і `Retry-After: 1`; текст помилки ioredis у відповідь не потрапляє навіть при `APP_ENV=local`. Запис `logger.error` ("Request failed: Redis unavailable") лишається в stdout, але в Sentry не йде — див. [Observability](/backend/observability#відмова-redis). Сервісний шар (login, logout, `logoutAll`, WS-токен) дає той самий `503`: `tryInternal` у [result-helpers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts) повертає `AppError` `ServiceUnavailable`, коли причина — `RedisUnavailableError`. Формат тіла — `{ status: "error", code, message, details? }` (`sendErrorResponse`).
 
 ## WebSocket: upgrade і повідомлення
 

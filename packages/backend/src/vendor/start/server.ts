@@ -346,7 +346,7 @@ export const handleError = (
   } else if (error instanceof RedisUnavailableError) {
     // Still error level for stdout; the Sentry transport skips this type
     // (redis-health reports one event per incident). No ioredis text in the body.
-    logger.error({ err: error, ...sentryContext }, "Redis unavailable");
+    logger.error({ err: error, ...sentryContext }, "Request failed: Redis unavailable");
     sendErrorResponse(
       res,
       error.statusCode,

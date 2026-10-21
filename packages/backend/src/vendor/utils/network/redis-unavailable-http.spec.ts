@@ -76,7 +76,7 @@ describe.each(["prod", "local"])("handleError for RedisUnavailableError (APP_ENV
     // Error level with the typed err: the Sentry transport skips it by err.type.
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ err: error }),
-      "Redis unavailable",
+      "Request failed: Redis unavailable",
     );
   });
 });
