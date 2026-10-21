@@ -1,4 +1,5 @@
 import logger from "#vendor/utils/logger.js";
+import { maskTokenForLogs } from "#vendor/utils/helpers/mask-sensitive.js";
 import crypto from "node:crypto";
 import appConfig from "#config/app.js";
 
@@ -77,8 +78,8 @@ const verifySignedToken = (
 
     if (!verifySignature(`${cookieUserToken}.${sessionId}`, signature)) {
       logger.warn(
-        { cookieUserToken, sessionId, signature },
-        `cookieUserToken: ${cookieUserToken} Invalid token signature`,
+        { cookieUserToken: maskTokenForLogs(cookieUserToken), sessionId },
+        "Invalid token signature",
       );
       return null;
     }

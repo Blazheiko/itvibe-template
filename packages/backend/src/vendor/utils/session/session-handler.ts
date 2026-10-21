@@ -19,6 +19,7 @@ import {
   destroyAllSessions,
 } from "#vendor/utils/session/redis-session-storage.js";
 import logger from "#vendor/utils/logger.js";
+import { maskTokenForLogs } from "#vendor/utils/helpers/mask-sensitive.js";
 import {
   createSignedToken,
   verifySignedToken,
@@ -320,7 +321,7 @@ export const wsSessionHandler = async (
     const sessionInfo = await getSession(sessionId, userToken);
 
     if (sessionInfo === null) {
-      logger.warn({ sessionId, userToken }, "Session not found");
+      logger.warn({ sessionId, userToken: maskTokenForLogs(userToken) }, "Session not found");
       return null;
     }
 
@@ -329,7 +330,7 @@ export const wsSessionHandler = async (
       sessionInfo.data.userId === ""
     ) {
       logger.warn(
-        { sessionId, userToken },
+        { sessionId, userToken: maskTokenForLogs(userToken) },
         "wsSessionHandler: session has no userId — not authenticated",
       );
       return null;
@@ -349,7 +350,7 @@ export const wsSessionHandler = async (
       },
     };
   } catch (err) {
-    logger.error({ err, sessionId, userToken }, "wsSessionHandler error");
+    logger.error({ err, sessionId, userToken: maskTokenForLogs(userToken) }, "wsSessionHandler error");
     return null;
   }
 };

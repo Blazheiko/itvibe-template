@@ -1,5 +1,6 @@
 import redis from '#database/redis.js';
 import logger from '#logger';
+import { maskTokenForLogs } from '#vendor/utils/helpers/mask-sensitive.js';
 import type { SessionInfo, SessionData } from '#vendor/types/types.js';
 
 const WS_TOKEN_TTL = 120;
@@ -11,7 +12,10 @@ const verifyUpgradeToken = async (
     try {
         const tokenData = await redis.get(`auth:ws:${token}`);
         if (tokenData === null) {
-            logger.warn({ token }, 'verifyUpgradeToken: token not found in Redis');
+            logger.warn(
+                { token: maskTokenForLogs(token) },
+                'verifyUpgradeToken: token not found in Redis',
+            );
             return null;
         }
 
@@ -37,7 +41,10 @@ const verifyUpgradeToken = async (
         const sessionKey = `session:${userToken}:${sessionId}`;
         const sessionData = await redis.get(sessionKey);
         if (sessionData === null) {
-            logger.warn({ sessionKey }, 'verifyUpgradeToken: session not found in Redis');
+            logger.warn(
+                { sessionId, userToken: maskTokenForLogs(userToken) },
+                'verifyUpgradeToken: session not found in Redis',
+            );
             return null;
         }
 

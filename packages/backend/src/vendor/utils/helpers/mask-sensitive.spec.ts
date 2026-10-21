@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { maskEmailForLogs, maskPhoneForLogs } from "./mask-sensitive.js";
+import {
+  maskEmailForLogs,
+  maskPhoneForLogs,
+  maskTokenForLogs,
+} from "./mask-sensitive.js";
 
 describe("maskPhoneForLogs", () => {
   it("masks normalized international phone numbers", () => {
@@ -20,5 +24,16 @@ describe("maskEmailForLogs", () => {
 
   it("falls back for malformed email values", () => {
     expect(maskEmailForLogs("not-an-email")).toBe("[redacted-email]");
+  });
+});
+
+describe("maskTokenForLogs", () => {
+  it("keeps only a short prefix of long tokens", () => {
+    expect(maskTokenForLogs("abcdef0123456789abcdef")).toBe("abcd…");
+  });
+
+  it("fully redacts short or missing tokens", () => {
+    expect(maskTokenForLogs("short")).toBe("[redacted-token]");
+    expect(maskTokenForLogs(undefined)).toBe("[redacted-token]");
   });
 });
