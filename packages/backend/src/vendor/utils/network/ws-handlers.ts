@@ -17,7 +17,10 @@ import type {
 } from "#vendor/types/types.js";
 import { wsSessionHandler } from "../session/session-handler.js";
 import getIP from "./get-ip.js";
-import checkUpgradeRateLimit from "#vendor/utils/rate-limit/upgrade-rate-limit.js";
+import checkUpgradeRateLimit, {
+  checkUpgradeRateLimitShared,
+  type UpgradeRateLimitResult,
+} from "#vendor/utils/rate-limit/upgrade-rate-limit.js";
 import { makeJson } from "#vendor/utils/helpers/json-handlers.js";
 import configApp from "#config/app.js";
 import type { Validator } from "#vendor/contracts/validator.js";
@@ -400,6 +403,22 @@ const onClose = async (
   }
 };
 
+const rejectUpgrade = (
+  res: HttpResponse,
+  result: Exclude<UpgradeRateLimitResult, { kind: "allowed" }>,
+): void => {
+  res.cork(() => {
+    if (result.kind === "limited") {
+      res
+        .writeStatus("429 Too Many Requests")
+        .writeHeader("Retry-After", String(result.retryAfter))
+        .end("Too many WebSocket upgrade requests");
+    } else {
+      res.writeStatus("503 Service Unavailable").end("Rate limit check failed");
+    }
+  });
+};
+
 const handleUpgrade = async (
   res: HttpResponse,
   req: HttpRequest,
@@ -418,21 +437,18 @@ const handleUpgrade = async (
   const userAgent = req.getHeader("user-agent");
   const ip = getIP(req, res);
 
-  // Before the token check and the session lookup: a flood of upgrades costs no I/O.
-  const upgradeLimit = checkUpgradeRateLimit(ip);
-  if (upgradeLimit.kind !== "allowed") {
-    res.cork(() => {
-      if (upgradeLimit.kind === "limited") {
-        res
-          .writeStatus("429 Too Many Requests")
-          .writeHeader("Retry-After", String(upgradeLimit.retryAfter))
-          .end("Too many WebSocket upgrade requests");
-      } else {
-        res
-          .writeStatus("503 Service Unavailable")
-          .end("Rate limit check failed");
-      }
-    });
+  // Level 1 (per process, sync) before any I/O: a flood of upgrades costs nothing.
+  const localLimit = checkUpgradeRateLimit(ip);
+  if (localLimit.kind !== "allowed") {
+    rejectUpgrade(res, localLimit);
+    return;
+  }
+
+  // Level 2 (cluster-wide, Redis), still before the token check and the session lookup.
+  const sharedLimit = await checkUpgradeRateLimitShared(ip);
+  if (aborted) return;
+  if (sharedLimit.kind !== "allowed") {
+    rejectUpgrade(res, sharedLimit);
     return;
   }
 

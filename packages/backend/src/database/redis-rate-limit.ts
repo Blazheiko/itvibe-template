@@ -18,6 +18,9 @@ const { password, ...baseConfig } = config;
 export const rateLimitRedisOptions = {
   ...baseConfig,
   ...(password !== null ? { password } : {}),
+  // Connected explicitly at startup (connectRateLimitRedis), so importing this
+  // module, e.g. in unit tests, opens no socket.
+  lazyConnect: true,
   enableOfflineQueue: false,
   maxRetriesPerRequest: 0,
   autoResendUnfulfilledCommands: false,
@@ -35,6 +38,17 @@ client.on("error", (err: unknown) => {
   lastErrorLog = now;
   logger.warn({ err }, "Rate-limit Redis connection error");
 });
+
+/**
+ * Opens the connection without blocking startup: until it is ready, commands
+ * fail fast and callers apply their onRedisError policy. Reconnects follow
+ * retryStrategy.
+ */
+export const connectRateLimitRedis = (): void => {
+  client.connect().catch((err: unknown) => {
+    logger.warn({ err }, "Rate-limit Redis initial connection failed");
+  });
+};
 
 /** Test-only: drop the connection and keep it down until reconnect() is called. */
 export const __rateLimitRedisTestHooks = {

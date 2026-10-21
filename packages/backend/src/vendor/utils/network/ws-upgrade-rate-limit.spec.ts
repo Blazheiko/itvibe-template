@@ -10,6 +10,10 @@ vi.mock("#config/rate-limit.js", () => ({
     configError: null,
   },
 }));
+// Level 2 (Redis) is covered in ws-upgrade-shared-limit.spec.ts; here it always allows.
+vi.mock("#database/redis-rate-limit.js", () => ({
+  default: { eval: vi.fn().mockResolvedValue([1, 1, 0]) },
+}));
 vi.mock("../routing/ws-api-dispatcher.js", () => ({ default: vi.fn() }));
 vi.mock("../session/session-handler.js", () => ({ wsSessionHandler: vi.fn() }));
 

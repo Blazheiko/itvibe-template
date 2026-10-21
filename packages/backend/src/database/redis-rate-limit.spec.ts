@@ -28,6 +28,7 @@ describe("rate-limit Redis client", () => {
   it("is created with strict, no-resend options on the shared server", () => {
     expect(constructed).toHaveLength(1);
     expect(constructed[0]).toMatchObject({
+      lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 0,
       autoResendUnfulfilledCommands: false,

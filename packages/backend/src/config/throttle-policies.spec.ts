@@ -57,6 +57,7 @@ describe("throttlePolicies registry", () => {
       link_email_target: [3, HOUR, "email"],
       link_email_user: [3, HOUR, "user"],
       link_email_user_cooldown: [1, 60_000, "user"],
+      upgrade: [60, 60_000, "ip"],
     });
   });
 

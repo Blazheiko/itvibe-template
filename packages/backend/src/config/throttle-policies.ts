@@ -1,3 +1,4 @@
+import { env } from "node:process";
 import { authConfig } from "#config/auth.js";
 
 // Registry of shared (Redis) limits for sensitive actions. Per-process limits
@@ -22,7 +23,20 @@ export interface ThrottlePolicy {
 }
 
 const HOUR_MS = 3_600_000;
+const INTEGER = /^\d+$/;
 const errors: string[] = [];
+
+const readInt = (name: string, fallback: number, min = 1): number => {
+  const raw = env[name];
+  if (raw === undefined) return fallback;
+  const value = raw.trim();
+  const parsed = Number(value);
+  if (!INTEGER.test(value) || !Number.isSafeInteger(parsed) || parsed < min) {
+    errors.push(`${name} must be an integer >= ${String(min)}, got "${raw}"`);
+    return fallback;
+  }
+  return parsed;
+};
 
 const fixedWindow = (
   scope: string,
@@ -112,6 +126,16 @@ export const throttlePolicies = {
     1,
     authConfig.emailLinkCooldownSeconds * 1000,
   ),
+  /** WS upgrade level 2: cluster-wide budget after the local level 1. */
+  wsUpgradeShared: {
+    scope: "upgrade",
+    keyBy: "ip",
+    algorithm: "sliding-log",
+    limit: readInt("WS_UPGRADE_SHARED_RATE_LIMIT_MAX", 60, 0),
+    windowMs: readInt("WS_UPGRADE_SHARED_RATE_LIMIT_WINDOW_MS", 60_000),
+    disableable: true,
+    onRedisError: "skip",
+  },
 } as const satisfies Record<string, ThrottlePolicy>;
 
 export type ThrottlePolicyName = keyof typeof throttlePolicies;
