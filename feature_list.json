@@ -59,10 +59,10 @@
       "id": "feat-007",
       "name": "Database DX",
       "description": "Document pgvector requirement in README, implement or remove the empty db:seed, remove/re-export empty src/drizzle/schema/index.ts (items 7, 10, 11). Details: docs/plan/code-issues-found-during-docs.md",
-      "owner": "",
-      "branch": "",
+      "owner": "Blazheiko",
+      "branch": "feat/db-dx",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     },
     {
