@@ -1,18 +1,16 @@
 import { getTextAdapterForModel } from '#app/services/ai/ai-provider.js';
 import { promptService } from '#app/services/ai/prompt-service.js';
 import logger from '#logger';
+import supportConfig from '#config/support.js';
 
-const DEFAULT_SYSTEM_PROMPT =
-    'Translate the following user support question into English. ' +
-    'Return ONLY the English translation, nothing else. ' +
-    'If the text is already in English, return it unchanged.';
+const { defaultTranslationPrompt, defaultGeneration } = supportConfig;
 
 export const supportQueryTranslationService = {
     async translateToEnglish(text: string): Promise<string> {
         const model = promptService.getModel('SUPPORT_QUERY_TRANSLATION');
-        const temperature = promptService.getTemperature('SUPPORT_QUERY_TRANSLATION') ?? 0.1;
-        const maxTokens = promptService.getMaxTokens('SUPPORT_QUERY_TRANSLATION') ?? 500;
-        const systemPrompt = promptService.getContent('SUPPORT_QUERY_TRANSLATION') || DEFAULT_SYSTEM_PROMPT;
+        const temperature = promptService.getTemperature('SUPPORT_QUERY_TRANSLATION') ?? defaultGeneration.SUPPORT_QUERY_TRANSLATION.temperature;
+        const maxTokens = promptService.getMaxTokens('SUPPORT_QUERY_TRANSLATION') ?? defaultGeneration.SUPPORT_QUERY_TRANSLATION.maxTokens;
+        const systemPrompt = promptService.getContent('SUPPORT_QUERY_TRANSLATION') || defaultTranslationPrompt;
 
         const adapter = getTextAdapterForModel(model);
         if (!adapter.isConfigured()) {

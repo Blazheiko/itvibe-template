@@ -16,11 +16,11 @@
 | 4   | ~~`SERVE_STATIC=true` у `.env.example` ламає запуск~~ ✅                                                          | Середня      | DX / конфігурація            |
 | 5   | ~~Fallback `PGSQL_PORT` не працює → `NaN`~~ ✅                                                                    | Середня      | Конфігурація                 |
 | 6   | ~~Розбіжності `.env.example` з кодом~~ ✅                                                                         | Середня      | Конфігурація                 |
-| 7   | Потрібен pgvector, ніде не задокументовано                                                                        | Низька       | DX / БД                      |
+| 7   | ~~Потрібен pgvector, ніде не задокументовано~~ ✅                                                                 | Низька       | DX / БД                      |
 | 8   | ~~Різні PostgreSQL defaults у застосунку та скриптах~~ ✅                                                         | Низька       | Конфігурація                 |
 | 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                    | Низька       | Безпека                      |
-| 10  | `db:seed` — порожня заглушка                                                                                      | Низька       | DX / БД                      |
-| 11  | `src/drizzle/schema/index.ts` порожній                                                                            | Низька       | Структура                    |
+| 10  | ~~`db:seed` — порожня заглушка~~ ✅                                                                               | Низька       | DX / БД                      |
+| 11  | ~~`src/drizzle/schema/index.ts` порожній~~ ✅                                                                     | Низька       | Структура                    |
 | 12  | Тіло запиту читається лише для `post`/`put`                                                                       | Низька       | HTTP                         |
 | 13  | `sendResponse` при `payload === null` віддає `String(status)` як JSON                                             | Низька       | HTTP                         |
 | 14  | Прогалини плану body limits: тести, `.env.example`, playground                                                    | Низька       | HTTP / тести                 |
@@ -143,6 +143,8 @@
 
 ### 7. Потрібен pgvector, ніде не задокументовано
 
+> **Виправлено** у feat-007 (гілка `feat/db-dx`): розділ [«pgvector»](https://blazheiko.github.io/itvibe-template/backend/database#pgvector) у `documentation/backend/database.md` пояснює, навіщо потрібне розширення (пошук у базі знань Support AI), що буде без нього, як його встановити й перевірити; на нього посилаються `README.md`, `packages/backend/README.md`, `getting-started`, `ai`, `deployment`, `repositories-transformers`.
+
 - **Що:** `src/db/create-database.ts` виконує `CREATE EXTENSION IF NOT EXISTS vector`. На звичайному образі `postgres` команда `db:create` падає.
 - **Пропозиція:** згадати pgvector у README (у документації вже є, образ `pgvector/pgvector:pg16`).
 
@@ -158,10 +160,14 @@
 
 ### 10. `db:seed` — порожня заглушка
 
+> **Виправлено** у feat-007 (гілка `feat/db-dx`) за планом [`db-seed-plan.md`](./db-seed-plan.md): `db:seed` ідемпотентно вставляє три промпти `llm_system_prompts` (тексти — ті самі runtime-fallback з `config/support.ts`), а з `--demo` — адміна і, опційно, звичайного користувача з `SEED_*`. Додано `db:seed:prod`.
+
 - **Що:** `src/db/seed.ts` містить лише `import "dotenv/config"`. Команда виконується успішно, але нічого не робить.
 - **Пропозиція:** додати мінімальні seed-дані (тестовий користувач/адмін) або прибрати скрипт.
 
 ### 11. `src/drizzle/schema/index.ts` порожній
+
+> **Виправлено** у feat-007 (гілка `feat/db-dx`): видалено порожні `src/drizzle/schema/index.ts`, а також такі самі порожні й ніде не імпортовані `src/drizzle/schema-validator.ts`, `type-guards.ts`, `types.ts`. У `src/drizzle/` лишилися тільки міграції; схема — `src/database/schema.ts`. Аліас `#drizzle/*` залишено, хоча зараз його ніхто не імпортує.
 
 - **Що:** реальна схема лежить у `src/database/schema.ts` (на неї вказує `drizzle.config.js`), а `src/drizzle/schema/index.ts` порожній. Це вводить в оману.
 - **Пропозиція:** видалити порожній файл або реекспортувати з нього схему.

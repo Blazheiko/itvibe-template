@@ -23,6 +23,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed:prod": "node dist/db/seed.js",
     "mail:test": "tsx src/scripts/send-test-email.ts",
     "test": "vitest run",
     "test:watch": "vitest",
