@@ -48,11 +48,11 @@
     {
       "id": "feat-006",
       "name": "Env Example Sync",
-      "description": "Fix SERVE_STATIC=true crash, PGSQL_PORT NaN fallback, unify DB defaults between app and scripts, sync .env.example with the 109 env vars read by code incl. REDIS_PREFIX (items 4, 5, 6, 8). Details: docs/plan/code-issues-found-during-docs.md",
-      "owner": "",
-      "branch": "",
+      "description": "Fix SERVE_STATIC=true crash, PGSQL_PORT NaN fallback, unify DB defaults between app and scripts, sync .env.example with the 109 env vars read by code incl. REDIS_PREFIX (items 4, 5, 6, 8); set SERVE_STATIC and APP_ENV in the Docker image (item 31). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "Blazheiko",
+      "branch": "feat/env-example-sync",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     },
     {
