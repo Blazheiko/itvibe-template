@@ -27,7 +27,8 @@ Goal: while Redis is down or slow, the main client (sessions, WS tokens) fails f
 - [x] T10.1 manual verification (below)
 - [x] Review of 97c4e91 (REQUEST CHANGES, both about logoutAll), fixed:
   - [HIGH] a stopped run deleted the caller's own session, so the repeat got 401/403: the current session is now skipped and deleted last, together with the cursor key in one `MULTI`
-  - [MEDIUM] every repeat restarted SCAN at 0: the cursor is saved in `logout_all:cursor:<userToken>` (TTL 600 s) after each batch and a repeat resumes from it
+  - [MEDIUM] every repeat restarted SCAN at 0: the cursor is saved after each batch and a repeat resumes from it
+- [x] Review of 813c3f6 (HIGH): password reset (`destroyAllSessions` without a kept session) resumed from the cursor of a stopped logoutAll and left the skipped old session valid. Fixed: the cursor is used only by interactive logoutAll and keyed by its session (`logout_all:cursor:<userToken>:<sessionId>`); full revocation always scans from 0 and never touches a cursor
 
 ### Not done
 
@@ -47,8 +48,9 @@ Goal: while Redis is down or slow, the main client (sessions, WS tokens) fails f
 
 - `pnpm typecheck`, `pnpm lint` clean
 - `pnpm test`: backend 550/550, frontend 45/45, shared 3/3, documentation 26/26
-- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 30/30 on Redis 7.4.11 (16 existing + 14 new)
+- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 31/31 on Redis 7.4.11 (16 existing + 15 new)
   - `logout-all-retry.redis.test.ts`: the route chain `session_web → csrf_guard → auth_guard → AuthController.logoutAll` (CSRF enforced); the first run stopped by `CLIENT PAUSE WRITE` answers 503 without `deletedCount` and keeps the current session; the repeat passes the guards, succeeds, and leaves no sessions and no cursor key. With the old call (`destroyAllSessions(token)` without the kept session) the test fails
+  - regression for the 813c3f6 finding (`logout-all-retry.redis.test.ts`): 301 sessions over several SCAN pages, the state a stopped logoutAll leaves (pages up to the one with the current session deleted except it, cursor past it, saved under both the old shared and the new key), then the password-reset call → no sessions left. On 813c3f6 the same test fails with the old session surviving
   - unit (`redis-session-storage.spec.ts`, in-memory keyspace with real cursors): a stopped run keeps the session and saves a cursor, the repeat starts from it; on 404 keys (41 pages) with each attempt cut after a few pages, repeats finish, SCAN starts at 0 only once and rescans at most the interrupted page per attempt. This test also caught a full rescan when the stop fell between deleting the cursor key and the kept session, now one `MULTI`
   - postponed-command signal confirmed: `flags=b … qbuf=0 … cmd=setex`, `blocked_clients:1`; the fallback signal has its own test
   - control runs with default ioredis retries (offline queue, resend, `maxRetriesPerRequest: null`) **do** resend SETEX/DEL after `CLIENT KILL` (asserted in the suite)

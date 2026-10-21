@@ -165,4 +165,40 @@ describe.skipIf(!hasRedis)("logoutAll repeated after a stopped run", () => {
     expect(await userSessions()).toEqual([]);
     expect(await admin.exists(`logout_all:cursor:${USER_TOKEN}`)).toBe(0);
   });
+
+  it("password reset after a stopped logoutAll still revokes the skipped session", async () => {
+    // Enough keys for several SCAN pages (COUNT 100).
+    for (let i = 0; i < 300; i++) await save(`s${String(i)}`);
+    await save("current");
+
+    // The state a stopped interactive run leaves: the pages up to the one with
+    // "current" are deleted except "current", and its cursor points past it.
+    let cursor = "0";
+    let found: boolean;
+    do {
+      const [next, keys] = await admin.scan(
+        cursor,
+        "MATCH",
+        `${PREFIX}session:${USER_TOKEN}:*`,
+        "COUNT",
+        100,
+      );
+      const others = keys
+        .filter((k) => !k.endsWith(":current"))
+        .map((k) => k.slice(PREFIX.length));
+      if (others.length > 0) await admin.del(...others);
+      found = keys.some((k) => k.endsWith(":current"));
+      cursor = next;
+    } while (!found);
+    expect(cursor, "setup: current must not be on the last SCAN page").not.toBe("0");
+    // Both the per-session key and the shared one 813c3f6 used: full
+    // revocation must ignore any saved cursor.
+    await admin.setex(`logout_all:cursor:${USER_TOKEN}:current`, 600, cursor);
+    await admin.setex(`logout_all:cursor:${USER_TOKEN}`, 600, cursor);
+
+    // What password-reset-service calls: full revocation, no kept session.
+    await storage.destroyAllSessions(USER_TOKEN);
+
+    expect(await userSessions()).toEqual([]);
+  });
 });

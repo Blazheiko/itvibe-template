@@ -192,7 +192,7 @@ describe("destroyAllSessions", () => {
       expect.stringContaining("Stopped deleting all sessions"),
     );
     expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(USER_TOKEN);
-    const saved = ks.store.get(`logout_all:cursor:${USER_TOKEN}`);
+    const saved = ks.store.get(`logout_all:cursor:${USER_TOKEN}:current`);
     expect(saved).toBeDefined();
     expect(saved).not.toBe("0");
 
@@ -201,6 +201,26 @@ describe("destroyAllSessions", () => {
     await expect(storage.destroyAllSessions(USER_TOKEN, "current")).resolves.toBeGreaterThan(0);
 
     expect(ks.scanCursors[0]).toBe(saved); // resumed, not restarted at 0
+    expect(ks.sessions()).toEqual([]);
+  });
+
+  it("full revocation after a stopped logoutAll ignores its cursor and deletes the skipped session", async () => {
+    const ks = createKeyspace(["current", "a", "b", "c"], 60);
+    failAfter(8); // stops after the page with "current" was scanned and skipped
+
+    await expect(
+      storage.destroyAllSessions(USER_TOKEN, "current"),
+    ).rejects.toBeInstanceOf(RedisUnavailableError);
+    expect(ks.has("current")).toBe(true);
+    expect(ks.store.size).toBe(1); // the interactive cursor is behind "current"
+
+    withRedis.mockImplementation(async (op) => op());
+    ks.scanCursors.length = 0;
+    redis.get.mockClear();
+    await storage.destroyAllSessions(USER_TOKEN); // e.g. password reset
+
+    expect(ks.scanCursors[0]).toBe("0");
+    expect(redis.get).not.toHaveBeenCalled();
     expect(ks.sessions()).toEqual([]);
   });
 

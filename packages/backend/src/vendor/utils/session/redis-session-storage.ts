@@ -174,13 +174,17 @@ const LOGOUT_ALL_CURSOR_TTL_SECONDS = 600;
  * reached cursor 0; otherwise (deadline REDIS_LOGOUT_ALL_DEADLINE_MS exhausted,
  * Redis unavailable) rejects with RedisUnavailableError.
  *
- * A stopped run must be repeatable by the same client:
- * - `keepSessionId` (the caller's own session) is skipped and deleted only
- *   after the scan completes, so the repeat request is still authenticated;
- * - the SCAN cursor is saved after each batch and a repeat resumes from it, so
- *   on a large keyspace repeats make progress instead of rescanning the start.
- *   A SCAN cursor is not bound to a connection. Sessions created behind the
- *   saved cursor between attempts are not seen by the resumed scan.
+ * Two modes:
+ * - Interactive logoutAll (`keepSessionId` = the caller's own session): the
+ *   session is skipped and deleted only after the scan completes, so a repeat
+ *   after a stop is still authenticated; the SCAN cursor is saved after each
+ *   batch under a key of that session and a repeat resumes from it, so on a
+ *   large keyspace repeats make progress. A SCAN cursor is not bound to a
+ *   connection. Sessions created behind the saved cursor between attempts are
+ *   not seen by the resumed scan.
+ * - Full revocation (no `keepSessionId`, e.g. password reset): always scans
+ *   from 0 and never reads or writes a cursor, so progress left by an
+ *   interactive run (which skipped its own session) cannot hide a session.
  */
 export const destroyAllSessions = async (
   userToken: string,
@@ -188,10 +192,13 @@ export const destroyAllSessions = async (
 ): Promise<number> => {
   const prefix = redisConfig.keyPrefix;
   const pattern = sanitizeRedisKey(`${prefix}session:${userToken}:*`);
-  const cursorKey = sanitizeRedisKey(`logout_all:cursor:${userToken}`);
   const keepKey =
     keepSessionId !== undefined
       ? sanitizeRedisKey(`session:${userToken}:${keepSessionId}`)
+      : undefined;
+  const cursorKey =
+    keepSessionId !== undefined
+      ? sanitizeRedisKey(`logout_all:cursor:${userToken}:${keepSessionId}`)
       : undefined;
   logger.info(
     { userToken: maskTokenForLogs(userToken) },
@@ -216,7 +223,10 @@ export const destroyAllSessions = async (
   let deletedCount = 0;
 
   try {
-    let cursor = (await step(() => redis.get(cursorKey))) ?? "0";
+    let cursor =
+      cursorKey === undefined
+        ? "0"
+        : ((await step(() => redis.get(cursorKey))) ?? "0");
     do {
       const [nextCursor, foundKeys] = await step(() =>
         redis.scan(cursor, "MATCH", pattern, "COUNT", 100),
@@ -230,7 +240,7 @@ export const destroyAllSessions = async (
       }
       cursor = nextCursor;
       // Saved after the DEL: a lost save only repeats an idempotent batch.
-      if (cursor !== "0") {
+      if (cursorKey !== undefined && cursor !== "0") {
         await step(() =>
           redis.setex(cursorKey, LOGOUT_ALL_CURSOR_TTL_SECONDS, cursor),
         );
@@ -240,9 +250,7 @@ export const destroyAllSessions = async (
     // Cursor and the kept session go together (MULTI): a stop between two
     // separate DELs would leave either a full rescan from 0 or an
     // unauthenticated client with sessions left.
-    if (keepKey === undefined) {
-      await step(() => redis.del(cursorKey));
-    } else {
+    if (keepKey !== undefined && cursorKey !== undefined) {
       const results = await step(() =>
         redis.multi().del(cursorKey).del(keepKey).exec(),
       );
