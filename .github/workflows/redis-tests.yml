@@ -1,8 +1,9 @@
 name: Redis tests
 
-# Integration tests of the shared rate limits against a real Redis
-# (packages/backend/src/**/*.redis.test.ts). Without REDIS_TEST_URL they skip,
-# so this job is what actually exercises the Lua scripts.
+# Integration tests against a real Redis (packages/backend/src/**/*.redis.test.ts):
+# the shared rate limits and the main client's no-resend / timeout contract.
+# Without REDIS_TEST_URL they skip, so this job is what actually exercises the
+# Lua scripts and CLIENT PAUSE scenarios.
 on:
   pull_request:
     paths: &redis_paths
