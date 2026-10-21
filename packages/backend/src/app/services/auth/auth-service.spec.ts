@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -92,6 +92,13 @@ function restoreEnv(): void {
 
   Object.assign(process.env, ORIGINAL_ENV);
 }
+
+beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+  resetAuthThrottleMock.mockReset();
+  resetAuthThrottleMock.mockResolvedValue(undefined);
+});
 
 afterEach(() => {
   vi.resetModules();

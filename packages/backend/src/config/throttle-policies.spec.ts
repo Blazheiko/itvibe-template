@@ -60,6 +60,12 @@ describe("throttlePolicies registry", () => {
       upgrade: [60, 60_000, "ip"],
       login_ip: [20, 900_000, "ip"],
       login_identifier: [40, 900_000, "identifier"],
+      change_password_user: [10, 900_000, "user"],
+      forgot_password_ip: [10, HOUR, "ip"],
+      forgot_password_email: [3, HOUR, "email"],
+      resend_verification_user: [3, HOUR, "user"],
+      reset_password_ip: [20, HOUR, "ip"],
+      verify_email_ip: [20, HOUR, "ip"],
     });
   });
 

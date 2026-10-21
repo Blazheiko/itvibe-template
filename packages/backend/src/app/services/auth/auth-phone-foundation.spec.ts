@@ -115,6 +115,10 @@ function hashOtp(code: string): string {
 }
 
 beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+  resetAuthThrottleMock.mockReset();
+  resetAuthThrottleMock.mockResolvedValue(undefined);
   process.env["APP_KEY"] = "a".repeat(32);
   process.env["AUTH_PHONE_ENABLED"] = "true";
   process.env["AUTH_SMS_PROVIDER"] = "fake";

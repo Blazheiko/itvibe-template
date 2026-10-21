@@ -249,6 +249,7 @@ export default {
     const payload = getTypedPayload(context);
     const result = await passwordResetService.requestPasswordReset(
       payload.email,
+      { ipAddress: context.httpData.ip ?? "" },
     );
     return {
       status: "success",
@@ -301,6 +302,7 @@ export default {
       payload.token,
       payload.password,
       payload.passwordConfirm,
+      { ipAddress: context.httpData.ip ?? "" },
     );
     if (Result.isError(result)) {
       const error = mapControllerError(context, result.error);
@@ -334,7 +336,9 @@ export default {
     context: HttpContext<VerifyEmailInput>,
   ): Promise<VerifyEmailResponse> {
     const payload = getTypedPayload(context);
-    const result = await emailVerificationService.verifyEmail(payload.token);
+    const result = await emailVerificationService.verifyEmail(payload.token, {
+      ipAddress: context.httpData.ip ?? "",
+    });
     if (Result.isError(result)) {
       return mapControllerError(context, result.error);
     }

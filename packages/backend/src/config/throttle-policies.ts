@@ -148,6 +148,48 @@ export const throttlePolicies = {
     onRedisError: "reject",
     resetOnSuccess: true,
   },
+  /** Checking the current password: consumed before validatePassword. */
+  changePasswordUser: {
+    scope: "change_password_user",
+    keyBy: "user",
+    algorithm: "fixed-window",
+    limit: readInt("AUTH_CHANGE_PASSWORD_MAX_ATTEMPTS_PER_USER", 10),
+    windowMs: readInt("AUTH_CHANGE_PASSWORD_WINDOW_SECONDS", 900) * 1000,
+    onRedisError: "reject",
+    resetOnSuccess: true,
+  },
+  forgotPasswordIp: fixedWindow(
+    "forgot_password_ip",
+    "ip",
+    readInt("AUTH_FORGOT_PASSWORD_MAX_REQUESTS_PER_IP_PER_HOUR", 10),
+    HOUR_MS,
+  ),
+  forgotPasswordEmail: fixedWindow(
+    "forgot_password_email",
+    "email",
+    readInt("AUTH_FORGOT_PASSWORD_MAX_REQUESTS_PER_EMAIL_PER_HOUR", 3),
+    HOUR_MS,
+  ),
+  resendVerificationUser: fixedWindow(
+    "resend_verification_user",
+    "user",
+    readInt("AUTH_RESEND_VERIFICATION_MAX_PER_USER_PER_HOUR", 3),
+    HOUR_MS,
+  ),
+  /** Guessing reset tokens. */
+  resetPasswordIp: fixedWindow(
+    "reset_password_ip",
+    "ip",
+    readInt("AUTH_RESET_PASSWORD_MAX_ATTEMPTS_PER_IP_PER_HOUR", 20),
+    HOUR_MS,
+  ),
+  /** Guessing verification tokens. */
+  verifyEmailIp: fixedWindow(
+    "verify_email_ip",
+    "ip",
+    readInt("AUTH_VERIFY_EMAIL_MAX_ATTEMPTS_PER_IP_PER_HOUR", 20),
+    HOUR_MS,
+  ),
   /** WS upgrade level 2: cluster-wide budget after the local level 1. */
   wsUpgradeShared: {
     scope: "upgrade",

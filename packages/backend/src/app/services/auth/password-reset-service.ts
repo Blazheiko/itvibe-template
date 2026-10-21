@@ -236,8 +236,26 @@ function buildResetEmailContent(
 export const passwordResetService = {
   async requestPasswordReset(
     email: string,
+    requestMeta: { ipAddress: string },
   ): Promise<AppResult<{ message: string }>> {
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Before the lookup, and the same generic answer either way: the response
+    // never tells whether the address exists or whether the budget is spent.
+    const throttles = await tryInternal(async () => {
+      const byIp = await consumeAuthThrottle(
+        throttlePolicies.forgotPasswordIp,
+        requestMeta.ipAddress,
+      );
+      if (!byIp.allowed || normalizedEmail === "") return byIp;
+      return consumeAuthThrottle(throttlePolicies.forgotPasswordEmail, normalizedEmail);
+    }, "Failed to enforce forgot password throttle");
+    if (Result.isError(throttles) || !throttles.value.allowed) {
+      if (Result.isError(throttles)) {
+        logger.warn({ err: throttles.error }, "Forgot password throttle unavailable");
+      }
+      return Result.ok({ message: GENERIC_RESET_MESSAGE });
+    }
     let user:
       | Awaited<ReturnType<typeof userRepository.findByEmail>>
       | undefined;
@@ -552,7 +570,21 @@ export const passwordResetService = {
     token: string,
     password: string,
     passwordConfirm: string,
+    requestMeta: { ipAddress: string },
   ): Promise<AppResult<{ status: "success" }>> {
+    const throttle = await tryInternal(
+      () => consumeAuthThrottle(throttlePolicies.resetPasswordIp, requestMeta.ipAddress),
+      "Failed to enforce reset password throttle",
+    );
+    if (Result.isError(throttle)) {
+      return Result.err(throttle.error);
+    }
+    if (!throttle.value.allowed) {
+      return Result.err(
+        badRequest("Too many password reset attempts. Please try again later."),
+      );
+    }
+
     const normalizedToken = token.trim();
     if (normalizedToken === "") {
       return Result.err(

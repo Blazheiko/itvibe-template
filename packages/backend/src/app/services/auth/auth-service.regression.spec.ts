@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const userRepositoryMock = {
   findByEmail: vi.fn(),
@@ -76,6 +76,13 @@ vi.mock('#app/services/auth/auth-throttle-service.js', () => ({
 async function loadAuthService() {
   return import("./auth-service.js");
 }
+
+beforeEach(() => {
+  consumeAuthThrottleMock.mockReset();
+  consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+  resetAuthThrottleMock.mockReset();
+  resetAuthThrottleMock.mockResolvedValue(undefined);
+});
 
 afterEach(() => {
   vi.resetModules();
@@ -326,5 +333,44 @@ describe("auth throttle fail-closed (email registration)", () => {
     expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
     expect(userRepositoryMock.findByEmail).not.toHaveBeenCalled();
     expect(userRepositoryMock.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("change password throttle", () => {
+  it.each([
+    ["the budget is spent", () => consumeAuthThrottleMock.mockResolvedValue({ allowed: false, count: 11 })],
+    ["Redis fails", () => consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"))],
+  ])("rejects without checking the current password when %s", async (_name, arrange) => {
+    arrange();
+    userRepositoryMock.findById.mockResolvedValue({ id: 7n, password: "stored-password-hash" });
+    const { authService } = await loadAuthService();
+    const result = await authService.changePassword(7n, {
+      currentPassword: "guess",
+      newPassword: "new-password-123",
+    });
+    expect(Result.isError(result)).toBe(true);
+    expect(consumeAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "change_password_user", limit: 10, windowMs: 900_000 }),
+      "7",
+    );
+    expect(validatePasswordMock).not.toHaveBeenCalled();
+    expect(userRepositoryMock.update).not.toHaveBeenCalled();
+  });
+
+  it("resets the budget after a successful change", async () => {
+    userRepositoryMock.findById.mockResolvedValue({ id: 7n, password: "stored-password-hash" });
+    validatePasswordMock.mockResolvedValue(true);
+    hashPasswordMock.mockResolvedValue("new-password-hash");
+    userRepositoryMock.update.mockResolvedValue({ id: 7n });
+    const { authService } = await loadAuthService();
+    const result = await authService.changePassword(7n, {
+      currentPassword: "secret123",
+      newPassword: "new-password-123",
+    });
+    expect(Result.isOk(result)).toBe(true);
+    expect(resetAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "change_password_user" }),
+      "7",
+    );
   });
 });

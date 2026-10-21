@@ -348,7 +348,18 @@ export type ThrottlePolicyName = keyof typeof throttlePolicies;
 | WS upgrade, рівень 2 (Redis)      | 60 / 60 с (`WS_UPGRADE_SHARED_RATE_LIMIT_*`)                                       |
 | Акаунт без пароля                 | відповідь уніфікується до `Invalid email or password`                              |
 
-Пороги для `forgot-password`, `resend-verification-email`, `reset-password` і `verify-email` обираються під час реалізації за зразком наявних `AUTH_*` (консервативні, через змінні оточення) і фіксуються в цій таблиці.
+Пороги, обрані під час реалізації (етап 5) за зразком наявних `AUTH_*`:
+
+| Рішення                                     | Значення                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `forgot-password` за IP                     | 10 / год (`AUTH_FORGOT_PASSWORD_MAX_REQUESTS_PER_IP_PER_HOUR`)                             |
+| `forgot-password` за email                  | 3 / год (`AUTH_FORGOT_PASSWORD_MAX_REQUESTS_PER_EMAIL_PER_HOUR`)                           |
+| `resend-verification-email` за користувачем | 3 / год (`AUTH_RESEND_VERIFICATION_MAX_PER_USER_PER_HOUR`)                                 |
+| `reset-password` за IP                      | 20 / год (`AUTH_RESET_PASSWORD_MAX_ATTEMPTS_PER_IP_PER_HOUR`)                              |
+| `verify-email` за IP                        | 20 / год (`AUTH_VERIFY_EMAIL_MAX_ATTEMPTS_PER_IP_PER_HOUR`)                                |
+| `change-password`                           | змінні `AUTH_CHANGE_PASSWORD_MAX_ATTEMPTS_PER_USER`, `AUTH_CHANGE_PASSWORD_WINDOW_SECONDS` |
+
+`forgot-password` при вичерпаному бюджеті або помилці Redis відповідає тим самим загальним повідомленням (лист не надсилається), щоб відповідь не розкривала ні існування адреси, ні стан бюджету.
 
 ## Відкриті питання
 
