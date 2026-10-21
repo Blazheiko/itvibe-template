@@ -126,6 +126,16 @@
       "dependencies": ["feat-005"],
       "status": "done",
       "evidence": "PR #32 (feat/redis-rate-limit, review fixes 94c6963): typecheck, lint, backend 466, frontend 41, test:redis 16 (CI job redis-tests green), docs:build + docs:verify, manual check with two backends on one Redis; evidence in progress.md on feat/redis-rate-limit"
+    },
+    {
+      "id": "feat-014",
+      "name": "Strip Console Logs In Production",
+      "description": "Frontend production build must not print to the browser console: remove console.log(data) with wsToken from App.vue and strip console.log/info/debug/trace via esbuild.pure in the app and service-worker builds (code-issues item 60)",
+      "owner": "Blazheiko",
+      "branch": "fix/strip-console-in-prod",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "This PR: pnpm --filter frontend build (dist: console.log 45 -> 0, info 4 -> 0, debug 1 -> 0; warn/error kept), dev server keeps logs, frontend tests 41, typecheck, lint, docs:build + docs:verify"
     }
   ]
 }

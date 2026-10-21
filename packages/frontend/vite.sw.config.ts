@@ -1,8 +1,11 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 
+import { stripConsoleLogs } from './vite.console'
+
 // Конфигурация для сборки Service Worker
 export default defineConfig({
+    esbuild: stripConsoleLogs,
     build: {
         // Same browser floor as the app bundle (see vite.config.ts).
         target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],

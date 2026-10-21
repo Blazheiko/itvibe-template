@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+import { stripConsoleLogs } from './vite.console'
+
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [
@@ -16,6 +18,7 @@ export default defineConfig({
         }),
         vueDevTools(),
     ],
+    esbuild: stripConsoleLogs,
     build: {
         // Vite 7 changed the default to 'baseline-widely-available' (chrome107/safari16).
         // Keep the Vite 6 browser floor until a supported-browser list is agreed.

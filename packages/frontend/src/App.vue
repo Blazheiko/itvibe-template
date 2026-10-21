@@ -127,7 +127,6 @@ const PUBLIC_PATHS = new Set([
 const initializeApp = async () => {
     try {
         const { data, error } = await mainApi.init()
-        console.log(data)
         const url = window.location.href
         const routePath = new URL(url).pathname
         const isPublicPath = PUBLIC_PATHS.has(routePath)
