@@ -71,30 +71,124 @@ sequenceDiagram
 
 ## Обмеження частоти запитів
 
-Захист працює на кількох рівнях. HTTP і WebSocket мають окремі гілки й незалежні бюджети:
+Ліміти працюють на двох рівнях, і в них різні задачі.
+
+- **Ліміт захищає процес від частих тяжких операцій** (парсинг тіла, middleware, запити до БД, AI) → `rateLimit` на маршруті чи групі або глобальний ліміт у [`config/rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts). Лічильник у пам'яті процесу, кожен інстанс рахує окремо.
+- **Ліміт стосується чутливої дії** (вхід, реєстрація, SMS, скидання й зміна пароля) і має бути спільним для всіх інстансів → політика в [`config/throttle-policies.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/throttle-policies.ts) і виклик `consumeAuthThrottle(policy, key)` у сервісі. Лічильник у Redis.
 
 ```
-HTTP API:  L1 global per-IP  →  per-route limit  →  handler
-WebSocket: upgrade per-IP    →  auth (onUpgrade)  →  per-message limits
+HTTP API:  L1 (memory) → ліміт маршруту (memory) → handler → auth-політики (Redis)
+WebSocket: upgrade рівень 1 (memory) → рівень 2 (Redis) → auth (onUpgrade) → ліміти повідомлень (memory)
 ```
 
-1. **L1, глобальний ліміт HTTP за IP** (`checkGlobalRateLimit` у [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)). Один fixed-window бюджет на IP для всіх API-запитів: зареєстровані маршрути, API-404, preflight `OPTIONS` і звичайні HTTP-запити на `/<API_PATH_PREFIX>/websocket`. Кожен запит рахується рівно один раз. Статика не рахується. За замовчуванням 600 запитів на хвилину (`HTTP_GLOBAL_RATE_LIMIT_*`). На успішній відповіді L1 заголовків не пише. На 429 він віддає `X-RateLimit-*` і `Retry-After` саме для себе, і per-route перевірка тоді не виконується.
-2. **Rate limit маршрутів**: [`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts) і [`ws-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/ws-rate-limit.ts). Ліміт задається полем `rateLimit: { windowMs, maxRequests }` на маршруті або групі, і ліміт маршруту має пріоритет над лімітом групи. Ключ складається з IP і URL маршруту. HTTP-відповідь містить заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining` і `X-RateLimit-Reset`. Коли ліміт перевищено, повертається `429` з `Retry-After` і кодом `rate_limited`. Якщо сама перевірка падає з помилкою, повертається `503 rate_limit_unavailable`, тобто система працює за принципом fail-closed. У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) обидві HTTP-перевірки виконуються синхронно і **до** читання тіла запиту.
-3. **Ліміт WebSocket upgrade за IP** ([`upgrade-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/upgrade-rate-limit.ts)). `handleUpgrade` перевіряє його першим: до формату токена і до пошуку сесії. Тому флуд upgrade-запитами не коштує I/O, а невалідні токени теж витрачають бюджет. Перевищення дає `429` з `Retry-After`, помилка лічильника дає `503`. За замовчуванням 60 спроб на хвилину (`WS_UPGRADE_RATE_LIMIT_*`). Цього вистачає на кілька вкладок за одним NAT, які перепідключаються кожні 5 с.
-4. **Throttling auth-дій у Redis**: [`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts) атомарно виконує `INCR` і `EXPIRE` через Lua-скрипт для ключа `auth:throttle:<scope>:<key>`. Ліміти задаються в `config/auth.ts` змінними `AUTH_SMS_*`, `AUTH_EMAIL_REGISTER_*` і `AUTH_EMAIL_LINK_*`. Серед них: кількість SMS на телефон і на IP за годину, кількість невдалих підтверджень, cooldown між повторними відправками.
+### Локальні ліміти (у пам'яті, на інстанс)
 
-**Лічильник** ([`rate-limit-store.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-store.ts)) синхронний і живе в пам'яті процесу:
+| Ліміт                  | Де задано                                                                                                                               | Ключ         | Алгоритм     | Вікно / максимум                                                       | Змінна оточення            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------ | ---------------------------------------------------------------------- | -------------------------- |
+| L1 — усі API-запити    | [`config/rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts)              | IP           | fixed-window | 60 с / 600                                                             | `HTTP_GLOBAL_RATE_LIMIT_*` |
+| Маршрут або група HTTP | `rateLimit` у [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) | IP + маршрут | sliding-log  | за маршрутом, напр. група `auth` 60 с / 10, `forgot-password` 60 с / 3 | — (у коді)                 |
+| WS upgrade, рівень 1   | [`config/rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts)              | IP           | sliding-log  | 60 с / 120                                                             | `WS_UPGRADE_RATE_LIMIT_*`  |
+| WS-повідомлення        | `rateLimit` у [`ws-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts)     | IP + маршрут | sliding-log  | 60 с / 60–120                                                          | — (у коді)                 |
 
-- **Відхилені спроби квоту не витрачають і не зберігаються.** Тому `Retry-After` точний: повтор через вказаний час проходить. Стан на ключ обмежений: sliding log довжиною не більше `max`, для L1 fixed window з одним лічильником.
-- **Межа ключів жорстка, 100 000.** На новий ключ перевіряються максимум 64 найстаріші ключі, і прострочені видаляються. Якщо місця досі немає, витісняється найстаріший ключ. Повний GC запускається раз на 60 с таймером.
+- **L1** ([`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)) рахує кожен API-запит рівно один раз: маршрути, API-404, preflight `OPTIONS` і звичайні HTTP-запити на `/<API_PATH_PREFIX>/websocket`. Статика не рахується. На успішній відповіді L1 заголовків не пише; на 429 віддає `X-RateLimit-*` і `Retry-After`, і ліміт маршруту тоді не перевіряється.
+- **Ліміт маршруту** має пріоритет над лімітом групи. Відповідь містить `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; перевищення — `429 rate_limited` з `Retry-After`; помилка лічильника — `503 rate_limit_unavailable` (fail-closed).
+- **Чому синхронно і в пам'яті.** У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) обидві HTTP-перевірки стоять **до** реєстрації `res.onData()`: якщо там буде `await`, uWS може доставити тіло малого POST раніше, ніж його почнуть читати, і запит зависне. Redis асинхронний, тому для цих лімітів не підходить. До того ж їхня задача — захистити процес, а не тримати точний бюджет у кластері.
+- **Бюджет при N інстансах** дорівнює N × максимум. Це свідомий вибір: кожен процес захищає себе сам. Ліміт на вході за потреби дає reverse proxy, див. [Розгортання](/backend/deployment#rate-limit-на-edge).
+- **WS-повідомлення** рахуються за IP, а не за з'єднанням: інакше бюджет можна множити, відкриваючи нові з'єднання.
+
+**Лічильник** ([`rate-limit-store.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-store.ts)):
+
+- **Відхилені спроби квоту не витрачають і не зберігаються.** Тому `Retry-After` точний. Стан на ключ обмежений: sliding log довжиною не більше `max`, для L1 один лічильник.
+- **Межа ключів жорстка, 100 000.** На новий ключ перевіряються максимум 64 найстаріші ключі; якщо місця немає, витісняється найстаріший. Повний GC раз на 60 с.
 
 ::: warning Переповнення store
-Коли ключів більше за межу, **строгість квот не гарантується**. FIFO-витіснення може скинути навіть активний лічильник, зокрема маршрутний ліміт логіну. Так пам'ять лишається обмеженою під атакою з великої кількості IP. Витіснення пише `warn` у лог не частіше разу на хвилину.
+Коли ключів більше за межу, **строгість квот не гарантується**: FIFO-витіснення може скинути навіть активний лічильник. Так пам'ять лишається обмеженою під атакою з великої кількості IP. Витіснення пише `warn` не частіше разу на хвилину.
 :::
 
-::: warning Масштабування
-Лічильники L1, маршрутів і upgrade зберігаються в пам'яті кожного процесу окремо. Якщо запустити кілька інстансів, фактичний ліміт множиться на їх кількість. Redis тут не використовується, бо HTTP-перевірка мусить бути синхронною. Для кількох інстансів ставте edge-ліміт, див. [Розгортання](/backend/deployment#rate-limit-на-edge). Throttling auth-дій зберігається в Redis, тому діє спільно для всіх інстансів.
-:::
+### Спільні ліміти (Redis)
+
+Усі спільні ліміти описані в реєстрі [`config/throttle-policies.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/throttle-policies.ts); стовпці таблиці відповідають полям `ThrottlePolicy`. Сервіси передають лише політику й ключ — `consumeAuthThrottle(throttlePolicies.loginIp, ip)` ([`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts)). Fixed-window політики пишуть ключ `auth:throttle:<scope>:<key>` (Lua `INCR` + `PEXPIRE` лише на першій спробі, тож вікно відраховується від першої спроби і відмови його не продовжують). `wsUpgradeShared` — sliding log на ZSET з ключем `rl:upgrade:<ip>` ([`redis-sliding-log.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/redis-sliding-log.ts)), час береться з Redis.
+
+| Політика                  | Операція                                                      | Ключ            | Алгоритм     | Вікно / максимум                       | Змінна оточення                                               | При відмові Redis                        | Скидання     |
+| ------------------------- | ------------------------------------------------------------- | --------------- | ------------ | -------------------------------------- | ------------------------------------------------------------- | ---------------------------------------- | ------------ |
+| `loginIp`                 | вхід                                                          | IP              | fixed-window | 15 хв / 20                             | `AUTH_LOGIN_MAX_ATTEMPTS_PER_IP`, `AUTH_LOGIN_WINDOW_SECONDS` | відхилити                                | —            |
+| `loginIdentifier`         | вхід                                                          | email / телефон | fixed-window | 15 хв / 40                             | `AUTH_LOGIN_MAX_ATTEMPTS_PER_IDENTIFIER`                      | відхилити                                | після успіху |
+| `changePasswordUser`      | зміна пароля                                                  | користувач      | fixed-window | 15 хв / 10                             | `AUTH_CHANGE_PASSWORD_*`                                      | відхилити                                | після успіху |
+| `forgotPasswordIp`        | лист скидання пароля                                          | IP              | fixed-window | 1 год / 10                             | `AUTH_FORGOT_PASSWORD_MAX_REQUESTS_PER_IP_PER_HOUR`           | загальна відповідь, лист не надсилається | —            |
+| `forgotPasswordEmail`     | лист скидання пароля                                          | email           | fixed-window | 1 год / 3                              | `AUTH_FORGOT_PASSWORD_MAX_REQUESTS_PER_EMAIL_PER_HOUR`        | загальна відповідь, лист не надсилається | —            |
+| `resetPasswordIp`         | скидання пароля за токеном                                    | IP              | fixed-window | 1 год / 20                             | `AUTH_RESET_PASSWORD_MAX_ATTEMPTS_PER_IP_PER_HOUR`            | відхилити                                | —            |
+| `verifyEmailIp`           | підтвердження email                                           | IP              | fixed-window | 1 год / 20                             | `AUTH_VERIFY_EMAIL_MAX_ATTEMPTS_PER_IP_PER_HOUR`              | відхилити                                | —            |
+| `resendVerificationUser`  | повторний лист підтвердження                                  | користувач      | fixed-window | 1 год / 3                              | `AUTH_RESEND_VERIFICATION_MAX_PER_USER_PER_HOUR`              | відхилити                                | —            |
+| `registerEmailIp`         | реєстрація email                                              | IP              | fixed-window | 1 год / 10                             | `AUTH_EMAIL_REGISTER_MAX_ATTEMPTS_PER_IP_PER_HOUR`            | відхилити                                | —            |
+| `registerEmailIdentifier` | реєстрація email                                              | email           | fixed-window | 1 год / 3                              | `AUTH_EMAIL_REGISTER_MAX_ATTEMPTS_PER_EMAIL_PER_HOUR`         | відхилити                                | —            |
+| `registerPhoneIp`         | реєстрація телефоном                                          | IP              | fixed-window | 1 год / 10                             | `AUTH_SMS_MAX_SENDS_PER_IP_PER_HOUR`                          | відхилити                                | —            |
+| `smsSendPhone`            | відправка SMS (реєстрація, скидання, прив'язка — один бюджет) | телефон         | fixed-window | 1 год / 3                              | `AUTH_SMS_MAX_SENDS_PER_PHONE_PER_HOUR`                       | відхилити                                | —            |
+| `confirmPhoneIp`          | підтвердження телефону                                        | IP              | fixed-window | 1 год / 20                             | `AUTH_SMS_MAX_CONFIRM_ATTEMPTS_PER_IP_PER_HOUR`               | відхилити                                | —            |
+| `resetPhoneIp`            | скидання пароля телефоном                                     | IP              | fixed-window | 1 год / 10                             | `AUTH_SMS_MAX_SENDS_PER_IP_PER_HOUR`                          | відхилити                                | —            |
+| `confirmResetPhoneIp`     | підтвердження скидання телефоном                              | IP              | fixed-window | 1 год / 20                             | `AUTH_SMS_MAX_CONFIRM_ATTEMPTS_PER_IP_PER_HOUR`               | відхилити                                | —            |
+| `linkPhoneIp`             | прив'язка телефону                                            | IP              | fixed-window | 1 год / 10                             | `AUTH_SMS_MAX_SENDS_PER_IP_PER_HOUR`                          | відхилити                                | —            |
+| `confirmLinkPhoneIp`      | підтвердження прив'язки телефону                              | IP              | fixed-window | 1 год / 20                             | `AUTH_SMS_MAX_CONFIRM_ATTEMPTS_PER_IP_PER_HOUR`               | відхилити                                | —            |
+| `linkEmailTarget`         | прив'язка email                                               | email           | fixed-window | 1 год / 3                              | `AUTH_EMAIL_LINK_MAX_ATTEMPTS_PER_TARGET_PER_HOUR`            | відхилити                                | —            |
+| `linkEmailUser`           | прив'язка email                                               | користувач      | fixed-window | 1 год / 3                              | `AUTH_EMAIL_LINK_MAX_ATTEMPTS_PER_USER_PER_HOUR`              | відхилити                                | —            |
+| `linkEmailUserCooldown`   | пауза між листами прив'язки                                   | користувач      | fixed-window | `AUTH_EMAIL_LINK_COOLDOWN_SECONDS` / 1 | `AUTH_EMAIL_LINK_COOLDOWN_SECONDS`                            | відхилити                                | —            |
+| `wsUpgradeShared`         | WS upgrade, рівень 2                                          | IP              | sliding-log  | 60 с / 60                              | `WS_UPGRADE_SHARED_RATE_LIMIT_*`                              | пропустити, діє рівень 1                 | —            |
+
+`0` у змінній auth-політики — помилка конфігу на старті: захист чутливої дії вимкнути не можна. Вимкнути змінною (`MAX=0`) можна лише `wsUpgradeShared` (`disableable`), напр. для одного інстансу.
+
+Спільні ліміти ходять в окреме з'єднання ([`redis-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/redis-rate-limit.ts)) до того самого Redis-сервера: без offline queue, без повторного надсилання команд і з коротким таймаутом `RATE_LIMIT_REDIS_TIMEOUT_MS`. Основний клієнт сесій лишається терпимим до коротких збоїв. Таймаут означає «результат невідомий»: Lua могла вже спожити спробу, тому повтору немає.
+
+### Політика входу
+
+- **Рахується кожна допущена спроба**, атомарно і **до** пошуку користувача: так немає гонки «перевірити зараз, порахувати потім», а відсутній акаунт, неправильний пароль чи акаунт без пароля коштують однаково.
+- **Однакова відповідь** `401 Invalid email or password` для відсутнього акаунта, неправильного пароля, акаунта без локального пароля (OAuth) і вичерпаного бюджету. Фронтенд у тексті помилки підказує вхід через Google або Facebook.
+- **Ключі:** IP і нормалізований ідентифікатор. Ідентифікатор нормалізує та сама функція `resolveLoginKey`, що й пошук користувача (email — нижній регістр, телефон — E.164). Якщо ідентифікатор не нормалізується, рахується лише IP.
+- **Поріг за ідентифікатором вищий за IP-поріг**, щоб один атакувальник не міг легко заблокувати чужий акаунт. Блокування не постійне — до кінця 15-хвилинного вікна.
+- **Після успішного входу** скидається лише лічильник ідентифікатора; IP-лічильник ні (інакше власний валідний акаунт обнуляв би IP-бюджет).
+- **Ризик lockout:** атакувальник з багатьох IP може вичерпати бюджет ідентифікатора і на 15 хв заблокувати вхід у чужий акаунт. Пом'якшення — вищий поріг і коротке вікно.
+- Зміна пароля працює за тією ж схемою з бюджетом на користувача.
+
+### Відмова Redis
+
+| Сценарій                                                        | WS upgrade, рівень 2                               | Автентифікація upgrade            | Auth-політики                                                                     |
+| --------------------------------------------------------------- | -------------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| Збій лише з'єднання лімітів (розрив, таймаут; сервер доступний) | пропускається, діє рівень 1, `warn` раз на хвилину | працює через основний клієнт      | відхиляються (fail-closed); `forgot-password` віддає загальну відповідь без листа |
+| Недоступний Redis-сервер                                        | пропускається, діє рівень 1                        | **не працює**: сесію не прочитати | відхиляються                                                                      |
+
+- Пропуск рівня 2 **не** витрачає локальний бюджет удруге: рівень 1 уже спожив спробу цього upgrade.
+- Пропуск рівня 2 **не гарантує** WS-з'єднання: перевірка токена й сесії теж іде в Redis. Якщо сесію не знайдено, upgrade зараз однаково виконується, а з'єднання закривається в `onOpen` кодом `4001`.
+- **Перевищення бюджету під час відмови:** кожен інстанс рахує лише локально, тож за вікно можливо до N × поріг рівня 1 upgrade з одного IP.
+- **Після відновлення Redis** спільний лічильник продовжується зі свого стану; спроби, пропущені локально під час відмови, у нього не потрапляють.
+
+### Як додати ліміт
+
+Захист процесу — `rateLimit` на маршруті:
+
+```ts
+defineRoute({
+    url: '/report/export',
+    method: 'post',
+    handler: ReportController.export.bind(ReportController),
+    rateLimit: { windowMs: 60_000, maxRequests: 5 },
+})
+```
+
+Чутлива дія — політика в реєстрі, виклик у сервісі й рядок у таблиці вище:
+
+```ts
+// config/throttle-policies.ts
+exportReportUser: fixedWindow(
+  'export_report_user',
+  'user',
+  readInt('REPORT_EXPORT_MAX_PER_USER_PER_HOUR', 10),
+  HOUR_MS,
+),
+
+// сервіс
+const throttle = await tryInternal(
+  () => consumeAuthThrottle(throttlePolicies.exportReportUser, String(userId)),
+  'Failed to enforce export throttle',
+)
+```
 
 ## CSRF
 
@@ -210,8 +304,3 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 - Ключі OAuth (`GOOGLE_CLIENT_SECRET=<secret>` тощо) і `*_REDIRECT_URI` на https.
 - CSP: залиште `CSP_ENABLED=true`. Задайте `CSP_API_ORIGIN`, `CSP_WS_ORIGIN` (за проксі), `CSP_SENTRY_ORIGIN`, якщо адреси відрізняються від `APP_URL` / `getWsUrl()`. Перший деплой можна зробити з `CSP_REPORT_ONLY=true` і `CSP_REPORT_URI`.
 - `DOC_PAGE` не вмикайте: ендпоінт `/doc/routes` реєструється лише при `APP_ENV=manual-test`.
-
-::: danger Відомі відкриті питання
-
-- Rate limit не спільний між інстансами (немає Redis-лічильника). Обхід: edge-ліміт у nginx.
-  :::
