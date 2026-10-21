@@ -2,6 +2,7 @@ import type { SessionData, SessionInfo } from "#vendor/types/types.js";
 // import { DateTime } from 'luxon';
 import redis from "#database/redis.js";
 import logger from "#vendor/utils/logger.js";
+import { maskTokenForLogs } from "#vendor/utils/helpers/mask-sensitive.js";
 import sessionConfig from "#config/session.js";
 import redisConfig from "#config/redis.js";
 
@@ -148,7 +149,8 @@ export const destroyAllSessions = async (
   const prefix = redisConfig.keyPrefix;
   const pattern = sanitizeRedisKey(`${prefix}session:${userToken}:*`);
   logger.info(
-    `Destroying all sessions for userToken ${userToken} with pattern ${pattern}`,
+    { userToken: maskTokenForLogs(userToken) },
+    "Destroying all sessions for userToken",
   );
   // Use SCAN instead of KEYS for DoS protection
   // SCAN doesn't block Redis and is safe for production
@@ -173,7 +175,8 @@ export const destroyAllSessions = async (
   } while (cursor !== "0");
 
   logger.info(
-    `Deleted ${String(deletedCount)} sessions for userToken ${userToken}`,
+    { userToken: maskTokenForLogs(userToken), deletedCount },
+    "Deleted all sessions for userToken",
   );
 
   return deletedCount;

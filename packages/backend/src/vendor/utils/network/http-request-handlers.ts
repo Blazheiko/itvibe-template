@@ -301,7 +301,7 @@ const parseCookies = (cookieHeader: string): Map<string, string> => {
           list.set(key, decodeURIComponent(value));
         }
       } catch (error) {
-        console.error(`Error decoding cookie value ${cookieHeader}":`, error);
+        logger.warn({ err: error }, "Error decoding a cookie value");
       }
     };
 

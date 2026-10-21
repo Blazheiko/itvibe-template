@@ -100,7 +100,7 @@
 
 ### 3. WS-токен і `userToken` потрапляють у логи
 
-> **Виправлено** у feat-005 (гілка `feat/security-hardening`): хелпер `maskTokenForLogs` (`src/vendor/utils/helpers/mask-sensitive.ts`) лишає в логах лише префікс `abcd…`. Його застосовано в `verifyUpgradeToken` (WS-токен; замість `sessionKey` логуються `sessionId` і маскований `userToken`), `wsSessionHandler` (`userToken`) і `verifyToken` у `token-handler.ts` (`cookieUserToken`; підпис більше не логується).
+> **Виправлено** у feat-005 (гілка `feat/security-hardening`): хелпер `maskTokenForLogs` (`src/vendor/utils/helpers/mask-sensitive.ts`) лишає в логах лише префікс `abcd…`. Його застосовано в `verifyUpgradeToken` (WS-токен; замість `sessionKey` логуються `sessionId` і маскований `userToken`), `wsSessionHandler` (`userToken`) `verifyToken` у `token-handler.ts` (`cookieUserToken`; підпис більше не логується) і `destroyAllSessions` у `redis-session-storage.ts` (`userToken`; Redis-pattern більше не логується). `parseCookies` при помилці декодування більше не друкує весь заголовок `Cookie`. Префікс із 4 символів годиться для локального зіставлення разом із `sessionId`, але не унікальний; для кореляції в масштабі потрібен стабільний HMAC-fingerprint (не зроблено).
 
 - **Що:** `verifyUpgradeToken` логує WS-токен; `wsSessionHandler` логує `userToken`.
 - **Наслідок:** секрети сесії потрапляють у логи та Sentry breadcrumbs.
