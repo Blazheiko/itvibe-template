@@ -40,7 +40,7 @@
 | `typecheck`      | `tsc --noEmit`                       | Перевірка типів                                                                                                                                       |
 | `db:create`      | `tsx src/db/create-database.ts`      | Створює базу даних ([create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts))          |
 | `db:create:prod` | `node dist/db/create-database.js`    | Те саме зі зібраного коду                                                                                                                             |
-| `db:generate`    | `drizzle-kit generate`               | Генерує міграцію зі схеми ([drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js))            |
+| `db:generate`    | `drizzle-kit generate`               | Генерує міграцію зі схеми ([drizzle.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts))            |
 | `db:migrate`     | `drizzle-kit migrate`                | Застосовує міграції                                                                                                                                   |
 | `db:studio`      | `drizzle-kit studio`                 | Відкриває Drizzle Studio                                                                                                                              |
 | `db:seed`        | `tsx src/db/seed.ts`                 | Заповнює БД початковими даними ([seed.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts))                    |

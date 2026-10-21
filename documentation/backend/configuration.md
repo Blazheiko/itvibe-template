@@ -6,7 +6,7 @@
 
 - `.env` читає [`dotenv`](https://www.npmjs.com/package/dotenv) через `import "dotenv/config"`. Цей рядок стоїть першим у точці входу [`src/index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts), у [`src/sentry-bootstrap.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/sentry-bootstrap.ts), у скриптах [`src/db/create-database.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts), [`src/db/seed.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts) та [`src/scripts/send-test-email.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/scripts/send-test-email.ts). Файл шукається в поточній робочій директорії процесу, тобто зазвичай це `packages/backend/.env`.
 - Кожен файл у [`src/config/`](https://github.com/Blazheiko/itvibe-template/tree/main/packages/backend/src/config) один раз читає `env` з `node:process` під час імпорту й повертає `Object.freeze(...)`. Якщо змінити змінну після старту, процес її не побачить.
-- [`drizzle.config.js`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js) не імпортує `dotenv`, а має власні fallback-значення для `PGSQL_*`. Ці значення відрізняються від [`src/config/database.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), де fallback-значень немає.
+- PostgreSQL-налаштування збирає одна функція `resolveDatabaseConfig()` у [`src/config/database.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts). Її використовують застосунок, `db:create` ([`create-database.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts)) і [`drizzle.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts), тож defaults однакові всюди. [`drizzle.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts) не імпортує `dotenv`.
 - Булеві значення розбирає [`parseBoolean`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/env/parse-boolean.ts): `true`, `1`, `yes`, `on` дають true, будь-що інше дає false, а якщо змінна не задана, береться default. Регістр має значення. У `auth.ts` є свій `parseBooleanFlag`, який приймає лише `1` або `true` без урахування регістру. Такий самий локальний парсер у `network.ts` додатково приймає `yes` та `on`.
 - Після імпорту конфігурацій `src/index.ts` викликає [`validateRuntimeConfig()`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts). Вона кидає помилку й зупиняє старт, якщо комбінація змінних неприпустима. Нижче ці перевірки позначено як «throw на старті».
 
@@ -86,12 +86,12 @@
 
 Дробові, від'ємні, `Infinity`, `NaN` і нечислові значення валять старт (`Invalid rate limit configuration`). Деталі в розділі [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
 
-| Змінна | Призначення | Default | Обов'язковість | Джерело |
-| --- | --- | --- | --- | --- |
-| `HTTP_GLOBAL_RATE_LIMIT_MAX`       | L1: максимум API-запитів з одного IP за вікно; `0` вимикає | `600`   | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
-| `HTTP_GLOBAL_RATE_LIMIT_WINDOW_MS` | Вікно L1 (fixed window), мс, ціле > 0                      | `60000` | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
-| `WS_UPGRADE_RATE_LIMIT_MAX`        | Максимум WebSocket upgrade з одного IP за вікно; `0` вимикає | `60`    | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
-| `WS_UPGRADE_RATE_LIMIT_WINDOW_MS`  | Вікно upgrade-ліміту (sliding log), мс, ціле > 0           | `60000` | Ні | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| Змінна                             | Призначення                                                  | Default | Обов'язковість | Джерело                                                                                                           |
+| ---------------------------------- | ------------------------------------------------------------ | ------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `HTTP_GLOBAL_RATE_LIMIT_MAX`       | L1: максимум API-запитів з одного IP за вікно; `0` вимикає   | `600`   | Ні             | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| `HTTP_GLOBAL_RATE_LIMIT_WINDOW_MS` | Вікно L1 (fixed window), мс, ціле > 0                        | `60000` | Ні             | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| `WS_UPGRADE_RATE_LIMIT_MAX`        | Максимум WebSocket upgrade з одного IP за вікно; `0` вимикає | `60`    | Ні             | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
+| `WS_UPGRADE_RATE_LIMIT_WINDOW_MS`  | Вікно upgrade-ліміту (sliding log), мс, ціле > 0             | `60000` | Ні             | [rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts) |
 
 ## Сесія і cookies
 
@@ -148,16 +148,16 @@
 
 ## База даних
 
-Докладніше див. на сторінці [База даних](/backend/database).
+Порожнє значення вважається незаданим. Докладніше див. на сторінці [База даних](/backend/database).
 
-| Змінна           | Призначення     | Default                                                                                                           | Обов'язковість (умова)                  | Читає файл                                                                                                                                                                                                                                                                                                                                             |
-| ---------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DB_CONNECTION`  | Тип клієнта БД  | немає                                                                                                             | Ні                                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts)                                                                                                                                                                                                                                          |
-| `PGSQL_HOST`     | Хост PostgreSQL | у застосунку немає; у drizzle-kit і `db:create` — `127.0.0.1`                                                     | Так для застосунку (fallback відсутній) | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), [drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js), [create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts) |
-| `PGSQL_PORT`     | Порт PostgreSQL | у застосунку `Number(undefined)` = `NaN` (fallback `?? 5432` не спрацьовує); у drizzle-kit і `db:create` — `5432` | Фактично так для застосунку             | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), [drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js), [create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts) |
-| `PGSQL_USER`     | Користувач БД   | у застосунку немає; у drizzle-kit і `db:create` — `postgres`                                                      | Так для застосунку                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), [drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js), [create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts) |
-| `PGSQL_PASSWORD` | Пароль БД       | у застосунку немає; у drizzle-kit і `db:create` — `""`                                                            | Залежить від сервера БД                 | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), [drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js), [create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts) |
-| `PGSQL_DB_NAME`  | Назва бази      | у застосунку немає; у drizzle-kit і `db:create` — `itvibe_template`                                               | Так для застосунку                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts), [drizzle.config.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js), [create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts) |
+| Змінна           | Призначення     | Default                                           | Обов'язковість (умова)  | Читає файл                                                                                                    |
+| ---------------- | --------------- | ------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `DB_CONNECTION`  | Тип клієнта БД  | `pg`                                              | Ні                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
+| `PGSQL_HOST`     | Хост PostgreSQL | `127.0.0.1`                                       | Ні                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
+| `PGSQL_PORT`     | Порт PostgreSQL | `5432`; не ціле число з 1–65535 — throw на старті | Ні                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
+| `PGSQL_USER`     | Користувач БД   | `postgres`                                        | Ні                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
+| `PGSQL_PASSWORD` | Пароль БД       | `""`                                              | Залежить від сервера БД | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
+| `PGSQL_DB_NAME`  | Назва бази      | `itvibe_template`                                 | Ні                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
 
 ## Redis
 
@@ -243,28 +243,11 @@
 
 Модуль [`support.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/support.ts) містить лише системні промпти AI-підтримки й не читає змінних оточення.
 
-## Розбіжності з .env.example
+## Відповідність .env.example
 
-Нижче наведено результат порівняння з [`packages/backend/.env.example`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/.env.example). Сам файл не виправлявся.
+[`packages/backend/.env.example`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/.env.example) містить усі змінні, які читає бекенд, крім `NODE_ENV` (запасне джерело для `APP_ENV`). Змінних, яких код не читає, у файлі немає.
 
-**Є в `.env.example`, але код їх не читає:**
-
-- `UNIX_PATH`. Код читає `APP_UNIX_PATH`, тож змінна просто перейменована.
-- `DATABASE_URL`. Ні застосунок, ні drizzle-kit її не використовують. Підключення збирається з `PGSQL_*`.
-- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
-- `XAI_IMAGE_API_URL`, `XAI_IMAGE_EDIT_API_URL`, `XAI_IMAGE_MODEL`, `XAI_IMAGE_FORMAT`.
-
-**Код їх читає, але в `.env.example` їх немає:**
-
-- `APP_UNIX_PATH`, `NODE_ENV`, `API_PATH_PREFIX`.
-- `APP_MAX_BODY_SIZE`, `APP_MAX_JSON_BODY_SIZE`, `APP_MAX_MULTIPART_BODY_SIZE`, `APP_MAX_OCTET_BODY_SIZE`.
-- Усі змінні OAuth: `GOOGLE_*`, `FACEBOOK_*`, `GITHUB_*`, `GITLAB_*` (`CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`), а також `OAUTH_FRONTEND_SUCCESS_URL` і `OAUTH_FRONTEND_ERROR_URL`.
-- `AI_TEXT_DRIVER`, `MISTRAL_API_KEY`, `MISTRAL_TEXT_MODEL`.
-- `TURN_SECRET`, `TURN_HOST`.
-
-**Інші невідповідності:**
-
-- У `database.ts` fallback для порту записано як `Number(env["PGSQL_PORT"]) ?? 5432`, і він ніколи не спрацьовує, бо `Number()` не повертає `null`/`undefined`. Без `PGSQL_PORT` застосунок отримає `NaN`.
+- `TURN_SECRET` і `TURN_HOST` читає [`config/turn.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/turn.ts), але цей модуль поки ніхто не імпортує.
 - Назва `CREDENTIONALS_CORS` містить друкарську помилку, але саме так її читає код, тому змінювати її не можна.
 
 Як запустити проєкт локально, див. на сторінці [Початок роботи](/guide/getting-started). Загальний огляд бекенда див. у розділі [Backend](/backend/).

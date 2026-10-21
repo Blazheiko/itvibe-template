@@ -1,12 +1,9 @@
 import { defineConfig } from "drizzle-kit";
 
-const dbConfig = {
-  host: process.env.PGSQL_HOST ?? "127.0.0.1",
-  port: Number(process.env.PGSQL_PORT ?? 5432),
-  user: process.env.PGSQL_USER ?? "postgres",
-  password: process.env.PGSQL_PASSWORD ?? "",
-  database: process.env.PGSQL_DB_NAME ?? "itvibe_template",
-};
+import { resolveDatabaseConfig } from "./src/config/database.ts";
+
+// Relative .ts import: drizzle-kit loads this file itself, without the #config alias.
+const dbConfig = resolveDatabaseConfig();
 
 export default defineConfig({
   schema: "./src/database/schema.ts",

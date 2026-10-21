@@ -38,7 +38,7 @@ FRONTEND_URL=http://localhost:5173
 PORT=3000
 HOST=0.0.0.0
 
-# PostgreSQL (runtime reads PGSQL_*, not DATABASE_URL)
+# PostgreSQL (runtime, db:create and drizzle-kit share these defaults)
 DB_CONNECTION=pg
 PGSQL_HOST=127.0.0.1
 PGSQL_PORT=5432
@@ -84,15 +84,9 @@ in `src/config/*`.
 | Mail (SMTP)   | Feature-dependent       | `SMTP_ENABLED`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`                     |
 | Observability | Optional                | `SENTRY_DSN`, `SENTRY_ENABLED`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`                                                          |
 
-> **Known `.env.example` drift** (update your `.env` accordingly):
->
-> - The runtime config reads **`APP_UNIX_PATH`**, but `.env.example` lists
->   `UNIX_PATH`. Use `APP_UNIX_PATH` when configuring a Unix socket.
-> - **`DATABASE_URL`** appears in `.env.example` but is **not** read by the
->   runtime or drizzle-kit — both use `PGSQL_*`. Treat it as unused.
-> - **`REDIS_*`** and the **`APP_MAX_*_BODY_SIZE`** / **`API_PATH_PREFIX`** /
->   **`CDN_URL`** variables are read by config but are not all present in
->   `.env.example`; add them when you need to override the defaults.
+`.env.example` lists every variable the backend reads (except `NODE_ENV`, a
+fallback for `APP_ENV`). Empty `PGSQL_*` values fall back to the defaults in
+`src/config/database.ts`, shared by the runtime, `db:create` and drizzle-kit.
 
 ## Verification
 
@@ -1400,7 +1394,7 @@ pnpm db:studio     # open Drizzle Studio in browser
 pnpm db:seed       # run seed script
 ```
 
-Migrations are stored in `src/drizzle/migrations/`. Configuration is in `drizzle.config.js` — it reads `PGSQL_*` env vars.
+Migrations are stored in `src/drizzle/migrations/`. Configuration is in `drizzle.config.ts` — it reads `PGSQL_*` via `resolveDatabaseConfig()` from `src/config/database.ts`.
 
 ---
 

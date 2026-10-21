@@ -33,7 +33,7 @@ const db = drizzle({
 
 SQL-логування вмикається для всіх середовищ, крім `prod`/`production`.
 
-Для `drizzle-kit` є окремий [`drizzle.config.js`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.js): ті самі `PGSQL_*` з дефолтами, `schema: "./src/database/schema.ts"`, `out: "./src/drizzle/migrations"`, таблиця журналу `drizzle.__drizzle_migrations`, `strict: true`.
+Для `drizzle-kit` є окремий [`drizzle.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts): він бере підключення з тієї ж `resolveDatabaseConfig()`, що й застосунок, `schema: "./src/database/schema.ts"`, `out: "./src/drizzle/migrations"`, таблиця журналу `drizzle.__drizzle_migrations`, `strict: true`.
 
 ## Схема та relations
 

@@ -1,14 +1,16 @@
 import "dotenv/config";
 import pg from "pg";
 
-const dbName = process.env["PGSQL_DB_NAME"] ?? "itvibe_template";
+import { resolveDatabaseConfig } from "../config/database.js";
 
-const connectionDefaults = {
-  host: process.env["PGSQL_HOST"] ?? "127.0.0.1",
-  port: Number(process.env["PGSQL_PORT"] ?? 5432),
-  user: process.env["PGSQL_USER"] ?? "postgres",
-  password: process.env["PGSQL_PASSWORD"] ?? "",
-};
+const {
+  host,
+  port,
+  user,
+  password,
+  database: dbName,
+} = resolveDatabaseConfig();
+const connectionDefaults = { host, port, user, password };
 
 async function createDatabase(): Promise<void> {
   const adminClient = new pg.Client({

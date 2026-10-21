@@ -61,7 +61,7 @@ flowchart LR
 1. Знову `ubuntu:24.04` + Node 24 + pnpm.
 2. `pnpm install --frozen-lockfile --prod --filter backend...` ставить лише production-залежності бекенду та його workspace-залежностей. `drizzle-kit` міститься в `dependencies` бекенду, тому потрапляє в образ.
 3. `ENV NODE_ENV=production`.
-4. З `builder` копіюються `packages/backend/dist`, `packages/shared/dist`, `packages/backend/public`, `packages/backend/public-test`, `drizzle.config.js`, `src/drizzle/migrations` і `docs/support-knowledge-base` (його читає [`knowledge-base-init-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-init-service.ts)).
+4. З `builder` копіюються `packages/backend/dist`, `packages/shared/dist`, `packages/backend/public`, `packages/backend/public-test`, `drizzle.config.ts` разом з `src/config/database.ts`, `src/drizzle/migrations` і `docs/support-knowledge-base` (його читає [`knowledge-base-init-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-init-service.ts)).
 5. `EXPOSE 3000`, `WORKDIR /app/packages/backend`.
 6. `CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]`: при кожному старті контейнер створює БД (якщо її немає), застосовує міграції і запускає сервер.
 
@@ -95,9 +95,9 @@ docker run --rm -p 3000:3000 --env-file ./production.env itvibe-template
 
 ## Runtime
 
-- **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Образ задає `NODE_ENV=production` і `APP_ENV=production`: `secure` у cookie і конфіг CSP (`config/csp.ts`, зокрема `wss:` у `getWsUrl()`) читають саме `APP_ENV`. Для staging-оточення перевизначте `APP_ENV` при запуску. Відомі розбіжності `.env.example` описано в проблемі 6.
+- **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Образ задає `NODE_ENV=production` і `APP_ENV=production`: `secure` у cookie і конфіг CSP (`config/csp.ts`, зокрема `wss:` у `getWsUrl()`) читають саме `APP_ENV`. Для staging-оточення перевизначте `APP_ENV` при запуску.
 - **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip).
-- **Unix socket**: якщо задано `APP_UNIX_PATH`, сервер викликає `listen_unix` замість TCP, і `HOST`/`PORT` тоді ігноруються. У `.env.example` ця змінна має назву `UNIX_PATH`, а код її не читає (проблема 6).
+- **Unix socket**: якщо задано `APP_UNIX_PATH`, сервер викликає `listen_unix` замість TCP, і `HOST`/`PORT` тоді ігноруються.
 - **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. Через `sh -c` у `CMD` сигнал `docker stop` отримує shell, а не Node. Чи дійде він до процесу, не перевірено.
 - **Sentry**: бекенд читає `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` тощо під час виконання ([`config/sentry.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/sentry.ts)). Фронтенду потрібні `VITE_SENTRY_*` як `--build-arg` під час збірки.
 
@@ -158,7 +158,7 @@ done
 ## База даних у production
 
 - `pnpm db:create:prod` (`node dist/db/create-database.js`) створює БД і виконує `CREATE EXTENSION IF NOT EXISTS vector`, тому PostgreSQL має містити pgvector (проблема 7). Докладніше див. [База даних](/backend/database).
-- `pnpm db:migrate` (`drizzle-kit migrate`) працює в образі, бо там є `drizzle-kit`, `drizzle.config.js` і `src/drizzle/migrations`. `drizzle.config.js` бере `PGSQL_*` з власними defaults, які відрізняються від defaults застосунку (проблеми 5 і 8). Тому задавайте всі `PGSQL_*`, зокрема `PGSQL_PORT`, явно.
+- `pnpm db:migrate` (`drizzle-kit migrate`) працює в образі, бо там є `drizzle-kit`, `drizzle.config.ts`, `src/config/database.ts` і `src/drizzle/migrations`. Застосунок, `db:create:prod` і `db:migrate` беруть `PGSQL_*` з однаковими defaults; у продакшні все одно задавайте їх явно.
 - Міграції запускаються при кожному старті контейнера. Якщо реплік кілька, вони запустять міграції паралельно.
 
 ## Redis і S3

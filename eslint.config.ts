@@ -13,6 +13,7 @@ export default tseslint.config(
       'documentation/.vitepress/cache/**',
       'eslint.config.ts',
       'packages/backend/vitest.config.ts',
+      'packages/backend/drizzle.config.ts',
     ],
   },
 
