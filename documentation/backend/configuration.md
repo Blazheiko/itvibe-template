@@ -181,6 +181,17 @@
 | `PGSQL_PASSWORD` | Пароль БД       | `""`                                              | Залежить від сервера БД | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
 | `PGSQL_DB_NAME`  | Назва бази      | `itvibe_template`                                 | Ні                      | [database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts) |
 
+### Seed
+
+Читає лише `db:seed --demo` ([run-seed.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed/run-seed.ts)); застосунок ці змінні не використовує. Якщо email або пароль порожні, відповідний акаунт пропускається (`missing_credentials`). Див. [База даних → Seed](/backend/database#seed).
+
+| Змінна                | Призначення                        | Default | Обов'язковість (умова) |
+| --------------------- | ---------------------------------- | ------- | ---------------------- |
+| `SEED_ADMIN_EMAIL`    | Email demo-адміна                  | —       | Ні (лише для `--demo`) |
+| `SEED_ADMIN_PASSWORD` | Пароль demo-адміна                 | —       | Ні (лише для `--demo`) |
+| `SEED_USER_EMAIL`     | Email звичайного demo-користувача  | —       | Ні (опційно)           |
+| `SEED_USER_PASSWORD`  | Пароль звичайного demo-користувача | —       | Ні (опційно)           |
+
 ## Redis
 
 Для `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` і `REDIS_PREFIX` використовується `||`, тому порожній рядок теж замінюється на default. `REDIS_COMMAND_TIMEOUT_MS` і `REDIS_LOGOUT_ALL_DEADLINE_MS` валідуються інакше: значення має бути цілим числом `>= 1`; інше значення (зокрема порожній рядок) — помилка старту `Invalid Redis configuration: ...` з `validateRuntimeConfig`. Як основний клієнт використовує ці значення — [Відмова Redis](/backend/auth-security#відмова-redis).

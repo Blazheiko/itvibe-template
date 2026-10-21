@@ -3,40 +3,52 @@
 ## Current State
 
 **Last Updated:** 2026-10-21
-**Active Feature:** feat-017 - Fix Mobile Layout E2E
-**Branch:** `fix/mobile-layout-e2e`
+**Active Feature:** feat-007 - Database DX (items 7, 10, 11 of `docs/plan/code-issues-found-during-docs.md`)
+**Branch:** `feat/db-dx`
 
-Goal: the 8 failing Playwright tests in `packages/frontend/e2e/mobile-layout.spec.ts` (2 tests × 4 browsers) pass again, and they check what they claim to check.
+Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. Items 7 (pgvector in README) and 11 (empty `src/drizzle/schema/index.ts`) are not started.
 
 ## Status
 
 ### Done
 
-- [x] PR #39: feat-017 → `in_progress`
-- [x] Root causes: the test had drifted from the app, not a layout regression
-  - registration: the modal opens on a choice step ("Continue with email" / "Continue with phone") when `VITE_AUTH_PHONE_ENABLED=true`, and the `.register-modal` class no longer exists (`.modal-overlay.show .modal`)
-  - support: `App.vue` sets the user only with a non-empty `wsToken` (the mock sent `''`, so the guard redirected to `/login`); the history API returns messages in `data`, not `messages` (the view showed the empty state, which has no input)
-  - geometry check: `boundingBox()` has no `bottom` field, so the assertion compared `undefined` and could never pass. It went unnoticed because nothing typechecked `e2e/` (`tsc -p e2e/tsconfig.json` on main reports `Property 'bottom' does not exist`)
-- [x] Fixes in the spec: role-based locators inside the open modal, optional choice step, mock `wsToken` and `data`, `bottom = y + height`
-- [x] `typecheck` of the frontend now also runs `tsc --noEmit -p e2e/tsconfig.json`
-- [x] Docs: `documentation/reference/scripts.md` (frontend `typecheck`)
-- [x] PR #40
+- [x] PR #42: feat-007 → `in_progress`
+- [x] Item 10: `db:seed`
+  - always seeds the 3 `llm_system_prompts` rows (`ON CONFLICT (type) DO NOTHING`); demo admin / user from `SEED_*` only with `--demo`, independent of `APP_ENV`
+  - prompt texts and temperature / max tokens come from one source, `config/support.ts`, shared with the runtime fallbacks (translation prompt and generation defaults moved there from the services, no behaviour change)
+  - existing users are never modified; admin email owned by a non-admin user → `exists_without_admin_role` warning, no promotion
+  - one transaction, pool closed in `finally`, exit code 1 on failure; new `db:seed:prod`
+  - docs: `backend/database.md` (Seed section, first production admin, prompt cache warning), `backend/configuration.md` (`SEED_*`), `guide/getting-started.md`, `reference/scripts.md`; `.env.example`
+
+### Not started
+
+- [ ] Item 7: pgvector in README
+- [ ] Item 11: empty `src/drizzle/schema/index.ts`
 
 ## Files Modified
 
-- `packages/frontend/e2e/mobile-layout.spec.ts` (also formatted with Prettier: it was not formatted on main)
-- `packages/frontend/package.json` (`typecheck`)
-- `documentation/reference/scripts.md`
+- `packages/backend/src/db/seed.ts`, `src/db/seed/{prompts,run-seed,drizzle-seed-store}.ts`, `src/db/seed/run-seed.spec.ts`
+- `packages/backend/src/config/support.ts`, `src/app/services/support/support-llm-service.ts`, `support-query-translation-service.ts`
+- `packages/backend/package.json`, `packages/backend/.env.example`
+- `documentation/backend/database.md`, `documentation/backend/configuration.md`, `documentation/guide/getting-started.md`, `documentation/reference/scripts.md`
+- `docs/plan/db-seed-plan.md` (new), `docs/plan/code-issues-found-during-docs.md` (item 10 marked fixed)
 
-## Evidence of Completion
+## Evidence of Completion (item 10)
 
-- `pnpm --filter frontend test:e2e`: 12/12 (chromium, firefox, webkit, Mobile Safari), `--repeat-each=3`: 36/36; passes without a running backend
-- The geometry check discriminates: with the viewport height set to 300 the registration test fails (`Expected <= 300, Received 497`); reverted
-- `pnpm typecheck` (now including `e2e/`), `pnpm lint` clean
-- `pnpm test`: backend 551, frontend 45, shared 3, documentation 26
+- `pnpm typecheck`, `pnpm lint` clean
+- `pnpm test`: backend 560, frontend 45, shared 3, documentation 26
 - `pnpm docs:build && pnpm docs:verify`: all checks passed
-- Not tested: the CI preview mode of Playwright (`CI=1`, `npm run preview` on 4173); there is no frontend CI job
+- Manual, on a throwaway DB `itvibe_seed_check` (`db:create` → `db:migrate`, dropped afterwards):
+  1. `db:seed` → 3 prompts inserted, admin / user `demo_disabled`; second run → all `already_exists`
+  2. `db:seed --demo` → admin (`role=admin`) and user inserted, `email_verified_at` set; `validatePassword` on the stored hash → `true`
+  3. prompt edited to `EDITED`, rerun with a different password and `ADMIN@seed.TEST` → `already_exists`, prompt text, password hash and role unchanged
+  4. `SEED_ADMIN_EMAIL` = existing user's email → `exists_without_admin_role` + warning, role stays `user`
+  5. failing insert (email > 255 chars) after the prompts → exit 1, 0 prompts in the DB (rollback)
+  6. `pnpm build && db:seed:prod` → same report; `APP_ENV=production db:seed:prod --demo` prints the warning
+  7. backend started on that DB logs `PromptService: loaded 3 prompts`
+- Not tested: logging in as the seeded admin through the UI and opening `/admin`
 
 ## Notes for Next Session
 
-- Merge PR #39 first, then PR #40; then flip feat-017 to `done` via PR to `main`.
+- Merge PR #42, then do items 7 and 11 on this branch, then PR `feat/db-dx` → `main` and flip feat-007 to `done`.
+- Out of scope, possible follow-ups: `promptRepository.update` → upsert; demo knowledge-base articles; running `db:seed:prod` in the migration job (item 30).

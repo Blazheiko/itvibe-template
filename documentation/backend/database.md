@@ -80,7 +80,39 @@ async findById(id) {
 | `db:generate`    | `drizzle-kit generate`            | генерує нову теку міграції з різниці між схемою та snapshot                                                                                                                                                                          |
 | `db:migrate`     | `drizzle-kit migrate`             | застосовує невиконані міграції                                                                                                                                                                                                       |
 | `db:studio`      | `drizzle-kit studio`              | веб-інтерфейс Drizzle Studio                                                                                                                                                                                                         |
-| `db:seed`        | `tsx src/db/seed.ts`              | наразі заглушка: [`seed.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts) містить лише `import "dotenv/config"`                                                                           |
+| `db:seed`        | `tsx src/db/seed.ts`              | ідемпотентно вставляє початкові промпти, з `--demo` — ще й demo-акаунти, див. [Seed](#seed) ([код](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts))                                          |
+| `db:seed:prod`   | `node dist/db/seed.js`            | те саме зі зібраного коду                                                                                                                                                                                                            |
+
+## Seed
+
+`db:seed` можна запускати повторно: наявні рядки він пропускає й нічого не перезаписує. Усе виконується в одній транзакції, тож при помилці в БД не залишається нічого, а команда завершується з кодом 1. Логіка — у [`src/db/seed/run-seed.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed/run-seed.ts).
+
+| Що                                                                                                  | Коли            | Повторний запуск                                                                        |
+| --------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| Промпти `SUPPORT_SYSTEM`, `SUPPORT_FIRST_CHAT`, `SUPPORT_QUERY_TRANSLATION` у `llm_system_prompts`  | завжди          | `ON CONFLICT (type) DO NOTHING`: промпти, відредаговані в адмінці, лишаються як є       |
+| Адмін (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`) і, опційно, звичайний користувач (`SEED_USER_*`) | лише з `--demo` | наявний користувач (пошук за `LOWER(email)`) пропускається; пароль і роль не змінюються |
+
+- Тексти промптів беруться з тих самих defaults, що й runtime-fallback сервісів ([`config/support.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/support.ts)), тому перший seed не змінює поведінку AI. Без рядків у таблиці AI працює на цих fallback, але адмінка не може змінити промпт: `UPDATE` не створює відсутній рядок.
+- Від `APP_ENV` seed не залежить: без `--demo` акаунти не створюються в жодному середовищі. З `--demo` у production-like середовищі виводиться попередження.
+- Email нормалізується (`trim().toLowerCase()`), пароль хешується `hashPassword` з `metautil`, `email_verified_at` = поточний час.
+- Якщо `SEED_ADMIN_EMAIL` уже належить користувачу з `role = 'user'`, seed завершується успішно з попередженням `exists_without_admin_role`: роль автоматично не підвищується.
+- Звіт виводить для кожного запису `inserted` або `skipped (<причина>)`: `already_exists`, `exists_without_admin_role`, `missing_credentials`, `demo_disabled`.
+
+::: warning Кеш промптів
+Backend читає промпти один раз на старті (`promptService.load()` у [`src/index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts)). Запускайте `db:seed` до старту backend або перезапустіть його після seed.
+:::
+
+### Перший адмін у production
+
+Demo-сценарій для production не призначений. Варіанти:
+
+1. Зареєструватися звичайним способом і підвищити роль вручну:
+
+    ```sql
+    UPDATE users SET role = 'admin' WHERE LOWER(email) = '<admin-email>';
+    ```
+
+2. Разово виконати `pnpm db:seed:prod --demo` з тимчасово заданими `SEED_ADMIN_EMAIL` і `SEED_ADMIN_PASSWORD`, а потім одразу прибрати їх з оточення.
 
 ## Як змінити схему
 

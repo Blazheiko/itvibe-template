@@ -43,7 +43,8 @@
 | `db:generate`    | `drizzle-kit generate`               | Генерує міграцію зі схеми ([drizzle.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts))            |
 | `db:migrate`     | `drizzle-kit migrate`                | Застосовує міграції                                                                                                                                   |
 | `db:studio`      | `drizzle-kit studio`                 | Відкриває Drizzle Studio                                                                                                                              |
-| `db:seed`        | `tsx src/db/seed.ts`                 | Заповнює БД початковими даними ([seed.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts))                    |
+| `db:seed`        | `tsx src/db/seed.ts`                 | Початкові промпти; з `--demo` — demo-акаунти ([seed.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts))      |
+| `db:seed:prod`   | `node dist/db/seed.js`               | Те саме зі зібраного коду                                                                                                                             |
 | `mail:test`      | `tsx src/scripts/send-test-email.ts` | Надсилає тестовий лист ([send-test-email.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/scripts/send-test-email.ts)) |
 | `test`           | `vitest run`                         | Одноразовий прогін Vitest                                                                                                                             |
 | `test:watch`     | `vitest`                             | Vitest у watch-режимі                                                                                                                                 |

@@ -22,8 +22,8 @@ export const supportLlmService = {
         onComplete?: TextUsageCompleteHandler,
     ): AsyncGenerator<string, void, undefined> {
         const systemPromptBase = promptService.getContent('SUPPORT_FIRST_CHAT') || supportConfig.defaultFirstChatPrompt;
-        const temperature = promptService.getTemperature('SUPPORT_FIRST_CHAT') ?? 0.5;
-        const maxTokens = promptService.getMaxTokens('SUPPORT_FIRST_CHAT') ?? 512;
+        const temperature = promptService.getTemperature('SUPPORT_FIRST_CHAT') ?? supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.temperature;
+        const maxTokens = promptService.getMaxTokens('SUPPORT_FIRST_CHAT') ?? supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.maxTokens;
         const modelOverride = promptService.getModel('SUPPORT_FIRST_CHAT');
         const adapter = getTextAdapterForModel(modelOverride);
         const systemPrompt = `${systemPromptBase}\n\n${buildNativeLanguageInstruction(langNative)}`;
@@ -48,8 +48,8 @@ export const supportLlmService = {
         onComplete?: TextUsageCompleteHandler,
     ): AsyncGenerator<string, void, undefined> {
         const systemPromptTemplate = promptService.getContent('SUPPORT_SYSTEM') || supportConfig.defaultSystemPrompt;
-        const temperature = promptService.getTemperature('SUPPORT_SYSTEM') ?? 0.3;
-        const maxTokens = promptService.getMaxTokens('SUPPORT_SYSTEM') ?? 2048;
+        const temperature = promptService.getTemperature('SUPPORT_SYSTEM') ?? supportConfig.defaultGeneration.SUPPORT_SYSTEM.temperature;
+        const maxTokens = promptService.getMaxTokens('SUPPORT_SYSTEM') ?? supportConfig.defaultGeneration.SUPPORT_SYSTEM.maxTokens;
         const modelOverride = promptService.getModel('SUPPORT_SYSTEM');
         const adapter = getTextAdapterForModel(modelOverride);
 

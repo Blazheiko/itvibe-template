@@ -77,7 +77,7 @@ SERVE_STATIC=false
 ```bash
 pnpm --filter backend db:create    # створює БД і розширення vector
 pnpm --filter backend db:migrate   # drizzle-kit migrate
-pnpm --filter backend db:seed      # див. примітку нижче
+pnpm --filter backend db:seed      # початкові промпти; з --demo ще й demo-акаунти
 ```
 
 Очікуваний вивід:
@@ -92,7 +92,7 @@ Extension "vector" ensured in database "itvibe_template".
 `db:create` можна запускати повторно: для наявної БД він виводить `Database "itvibe_template" already exists.`
 
 ::: info Seed
-Зараз [src/db/seed.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts) містить тільки `import "dotenv/config"` і жодних даних не вставляє. Команда завершується без помилок, але нічого не робить.
+`db:seed` вставляє початкові AI-промпти й безпечний для повторного запуску. Щоб отримати адміна для локальної роботи, задайте `SEED_ADMIN_EMAIL` і `SEED_ADMIN_PASSWORD` у `.env` (опційно `SEED_USER_*`) і виконайте `pnpm --filter backend db:seed --demo`. Запускайте seed до `pnpm dev`, бо промпти кешуються на старті. Деталі: [База даних → Seed](/backend/database#seed).
 :::
 
 Детальніше про схему та міграції: [База даних](/backend/database).
