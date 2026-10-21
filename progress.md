@@ -42,8 +42,9 @@ Goal: HTTP and WS-message limits stay in-memory (process protection); WS upgrade
 
 - `pnpm typecheck` clean
 - `pnpm lint` clean
-- `pnpm test`: backend 465/465, frontend 41/41, shared 3/3, documentation 26/26
-- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 13/13, no keys left behind; a deliberately broken Lua (`count <= max`) fails 7/13
+- `pnpm test`: backend 466/466, frontend 41/41, shared 3/3, documentation 26/26
+- `REDIS_TEST_URL=redis://127.0.0.1:6379/15 pnpm --filter backend test:redis`: 16/16, no keys left behind; a deliberately broken Lua (`count <= max`) fails 7 tests
+- Production client contract against a real server (`redis-rate-limit.redis.test.ts`, uses `rateLimitRedisOptions` as is): `commandTimeout` 50 ms fires under `CLIENT PAUSE WRITE` (< 300 ms); an in-flight command killed with `CLIENT KILL` is not resent after reconnect and commands fail fast while reconnecting; the client reconnects by itself (no manual `connect()`). With `autoResendUnfulfilledCommands: true` the resend test fails, so it discriminates
 - `pnpm docs:build && pnpm docs:verify`: all checks passed; shared-limits table rows match the registry 21/21
 - Manual (two backend processes on 3101/3102 from `dist`, separate `redis-server --port 6390`, `REDIS_PREFIX=ft013:`):
   - startup: 5 Redis clients (2 per backend — main + rate-limit — plus redis-cli)
@@ -55,7 +56,7 @@ Goal: HTTP and WS-message limits stay in-memory (process protection); WS upgrade
   - Redis back: login and upgrade are counted in Redis again without restarting the backends
 - Latency (local Redis, 2000 `EVAL` of the throttle script): p50 0.37 ms, p99 1.6 ms, max 24 ms → default `RATE_LIMIT_REDIS_TIMEOUT_MS=50` kept
 - Not tested:
-  - scenario «only the rate-limit connection fails» by hand (no clean external way to drop just that connection); covered by `upgrade-rate-limit.redis.test.ts` with a forced `disconnect(false)`
+  - scenario «only the rate-limit connection fails» end to end through running backends (the connection drop itself is covered by `redis-rate-limit.redis.test.ts` with `CLIENT KILL`, the limiter fallback by `upgrade-rate-limit.redis.test.ts`)
   - login hint in the browser and `pnpm --filter frontend test:e2e` (only the i18n string changed; no e2e test references it)
   - production timeout value (needs the target network)
   - `redis-tests.yml` on GitHub (runs on the PR)

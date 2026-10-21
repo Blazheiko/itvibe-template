@@ -465,7 +465,10 @@ const handleUpgrade = async (
   const appType = normalizeAppTypeProtocol(protocols[1] ?? "");
 
   if (!checkToken(token)) {
-    res.writeStatus("401 Unauthorized").end("Invalid token format");
+    // After the level 2 await: corked, like every other write here.
+    res.cork(() => {
+      res.writeStatus("401 Unauthorized").end("Invalid token format");
+    });
     return;
   }
 

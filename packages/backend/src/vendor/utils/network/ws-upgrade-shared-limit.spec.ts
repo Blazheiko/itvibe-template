@@ -113,6 +113,18 @@ describe("handleUpgrade: level 1 → level 2 → auth", () => {
     expect(onUpgrade).not.toHaveBeenCalled();
   });
 
+  it("corks the 401 for an invalid token written after the level 2 await", async () => {
+    const handleUpgrade = await load();
+    const { res, calls } = createRes();
+    const badReq = {
+      getHeader: (name: string) =>
+        name === "sec-websocket-protocol" ? "bad, web" : "",
+    };
+    await handleUpgrade(res as never, badReq as never, {});
+    expect(calls).toEqual(["cork", "status:401 Unauthorized", "end"]);
+    expect(onUpgrade).not.toHaveBeenCalled();
+  });
+
   it("upgrades when both levels allow (incl. a skipped level 2)", async () => {
     const handleUpgrade = await load();
     const { res, calls } = createRes();
