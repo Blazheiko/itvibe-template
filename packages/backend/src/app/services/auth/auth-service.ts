@@ -25,7 +25,10 @@ import {
   smsVerificationProvider,
   type SmsVerificationFlow,
 } from "#app/services/auth/sms-verification-provider.js";
-import { consumeAuthThrottle } from "#app/services/auth/auth-throttle-service.js";
+import {
+  consumeAuthThrottle,
+  resetAuthThrottle,
+} from "#app/services/auth/auth-throttle-service.js";
 import { throttlePolicies } from "#config/throttle-policies.js";
 import {
   hashOtpVerificationCode,
@@ -89,6 +92,27 @@ function assertPhoneAuthEnabled(): AppResult<never> | undefined {
 
 function resolveLoginIdentifier(payload: LoginInput): string {
   return "identifier" in payload ? payload.identifier : payload.email;
+}
+
+type LoginKey =
+  | { kind: "email"; value: string }
+  | { kind: "phone"; value: string };
+
+/**
+ * The normalized login identifier, shared by the user lookup and the login
+ * throttle so both see the same key. null when it cannot identify an account
+ * (not an email or phone, phone auth disabled, unparsable phone).
+ */
+export function resolveLoginKey(identifier: string): LoginKey | null {
+  const trimmed = identifier.trim();
+  if (trimmed.includes("@")) {
+    return { kind: "email", value: normalizeEmail(trimmed) };
+  }
+  if (!looksLikePhoneNumber(trimmed) || !authConfig.phoneAuthEnabled) {
+    return null;
+  }
+  const phone = normalizePhone(trimmed);
+  return Result.isError(phone) ? null : { kind: "phone", value: phone.value };
 }
 
 function normalizeEmail(email: string): string {
@@ -1186,47 +1210,59 @@ export const authService = {
     payload: LoginInput,
     auth: Auth,
     session: Session,
+    requestMeta: { ipAddress: string },
   ): Promise<AppResult<AuthSuccessPayload>> {
     const { password } = payload;
-    const identifier = resolveLoginIdentifier(payload).trim();
-    const isEmailIdentifier = identifier.includes("@");
+    const invalidCredentials = (): AppResult<never> =>
+      Result.err(unauthorized("Invalid email or password"));
+    const loginKey = resolveLoginKey(resolveLoginIdentifier(payload));
 
-    let userResult;
-    if (isEmailIdentifier) {
-      userResult = await tryInternal(
-        () => userRepository.findByEmail(normalizeEmail(identifier)),
-        "Failed to load user by email",
-      );
-    } else if (looksLikePhoneNumber(identifier)) {
-      const gateResult = assertPhoneAuthEnabled();
-      if (gateResult !== undefined) {
-        return Result.err(unauthorized("Invalid email or password"));
-      }
-
-      const normalizedPhoneResult = normalizePhone(identifier);
-      if (Result.isError(normalizedPhoneResult)) {
-        return Result.err(unauthorized("Invalid email or password"));
-      }
-
-      userResult = await tryInternal(
-        () => userRepository.findByPhone(normalizedPhoneResult.value),
-        "Failed to load user by phone",
-      );
-    } else {
-      return Result.err(unauthorized("Invalid email or password"));
+    // Consume before the lookup: same cost for every outcome, no check/increment race.
+    const ipThrottle = await tryInternal(
+      () => consumeAuthThrottle(throttlePolicies.loginIp, requestMeta.ipAddress),
+      "Failed to enforce login IP throttle",
+    );
+    if (Result.isError(ipThrottle)) {
+      return Result.err(ipThrottle.error);
+    }
+    if (!ipThrottle.value.allowed) {
+      return invalidCredentials();
     }
 
+    if (loginKey === null) {
+      return invalidCredentials();
+    }
+
+    const identifierThrottle = await tryInternal(
+      () => consumeAuthThrottle(throttlePolicies.loginIdentifier, loginKey.value),
+      "Failed to enforce login identifier throttle",
+    );
+    if (Result.isError(identifierThrottle)) {
+      return Result.err(identifierThrottle.error);
+    }
+    if (!identifierThrottle.value.allowed) {
+      return invalidCredentials();
+    }
+
+    const userResult = await tryInternal(
+      () =>
+        loginKey.kind === "email"
+          ? userRepository.findByEmail(loginKey.value)
+          : userRepository.findByPhone(loginKey.value),
+      `Failed to load user by ${loginKey.kind}`,
+    );
     if (Result.isError(userResult)) {
       return Result.err(userResult.error);
     }
 
     const user = userResult.value;
     if (user === undefined) {
-      return Result.err(unauthorized("Invalid email or password"));
+      return invalidCredentials();
     }
 
+    // Same answer as a wrong password: do not reveal that an OAuth-only account exists.
     if (user.password === null || user.password === "") {
-      return Result.err(badRequest("Please use social login for this account"));
+      return invalidCredentials();
     }
 
     const validResult = await tryInternal(
@@ -1238,11 +1274,20 @@ export const authService = {
     }
 
     if (!validResult.value) {
-      return Result.err(unauthorized("Invalid email or password"));
+      return invalidCredentials();
+    }
+
+    // The correct password resets the per-account budget; the IP budget stays.
+    const resetResult = await tryInternal(
+      () => resetAuthThrottle(throttlePolicies.loginIdentifier, loginKey.value),
+      "Failed to reset login identifier throttle",
+    );
+    if (Result.isError(resetResult)) {
+      logger.warn({ err: resetResult.error }, "Login throttle reset failed");
     }
 
     if (
-      isEmailIdentifier &&
+      loginKey.kind === "email" &&
       authConfig.strictRegistration &&
       user.emailVerifiedAt === null
     ) {

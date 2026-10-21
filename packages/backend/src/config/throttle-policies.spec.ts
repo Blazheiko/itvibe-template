@@ -38,7 +38,7 @@ describe("throttlePolicies registry", () => {
     expect(validateThrottlePolicies(throttlePolicies)).toEqual([]);
   });
 
-  it("keeps the scopes, limits and windows of the pre-registry calls", async () => {
+  it("keeps the scopes, limits and windows of the pre-registry calls and the confirmed new policies", async () => {
     const { throttlePolicies: p } = await load();
     const HOUR = 3_600_000;
     const table = Object.fromEntries(
@@ -58,6 +58,8 @@ describe("throttlePolicies registry", () => {
       link_email_user: [3, HOUR, "user"],
       link_email_user_cooldown: [1, 60_000, "user"],
       upgrade: [60, 60_000, "ip"],
+      login_ip: [20, 900_000, "ip"],
+      login_identifier: [40, 900_000, "identifier"],
     });
   });
 

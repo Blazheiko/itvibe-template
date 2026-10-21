@@ -126,6 +126,28 @@ export const throttlePolicies = {
     1,
     authConfig.emailLinkCooldownSeconds * 1000,
   ),
+  /**
+   * Login: every admitted attempt is consumed atomically before the user
+   * lookup, so concurrent requests cannot all pass a free budget.
+   */
+  loginIp: {
+    scope: "login_ip",
+    keyBy: "ip",
+    algorithm: "fixed-window",
+    limit: readInt("AUTH_LOGIN_MAX_ATTEMPTS_PER_IP", 20),
+    windowMs: readInt("AUTH_LOGIN_WINDOW_SECONDS", 900) * 1000,
+    onRedisError: "reject",
+  },
+  /** Higher than loginIp, so one attacker cannot easily lock out an account. */
+  loginIdentifier: {
+    scope: "login_identifier",
+    keyBy: "identifier",
+    algorithm: "fixed-window",
+    limit: readInt("AUTH_LOGIN_MAX_ATTEMPTS_PER_IDENTIFIER", 40),
+    windowMs: readInt("AUTH_LOGIN_WINDOW_SECONDS", 900) * 1000,
+    onRedisError: "reject",
+    resetOnSuccess: true,
+  },
   /** WS upgrade level 2: cluster-wide budget after the local level 1. */
   wsUpgradeShared: {
     scope: "upgrade",

@@ -188,6 +188,7 @@ export default {
       payload,
       context.auth,
       context.session,
+      { ipAddress: context.httpData.ip ?? "" },
     );
 
     if (Result.isError(result)) {

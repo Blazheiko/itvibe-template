@@ -45,6 +45,7 @@ const hashPasswordMock = vi.fn();
 const validatePasswordMock = vi.fn();
 const generateWsTokenMock = vi.fn();
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 const issueVerificationCodeMock = vi.fn();
 
 vi.mock("#app/repositories/index.js", () => ({
@@ -92,6 +93,7 @@ vi.mock("#app/services/auth/email-verification-service.js", () => ({
 
 vi.mock("#app/services/auth/auth-throttle-service.js", () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 vi.mock("#app/services/auth/sms-verification-provider.js", () => ({
@@ -132,6 +134,7 @@ afterEach(() => {
 
 describe("authService phone foundation", () => {
   it("logs in with a phone identifier when phone auth is enabled", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByPhone.mockResolvedValue({
       id: 7n,
       email: null,
@@ -153,6 +156,7 @@ describe("authService phone foundation", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(userRepositoryMock.findByPhone).toHaveBeenCalledWith("+14155550123");
@@ -1004,5 +1008,142 @@ describe("auth throttle fail-closed (phone flows)", () => {
     expect(Result.isError(result)).toBe(true);
     expect(consumeAuthThrottleMock).toHaveBeenCalledTimes(1);
     expect(smsAuthChallengeRepositoryMock.findById).not.toHaveBeenCalled();
+  });
+});
+
+describe("login throttle", () => {
+  const login = async (identifier: string, ipAddress = "127.0.0.1") => {
+    const { authService } = await loadAuthService();
+    return authService.login(
+      { identifier, password: "secret123", token: "" },
+      authMock as any,
+      sessionMock as any,
+      { ipAddress },
+    );
+  };
+  const invalid = {
+    _tag: "Unauthorized",
+    message: "Invalid email or password",
+  };
+  const scopesCalled = (): string[] =>
+    consumeAuthThrottleMock.mock.calls.map(
+      (call) => (call[0] as { scope: string }).scope,
+    );
+
+  beforeEach(() => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+    resetAuthThrottleMock.mockReset();
+    resetAuthThrottleMock.mockResolvedValue(undefined);
+  });
+
+  it("resolveLoginKey matches the lookup normalization for email and phone", async () => {
+    const { resolveLoginKey } = await loadAuthService();
+    expect(resolveLoginKey("  User@Example.COM ")).toEqual({
+      kind: "email",
+      value: "user@example.com",
+    });
+    expect(resolveLoginKey("+1 415 555 0123")).toEqual(
+      resolveLoginKey("+1 (415) 555-0123"),
+    );
+    expect(resolveLoginKey("+1 415 555 0123")).toEqual({
+      kind: "phone",
+      value: "+14155550123",
+    });
+    expect(resolveLoginKey("not-an-identifier")).toBeNull();
+  });
+
+  it("consumes the IP and identifier budgets before the user lookup", async () => {
+    userRepositoryMock.findByEmail.mockResolvedValue(undefined);
+    await login("User@Example.com");
+    expect(scopesCalled()).toEqual(["login_ip", "login_identifier"]);
+    expect(consumeAuthThrottleMock.mock.calls[1]?.[1]).toBe("user@example.com");
+    expect(consumeAuthThrottleMock.mock.invocationCallOrder[1]).toBeLessThan(
+      userRepositoryMock.findByEmail.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it.each([
+    ["IP", 0],
+    ["identifier", 1],
+  ])(
+    "stops before the lookup and password check when the %s budget is spent",
+    async (_n, at) => {
+      consumeAuthThrottleMock.mockReset();
+      consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
+      if (at === 0)
+        consumeAuthThrottleMock.mockResolvedValueOnce({
+          allowed: false,
+          count: 21,
+        });
+      else
+        consumeAuthThrottleMock
+          .mockResolvedValueOnce({ allowed: true, count: 1 })
+          .mockResolvedValueOnce({ allowed: false, count: 41 });
+      const result = await login("user@example.com");
+      expect(Result.isError(result) && result.error).toEqual(invalid);
+      expect(userRepositoryMock.findByEmail).not.toHaveBeenCalled();
+      expect(validatePasswordMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("charges the same budget and answers the same for unknown, wrong-password and no-password accounts", async () => {
+    const outcomes = [];
+    for (const user of [
+      undefined,
+      { id: 1n, email: "user@example.com", password: "hash" },
+      { id: 1n, email: "user@example.com", password: null },
+    ]) {
+      consumeAuthThrottleMock.mockClear();
+      userRepositoryMock.findByEmail.mockResolvedValue(user);
+      validatePasswordMock.mockResolvedValue(false);
+      const result = await login("user@example.com");
+      outcomes.push({
+        error: Result.isError(result) && result.error,
+        calls: scopesCalled(),
+      });
+    }
+    for (const outcome of outcomes) {
+      expect(outcome).toEqual({
+        error: invalid,
+        calls: ["login_ip", "login_identifier"],
+      });
+    }
+    expect(resetAuthThrottleMock).not.toHaveBeenCalled();
+  });
+
+  it("counts only the IP for an identifier that cannot be normalized", async () => {
+    await login("not-an-identifier");
+    expect(scopesCalled()).toEqual(["login_ip"]);
+  });
+
+  it("fails closed on a Redis error without looking up the user", async () => {
+    consumeAuthThrottleMock.mockReset();
+    consumeAuthThrottleMock.mockRejectedValue(new Error("redis down"));
+    const result = await login("user@example.com");
+    expect(Result.isError(result)).toBe(true);
+    expect(userRepositoryMock.findByEmail).not.toHaveBeenCalled();
+    expect(validatePasswordMock).not.toHaveBeenCalled();
+  });
+
+  it("resets only the identifier budget after a successful login", async () => {
+    userRepositoryMock.findByPhone.mockResolvedValue({
+      id: 7n,
+      email: null,
+      phone: "+14155550123",
+      name: "Jane",
+      password: "hashed-password",
+      sessionToken: "session-token",
+    });
+    validatePasswordMock.mockResolvedValue(true);
+    authMock.login.mockResolvedValue(true);
+    generateWsTokenMock.mockResolvedValue("ws-token");
+    const result = await login("+1 415 555 0123");
+    expect(Result.isOk(result)).toBe(true);
+    expect(resetAuthThrottleMock).toHaveBeenCalledTimes(1);
+    expect(resetAuthThrottleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "login_identifier" }),
+      "+14155550123",
+    );
   });
 });

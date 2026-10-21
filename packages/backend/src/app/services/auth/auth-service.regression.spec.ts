@@ -31,6 +31,7 @@ const hashPasswordMock = vi.fn();
 const validatePasswordMock = vi.fn();
 const generateWsTokenMock = vi.fn();
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 
 vi.mock("#app/repositories/index.js", () => ({
   userRepository: userRepositoryMock,
@@ -69,6 +70,7 @@ vi.mock("#app/services/auth/email-verification-service.js", () => ({
 
 vi.mock('#app/services/auth/auth-throttle-service.js', () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 async function loadAuthService() {
@@ -177,6 +179,7 @@ describe("authService legacy regressions", () => {
   });
 
   it("logs in with a case-insensitive email identifier and returns websocket details", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -198,6 +201,7 @@ describe("authService legacy regressions", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(userRepositoryMock.findByEmail).toHaveBeenCalledWith(
@@ -223,7 +227,8 @@ describe("authService legacy regressions", () => {
     }
   });
 
-  it("rejects password login for accounts that do not have a local password", async () => {
+  it("answers a login to an account without a local password like a wrong password", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -241,13 +246,14 @@ describe("authService legacy regressions", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
     if (Result.isError(result)) {
       expect(result.error).toEqual({
-        _tag: "BadRequest",
-        message: "Please use social login for this account",
+        _tag: "Unauthorized",
+        message: "Invalid email or password",
       });
     }
     expect(validatePasswordMock).not.toHaveBeenCalled();

@@ -35,6 +35,7 @@ const destroyAllSessionsMock = vi.fn();
 const hashPasswordMock = vi.fn();
 const nanoidMock = vi.fn(() => "new-session-token");
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 const issueVerificationCodeMock = vi.fn();
 const loggerMock = {
   warn: vi.fn(),
@@ -59,6 +60,7 @@ vi.mock("#vendor/utils/session/redis-session-storage.js", () => ({
 
 vi.mock("#app/services/auth/auth-throttle-service.js", () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 vi.mock("#app/services/auth/sms-verification-provider.js", () => ({

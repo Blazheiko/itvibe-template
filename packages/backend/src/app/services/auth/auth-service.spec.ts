@@ -34,6 +34,7 @@ const hashPasswordMock = vi.fn();
 const validatePasswordMock = vi.fn();
 const generateWsTokenMock = vi.fn();
 const consumeAuthThrottleMock = vi.fn();
+const resetAuthThrottleMock = vi.fn();
 const sendVerificationEmailAfterRegistrationMock = vi.fn();
 const sendLinkVerificationEmailMock = vi.fn();
 const ROTATED_LOGOUT_CSRF_TOKEN = "b".repeat(43);
@@ -75,6 +76,7 @@ vi.mock("#app/services/auth/email-verification-service.js", () => ({
 
 vi.mock("#app/services/auth/auth-throttle-service.js", () => ({
   consumeAuthThrottle: consumeAuthThrottleMock,
+  resetAuthThrottle: resetAuthThrottleMock,
 }));
 
 async function loadAuthService() {
@@ -222,6 +224,7 @@ describe("authService", () => {
   });
 
   it("returns internal error when login session establishment fails", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -241,6 +244,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -363,6 +367,7 @@ describe("authService", () => {
   });
 
   it("returns unauthorized when login email is unknown", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue(undefined);
 
     const { authService } = await loadAuthService();
@@ -374,6 +379,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -387,6 +393,7 @@ describe("authService", () => {
   });
 
   it("returns unauthorized when login password is invalid", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -405,6 +412,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -418,6 +426,7 @@ describe("authService", () => {
   });
 
   it("blocks email password login for unverified users when strict registration is enabled", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
       email: "user@example.com",
@@ -436,6 +445,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isError(result)).toBe(true);
@@ -449,6 +459,7 @@ describe("authService", () => {
   });
 
   it("allows email password login for unverified users when strict registration is disabled", async () => {
+    consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 });
     process.env["AUTH_STRICT_REGISTRATION"] = "false";
     userRepositoryMock.findByEmail.mockResolvedValue({
       id: 7n,
@@ -470,6 +481,7 @@ describe("authService", () => {
       },
       authMock as any,
       sessionMock as any,
+      { ipAddress: "127.0.0.1" },
     );
 
     expect(Result.isOk(result)).toBe(true);
