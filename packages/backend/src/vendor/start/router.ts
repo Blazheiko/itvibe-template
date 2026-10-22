@@ -1,5 +1,6 @@
 import logger from "#vendor/utils/logger.js";
 import { normalizePath } from "#vendor/utils/network/http-request-handlers.js";
+import { isNoBodyMethod } from "#vendor/utils/routing/body-methods.js";
 import appConfig from "#config/app.js";
 import type {
   Method,
@@ -47,6 +48,13 @@ const routeHandler = (
 ): RouteItem => {
   let method = route.method;
   method = method === "delete" ? "del" : route.method;
+  if (isNoBodyMethod(method) && route.validator !== undefined) {
+    throw new Error(
+      `Route ${route.method.toUpperCase()} ${route.url} declares a body validator, ` +
+        `but ${route.method.toUpperCase()} requests never read a body. ` +
+        "Pass the data via :params or queryValidator, or use post/put/patch.",
+    );
+  }
   return createRoute(method, route, groupRateLimit);
 };
 

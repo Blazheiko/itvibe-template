@@ -65,6 +65,7 @@ import configApp from "#config/app.js";
 // import schemas from "#app/validate/schemas/schemas.js";
 import getIP from "#vendor/utils/network/get-ip.js";
 import { serializeRoutes } from "#vendor/utils/routing/serialize-routes.js";
+import { isBodyMethod } from "#vendor/utils/routing/body-methods.js";
 import {
   makeBroadcastJson,
   makeJson,
@@ -177,7 +178,7 @@ const collectRequestMetadata = (
       : {};
   const contentType = headers.get("content-type");
   const ip = getIP(req, res);
-  const hasBody = route.method === "post" || route.method === "put";
+  const hasBody = isBodyMethod(route.method);
   const bodyKind: BodyKind =
     contentType !== undefined ? detectBodyKind(contentType) : "other";
 
@@ -211,6 +212,12 @@ export const validateQuery = (
   return validateRoutePayload(route.queryValidator, flattened);
 };
 
+const hasBodyFraming = (headers: Map<string, string>): boolean => {
+  if (headers.has("transfer-encoding")) return true;
+  const contentLength = headers.get("content-length");
+  return contentLength !== undefined && contentLength.trim() !== "0";
+};
+
 export const readAndParseBody = async (
   res: HttpResponse,
   meta: RequestMetadata,
@@ -220,11 +227,33 @@ export const readAndParseBody = async (
   payload: Payload | null;
   files: Map<string, UploadedFile> | null;
 }> => {
-  if (!meta.hasBody || meta.contentType === undefined) {
+  if (!meta.hasBody) {
     return { payload: null, files: null };
   }
 
   const allowed: BodyKind[] = route.allowedContentTypes ?? ["json"];
+
+  if (meta.contentType === undefined) {
+    if (route.validator === undefined) {
+      return { payload: null, files: null };
+    }
+    // API contract (RFC 9110 §8.3 does not require 415 here): body framing
+    // without Content-Type is rejected before reading; no framing means an
+    // empty body, validated like empty JSON. Transfer-Encoding counts as
+    // framing even if the chunked body turns out empty (RFC 9112 §6.3).
+    if (hasBodyFraming(meta.headers)) {
+      logger.warn(
+        { routeUrl: route.url, routeMethod: route.method, allowed },
+        "Request body without Content-Type rejected",
+      );
+      throw new UnsupportedMediaTypeError(null, allowed);
+    }
+    return {
+      payload: validateRoutePayload(route.validator, {}) as Payload,
+      files: null,
+    };
+  }
+
   if (!allowed.includes(meta.bodyKind)) {
     logger.warn(
       {

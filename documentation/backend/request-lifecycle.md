@@ -56,7 +56,7 @@ sequenceDiagram
 
 1. **Відмова під час зупинки.** Якщо `state.listenSocket === undefined`, з'єднання закривається (`res.close()`).
 2. **onAborted.** Реєструється один раз; прапорець передається в `readData` через об'єкт `RequestAbortSignal`, бо в uWS `onAborted` — один слот. Після abort відповідь не пишеться.
-3. **Метадані синхронно.** `collectRequestMetadata` до першого `await` збирає cookies (`parseCookies`), query, заголовки (`getHeaders`, без `cookie`, з валідацією `validateHeader`), параметри маршруту (`extractParameters` з `validateParameter`), IP (`getIP`), `content-type` і `bodyKind`. `hasBody` дорівнює `true` лише для `post` і `put`.
+3. **Метадані синхронно.** `collectRequestMetadata` до першого `await` збирає cookies (`parseCookies`), query, заголовки (`getHeaders`, без `cookie`, з валідацією `validateHeader`), параметри маршруту (`extractParameters` з `validateParameter`), IP (`getIP`), `content-type` і `bodyKind`. `hasBody` дорівнює `true` для `post`, `put` і `patch` (`BODY_METHODS` у [body-methods.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/body-methods.ts)); для `get` і `delete` тіло не читається.
 4. **Rate limit до читання тіла.** Спершу `checkGlobalRateLimit` (L1: один бюджет на IP для всіх API-запитів, за замовчуванням 600 на хвилину), потім `checkRateLimit` ([http-rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)): ліміт маршруту, інакше групи, без ліміту — пропускає. Обидві перевірки синхронні, щоб не пропустити `onData`. API-404, preflight `OPTIONS` і `/<pathPrefix>/doc/routes` не проходять через `setHttpHandler`, але L1 для них викликається окремо. Деталі — [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
 5. **Query.** `validateQuery` валідує query лише якщо в маршруті є `queryValidator`, інакше `httpData.query === null`.
 6. **Тіло.** `readAndParseBody` (деталі нижче).
@@ -78,24 +78,47 @@ sequenceDiagram
 
 Порядок у `readAndParseBody`:
 
-1. Немає тіла (`hasBody === false`) або немає `Content-Type` — тіло не читається.
-2. `bodyKind` має бути в `route.allowedContentTypes` (за замовчуванням `["json"]`), інакше `UnsupportedMediaTypeError` → **415**. Наприклад, завантаження аватара оголошує `allowedContentTypes: ["multipart"]`.
-3. Ранній відказ: якщо `Content-Length` — ціле число і більше ліміту, кидається `PayloadTooLargeError` → **413** без читання тіла.
-4. `readData` збирає чанки з `res.onData` і перериває читання з `PayloadTooLargeError`, щойно сума перевищить ліміт (захист від chunked-тіл і неправдивого `Content-Length`).
-5. Парсинг: `json` → `JSON.parse` (тільки об'єкт, порожнє тіло → `{}`; невалідний JSON або не-об'єкт → `MalformedBodyError`, без уривка тіла в повідомленні), `multipart` → `getParts` з uWS (поля в payload, файли в `files`), `urlencoded` → `URLSearchParams`, `text` → рядок, `octet` → один файл (ім'я з `content-disposition` або `x-filename`).
-6. Якщо є `route.validator` і payload — `validateRoutePayload`. Якщо валідатора немає, `payload` стає `null` (файли зберігаються).
+1. Метод без тіла (`hasBody === false`) — тіло не читається, `payload = null`.
+2. Немає `Content-Type`:
+    - маршрут без `validator` — тіло не читається, `payload = null`;
+    - маршрут з `validator`, є framing тіла (`Transfer-Encoding` або `Content-Length` не `0`) — `UnsupportedMediaTypeError` з `receivedContentType: null` → **415** до читання тіла;
+    - маршрут з `validator`, framing немає — тіло вважається порожнім і валідується як `{}` (так само, як порожнє JSON-тіло): обов'язкові поля → **422**, defaults схеми застосовуються.
+3. `bodyKind` має бути в `route.allowedContentTypes` (за замовчуванням `["json"]`), інакше `UnsupportedMediaTypeError` → **415**. Наприклад, завантаження аватара оголошує `allowedContentTypes: ["multipart"]`.
+4. Ранній відказ: якщо `Content-Length` — ціле число і більше ліміту, кидається `PayloadTooLargeError` → **413** без читання тіла.
+5. `readData` збирає чанки з `res.onData` і перериває читання з `PayloadTooLargeError`, щойно сума перевищить ліміт (захист від chunked-тіл і неправдивого `Content-Length`).
+6. Парсинг: `json` → `JSON.parse` (тільки об'єкт, порожнє тіло → `{}`; невалідний JSON або не-об'єкт → `MalformedBodyError`, без уривка тіла в повідомленні), `multipart` → `getParts` з uWS (поля в payload, файли в `files`), `urlencoded` → `URLSearchParams`, `text` → рядок, `octet` → один файл (ім'я з `content-disposition` або `x-filename`).
+7. Якщо є `route.validator` і payload — `validateRoutePayload`. Якщо валідатора немає, `payload` стає `null` (файли зберігаються). Парсер `octet` завжди повертає `payload: null` і файл у `files`, тому `validator` на `octet`-маршруті не викликається: контракт бінарних upload-маршрутів поки не визначено.
+
+### Запит без `Content-Type`
+
+Поведінка з кроку 2 — контракт API цього шаблону. RFC його не вимагає: за [RFC 9110 §8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.3) отримувач без `Content-Type` може вгадати тип або вважати вміст `application/octet-stream`. Шаблон обирає явну відмову, щоб не читати вміст невідомого типу і щоб маршрут з `validator` ніколи не отримав `payload = null`.
+
+`Transfer-Encoding` вважається framing тіла, навіть якщо chunked-тіло виявиться порожнім ([RFC 9112 §6.3](https://www.rfc-editor.org/rfc/rfc9112.html#section-6.3)): рішення приймається до читання, тому порожній chunked-запит без `Content-Type` теж отримує 415.
+
+| Запит до маршруту з `validator`                  | Відповідь                                      |
+| ------------------------------------------------ | ---------------------------------------------- |
+| без `Content-Type` і без тіла                    | валідація `{}`: 422 зі списком полів або успіх |
+| без `Content-Type`, з `Content-Length > 0`       | 415, `details.receivedContentType: null`       |
+| без `Content-Type`, `Transfer-Encoding: chunked` | 415, навіть якщо байтів немає                  |
+
+Перевірити через `curl` (для запиту з тілом `-H 'Content-Type:'` прибирає заголовок, який `curl` сам додає до `-d`):
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/login                                              # 422
+curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' http://127.0.0.1:3000/api/auth/login   # 415
+```
 
 ## Обробка помилок (handleError)
 
-| Помилка                     | Статус             | `code`                                                         |
-| --------------------------- | ------------------ | -------------------------------------------------------------- |
-| `PayloadTooLargeError`      | 413                | `payload_too_large` (+ `details.limit`, `details.contentType`) |
-| `MalformedBodyError`        | 400                | `bad_request` (`message: "Malformed json body"`)               |
-| `UnsupportedMediaTypeError` | 415                | `unsupported_media_type`                                       |
-| `ValidationError`           | `error.statusCode` | `error.code`, `details.kind: "validation"`                     |
-| `ParameterValidationError`  | `error.statusCode` | `error.code`, `details.kind: "parameter_validation"`           |
-| `RedisUnavailableError`     | 503                | `service_unavailable`, заголовок `Retry-After: 1`              |
-| інше                        | 500                | `internal_error` (текст помилки лише при `env === "local"`)    |
+| Помилка                     | Статус             | `code`                                                                                               |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `PayloadTooLargeError`      | 413                | `payload_too_large` (+ `details.limit`, `details.contentType`)                                       |
+| `MalformedBodyError`        | 400                | `bad_request` (`message: "Malformed json body"`)                                                     |
+| `UnsupportedMediaTypeError` | 415                | `unsupported_media_type` (+ `details.receivedContentType`: рядок або `null`, `details.allowedKinds`) |
+| `ValidationError`           | `error.statusCode` | `error.code`, `details.kind: "validation"`                                                           |
+| `ParameterValidationError`  | `error.statusCode` | `error.code`, `details.kind: "parameter_validation"`                                                 |
+| `RedisUnavailableError`     | 503                | `service_unavailable`, заголовок `Retry-After: 1`                                                    |
+| інше                        | 500                | `internal_error` (текст помилки лише при `env === "local"`)                                          |
 
 400, 413 і 415 логуються як `warn`, невідомі помилки — як `error` з контекстом для Sentry.
 
@@ -139,5 +162,5 @@ sequenceDiagram
 Про сесії, CSRF і автентифікацію — див. [/backend/auth-security](/backend/auth-security).
 
 ::: warning План
-За [HTTP_BODY_LIMITS_PLAN.md](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/HTTP_BODY_LIMITS_PLAN.md) ще не зроблено: опис змінних `APP_MAX_*_BODY_SIZE` у `packages/backend/.env.example`; інтеграційні тести лімітів (413 при перевищенні, межа «рівно ліміт», розділення лімітів octet/json); вивід розрахункового ліміту в API playground (`serializeRoutes`). Per-route ліміти тіла, окремий налаштовуваний ліміт для WS і читання тіла для `PATCH`/`DELETE` план свідомо залишає поза рамками.
+За [HTTP_BODY_LIMITS_PLAN.md](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/HTTP_BODY_LIMITS_PLAN.md) ще не зроблено: опис змінних `APP_MAX_*_BODY_SIZE` у `packages/backend/.env.example`; інтеграційні тести лімітів (413 при перевищенні, межа «рівно ліміт», розділення лімітів octet/json); вивід розрахункового ліміту в API playground (`serializeRoutes`). Per-route ліміти тіла й окремий налаштовуваний ліміт для WS план свідомо залишає поза рамками. Тіло `PATCH` читається; `DELETE` тіло свідомо не читає (див. [Роутинг → Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
 :::

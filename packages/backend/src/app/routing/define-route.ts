@@ -1,7 +1,8 @@
 import type { Type } from "@arktype/type";
 
 import { defaultValidator } from "#app/validate/index.js";
-import type { HttpHandler, RouteConfig, RouteItem } from "#vendor/types/types.js";
+import type { HttpHandler, Method, RouteConfig, RouteItem } from "#vendor/types/types.js";
+import type { BodyMethod } from "#vendor/utils/routing/body-methods.js";
 
 type InferSchema<TSchema> = TSchema extends Type<infer T> ? T : unknown;
 
@@ -15,8 +16,13 @@ type InferQueryFromSchema<TSchema> = TSchema extends Type<infer T> ? T : null;
 type DefineRouteInput<
   TBody extends Type | undefined,
   TQuery extends Type | undefined,
-> = Omit<RouteConfig, "validator" | "queryValidator"> & {
-  validator?: TBody;
+> = Omit<RouteConfig, "method" | "validator" | "queryValidator"> &
+  // A body validator is only allowed on methods that read a body; on
+  // get/delete it would silently receive `payload = null`.
+  (
+    | { method: BodyMethod; validator?: TBody }
+    | { method: Exclude<Method, BodyMethod>; validator?: undefined }
+  ) & {
   queryValidator?: TQuery;
   queryAllowExtra?: boolean;
   queryArrays?: readonly string[];

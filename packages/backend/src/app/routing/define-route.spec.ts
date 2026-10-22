@@ -77,6 +77,49 @@ describe("defineRoute", () => {
   });
 });
 
+describe("defineRoute body validator typing", () => {
+  const schema = type({ id: "string" });
+
+  it("allows a body validator on post/put/patch", () => {
+    for (const method of ["post", "put", "patch"] as const) {
+      expect(
+        defineRoute({
+          url: "/items",
+          method,
+          validator: schema,
+          handler: () => ({}),
+        }).validator,
+      ).toBeDefined();
+    }
+  });
+
+  it("rejects a body validator on get/delete/del at the type level", () => {
+    // Runtime would throw in routesHandler; here only the type error matters.
+    // @ts-expect-error get never reads a body
+    defineRoute({
+      url: "/items",
+      method: "get",
+      validator: schema,
+      handler: () => ({}),
+    });
+    // @ts-expect-error delete never reads a body
+    defineRoute({
+      url: "/items",
+      method: "delete",
+      validator: schema,
+      handler: () => ({}),
+    });
+    // @ts-expect-error del never reads a body
+    defineRoute({
+      url: "/items",
+      method: "del",
+      validator: schema,
+      handler: () => ({}),
+    });
+    expect(true).toBe(true);
+  });
+});
+
 describe("defineWsRoute", () => {
   it("wraps websocket route schemas through the same validator wrapper", () => {
     const schema = type({

@@ -1,6 +1,8 @@
+import { type } from "@arktype/type";
 import { describe, expect, it } from "vitest";
 
 import { defineRoute } from "#app/routing/define-route.js";
+import { defineWsRoute } from "#app/routing/define-ws-route.js";
 import type { routeList } from "#vendor/types/types.js";
 import { routesHandler } from "./router.js";
 
@@ -34,5 +36,65 @@ describe("routesHandler", () => {
       "group_middleware",
       "route_middleware",
     ]);
+  });
+
+  describe("body validator on methods without a body", () => {
+    const schema = type({ id: "string" });
+    // Bypasses defineRoute's type check, like a hand-written route would.
+    const withValidator = (method: "get" | "delete" | "del") =>
+      ({
+        ...defineRoute({
+          url: "/items",
+          method: "post",
+          validator: schema,
+          handler: () => ({}),
+        }),
+        method,
+      }) as ReturnType<typeof defineRoute>;
+
+    it.each(["get", "delete", "del"] as const)(
+      "throws at startup for %s",
+      (method) => {
+        expect(() => routesHandler([withValidator(method)])).toThrow(
+          /declares a body validator, but .* requests never read a body/,
+        );
+      },
+    );
+
+    it("accepts get/delete routes without a body validator", () => {
+      const routes = routesHandler([
+        defineRoute({ url: "/items", method: "get", handler: () => ({}) }),
+        defineRoute({
+          url: "/items/:id",
+          method: "delete",
+          handler: () => ({}),
+        }),
+      ]);
+      expect(routes.map((r) => r.method)).toEqual(["get", "del"]);
+    });
+
+    it("accepts patch routes with a validator", () => {
+      const [route] = routesHandler([
+        defineRoute({
+          url: "/items/:id",
+          method: "patch",
+          validator: schema,
+          handler: () => ({}),
+        }),
+      ]);
+      expect(route?.validator).toBeDefined();
+    });
+
+    it("accepts WS routes with a validator (regression)", () => {
+      const [route] = routesHandler([
+        defineWsRoute({
+          url: "join_room",
+          validator: schema,
+          handler: () => ({}),
+        }),
+      ]);
+      expect(route?.method).toBe("ws");
+      expect(route?.validator).toBeDefined();
+    });
   });
 });

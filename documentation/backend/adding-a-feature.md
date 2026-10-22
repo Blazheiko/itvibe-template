@@ -359,6 +359,8 @@ import {
 
 [`defineRoute`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Роутингу та middleware](/backend/routing-middlewares)).
 
+Якщо додаєте оновлення або видалення нотатки: для часткового оновлення беріть `method: "patch"` з `validator`, а для видалення — `method: "delete"` з `url: "/:id"` і без `validator`, бо `DELETE` тіло не читає ([Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
+
 ## Крок 9. Тест сервісу
 
 Тести сервісів лежать поряд із кодом і мокають barrel `#app/repositories/index.js` через `vi.mock`, як у [push-subscription-service.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts). БД для них не потрібна.
