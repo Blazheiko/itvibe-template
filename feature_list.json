@@ -62,8 +62,8 @@
       "owner": "Blazheiko",
       "branch": "feat/db-dx",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #43 (merge aaa46cf): db:seed (prompts always, demo accounts with --demo, one transaction, safe failure log), pgvector docs, empty src/drizzle files removed; typecheck, lint, pnpm test (backend 564, frontend 45, shared 3, docs 26), docs:build + docs:verify, drizzle-kit check, manual seed run on a throwaway DB; evidence in progress.md on feat/db-dx"
     },
     {
       "id": "feat-008",
