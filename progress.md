@@ -2,75 +2,52 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-21
-**Active Feature:** feat-007 - Database DX (items 7, 10, 11 of `docs/plan/code-issues-found-during-docs.md`)
-**Branch:** `feat/db-dx`
+**Last Updated:** 2026-10-22
+**Active Feature:** feat-008 - HTTP Body Fixes (items 12, 13, 14 of `docs/plan/code-issues-found-during-docs.md`)
+**Branch:** `feat/http-body-fixes`
 
-Item 10 (`db:seed` was an empty stub) is done per `docs/plan/db-seed-plan.md`. Item 7 (pgvector) is done. Item 11 is done. All three items of feat-007 are complete; next: feature PR.
+Item 12 is done per `docs/plan/http-body-methods-plan.md`. Items 13 (`sendResponse` with `payload === null`) and 14 (body-limit gaps) are not started.
 
 ## Status
 
 ### Done
 
-- [x] PR #42: feat-007 → `in_progress`
-- [x] Item 10: `db:seed`
-  - always seeds the 3 `llm_system_prompts` rows (`ON CONFLICT (type) DO NOTHING`); demo admin / user from `SEED_*` only with `--demo`, independent of `APP_ENV`
-  - prompt texts and temperature / max tokens come from one source, `config/support.ts`, shared with the runtime fallbacks (translation prompt and generation defaults moved there from the services, no behaviour change)
-  - existing users are never modified; admin email owned by a non-admin user → `exists_without_admin_role` warning, no promotion
-  - one transaction, pool closed in `finally`, exit code 1 on failure; new `db:seed:prod`
-  - review fix: the failure log no longer prints `DrizzleQueryError` params / pg `detail` / messages (email, password hash, `session_token`); only `name`, `code`, `constraint`, `table`, `column` (`src/db/seed/describe-error.ts`), regression test through the real Drizzle store with a fake pg client
-  - review fix: root and backend README describe the real seed; idempotency limit (concurrent `--demo` runs) documented
-  - docs: `backend/database.md` (Seed section, first production admin, prompt cache warning), `backend/configuration.md` (`SEED_*`), `guide/getting-started.md`, `reference/scripts.md`; `.env.example`
+- [x] PR #45: feat-008 → `in_progress`
+- [x] Item 12: methods with a body and routes with a `validator`
+  - `patch` reads and validates the body (`BODY_METHODS` in `src/vendor/utils/routing/body-methods.ts`)
+  - body `validator` on `get`/`delete`/`del` is a type error in `defineRoute` and a startup error in `routesHandler`; WS routes are not affected
+  - route with a `validator`, no `Content-Type`: no body framing → validated as `{}` (422 or success, defaults applied); `Transfer-Encoding` or `Content-Length` ≠ `0` → 415 before reading, `receivedContentType: null` (was 500 from `getTypedPayload`)
+  - `UnsupportedMediaTypeError` accepts `receivedContentType: string | null`
+  - docs: `backend/request-lifecycle.md` (step 3, body order, new section «Запит без Content-Type», 415 details, octet limit), `backend/routing-middlewares.md` (new «Методи і тіло запиту»), `backend/validation.md`, `backend/adding-a-feature.md`; item 12 marked fixed
 
-- [x] Item 7: pgvector documented
-  - new section `documentation/backend/database.md#pgvector`: why (Support AI knowledge-base search: `vector(1536)` embeddings, cosine distance `<=>`, RAG), required even without AI (the schema uses the type), where it is used in code, what fails without it, how to install (Docker image, Homebrew/apt, managed services, privileges), how to check, limits (hard-coded 1536, no HNSW index)
-  - links from `README.md` (services table + note), `packages/backend/README.md`, `guide/getting-started.md`, `backend/ai.md`, `backend/deployment.md`; stale "not documented" warning removed from `backend/repositories-transformers.md`
+### Not started
 
-- [x] Item 11: removed the empty `src/drizzle/schema/index.ts` and the equally empty, unimported `src/drizzle/{schema-validator,type-guards,types}.ts`; `src/drizzle/` now holds only migrations. Docs: `backend/database.md`, `guide/project-structure.md`. The `#drizzle/*` alias is kept (nothing imports it)
+- [ ] Item 13: `sendResponse` with `payload === null`
+- [ ] Item 14: body-limit gaps (tests, `.env.example`, playground, defaults)
 
 ## Files Modified
 
-- `packages/backend/src/db/seed.ts`, `src/db/seed/{prompts,run-seed,drizzle-seed-store,describe-error}.ts`, `src/db/seed/{run-seed,describe-error}.spec.ts`
-- `README.md`, `packages/backend/README.md`
-- `packages/backend/src/config/support.ts`, `src/app/services/support/support-llm-service.ts`, `support-query-translation-service.ts`
-- `packages/backend/package.json`, `packages/backend/.env.example`
-- `documentation/backend/database.md`, `documentation/backend/configuration.md`, `documentation/guide/getting-started.md`, `documentation/reference/scripts.md`
-- deleted: `packages/backend/src/drizzle/schema/index.ts`, `src/drizzle/{schema-validator,type-guards,types}.ts`; `documentation/guide/project-structure.md`
-- `docs/plan/db-seed-plan.md` (new), `docs/plan/code-issues-found-during-docs.md` (item 10 marked fixed)
+- new: `packages/backend/src/vendor/utils/routing/body-methods.ts`, `src/vendor/start/http-body-methods.spec.ts`, `docs/plan/http-body-methods-plan.md`
+- `packages/backend/src/vendor/start/server.ts`, `src/vendor/start/router.ts`, `src/app/routing/define-route.ts`, `src/vendor/utils/network/errors/unsupported-media-type-error.ts`
+- tests: `src/vendor/start/router.spec.ts`, `src/app/routing/define-route.spec.ts`
+- `documentation/backend/{request-lifecycle,routing-middlewares,validation,adding-a-feature}.md`, `docs/plan/code-issues-found-during-docs.md`
 
-## Evidence of Completion (item 10)
+## Evidence of Completion (item 12)
 
 - `pnpm typecheck`, `pnpm lint` clean
-- `pnpm test`: backend 564, frontend 45, shared 3, documentation 26
-- `pnpm docs:build && pnpm docs:verify`: all checks passed
-- Manual, on a throwaway DB `itvibe_seed_check` (`db:create` → `db:migrate`, dropped afterwards):
-  1. `db:seed` → 3 prompts inserted, admin / user `demo_disabled`; second run → all `already_exists`
-  2. `db:seed --demo` → admin (`role=admin`) and user inserted, `email_verified_at` set; `validatePassword` on the stored hash → `true`
-  3. prompt edited to `EDITED`, rerun with a different password and `ADMIN@seed.TEST` → `already_exists`, prompt text, password hash and role unchanged
-  4. `SEED_ADMIN_EMAIL` = existing user's email → `exists_without_admin_role` + warning, role stays `user`
-  5. failing insert (email > 255 chars) after the prompts → exit 1, 0 prompts in the DB (rollback)
-  6. `pnpm build && db:seed:prod` → same report; `APP_ENV=production db:seed:prod --demo` prints the warning
-  6a. after the review fix, on a throwaway DB: a failing insert prints `DrizzleQueryError` / `caused by: error code=22001` only; a wrong port prints `Error code=ECONNREFUSED connect ECONNREFUSED 127.0.0.1:5999`
-  6b. negative control: with the old `console.error(..., err)` the regression test fails (email in the output)
-  7. backend started on that DB logs `PromptService: loaded 3 prompts`
-- Not tested: logging in as the seeded admin through the UI and opening `/admin`
-
-## Evidence of Completion (item 7)
-
-- Error texts checked on `postgres:17-alpine` (no pgvector): `CREATE EXTENSION IF NOT EXISTS vector` → `extension "vector" is not available`; a `vector(3)` column → `type "vector" does not exist`
-- `pnpm docs:build && pnpm docs:verify`: all checks passed; anchors `#pgvector`, `#support-ai-і-база-знань`, `#postgresql-і-redis-через-docker` exist in the built HTML
-- documentation tests 26/26, `pnpm lint` clean
-
-## Evidence of Completion (item 11)
-
-- `rg` for `drizzle/schema`, `schema-validator`, `type-guards`, `#drizzle/` imports: no code references
-- `pnpm typecheck`, `pnpm lint` clean; clean `rm -rf dist && pnpm build` for backend
-- `pnpm test`: backend 564, frontend 45, shared 3, documentation 26
-- `drizzle-kit check`: Everything's fine
-- `pnpm docs:build && pnpm docs:verify`: all checks passed
+- `pnpm test`: backend 580 (+16), frontend 45, shared 3, documentation 26
+- `pnpm docs:build && pnpm docs:verify`: all checks passed; anchors `#методи-і-тіло-запиту`, `#запит-без-content-type` exist
+- `http-body-methods.spec.ts` goes through the handler registered with the fake uWS app (real `collectRequestMetadata`, `onData`). Negative control: with `server.ts` from `main` 7 of 8 tests fail (the one that passes checks unchanged behaviour)
+- `@ts-expect-error` on `defineRoute` with `validator` for `get`, `delete`, `del`
+- Manual (backend on :3000, temporary routes not committed):
+  - `curl -X POST /api/auth/login` → 422 with field messages
+  - `curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' /api/auth/login` → 415, `receivedContentType: null`
+  - `curl -X POST -H 'Content-Type:' -H 'Transfer-Encoding: chunked' --data-binary ''` → 415
+  - temporary `patch` route with `LoginInputSchema`: valid body → 200 with the payload, invalid → 422
+  - temporary `delete` route with a `validator` → startup fails: `Route DELETE /auth/zz-delete declares a body validator…`, exit 1
+- Not formatted by Prettier on purpose: `server.ts` and `define-route.ts` were already unformatted on `main` (item 16)
 
 ## Notes for Next Session
 
-- Merge PR #42, then PR `feat/db-dx` → `main`, then flip feat-007 to `done` via PR to `main`.
-- Possible follow-up: drop the unused `#drizzle/*` alias (tsconfig, package.json `imports`, vitest, 5 docs pages).
-- Out of scope, possible follow-ups: `promptRepository.update` → upsert; demo knowledge-base articles; running `db:seed:prod` in the migration job (item 30).
+- Merge PR #45, then items 13 and 14 on this branch, then PR `feat/http-body-fixes` → `main`.
+- Out of scope: `validator` contract for `octet` routes; moving partial-update `put` routes to `patch`; `getTypedPayload` throwing a plain `Error`.
