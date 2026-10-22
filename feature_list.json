@@ -69,10 +69,10 @@
       "id": "feat-008",
       "name": "HTTP Body Fixes",
       "description": "Read body for PATCH (or forbid patch routes), proper response for null payload, tests for body-kind/limit resolution and 413, show limits in playground, settle default limits (items 12, 13, 14). Details: docs/plan/code-issues-found-during-docs.md",
-      "owner": "",
-      "branch": "",
+      "owner": "Blazheiko",
+      "branch": "feat/http-body-fixes",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     },
     {
