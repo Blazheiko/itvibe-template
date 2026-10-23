@@ -21,11 +21,14 @@ function normalizeEnvName(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
 }
 
-// Parse size in bytes with validation and default value
+// Parse size in bytes: a positive safe integer written in digits only.
+// Anything else ("Infinity", "1.5", "1e6", "0x10", "0") falls back to the default.
 function parseSize(value: string | undefined, defaultValue: number): number {
   if (value === undefined) return defaultValue;
-  const size = Number(value);
-  if (isNaN(size) || size <= 0) return defaultValue;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return defaultValue;
+  const size = Number(trimmed);
+  if (!Number.isSafeInteger(size) || size <= 0) return defaultValue;
   return size;
 }
 

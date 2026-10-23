@@ -26,6 +26,11 @@ export interface RateLimit {
   maxRequests: number
 }
 
+export interface BodyLimit {
+  kind: string
+  maxBytes: number
+}
+
 export interface ApiRoute {
   id: number
   url: string
@@ -38,6 +43,8 @@ export interface ApiRoute {
   inputSchema?: ArkSchema
   querySchema?: ArkSchema
   outputSchema?: ArkSchema
+  // Only routes that read a body; [] = no allowed body type.
+  bodyLimits?: BodyLimit[]
   fullUrl?: string
   isSelected: boolean
 }

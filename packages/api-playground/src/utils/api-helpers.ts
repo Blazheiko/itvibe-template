@@ -58,6 +58,12 @@ export function extractParameters(url: string): RouteParameter[] {
   return params
 }
 
+export function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${Number((bytes / (1024 * 1024)).toFixed(1))} MiB`
+  if (bytes >= 1024) return `${Number((bytes / 1024).toFixed(1))} KiB`
+  return `${bytes} B`
+}
+
 export function formatRateLimit(rateLimit?: RateLimit) {
   if (!rateLimit || (!rateLimit.windowMs && !rateLimit.maxRequests)) {
     return null

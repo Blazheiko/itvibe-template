@@ -6,7 +6,7 @@
 **Active Feature:** feat-008 - HTTP Body Fixes (items 12, 13, 14 of `docs/plan/code-issues-found-during-docs.md`)
 **Branch:** `feat/http-body-fixes`
 
-Item 12 is done per `docs/plan/http-body-methods-plan.md`. Item 13 is done per `docs/plan/http-null-payload-plan.md`. Item 14 (body-limit gaps) is not started.
+Item 12 is done per `docs/plan/http-body-methods-plan.md`. Items 12, 13 and 14 are done per `docs/plan/http-body-methods-plan.md`, `http-null-payload-plan.md`, `http-body-limits-plan.md`. Next: PR `feat/http-body-fixes` → `main`.
 
 ## Status
 
@@ -27,12 +27,16 @@ Item 12 is done per `docs/plan/http-body-methods-plan.md`. Item 13 is done per `
   - 4xx/5xx with an empty payload → `{ status: "error", code, message }`, `code` from shared `ErrorCode` (`buildStatusErrorBody` in `http-response-handlers.ts`)
   - docs: `backend/request-lifecycle.md` (step 8, new «Відповідь без даних»), `backend/adding-a-feature.md`; item 13 marked fixed
 
-### Not started
-
-- [ ] Item 14: body-limit gaps (tests, `.env.example`, playground, defaults)
+- [x] Item 14: body-limit gaps
+  - `parseSize` accepts only a positive safe integer of bytes (digits, surrounding whitespace allowed); `Infinity`, `1.5`, `1e6`, `0x10` → default (behaviour change)
+  - tests: `config/app.spec.ts` (real config, env restored), `http-request-handlers.spec.ts` (`detectBodyKind`, `resolveMaxBodySize` with mocked config), `http-body-limits.spec.ts` (registered handler, small limits), `http-body-limits.transport.spec.ts` (real uWS, raw socket)
+  - `serializeRoutes` adds `bodyLimits: [{ kind, maxBytes }]` to post/put/patch routes; playground shows it (`ApiRoute.vue`, `formatBytes`), "No additional details" condition updated
+  - defaults 2 / 50 / 50 / 2 MiB kept and documented; `.env.example` was already done in feat-006
+  - docs: `backend/request-lifecycle.md`, `backend/configuration.md` (why the defaults, proxy, memory estimate), `playground/index.md`, note in `src/docs/HTTP_BODY_LIMITS_PLAN.md`; item 14 marked fixed
 
 ## Files Modified
 
+- item 14: `src/config/app.ts` (+ new `app.spec.ts`), `src/vendor/utils/routing/serialize-routes.ts` (+spec), new `src/vendor/utils/network/http-request-handlers.spec.ts`, `src/vendor/start/http-body-limits{,.transport}.spec.ts`, `packages/api-playground/src/{stores/api-doc.ts,utils/api-helpers.ts,components/api/ApiRoute.vue}`, `documentation/backend/{request-lifecycle,configuration}.md`, `documentation/playground/index.md`, `src/docs/HTTP_BODY_LIMITS_PLAN.md`
 - item 13: `src/vendor/start/server.ts` (`sendResponse`), `src/vendor/utils/network/http-response-handlers.ts` (+spec), new `src/vendor/start/http-empty-payload.spec.ts`, `docs/plan/http-null-payload-plan.md`, `documentation/backend/{request-lifecycle,adding-a-feature}.md`
 - new: `packages/backend/src/vendor/utils/routing/body-methods.ts`, `src/vendor/start/http-body-methods.spec.ts`, `docs/plan/http-body-methods-plan.md`
 - `packages/backend/src/vendor/start/server.ts`, `src/vendor/start/router.ts`, `src/app/routing/define-route.ts`, `src/vendor/utils/network/errors/unsupported-media-type-error.ts`
@@ -69,7 +73,22 @@ Item 12 is done per `docs/plan/http-body-methods-plan.md`. Item 13 is done per `
   - `GET /api/ping` → 200 `{"status":"ok"}` as before
   - `curl -v` 204 then `/api/ping` on one connection → connection re-used
 
+## Evidence of Completion (item 14)
+
+- `pnpm typecheck`, `pnpm lint` clean; `pnpm test`: backend 671 (+51), frontend 45; `pnpm --filter api-playground build` OK
+- `pnpm docs:build && pnpm docs:verify`: all checks passed
+- Negative controls on `http-body-limits.spec.ts`: `resolveMaxBodySize` → always `maxBodySize` makes 12 of 13 fail; `totalSize >= limit` in `readData` makes the 4 "exactly the limit" tests fail. `config/app.spec.ts` on the old `parseSize`: `1.5`, `1e6`, `Infinity`, `9007199254740993`, `0x10` fail
+- Real uWS (`http-body-limits.transport.spec.ts`): only headers with oversized `Content-Length` → full 413 (status, headers, JSON body); chunked over the limit on a non-final chunk, no terminating chunk → full 413. No change to `readData` was needed
+- Manual (backend on :3917; :3000 is another local app):
+  - 3 MB JSON object to `POST /api/auth/login` → 413, `limit: 2097152`
+  - `Content-Length: 99999999` with a 2-byte body → 413 in ~1 ms (early rejection)
+  - 3 MB via `Transfer-Encoding: chunked` → 413
+  - normal small body → reaches validation (422 from the login schema), as before
+  - `GET /api/doc/routes` (`APP_ENV=manual-test`, `DOC_PAGE=true`): `post auth/login` → `[{json, 2097152}]`, `post avatar/upload` and knowledge-base screenshot → `[{multipart, 52428800}]`, `get`/`delete` → no field
+- Not done: visual check of the playground card in a browser (build and JSON checked only)
+
 ## Notes for Next Session
 
-- Item 14 on this branch, then PR `feat/http-body-fixes` → `main`.
+- Open PR `feat/http-body-fixes` → `main`, then a done PR for feat-008.
+- Optional: look at the playground card in a browser (`pnpm --filter api-playground dev` against a backend with `APP_ENV=manual-test`).
 - Out of scope: `validator` contract for `octet` routes; moving partial-update `put` routes to `patch`; `getTypedPayload` throwing a plain `Error`.

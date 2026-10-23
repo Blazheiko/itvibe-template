@@ -193,6 +193,8 @@
 
 ### 14. Прогалини плану body limits
 
+> **Виправлено** у feat-008 (гілка `feat/http-body-fixes`) за планом [`http-body-limits-plan.md`](./http-body-limits-plan.md): тести `detectBodyKind`/`resolveMaxBodySize`, 413 через зареєстрований handler (межа рівно в ліміт, UTF-8 між чанками, розділення лімітів) і на справжньому uWS; `bodyLimits` у playground; defaults 2 / 50 / 50 / 2 MiB зафіксовано як рішення; `parseSize` приймає лише додатне безпечне ціле. `APP_MAX_*_BODY_SIZE` у `.env.example` додано ще в feat-006 (п. 6).
+
 Згідно з `src/docs/HTTP_BODY_LIMITS_PLAN.md` основну частину реалізовано: ліміти за типом, 413, рання відмова, `onAborted`. Не зроблено:
 
 - unit-тести для `detectBodyKind` / `resolveMaxBodySize` та інтеграційні тести на 413;
