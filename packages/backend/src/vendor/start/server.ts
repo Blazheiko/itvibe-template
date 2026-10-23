@@ -36,6 +36,7 @@ import { UnsupportedMediaTypeError } from "#vendor/utils/network/errors/unsuppor
 import logger from "#vendor/utils/logger.js";
 import { isWsChannel, type WsChannel } from "shared/guards";
 import {
+  buildStatusErrorBody,
   setHeaders,
   setCookies,
   setSecurityHeaders,
@@ -302,20 +303,38 @@ const sendResponse = (
   responseData: ResponseData,
   requestOrigin: string | undefined,
 ): void => {
-  const isRedirect = responseData.status >= 300 && responseData.status < 400;
-  writeHttpStatus(res, responseData.status);
-  if (!isRedirect) {
-    res.writeHeader("content-type", "application/json");
-  }
+  const { status } = responseData;
+  // Only null and undefined are "no payload"; false, 0 and "" are JSON data.
+  // undefined is outside the Payload type but a handler cast can still yield it.
+  const payload = responseData.payload as Payload | undefined;
+  const isEmptyPayload = payload === null || payload === undefined;
+  const isSuccess = status >= 200 && status < 300;
+  // 3xx (incl. 304), 204 and 205 never carry a body (RFC 9110 §15.3.5, §15.3.6,
+  // §15.4.5); neither does a 2xx with an empty payload.
+  const noBody =
+    (status >= 300 && status < 400) ||
+    status === 204 ||
+    status === 205 ||
+    (isSuccess && isEmptyPayload);
+  // 200 with nothing to send becomes 204; another 2xx (201, 202, …) keeps its meaning.
+  const sentStatus = status === 200 && isEmptyPayload ? 204 : status;
+  writeHttpStatus(res, sentStatus);
+  if (!noBody) res.writeHeader("content-type", "application/json");
   setSecurityHeaders(res, responseData.headers);
-  if (responseData.headers.length > 0) setHeaders(res, responseData.headers);
+  // A response without a body has no Content-Type, controller-set ones included.
+  if (responseData.headers.length > 0)
+    setHeaders(res, responseData.headers, noBody ? "content-type" : undefined);
   if (responseData.cookies.size > 0) setCookies(res, responseData.cookies);
   if (corsConfig.enabled) setCorsHeader(res, requestOrigin);
-  if (isRedirect) {
+  if (sentStatus === 204 || sentStatus === 304) {
+    // res.end() would add Content-Length: 0, which 204 must not carry
+    // (RFC 9110 §8.6) and which would misstate the representation in a 304.
+    res.endWithoutBody();
+  } else if (noBody) {
     res.end();
-  } else if (responseData.payload !== null) {
-    res.end(makeJson(responseData.payload));
-  } else res.end(String(responseData.status));
+  } else if (isEmptyPayload) {
+    res.end(makeJson(buildStatusErrorBody(status)));
+  } else res.end(makeJson(payload));
 };
 
 type CanonicalErrorBody = {

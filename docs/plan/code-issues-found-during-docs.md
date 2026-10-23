@@ -186,6 +186,8 @@
 
 ### 13. `sendResponse` при `payload === null`
 
+> **Виправлено** у feat-008 (гілка `feat/http-body-fixes`) за планом [`http-null-payload-plan.md`](./http-null-payload-plan.md): порожній payload (`null`/`undefined`) у 200 дає 204, в іншому 2xx — той самий статус без тіла; 204/205/3xx завжди без тіла й без `Content-Type` (зокрема з `responseData.headers`); у 4xx/5xx — канонічне тіло помилки з `code` зі спільного `ErrorCode`.
+
 - **Що:** якщо `payload` дорівнює `null`, тілом відповіді стає `String(status)`, хоча `Content-Type: application/json`.
 - **Пропозиція:** віддавати `null` або порожнє тіло зі статусом 204.
 

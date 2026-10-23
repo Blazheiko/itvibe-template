@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { ErrorCodeValues } from "shared/errors";
+
 import {
+  buildStatusErrorBody,
   getHttpStatusLine,
   setCookies,
   writeHttpStatus,
@@ -128,5 +131,29 @@ describe("http-response-handlers", () => {
       expect(header).toContain(`; Max-Age=${String(ageSeconds)}`);
       expect(header).toContain(`; Expires=${expires.toUTCString()}`);
     });
+  });
+});
+
+describe("buildStatusErrorBody", () => {
+  it.each([
+    [400, "bad_request", "Bad Request"],
+    [401, "unauthorized", "Unauthorized"],
+    [403, "forbidden", "Forbidden"],
+    [404, "not_found", "Not Found"],
+    [409, "conflict", "Conflict"],
+    [413, "payload_too_large", "Payload Too Large"],
+    [415, "unsupported_media_type", "Unsupported Media Type"],
+    [422, "validation_failed", "Unprocessable Entity"],
+    [429, "rate_limited", "Too Many Requests"],
+    [503, "service_unavailable", "Service Unavailable"],
+    [418, "bad_request", "I'm a Teapot"],
+    [500, "internal_error", "Internal Server Error"],
+    [502, "internal_error", "Bad Gateway"],
+    [499, "bad_request", "Error"],
+  ])("%i → %s", (status, code, message) => {
+    const body = buildStatusErrorBody(status);
+
+    expect(body).toEqual({ status: "error", code, message });
+    expect(ErrorCodeValues).toContain(body.code);
   });
 });

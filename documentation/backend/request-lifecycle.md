@@ -61,7 +61,7 @@ sequenceDiagram
 5. **Query.** `validateQuery` валідує query лише якщо в маршруті є `queryValidator`, інакше `httpData.query === null`.
 6. **Тіло.** `readAndParseBody` (деталі нижче).
 7. **Контекст і middleware.** Формується `HttpData`, `contextHandler` створює контекст; `executeMiddlewares` ([execute-httpMiddlewares.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/execute-httpMiddlewares.ts)) виконує ланцюжок. Handler викликається, лише якщо всі middleware викликали `next()` і `responseData.status` у діапазоні 2xx.
-8. **Відповідь.** `sendResponse` пише статус, `content-type: application/json` (крім 3xx), security-заголовки, заголовки й cookies з `responseData`, CORS; тіло — `makeJson(payload)`, або `String(status)`, якщо payload `null`; для редиректів тіла немає.
+8. **Відповідь.** `sendResponse` пише статус, `content-type: application/json` (лише коли є тіло), security-заголовки, заголовки й cookies з `responseData`, CORS; тіло — `makeJson(payload)`. Відповіді з порожнім payload — у розділі [Відповідь без даних](#відповідь-без-даних).
 
 ## Тіло запиту: типи і ліміти
 
@@ -107,6 +107,23 @@ sequenceDiagram
 curl -X POST http://127.0.0.1:3000/api/auth/login                                              # 422
 curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' http://127.0.0.1:3000/api/auth/login   # 415
 ```
+
+## Відповідь без даних
+
+Порожній payload — це лише `null` або `undefined`, які повернув handler; `false`, `0` і `""` — дані й серіалізуються в JSON. Правила `sendResponse` ([server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)):
+
+| Ситуація                                | Відповідь                                                                   |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| 3xx (включно з 304)                     | без тіла                                                                    |
+| статус 204 або 205                      | без тіла, навіть якщо payload є                                             |
+| 200 і порожній payload                  | **204 No Content**, без тіла                                                |
+| інший 2xx (201, 202, …) і порожній payload | той самий статус, без тіла                                               |
+| 4xx/5xx і порожній payload              | `{ status: "error", code, message }`, `application/json`                  |
+| інакше                                  | `makeJson(payload)`, `application/json`                                     |
+
+У відповіді без тіла немає `Content-Type`: `sendResponse` його не пише і пропускає `Content-Type` з `responseData.headers` (назва без урахування регістру). Інші заголовки, cookies, security-заголовки й CORS пишуться як завжди, тож дія без даних може ставити cookie у 204. 204 і 304 завершуються через `res.endWithoutBody()`, бо `res.end()` у uWS додає `Content-Length: 0`, а в 204 цього заголовка бути не може ([RFC 9110 §8.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6)); решта відповідей без тіла йде з `Content-Length: 0`. Статуси без тіла — за [RFC 9110 §15.3.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.5), [§15.3.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.6), [§15.4.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.4.5).
+
+`code` для 4xx/5xx береться зі спільного `ErrorCode` (`shared/errors`) за таблицею в `buildStatusErrorBody` ([http-response-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts)): 400 `bad_request`, 401 `unauthorized`, 403 `forbidden`, 404 `not_found`, 409 `conflict`, 413 `payload_too_large`, 415 `unsupported_media_type`, 422 `validation_failed`, 429 `rate_limited`, 503 `service_unavailable`; інший 4xx — `bad_request`, інший 5xx — `internal_error`. `message` — reason phrase статусу з `node:http`, а без неї — `"Error"`. Middleware і `applyAppErrorStatus` ставлять payload самі, тож це правило — запасне для handler'а, що поставив статус помилки без тіла.
 
 ## Обробка помилок (handleError)
 

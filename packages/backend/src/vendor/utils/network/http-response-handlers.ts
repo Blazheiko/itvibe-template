@@ -1,4 +1,5 @@
 import { STATUS_CODES } from "node:http";
+import type { ErrorCode } from "shared/errors";
 import type { Cookie, Header } from "#vendor/types/types.js";
 import type { HttpResponse } from "#vendor/start/server.js";
 import cspConfig from "#config/csp.js";
@@ -38,6 +39,38 @@ export const getHttpStatusLine = (statusCode: number | string): string => {
   return `${String(code)} ${reasonPhrase}`;
 };
 
+// Codes come from the shared ErrorCode contract: the frontend only accepts known
+// codes. 403 stays `forbidden` — a CSRF rejection can't be told apart by status.
+const STATUS_ERROR_CODES: Readonly<Record<number, ErrorCode>> = {
+  400: "bad_request",
+  401: "unauthorized",
+  403: "forbidden",
+  404: "not_found",
+  409: "conflict",
+  413: "payload_too_large",
+  415: "unsupported_media_type",
+  422: "validation_failed",
+  429: "rate_limited",
+  503: "service_unavailable",
+};
+
+export type StatusErrorBody = {
+  status: "error";
+  code: ErrorCode;
+  message: string;
+};
+
+// Canonical error body for a 4xx/5xx response whose payload is empty.
+export const buildStatusErrorBody = (statusCode: number): StatusErrorBody => {
+  const code =
+    STATUS_ERROR_CODES[statusCode] ??
+    (statusCode >= 500 ? "internal_error" : "bad_request");
+  const reasonPhrase = STATUS_CODES[statusCode];
+  const message =
+    reasonPhrase === undefined || reasonPhrase === "" ? "Error" : reasonPhrase;
+  return { status: "error", code, message };
+};
+
 export const writeHttpStatus = (
   res: Pick<HttpResponse, "writeStatus">,
   statusCode: number | string,
@@ -45,8 +78,13 @@ export const writeHttpStatus = (
   res.writeStatus(getHttpStatusLine(statusCode));
 };
 
-export const setHeaders = (res: HttpResponse, headers: Header[]): void => {
+export const setHeaders = (
+  res: HttpResponse,
+  headers: Header[],
+  skip?: string,
+): void => {
   headers.forEach((header) => {
+    if (skip !== undefined && header.name.toLowerCase() === skip) return;
     res.writeHeader(header.name, header.value);
   });
 };
