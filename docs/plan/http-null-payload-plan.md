@@ -69,7 +69,7 @@ Handler без `return` (`async () => { … }`) повертає `undefined`. П
 
 `csrf_invalid` за статусом не вгадується (CSRF-відмова — теж 403), тож для 403 лишається `forbidden`. `message` — reason phrase з `STATUS_CODES` (`node:http`), як у `getHttpStatusLine` (`src/vendor/utils/network/http-response-handlers.ts`); для статусу без reason phrase — `"Error"`. Таблицю тримає helper `buildStatusErrorBody`; `sendErrorResponse` не змінюється.
 
-**`payload` у типах.** `HttpHandler` повертає `unknown`, тож `undefined` з типів не відсіюється. Тип не звужуємо: це зміна для всіх контролерів, а runtime-правило і так обробляє обидва значення.
+**`payload` у типах.** `HttpHandler` повертає `HandlerReturn = Payload | Promise<Payload>` (`src/vendor/types/types.d.ts`): `null` входить у `Payload`, `undefined` — ні, тож handler без `return` — помилка типів. `undefined` все одно обробляється в runtime, бо його можна отримати через приведення типу. Тип не звужуємо (не прибираємо `null`): `null` — штатний спосіб сказати «даних немає».
 
 ## Кроки
 
@@ -112,6 +112,7 @@ Handler без `return` (`async () => { … }`) повертає `undefined`. П
 
 ## Знайдено під час реалізації
 
+- **`Content-Length` від контролера.** У відповіді без тіла `sendResponse` пропускає з `responseData.headers` не лише `Content-Type`, а й `Content-Length` (без урахування регістру): framing задає uWS, і заголовок контролера суперечив би йому, а в 204 його бути не може. Знайдено в рев'ю `74b784c`.
 - **`Content-Length: 0` у 204.** `res.end()` у uWS завжди пише `Content-Length`, а [RFC 9110 §8.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6) забороняє його в 204; у 304 він описував би представлення, а не порожнє тіло. Для 204 і 304 `sendResponse` викликає `res.endWithoutBody()`; 201/202/205/3xx без тіла лишаються з `Content-Length: 0`. Перевірено `curl -v`: заголовка немає, з'єднання перевикористовується.
 - **Аудит (крок 1).** Тимчасово прибрано `null` з `HandlerReturn` (`src/vendor/types/types.d.ts`): `tsc` для коду поза `*.spec.ts` чистий, отже жоден handler на успішному шляху не повертає `null`; `undefined` і так відсікається типом. Відповіді чинних маршрутів не змінюються.
 

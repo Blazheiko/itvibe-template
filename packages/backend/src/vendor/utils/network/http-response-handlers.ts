@@ -81,10 +81,11 @@ export const writeHttpStatus = (
 export const setHeaders = (
   res: HttpResponse,
   headers: Header[],
-  skip?: string,
+  // Lower-case header names to leave out.
+  skip?: readonly string[],
 ): void => {
   headers.forEach((header) => {
-    if (skip !== undefined && header.name.toLowerCase() === skip) return;
+    if (skip?.includes(header.name.toLowerCase()) === true) return;
     res.writeHeader(header.name, header.value);
   });
 };

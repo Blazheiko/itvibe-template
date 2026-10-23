@@ -298,6 +298,8 @@ export const readAndParseBody = async (
   return { payload: null, files: result.files };
 };
 
+const NO_BODY_SKIPPED_HEADERS = ["content-type", "content-length"] as const;
+
 const sendResponse = (
   res: HttpResponse,
   responseData: ResponseData,
@@ -321,9 +323,11 @@ const sendResponse = (
   writeHttpStatus(res, sentStatus);
   if (!noBody) res.writeHeader("content-type", "application/json");
   setSecurityHeaders(res, responseData.headers);
-  // A response without a body has no Content-Type, controller-set ones included.
+  // A response without a body has no controller-set Content-Type or
+  // Content-Length: uWS frames it itself (res.end writes Content-Length: 0,
+  // endWithoutBody writes none, as 204 requires).
   if (responseData.headers.length > 0)
-    setHeaders(res, responseData.headers, noBody ? "content-type" : undefined);
+    setHeaders(res, responseData.headers, noBody ? NO_BODY_SKIPPED_HEADERS : undefined);
   if (responseData.cookies.size > 0) setCookies(res, responseData.cookies);
   if (corsConfig.enabled) setCorsHeader(res, requestOrigin);
   if (sentStatus === 204 || sentStatus === 304) {

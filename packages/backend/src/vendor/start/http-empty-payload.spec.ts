@@ -174,6 +174,12 @@ describe("HTTP response with an empty payload", () => {
           headers: { "Content-Type": "application/json" },
         }),
         route("null-cookie", { payload: null, cookie: true }),
+        route("null-content-length", { payload: null, headers: { "Content-Length": "12" } }),
+        route("accepted-content-length", {
+          status: 202,
+          payload: null,
+          headers: { "content-length": "12" },
+        }),
         route("object", { payload: { a: 1 } }),
         route("false", { payload: false }),
         route("zero", { payload: 0 }),
@@ -254,6 +260,17 @@ describe("HTTP response with an empty payload", () => {
       expect(sent.status).toBe("304 Not Modified");
       expectNoBody(sent);
       expect(sent.withoutBody).toBe(true);
+    });
+
+    it.each([
+      ["null-content-length", "204 No Content"],
+      ["accepted-content-length", "202 Accepted"],
+    ])("%s: controller Content-Length is not written without a body", async (name, status) => {
+      const sent = await call(name);
+
+      expect(sent.status).toBe(status);
+      expect(sent.headers.filter(([n]) => n.toLowerCase() === "content-length")).toEqual([]);
+      expectNoBody(sent);
     });
 
     it("still writes cookies on a 204", async () => {

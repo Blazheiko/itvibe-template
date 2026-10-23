@@ -22,7 +22,7 @@ Item 12 is done per `docs/plan/http-body-methods-plan.md`. Item 13 is done per `
 
 - [x] Item 13: response with an empty payload (`sendResponse`)
   - `null`/`undefined` in 200 → 204; other 2xx keep the status without a body; 204/205/3xx never have a body
-  - no `Content-Type` without a body, including one from `responseData.headers` (case-insensitive)
+  - no `Content-Type` without a body, including one from `responseData.headers` (case-insensitive); controller `Content-Length` is skipped too (review of `74b784c`)
   - 204 and 304 end via `res.endWithoutBody()`: no `Content-Length` (RFC 9110 §8.6)
   - 4xx/5xx with an empty payload → `{ status: "error", code, message }`, `code` from shared `ErrorCode` (`buildStatusErrorBody` in `http-response-handlers.ts`)
   - docs: `backend/request-lifecycle.md` (step 8, new «Відповідь без даних»), `backend/adding-a-feature.md`; item 13 marked fixed
@@ -57,7 +57,7 @@ Item 12 is done per `docs/plan/http-body-methods-plan.md`. Item 13 is done per `
 
 ## Evidence of Completion (item 13)
 
-- `pnpm typecheck`, `pnpm lint` clean; backend 618 tests (+34: 20 in `http-empty-payload.spec.ts`, 14 in `http-response-handlers.spec.ts`)
+- `pnpm typecheck`, `pnpm lint` clean; backend 620 tests (+36: 22 in `http-empty-payload.spec.ts`, 14 in `http-response-handlers.spec.ts`)
 - `pnpm docs:build && pnpm docs:verify`: all checks passed; anchor `#відповідь-без-даних` exists
 - `http-empty-payload.spec.ts` goes through the registered handler and the real `sendResponse`. Negative control: with `server.ts` and `http-response-handlers.ts` from `HEAD` all 15 new-behaviour tests fail, the 5 regression tests pass
 - Audit: `null` removed from `HandlerReturn` temporarily → `tsc` clean outside specs, so no live route changes its response
