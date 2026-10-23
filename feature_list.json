@@ -72,8 +72,8 @@
       "owner": "Blazheiko",
       "branch": "feat/http-body-fixes",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #46 (merge 8ee410b): PATCH reads the body, no body validator on GET/DELETE, 422/415 without Content-Type; empty payload → 204 / status without body / canonical error body, no Content-Type or Content-Length without a body; body-limit tests incl. real uWS, strict parseSize, bodyLimits in playground, defaults documented; typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), api-playground build, docs:build + docs:verify, negative controls, manual curl; evidence in progress.md on feat/http-body-fixes"
     },
     {
       "id": "feat-009",
