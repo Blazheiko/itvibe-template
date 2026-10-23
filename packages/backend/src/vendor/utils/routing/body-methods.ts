@@ -1,5 +1,9 @@
 import type { Method } from "#vendor/types/types.js";
 
+// Methods an HTTP route (`defineRoute`) can be registered with in
+// `registerHttpRoute`; `delete` is normalized to `del` by `routesHandler`.
+export type HttpRouteMethod = "get" | "post" | "put" | "patch" | "delete" | "del";
+
 // HTTP methods whose request body is read, parsed and validated.
 export const BODY_METHODS = ["post", "put", "patch"] as const;
 export type BodyMethod = (typeof BODY_METHODS)[number];

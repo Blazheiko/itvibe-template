@@ -215,7 +215,9 @@ export const validateQuery = (
 const hasBodyFraming = (headers: Map<string, string>): boolean => {
   if (headers.has("transfer-encoding")) return true;
   const contentLength = headers.get("content-length");
-  return contentLength !== undefined && contentLength.trim() !== "0";
+  // "0", "00", … all mean zero bytes (RFC 9110 §8.6); anything else,
+  // including malformed values, is treated as a body.
+  return contentLength !== undefined && !/^0+$/.test(contentLength.trim());
 };
 
 export const readAndParseBody = async (

@@ -45,6 +45,7 @@ Item 12 is done per `docs/plan/http-body-methods-plan.md`. Items 13 (`sendRespon
   - `curl -X POST -H 'Content-Type:' -H 'Transfer-Encoding: chunked' --data-binary ''` → 415
   - temporary `patch` route with `LoginInputSchema`: valid body → 200 with the payload, invalid → 422
   - temporary `delete` route with a `validator` → startup fails: `Route DELETE /auth/zz-delete declares a body validator…`, exit 1
+- Review follow-up: `Content-Length: 00` / ` 000 ` count as zero bytes (`/^0+$/`), malformed values still count as a body; +3 tests (negative control: `00` and ` 000 ` fail on the old helper). `defineRoute` `method` narrowed to `HttpRouteMethod` (no `ws`/`options`), `@ts-expect-error` tests. Backend 584 tests
 - Not formatted by Prettier on purpose: `server.ts` and `define-route.ts` were already unformatted on `main` (item 16)
 
 ## Notes for Next Session

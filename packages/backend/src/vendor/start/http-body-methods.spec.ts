@@ -226,6 +226,16 @@ describe("HTTP methods with a request body", () => {
       expect(controller).not.toHaveBeenCalled();
     });
 
+    it.each(["0", "00", " 000 "])(
+      "treats Content-Length %j as no body and validates {}",
+      async (contentLength) => {
+        const res = await send("post", "optional", { "content-length": contentLength });
+
+        expect(res.status).toBe("200 OK");
+        expect(received).toEqual([{}]);
+      },
+    );
+
     it("rejects chunked framing with 415 even when no bytes follow (policy)", async () => {
       const res = await send("post", "optional", {
         "transfer-encoding": "chunked",

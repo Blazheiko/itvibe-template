@@ -81,7 +81,7 @@ sequenceDiagram
 1. Метод без тіла (`hasBody === false`) — тіло не читається, `payload = null`.
 2. Немає `Content-Type`:
     - маршрут без `validator` — тіло не читається, `payload = null`;
-    - маршрут з `validator`, є framing тіла (`Transfer-Encoding` або `Content-Length` не `0`) — `UnsupportedMediaTypeError` з `receivedContentType: null` → **415** до читання тіла;
+    - маршрут з `validator`, є framing тіла (`Transfer-Encoding` або `Content-Length` не нуль; `0`, `00` тощо означають нуль байтів, [RFC 9110 §8.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6), а некоректне значення вважається тілом) — `UnsupportedMediaTypeError` з `receivedContentType: null` → **415** до читання тіла;
     - маршрут з `validator`, framing немає — тіло вважається порожнім і валідується як `{}` (так само, як порожнє JSON-тіло): обов'язкові поля → **422**, defaults схеми застосовуються.
 3. `bodyKind` має бути в `route.allowedContentTypes` (за замовчуванням `["json"]`), інакше `UnsupportedMediaTypeError` → **415**. Наприклад, завантаження аватара оголошує `allowedContentTypes: ["multipart"]`.
 4. Ранній відказ: якщо `Content-Length` — ціле число і більше ліміту, кидається `PayloadTooLargeError` → **413** без читання тіла.

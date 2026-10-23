@@ -118,6 +118,14 @@ describe("defineRoute body validator typing", () => {
     });
     expect(true).toBe(true);
   });
+
+  it("accepts only methods registerHttpRoute can register", () => {
+    // @ts-expect-error ws routes go through defineWsRoute
+    defineRoute({ url: "/items", method: "ws", handler: () => ({}) });
+    // @ts-expect-error options is answered by the CORS preflight handler
+    defineRoute({ url: "/items", method: "options", handler: () => ({}) });
+    expect(true).toBe(true);
+  });
 });
 
 describe("defineWsRoute", () => {
