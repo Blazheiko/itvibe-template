@@ -21,7 +21,7 @@
 | 9   | ~~`broadcastToChannel` без runtime-перевірки каналу (L-4)~~ ✅                                                    | Низька       | Безпека                      |
 | 10  | ~~`db:seed` — порожня заглушка~~ ✅                                                                               | Низька       | DX / БД                      |
 | 11  | ~~`src/drizzle/schema/index.ts` порожній~~ ✅                                                                     | Низька       | Структура                    |
-| 12  | Тіло запиту читається лише для `post`/`put`                                                                       | Низька       | HTTP                         |
+| 12  | ~~Тіло запиту читається лише для `post`/`put`~~ ✅                                                                | Низька       | HTTP                         |
 | 13  | `sendResponse` при `payload === null` віддає `String(status)` як JSON                                             | Низька       | HTTP                         |
 | 14  | Прогалини плану body limits: тести, `.env.example`, playground                                                    | Низька       | HTTP / тести                 |
 | 15  | Застарілі внутрішні документи                                                                                     | Низька       | Документація                 |
@@ -178,16 +178,22 @@
 
 ### 12. Тіло запиту читається лише для `post`/`put`
 
+> **Виправлено** у feat-008 (гілка `feat/http-body-fixes`) за планом [`http-body-methods-plan.md`](./http-body-methods-plan.md): `patch` читає й валідує тіло; `validator` на `get`/`delete`/`del` заборонено типами `defineRoute` і перевіркою в `routesHandler`; маршрут з `validator` без `Content-Type` дає 422 (порожнє тіло валідується як `{}`) або 415 (є framing тіла) замість 500. Контракт `octet`-маршрутів з `validator` лишається відкритим.
+
 - **Що:** у `src/vendor/start/server.ts` `hasBody` істинний лише для `post` і `put`. Body `PATCH` і `DELETE` ніколи не читається.
 - **Наслідок:** зараз `patch`-маршрутів немає, але новий `patch`-маршрут мовчки отримає порожній payload.
 - **Пропозиція:** додати `patch` (і за потреби `del`) до методів з body або явно заборонити `patch` у `defineRoute`.
 
 ### 13. `sendResponse` при `payload === null`
 
+> **Виправлено** у feat-008 (гілка `feat/http-body-fixes`) за планом [`http-null-payload-plan.md`](./http-null-payload-plan.md): порожній payload (`null`/`undefined`) у 200 дає 204, в іншому 2xx — той самий статус без тіла; 204/205/3xx завжди без тіла й без `Content-Type` (зокрема з `responseData.headers`); у 4xx/5xx — канонічне тіло помилки з `code` зі спільного `ErrorCode`.
+
 - **Що:** якщо `payload` дорівнює `null`, тілом відповіді стає `String(status)`, хоча `Content-Type: application/json`.
 - **Пропозиція:** віддавати `null` або порожнє тіло зі статусом 204.
 
 ### 14. Прогалини плану body limits
+
+> **Виправлено** у feat-008 (гілка `feat/http-body-fixes`) за планом [`http-body-limits-plan.md`](./http-body-limits-plan.md): тести `detectBodyKind`/`resolveMaxBodySize`, 413 через зареєстрований handler (межа рівно в ліміт, UTF-8 між чанками, розділення лімітів) і на справжньому uWS; `bodyLimits` у playground; defaults 2 / 50 / 50 / 2 MiB зафіксовано як рішення; `parseSize` приймає лише додатне безпечне ціле. `APP_MAX_*_BODY_SIZE` у `.env.example` додано ще в feat-006 (п. 6).
 
 Згідно з `src/docs/HTTP_BODY_LIMITS_PLAN.md` основну частину реалізовано: ліміти за типом, 413, рання відмова, `onAborted`. Не зроблено:
 

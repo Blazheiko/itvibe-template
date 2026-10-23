@@ -56,12 +56,12 @@ sequenceDiagram
 
 1. **Відмова під час зупинки.** Якщо `state.listenSocket === undefined`, з'єднання закривається (`res.close()`).
 2. **onAborted.** Реєструється один раз; прапорець передається в `readData` через об'єкт `RequestAbortSignal`, бо в uWS `onAborted` — один слот. Після abort відповідь не пишеться.
-3. **Метадані синхронно.** `collectRequestMetadata` до першого `await` збирає cookies (`parseCookies`), query, заголовки (`getHeaders`, без `cookie`, з валідацією `validateHeader`), параметри маршруту (`extractParameters` з `validateParameter`), IP (`getIP`), `content-type` і `bodyKind`. `hasBody` дорівнює `true` лише для `post` і `put`.
+3. **Метадані синхронно.** `collectRequestMetadata` до першого `await` збирає cookies (`parseCookies`), query, заголовки (`getHeaders`, без `cookie`, з валідацією `validateHeader`), параметри маршруту (`extractParameters` з `validateParameter`), IP (`getIP`), `content-type` і `bodyKind`. `hasBody` дорівнює `true` для `post`, `put` і `patch` (`BODY_METHODS` у [body-methods.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/body-methods.ts)); для `get` і `delete` тіло не читається.
 4. **Rate limit до читання тіла.** Спершу `checkGlobalRateLimit` (L1: один бюджет на IP для всіх API-запитів, за замовчуванням 600 на хвилину), потім `checkRateLimit` ([http-rate-limit.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)): ліміт маршруту, інакше групи, без ліміту — пропускає. Обидві перевірки синхронні, щоб не пропустити `onData`. API-404, preflight `OPTIONS` і `/<pathPrefix>/doc/routes` не проходять через `setHttpHandler`, але L1 для них викликається окремо. Деталі — [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
 5. **Query.** `validateQuery` валідує query лише якщо в маршруті є `queryValidator`, інакше `httpData.query === null`.
 6. **Тіло.** `readAndParseBody` (деталі нижче).
 7. **Контекст і middleware.** Формується `HttpData`, `contextHandler` створює контекст; `executeMiddlewares` ([execute-httpMiddlewares.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/execute-httpMiddlewares.ts)) виконує ланцюжок. Handler викликається, лише якщо всі middleware викликали `next()` і `responseData.status` у діапазоні 2xx.
-8. **Відповідь.** `sendResponse` пише статус, `content-type: application/json` (крім 3xx), security-заголовки, заголовки й cookies з `responseData`, CORS; тіло — `makeJson(payload)`, або `String(status)`, якщо payload `null`; для редиректів тіла немає.
+8. **Відповідь.** `sendResponse` пише статус, `content-type: application/json` (лише коли є тіло), security-заголовки, заголовки й cookies з `responseData`, CORS; тіло — `makeJson(payload)`. Відповіді з порожнім payload — у розділі [Відповідь без даних](#відповідь-без-даних).
 
 ## Тіло запиту: типи і ліміти
 
@@ -74,28 +74,68 @@ sequenceDiagram
 | `application/octet-stream…`                               | `octet`                         | `maxOctetStreamBodySize` | `APP_MAX_OCTET_BODY_SIZE`     | 52 428 800       |
 | `application/x-www-form-urlencoded…`, `text/plain…`, інше | `urlencoded` / `text` / `other` | `maxBodySize`            | `APP_MAX_BODY_SIZE`           | 2 097 152        |
 
-Значення читаються через `parseSize` у [config/app.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts). JSON визначається регулярним виразом, тож `application/json; charset=utf-8` — це `json`, а `application/json-patch+json` — `other`.
+Значення читаються через `parseSize` у [config/app.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts): лише додатне безпечне ціле число байт, інакше default (див. [Конфігурація](/backend/configuration#ліміти-тіла-запиту)). Ліміти маршрутів видно в playground (`bodyLimits`). JSON визначається регулярним виразом, тож `application/json; charset=utf-8` — це `json`, а `application/json-patch+json` — `other`.
 
 Порядок у `readAndParseBody`:
 
-1. Немає тіла (`hasBody === false`) або немає `Content-Type` — тіло не читається.
-2. `bodyKind` має бути в `route.allowedContentTypes` (за замовчуванням `["json"]`), інакше `UnsupportedMediaTypeError` → **415**. Наприклад, завантаження аватара оголошує `allowedContentTypes: ["multipart"]`.
-3. Ранній відказ: якщо `Content-Length` — ціле число і більше ліміту, кидається `PayloadTooLargeError` → **413** без читання тіла.
-4. `readData` збирає чанки з `res.onData` і перериває читання з `PayloadTooLargeError`, щойно сума перевищить ліміт (захист від chunked-тіл і неправдивого `Content-Length`).
-5. Парсинг: `json` → `JSON.parse` (тільки об'єкт, порожнє тіло → `{}`; невалідний JSON або не-об'єкт → `MalformedBodyError`, без уривка тіла в повідомленні), `multipart` → `getParts` з uWS (поля в payload, файли в `files`), `urlencoded` → `URLSearchParams`, `text` → рядок, `octet` → один файл (ім'я з `content-disposition` або `x-filename`).
-6. Якщо є `route.validator` і payload — `validateRoutePayload`. Якщо валідатора немає, `payload` стає `null` (файли зберігаються).
+1. Метод без тіла (`hasBody === false`) — тіло не читається, `payload = null`.
+2. Немає `Content-Type`:
+    - маршрут без `validator` — тіло не читається, `payload = null`;
+    - маршрут з `validator`, є framing тіла (`Transfer-Encoding` або `Content-Length` не нуль; `0`, `00` тощо означають нуль байтів, [RFC 9110 §8.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6), а некоректне значення вважається тілом) — `UnsupportedMediaTypeError` з `receivedContentType: null` → **415** до читання тіла;
+    - маршрут з `validator`, framing немає — тіло вважається порожнім і валідується як `{}` (так само, як порожнє JSON-тіло): обов'язкові поля → **422**, defaults схеми застосовуються.
+3. `bodyKind` має бути в `route.allowedContentTypes` (за замовчуванням `["json"]`), інакше `UnsupportedMediaTypeError` → **415**. Наприклад, завантаження аватара оголошує `allowedContentTypes: ["multipart"]`.
+4. Ранній відказ: якщо `Content-Length` — ціле число і більше ліміту, кидається `PayloadTooLargeError` → **413** без читання тіла. Пробіли навколо значення вже прибрав `getHeaders`. `Content-Length`, рівний ліміту, рано не відхиляється.
+5. `readData` збирає чанки з `res.onData` і перериває читання з `PayloadTooLargeError`, щойно сума **перевищить** ліміт: тіло рівно в ліміт байтів проходить, ліміт + 1 — ні. Рахуються байти, не символи, і багатобайтовий UTF-8 символ може бути розрізаний між чанками. Це захищає від chunked-тіл і неправдивого `Content-Length`. На справжньому uWS клієнт отримує повну відповідь 413, не дочекавшись кінця свого тіла: і коли надіслано лише заголовки із завеликим `Content-Length`, і коли ліміт перевищено на неостанньому chunked-чанку ([http-body-limits.transport.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/http-body-limits.transport.spec.ts)).
+6. Парсинг: `json` → `JSON.parse` (тільки об'єкт, порожнє тіло → `{}`; невалідний JSON або не-об'єкт → `MalformedBodyError`, без уривка тіла в повідомленні), `multipart` → `getParts` з uWS (поля в payload, файли в `files`), `urlencoded` → `URLSearchParams`, `text` → рядок, `octet` → один файл (ім'я з `content-disposition` або `x-filename`).
+7. Якщо є `route.validator` і payload — `validateRoutePayload`. Якщо валідатора немає, `payload` стає `null` (файли зберігаються). Парсер `octet` завжди повертає `payload: null` і файл у `files`, тому `validator` на `octet`-маршруті не викликається: контракт бінарних upload-маршрутів поки не визначено.
+
+### Запит без `Content-Type`
+
+Поведінка з кроку 2 — контракт API цього шаблону. RFC його не вимагає: за [RFC 9110 §8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.3) отримувач без `Content-Type` може вгадати тип або вважати вміст `application/octet-stream`. Шаблон обирає явну відмову, щоб не читати вміст невідомого типу і щоб маршрут з `validator` ніколи не отримав `payload = null`.
+
+`Transfer-Encoding` вважається framing тіла, навіть якщо chunked-тіло виявиться порожнім ([RFC 9112 §6.3](https://www.rfc-editor.org/rfc/rfc9112.html#section-6.3)): рішення приймається до читання, тому порожній chunked-запит без `Content-Type` теж отримує 415.
+
+| Запит до маршруту з `validator`                  | Відповідь                                      |
+| ------------------------------------------------ | ---------------------------------------------- |
+| без `Content-Type` і без тіла                    | валідація `{}`: 422 зі списком полів або успіх |
+| без `Content-Type`, з `Content-Length > 0`       | 415, `details.receivedContentType: null`       |
+| без `Content-Type`, `Transfer-Encoding: chunked` | 415, навіть якщо байтів немає                  |
+
+Перевірити через `curl` (для запиту з тілом `-H 'Content-Type:'` прибирає заголовок, який `curl` сам додає до `-d`):
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/login                                              # 422
+curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' http://127.0.0.1:3000/api/auth/login   # 415
+```
+
+## Відповідь без даних
+
+Порожній payload — це лише `null` або `undefined`, які повернув handler; `false`, `0` і `""` — дані й серіалізуються в JSON. Правила `sendResponse` ([server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)):
+
+| Ситуація                                | Відповідь                                                                   |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| 3xx (включно з 304)                     | без тіла                                                                    |
+| статус 204 або 205                      | без тіла, навіть якщо payload є                                             |
+| 200 і порожній payload                  | **204 No Content**, без тіла                                                |
+| інший 2xx (201, 202, …) і порожній payload | той самий статус, без тіла                                               |
+| 4xx/5xx і порожній payload              | `{ status: "error", code, message }`, `application/json`                  |
+| інакше                                  | `makeJson(payload)`, `application/json`                                     |
+
+У відповіді без тіла немає `Content-Type`: `sendResponse` його не пише і пропускає `Content-Type` і `Content-Length` з `responseData.headers` (назва без урахування регістру), бо framing такої відповіді задає uWS. Інші заголовки, cookies, security-заголовки й CORS пишуться як завжди, тож дія без даних може ставити cookie у 204. 204 і 304 завершуються через `res.endWithoutBody()`, бо `res.end()` у uWS додає `Content-Length: 0`, а в 204 цього заголовка бути не може ([RFC 9110 §8.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.6)); решта відповідей без тіла йде з `Content-Length: 0`. Статуси без тіла — за [RFC 9110 §15.3.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.5), [§15.3.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.3.6), [§15.4.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.4.5).
+
+`code` для 4xx/5xx береться зі спільного `ErrorCode` (`shared/errors`) за таблицею в `buildStatusErrorBody` ([http-response-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts)): 400 `bad_request`, 401 `unauthorized`, 403 `forbidden`, 404 `not_found`, 409 `conflict`, 413 `payload_too_large`, 415 `unsupported_media_type`, 422 `validation_failed`, 429 `rate_limited`, 503 `service_unavailable`; інший 4xx — `bad_request`, інший 5xx — `internal_error`. `message` — reason phrase статусу з `node:http`, а без неї — `"Error"`. Middleware і `applyAppErrorStatus` ставлять payload самі, тож це правило — запасне для handler'а, що поставив статус помилки без тіла.
 
 ## Обробка помилок (handleError)
 
-| Помилка                     | Статус             | `code`                                                         |
-| --------------------------- | ------------------ | -------------------------------------------------------------- |
-| `PayloadTooLargeError`      | 413                | `payload_too_large` (+ `details.limit`, `details.contentType`) |
-| `MalformedBodyError`        | 400                | `bad_request` (`message: "Malformed json body"`)               |
-| `UnsupportedMediaTypeError` | 415                | `unsupported_media_type`                                       |
-| `ValidationError`           | `error.statusCode` | `error.code`, `details.kind: "validation"`                     |
-| `ParameterValidationError`  | `error.statusCode` | `error.code`, `details.kind: "parameter_validation"`           |
-| `RedisUnavailableError`     | 503                | `service_unavailable`, заголовок `Retry-After: 1`              |
-| інше                        | 500                | `internal_error` (текст помилки лише при `env === "local"`)    |
+| Помилка                     | Статус             | `code`                                                                                               |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `PayloadTooLargeError`      | 413                | `payload_too_large` (+ `details.limit`, `details.contentType`)                                       |
+| `MalformedBodyError`        | 400                | `bad_request` (`message: "Malformed json body"`)                                                     |
+| `UnsupportedMediaTypeError` | 415                | `unsupported_media_type` (+ `details.receivedContentType`: рядок або `null`, `details.allowedKinds`) |
+| `ValidationError`           | `error.statusCode` | `error.code`, `details.kind: "validation"`                                                           |
+| `ParameterValidationError`  | `error.statusCode` | `error.code`, `details.kind: "parameter_validation"`                                                 |
+| `RedisUnavailableError`     | 503                | `service_unavailable`, заголовок `Retry-After: 1`                                                    |
+| інше                        | 500                | `internal_error` (текст помилки лише при `env === "local"`)                                          |
 
 400, 413 і 415 логуються як `warn`, невідомі помилки — як `error` з контекстом для Sentry.
 
@@ -139,5 +179,5 @@ sequenceDiagram
 Про сесії, CSRF і автентифікацію — див. [/backend/auth-security](/backend/auth-security).
 
 ::: warning План
-За [HTTP_BODY_LIMITS_PLAN.md](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/HTTP_BODY_LIMITS_PLAN.md) ще не зроблено: опис змінних `APP_MAX_*_BODY_SIZE` у `packages/backend/.env.example`; інтеграційні тести лімітів (413 при перевищенні, межа «рівно ліміт», розділення лімітів octet/json); вивід розрахункового ліміту в API playground (`serializeRoutes`). Per-route ліміти тіла, окремий налаштовуваний ліміт для WS і читання тіла для `PATCH`/`DELETE` план свідомо залишає поза рамками.
+За [HTTP_BODY_LIMITS_PLAN.md](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/HTTP_BODY_LIMITS_PLAN.md) ще не зроблено: опис змінних `APP_MAX_*_BODY_SIZE` у `packages/backend/.env.example`; інтеграційні тести лімітів (413 при перевищенні, межа «рівно ліміт», розділення лімітів octet/json); вивід розрахункового ліміту в API playground (`serializeRoutes`). Per-route ліміти тіла й окремий налаштовуваний ліміт для WS план свідомо залишає поза рамками. Тіло `PATCH` читається; `DELETE` тіло свідомо не читає (див. [Роутинг → Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
 :::

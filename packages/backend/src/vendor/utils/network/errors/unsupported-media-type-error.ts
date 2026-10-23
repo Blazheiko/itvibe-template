@@ -6,11 +6,14 @@ export class UnsupportedMediaTypeError extends Error {
   readonly statusCode = 415;
 
   constructor(
-    public readonly receivedContentType: string,
+    // null: the request has a body but no Content-Type header.
+    public readonly receivedContentType: string | null,
     public readonly allowedKinds: BodyKind[],
   ) {
     super(
-      `Unsupported Content-Type "${receivedContentType}". Allowed: ${allowedKinds.join(", ")}`,
+      receivedContentType === null
+        ? `Missing Content-Type. Allowed: ${allowedKinds.join(", ")}`
+        : `Unsupported Content-Type "${receivedContentType}". Allowed: ${allowedKinds.join(", ")}`,
     );
   }
 }

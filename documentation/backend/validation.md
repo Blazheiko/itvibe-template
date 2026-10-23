@@ -34,7 +34,7 @@ export { arkValidator as defaultValidator, arkValidator } from './adapters/arkty
 
 У маршрутах передається **схема**, а не валідатор: `defineRoute` / `defineWsRoute` самі загортають її через `defaultValidator` ([define-route.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-route.ts), [define-ws-route.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-ws-route.ts)). Вручну обгортати `arkValidator(...)` у файлах маршрутів не потрібно.
 
-- `validator` — схема тіла (HTTP) або payload (WS).
+- `validator` — схема тіла (HTTP) або payload (WS). На HTTP він дозволений лише для `post`, `put` і `patch`; на `get`/`delete` дає помилку типів і помилку на старті, бо тіло там не читається ([Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)). Без `Content-Type` і без тіла валідується `{}`, тож handler з `validator` не отримує `payload = null` (крім `octet`-маршрутів).
 - `queryValidator` — схема query (лише HTTP). До неї `defineRoute` застосовує `onUndeclaredKey("reject")` (зайві ключі → помилка) або, з `queryAllowExtra: true`, `onUndeclaredKey("delete")` (зайві ключі видаляються). `queryArrays` перелічує ключі, які можуть повторюватися (збираються в `string[]`); див. [flatten-query.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/validation/flatten-query.ts).
 
 Приклад з [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts):

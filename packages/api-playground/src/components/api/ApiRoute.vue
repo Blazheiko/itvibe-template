@@ -10,6 +10,7 @@ import {
 } from '@/utils/json-schema-guards'
 import {
   extractParameters,
+  formatBytes,
   formatRateLimit,
   getFieldTypeClass,
   getMethodClass,
@@ -267,6 +268,22 @@ const openTesting = () => {
                   {{ props.route.rateLimit ? 'route' : 'group' }}
                 </span>
               </div>
+              <div v-if="route.bodyLimits" class="break-words">
+                <span class="font-medium text-slate-700 dark:text-slate-200">Body limit:</span>
+                <span
+                  v-if="route.bodyLimits.length === 0"
+                  class="ml-2 text-xs text-slate-500 dark:text-slate-400"
+                >
+                  No allowed body types
+                </span>
+                <span
+                  v-for="limit in route.bodyLimits"
+                  :key="limit.kind"
+                  class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-200"
+                >
+                  {{ limit.kind }}: {{ formatBytes(limit.maxBytes) }}
+                </span>
+              </div>
               <div v-if="parameters.length">
                 <h6
                   class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
@@ -287,7 +304,12 @@ const openTesting = () => {
                 </div>
               </div>
               <p
-                v-if="!route.middlewares?.length && !routeRateLimit && !parameters.length"
+                v-if="
+                  !route.middlewares?.length &&
+                  !routeRateLimit &&
+                  !route.bodyLimits &&
+                  !parameters.length
+                "
                 class="text-xs text-slate-400 dark:text-slate-500 italic"
               >
                 No additional details

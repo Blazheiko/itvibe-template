@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { defineRoute } from "#app/routing/define-route.js";
 import { LoginInputSchema } from "shared/schemas";
 import { CanonicalErrorResponseSchema } from "shared/responses";
+import { defineWsRoute } from "#app/routing/define-ws-route.js";
+import appConfig from "#config/app.js";
 import { serializeRoutes } from "./serialize-routes.js";
 
 interface JsonSchemaForTest {
@@ -181,5 +183,53 @@ describe("serializeRoutes", () => {
     const [result] = serializeRoutes(routes) as Record<string, unknown>[];
     expect(result).toBeDefined();
     expect(result?.["inputSchema"]).toBeUndefined();
+  });
+});
+
+describe("serializeRoutes bodyLimits", () => {
+  const handler = () => ({});
+  const json = { kind: "json", maxBytes: appConfig.maxJsonBodySize };
+  const multipart = { kind: "multipart", maxBytes: appConfig.maxMultipartBodySize };
+  const bodyLimitsOf = (route: unknown): unknown =>
+    (serializeRoutes([route])[0] as Record<string, unknown>)["bodyLimits"];
+
+  it.each(["post", "put", "patch"] as const)(
+    "%s without allowedContentTypes → the JSON limit",
+    (method) => {
+      expect(bodyLimitsOf(defineRoute({ url: "/x", method, handler }))).toEqual([json]);
+    },
+  );
+
+  it("lists each allowed type in order", () => {
+    expect(
+      bodyLimitsOf(defineRoute({ url: "/x", method: "post", allowedContentTypes: ["multipart"], handler })),
+    ).toEqual([multipart]);
+    expect(
+      bodyLimitsOf(
+        defineRoute({ url: "/x", method: "post", allowedContentTypes: ["json", "multipart"], handler }),
+      ),
+    ).toEqual([json, multipart]);
+  });
+
+  it("allowedContentTypes: [] → an empty list", () => {
+    expect(
+      bodyLimitsOf(defineRoute({ url: "/x", method: "post", allowedContentTypes: [], handler })),
+    ).toEqual([]);
+  });
+
+  it.each(["get", "delete"] as const)("%s has no bodyLimits", (method) => {
+    expect(bodyLimitsOf(defineRoute({ url: "/x", method, handler }))).toBeUndefined();
+  });
+
+  it("a WS route has no bodyLimits", () => {
+    expect(bodyLimitsOf(defineWsRoute({ url: "x", handler }))).toBeUndefined();
+  });
+
+  it("is set on routes inside nested groups", () => {
+    const [group] = serializeRoutes([
+      { group: [{ group: [defineRoute({ url: "/x", method: "patch", handler })] }] },
+    ]) as { group: { group: Record<string, unknown>[] }[] }[];
+
+    expect(group?.group[0]?.group[0]?.["bodyLimits"]).toEqual([json]);
   });
 });

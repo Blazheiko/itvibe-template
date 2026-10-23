@@ -314,6 +314,8 @@ export default {
 
 Автентифікацію гарантує middleware `auth_guard` на групі маршрутів (наступний крок). Перевірка `userId === null` — лише захисна гілка для типізації.
 
+Якщо дії нема чого повертати (наприклад, видалення), handler повертає `null`: відповідь буде `204 No Content` без тіла, а явно заданий 201 чи 202 збережеться. Деталі — [Відповідь без даних](/backend/request-lifecycle#відповідь-без-даних).
+
 ## Крок 8. Реєстрація маршрутів
 
 У [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) додайте імпорт контролера (поруч з іншими) і допишіть `CreateNoteInputSchema` до наявного імпорту з `shared/schemas`:
@@ -358,6 +360,8 @@ import {
 ```
 
 [`defineRoute`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Роутингу та middleware](/backend/routing-middlewares)).
+
+Якщо додаєте оновлення або видалення нотатки: для часткового оновлення беріть `method: "patch"` з `validator`, а для видалення — `method: "delete"` з `url: "/:id"` і без `validator`, бо `DELETE` тіло не читає ([Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
 
 ## Крок 9. Тест сервісу
 

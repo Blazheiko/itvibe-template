@@ -1,5 +1,7 @@
 # HTTP Body Limits Plan
 
+> **Стан (feat-008, п. 14).** Defaults из этого плана (1 / 50 / 100 / 1 MB) не применены: оставлены 2 MiB (JSON и остальное), 50 MiB (multipart), 50 MiB (octet) — обоснование в [`docs/plan/http-body-limits-plan.md`](../../../../docs/plan/http-body-limits-plan.md) и в `documentation/backend/configuration.md`. Тесты из раздела 7 сделаны: `http-request-handlers.spec.ts`, `http-body-limits.spec.ts`, `http-body-limits.transport.spec.ts`, `config/app.spec.ts`; лимиты в playground (6.3) — `bodyLimits` в `serializeRoutes`. `parseSize` теперь принимает только положительное безопасное целое.
+
 ## 1. Контекст и цель
 
 В `packages/backend/src/vendor/utils/network/http-request-handlers.ts` лимит на размер request body один общий (`config.maxBodySize`, 10 MB). Это плохо: для JSON безопасно 1 MB, для загрузки файлов 10 MB мало. Кроме того, при превышении бросается обычный `Error`, который уходит клиенту как `500`, а не как `413 Payload Too Large`.

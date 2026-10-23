@@ -24,7 +24,7 @@ defineRoute({
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `url`, `method`  | шлях (підтримує `:param`) та HTTP-метод                                                                                       |
 | `handler`        | метод контролера, прив'язаний через `.bind`                                                                                   |
-| `validator`      | схема тіла запиту (ArkType із `shared/schemas`)                                                                               |
+| `validator`      | схема тіла запиту (ArkType із `shared/schemas`); лише для `post`/`put`/`patch`                                                |
 | `queryValidator` | схема query; за замовчуванням зайві ключі відхиляються (`onUndeclaredKey("reject")`), з `queryAllowExtra: true` — видаляються |
 | `ResponseSchema` | схема відповіді з `shared/responses` (для документації маршрутів)                                                             |
 | `middlewares`    | імена middleware з kernel                                                                                                     |
@@ -32,6 +32,19 @@ defineRoute({
 | `description`    | опис для інтроспекції                                                                                                         |
 
 Якщо `queryValidator` не задано, `httpData.query` дорівнює `null` — handler має явно оголосити схему, щоб читати query.
+
+### Методи і тіло запиту
+
+| Метод                         | Тіло читається | `validator`                                                   |
+| ----------------------------- | -------------- | ------------------------------------------------------------- |
+| `post`, `put`, `patch`        | так            | дозволено                                                     |
+| `get`, `delete` (`del`)       | ні             | заборонено: помилка типів у `defineRoute` і помилка на старті |
+| WS-маршрути (`defineWsRoute`) | —              | дозволено (payload повідомлення)                              |
+
+- Для часткового оновлення використовуйте `patch`.
+- `DELETE` тіло не читає: за [RFC 9110 §9.3.5](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.5) вміст `DELETE` не має загальновизначеної семантики, і частина проксі його відкидає. Ідентифікатор передавайте через `:param` (`url: "/:id"`), додаткові дані — через `queryValidator`.
+- Перевірку на старті робить `routesHandler` ([router.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/router.ts)): маршрут `get`/`delete` з `validator`, оголошений в обхід `defineRoute`, зупиняє запуск з помилкою `Route DELETE … declares a body validator…`. Множини методів — у [body-methods.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/body-methods.ts).
+- Як обробляється запит без `Content-Type`, див. [Життєвий цикл запиту](/backend/request-lifecycle#запит-без-content-type).
 
 ## Групи, префікси та `API_PATH_PREFIX`
 

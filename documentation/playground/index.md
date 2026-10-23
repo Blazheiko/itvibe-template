@@ -50,7 +50,8 @@ flowchart LR
 
 - `inputSchema` — з `validator` (тіло запиту);
 - `querySchema` — з `queryValidator`;
-- `outputSchema` — з `ResponseSchema`.
+- `outputSchema` — з `ResponseSchema`;
+- `bodyLimits` — лише для `post`/`put`/`patch`: список `{ kind, maxBytes }` для кожного типу з `allowedContentTypes` (за замовчуванням `["json"]`), бо ліміт залежить від `Content-Type` запиту. `[]` означає `allowedContentTypes: []`, і картка пише «No allowed body types». Обчислюється через `resolveMaxBodySize` у [serialize-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/serialize-routes.ts).
 
 Кожна схема має форму `{ expression, fields[], jsonSchema? }` (тип `ArkSchema` у store). Решта полів, які використовує UI: `url`, `method`, `description`, `middlewares`, `rateLimit` / `groupRateLimit` (`{ windowMs, maxRequests }`), а для груп ще `prefix` і `group`. Детальніше про схеми див. [Валідація](/backend/validation).
 
