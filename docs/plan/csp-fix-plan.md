@@ -1,5 +1,7 @@
 # План виправлення: CSP ніде не застосовується
 
+> **Статус:** виконано у feat-005, п. 1 (PR #22, merge `70bb473`, 2026-10-20). Чекбокси DoD нижче не відмічено заднім числом: evidence — у `feature_list.json` (feat-005) і `progress.md` гілки `feat/security-hardening`. Шляхи й посилання — на момент написання.
+
 Джерело: пункт 1 у [`code-issues-found-during-docs.md`](./code-issues-found-during-docs.md), finding M-5 у `packages/backend/src/vendor/start/SECURITY_ANALYSIS.md`.
 Серйозність: висока. Область: безпека. Входить до **feat-005 Security Hardening** (`feature_list.json`), окремої feature не створюємо.
 

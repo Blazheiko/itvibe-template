@@ -1,5 +1,7 @@
 # План: rate limit для кількох інстансів (feat-013)
 
+> **Статус:** виконано у feat-013 (PR #32, merge `28e1be8`, 2026-10-21).
+
 Джерело: відкрита підзадача пункту 2 у [code-issues-found-during-docs.md](./code-issues-found-during-docs.md) (залишок finding C-2). Попередній план того ж пункту: [ws-upgrade-rate-limit-plan.md](./ws-upgrade-rate-limit-plan.md).
 
 Редакція 10: `onRedisError: "fallback-memory"` перейменовано на `"skip"` — при відмові Redis рівень 2 пропускається без другого локального consume.

@@ -1,5 +1,7 @@
 # Task list: rate limit для кількох інстансів (feat-013)
 
+> **Статус:** виконано у feat-013 (PR #32, merge `28e1be8`, 2026-10-21). Невідмічений T9.3 (evidence) закрито в самому PR: див. `evidence` feat-013 у `feature_list.json`. Чекбокси заднім числом не відмічаються.
+
 Джерело: [redis-rate-limit-plan.md](./redis-rate-limit-plan.md) (редакція 10).
 Кожна задача атомарна (≤ 0.5 дня), з критерієм приймання (**AC**). Порядок послідовний, якщо не вказано інше; `→` — залежність. Після кожної задачі: `pnpm typecheck`, `pnpm lint`, `pnpm --filter backend test` зелені.
 

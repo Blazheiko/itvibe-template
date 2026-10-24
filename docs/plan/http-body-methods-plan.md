@@ -1,5 +1,7 @@
 # План: методи з тілом запиту і маршрути з `validator` (п. 12)
 
+> **Статус:** виконано у feat-008, п. 12 (PR #46, merge `8ee410b`, 2026-10-23).
+
 Пункт 12 з [`code-issues-found-during-docs.md`](./code-issues-found-during-docs.md). Фіча: **feat-008 «HTTP Body Fixes»** (разом із п. 13 і 14).
 Шляхи відносно `packages/backend/`, якщо не вказано інше.
 

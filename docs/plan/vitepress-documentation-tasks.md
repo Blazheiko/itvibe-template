@@ -1,5 +1,7 @@
 # Task list: документація itvibe на VitePress
 
+> **Статус:** виконано у feat-003 (PR #2, 2026-10-19) і feat-011 (PR #9–#18, 2026-10-20). Чекбокси нижче не відмічено заднім числом: evidence — у `feature_list.json`. Документи з `packages/backend/src/docs/` і `SECURITY_ANALYSIS.md` у feat-009 видалено або перенесено.
+
 Джерело: [vitepress-documentation-plan.md](./vitepress-documentation-plan.md) (ревізія 3).
 Кожна задача — атомарна (≤ 0.5 дня), з критерієм приймання (**AC**). Порядок — послідовний, якщо
 не вказано інше; `→` — залежність.

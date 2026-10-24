@@ -1,5 +1,7 @@
 # План: прогалини лімітів тіла запиту (п. 14)
 
+> **Статус:** виконано у feat-008, п. 14 (PR #46, merge `8ee410b`, 2026-10-23). `src/docs/HTTP_BODY_LIMITS_PLAN.md` згодом перенесено в [`http-body-limits-original-plan.md`](./http-body-limits-original-plan.md) (feat-009).
+
 Пункт 14 з [`code-issues-found-during-docs.md`](./code-issues-found-during-docs.md). Фіча: **feat-008 «HTTP Body Fixes»** (разом із п. 12 і 13, обидва зроблено).
 Шляхи відносно `packages/backend/`, якщо не вказано інше. Початковий план лімітів — `src/docs/HTTP_BODY_LIMITS_PLAN.md`.
 
