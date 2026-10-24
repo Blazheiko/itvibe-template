@@ -211,17 +211,17 @@
             "owner": "Blazheiko",
             "branch": "feat/push-access",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #59: POST test-push with body schema, auth_guard on push routes except vapid-public-key, ws_admin_guard on admin WS group, transfer only with matching keys (409 otherwise), 404 for non-numeric subscription ids; route access matrix test with negative control; backend 686, frontend 45, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual check on a disposable DB incl. WS; evidence in progress.md on feat/push-access"
         },
         {
             "id": "feat-022",
             "name": "Push Data Access",
             "description": "push-notification-log-repository, findByUserIdWithLogs in 2 queries keeping the 5-latest-logs contract, SQL aggregates for statistics, bounded parallel send with batch log insert (code-issues items 20, 21, 49). Roadmap F05: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/push-data-access",
             "dependencies": ["feat-021", "feat-036"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
