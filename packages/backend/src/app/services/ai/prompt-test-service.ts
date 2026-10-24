@@ -8,6 +8,7 @@ import {
     upstreamTimeout,
     type AppResult,
 } from '#app/services/shared/errors.js'
+import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
 import logger from '#logger'
 
 // Admin "test this prompt" call (code-issues item 23): goes through the
@@ -18,6 +19,7 @@ export const promptTestService = {
         systemPrompt: string,
         message: string,
         signal?: AbortSignal,
+        usage?: { userId: bigint | null; llmSystemPromptId: bigint | null },
     ): Promise<AppResult<string>> {
         if (!textAdapter.isConfigured()) {
             return Result.err({
@@ -28,13 +30,20 @@ export const promptTestService = {
 
         try {
             let result = ''
-            for await (const chunk of textAdapter.streamText({
-                systemPrompt,
-                userPrompt: message,
-                temperature: 0.5,
-                maxOutputTokens: 2000,
-                ...(signal !== undefined ? { signal } : {}),
-            })) {
+            for await (const chunk of textAdapter.streamText(
+                {
+                    systemPrompt,
+                    userPrompt: message,
+                    temperature: 0.5,
+                    maxOutputTokens: 2000,
+                    ...(signal !== undefined ? { signal } : {}),
+                },
+                llmUsageService.textUsageRecorder(
+                    'PROMPT_TEST',
+                    usage?.userId ?? null,
+                    usage?.llmSystemPromptId ?? null,
+                ),
+            )) {
                 result += chunk
             }
             return Result.ok(result)

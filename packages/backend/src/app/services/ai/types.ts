@@ -1,10 +1,24 @@
 import type { ToolCallHandler } from '#app/services/actions/types.js'
 
-export interface TokenUsage {
+/** Token counts a provider reported. */
+export interface ReportedUsage {
     promptTokens: number
     completionTokens: number
     totalTokens: number
 }
+
+/** What the usage log records: `null` means the provider did not report it. */
+export interface TokenUsage {
+    promptTokens: number | null
+    completionTokens: number | null
+    totalTokens: number | null
+}
+
+export const UNKNOWN_USAGE: TokenUsage = Object.freeze({
+    promptTokens: null,
+    completionTokens: null,
+    totalTokens: null,
+})
 
 export type TextUsageCompleteHandler = (
     usage: TokenUsage,

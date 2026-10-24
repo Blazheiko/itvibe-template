@@ -116,18 +116,7 @@ export const supportService = {
             let fullReply = ''
             for await (const token of supportLlmService.openChatStream(
                 langNative,
-                (usage, model, finalPrompt) => {
-                    llmUsageService.recordText({
-                        userId,
-                        llmSystemPromptId: promptId,
-                        model,
-                        feature: 'SUPPORT_CHAT',
-                        finalPrompt,
-                        promptTokens: usage.promptTokens,
-                        completionTokens: usage.completionTokens,
-                        totalTokens: usage.totalTokens,
-                    })
-                },
+                llmUsageService.textUsageRecorder('SUPPORT_CHAT', userId, promptId),
                 signal,
             )) {
                 fullReply += token
@@ -167,11 +156,17 @@ export const supportService = {
             await supportRepository.addChatMessage(userId, 'user', message)
 
             const [englishQuery, chatHistory] = await Promise.all([
-                supportQueryTranslationService.translateToEnglish(message),
+                supportQueryTranslationService.translateToEnglish(message, {
+                    userId,
+                    ...(signal !== undefined ? { signal } : {}),
+                }),
                 supportRepository.findChatHistory(userId, 20),
             ])
 
-            const searchResults = await supportEmbeddingService.search(englishQuery, 5)
+            const searchResults = await supportEmbeddingService.search(englishQuery, 5, {
+                userId,
+                ...(signal !== undefined ? { signal } : {}),
+            })
             const knowledgeContext = formatKnowledgeContext(searchResults)
             const promptId = promptService.get('SUPPORT_SYSTEM')?.id ?? null
 
@@ -181,18 +176,7 @@ export const supportService = {
                 knowledgeContext,
                 chatHistory.filter((m) => m.role !== 'user' || m.content !== message),
                 langNative,
-                (usage, model, finalPrompt) => {
-                    llmUsageService.recordText({
-                        userId,
-                        llmSystemPromptId: promptId,
-                        model,
-                        feature: 'SUPPORT_CHAT',
-                        finalPrompt,
-                        promptTokens: usage.promptTokens,
-                        completionTokens: usage.completionTokens,
-                        totalTokens: usage.totalTokens,
-                    })
-                },
+                llmUsageService.textUsageRecorder('SUPPORT_CHAT', userId, promptId),
                 signal,
             )) {
                 fullReply += token

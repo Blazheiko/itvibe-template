@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import aiConfig from '#config/ai.js'
 import { aiRequestSignal } from '#app/services/ai/ai-request-signal.js'
+import type { TextUsageCompleteHandler } from '#app/services/ai/types.js'
 
 const cfg = aiConfig.openaiEmbedding
 
@@ -13,16 +14,45 @@ function getClient(): OpenAI {
     return client
 }
 
+export interface EmbedOptions {
+    signal?: AbortSignal
+    /** Called once per request with the provider's usage (code-issues item 53). */
+    onComplete?: TextUsageCompleteHandler
+}
+
+// Embeddings have no completion tokens; missing usage is recorded as NULL.
+function reportUsage(
+    usage: { prompt_tokens?: number; total_tokens?: number } | undefined,
+    input: string,
+    onComplete: TextUsageCompleteHandler | undefined,
+): void {
+    if (onComplete === undefined) return
+    try {
+        onComplete(
+            {
+                promptTokens: usage?.prompt_tokens ?? null,
+                completionTokens: null,
+                totalTokens: usage?.total_tokens ?? null,
+            },
+            cfg.model,
+            input,
+        )
+    } catch {
+        // usage tracking must not break the call
+    }
+}
+
 export const openaiEmbeddingAdapter = {
     isConfigured(): boolean {
         return cfg.apiKey !== ''
     },
 
-    async embed(text: string, signal?: AbortSignal): Promise<number[]> {
+    async embed(text: string, options: EmbedOptions = {}): Promise<number[]> {
         const response = await getClient().embeddings.create(
             { model: cfg.model, input: text, dimensions: cfg.dimensions },
-            { signal: aiRequestSignal(signal) },
+            { signal: aiRequestSignal(options.signal) },
         )
+        reportUsage(response.usage, text, options.onComplete)
 
         const data = response.data[0]
         if (data === undefined) {
@@ -31,13 +61,14 @@ export const openaiEmbeddingAdapter = {
         return data.embedding
     },
 
-    async embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]> {
+    async embedBatch(texts: string[], options: EmbedOptions = {}): Promise<number[][]> {
         if (texts.length === 0) return []
 
         const response = await getClient().embeddings.create(
             { model: cfg.model, input: texts, dimensions: cfg.dimensions },
-            { signal: aiRequestSignal(signal) },
+            { signal: aiRequestSignal(options.signal) },
         )
+        reportUsage(response.usage, texts.join('\n\n'), options.onComplete)
 
         const sorted = [...response.data].sort((a, b) => a.index - b.index)
         return sorted.map((d) => d.embedding)

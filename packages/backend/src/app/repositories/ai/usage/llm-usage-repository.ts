@@ -12,7 +12,10 @@ export interface TextStatRow {
     model: string
     feature: string
     totalCalls: number
+    /** Sum over calls with known usage; NULL tokens are not counted as 0. */
     totalTokens: number
+    /** Calls the provider reported no usage for. */
+    callsWithoutUsage: number
 }
 
 export interface TextFilter {
@@ -62,8 +65,9 @@ export const llmUsageRepository: ILlmUsageRepository = {
             .select({
                 model: llmTextUsage.model,
                 feature: llmTextUsage.feature,
-                totalCalls: sql<number>`count(*)`,
-                totalTokens: sql<number>`sum(${llmTextUsage.totalTokens})`,
+                totalCalls: sql<number>`count(*)::int`,
+                totalTokens: sql<number | null>`sum(${llmTextUsage.totalTokens})::int`,
+                callsWithoutUsage: sql<number>`count(*) filter (where ${llmTextUsage.totalTokens} is null)::int`,
             })
             .from(llmTextUsage)
             .groupBy(llmTextUsage.model, llmTextUsage.feature)
@@ -73,6 +77,7 @@ export const llmUsageRepository: ILlmUsageRepository = {
             feature: r.feature,
             totalCalls: r.totalCalls,
             totalTokens: r.totalTokens ?? 0,
+            callsWithoutUsage: r.callsWithoutUsage,
         }))
     },
 }

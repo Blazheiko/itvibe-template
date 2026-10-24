@@ -31,7 +31,8 @@ export const LlmTextUsageQuerySchema = type({
     ...PaginationFields,
     ...DateRangeFields,
     'userId?': 'string',
-    'feature?': "'SUPPORT_CHAT' | 'SUPPORT_QUERY_TRANSLATION' | 'PROMPT_TEST'",
+    'feature?':
+        "'SUPPORT_CHAT' | 'SUPPORT_QUERY_TRANSLATION' | 'PROMPT_TEST' | 'SUPPORT_EMBEDDING'",
 }) as unknown as SharedQuerySchema<LlmTextUsageQueryOutput>
 
 export type LlmTextUsageQuery = typeof LlmTextUsageQuerySchema.infer
