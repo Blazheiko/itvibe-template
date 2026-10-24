@@ -16,7 +16,7 @@
 | feat-014 | 60             |
 | feat-016 | 70             |
 
-Решта відкрита.
+Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
 Шляхи відносно `packages/backend/`, якщо не вказано інше.
 
@@ -466,6 +466,8 @@
 
 ### 55. `llm_text_usage.final_prompt` зберігає повні тексти
 
+> **Відкладено** (рішення Р3 у [`open-issues-roadmap.md`](./open-issues-roadmap.md)): застосунок тестовий, промпти поки не очищаються. Повернутися до пункту перед роботою з реальними користувачами.
+
 - **Що:** у `llm_text_usage.final_prompt` безстроково зберігаються повні повідомлення користувачів та історія, і адміністратор бачить їх через `/admin/usage/text`.
 - **Наслідок:** персональні дані без політики зберігання.
 - **Пропозиція:** retention-політика, маскування, або зберігати лише метадані.
@@ -557,6 +559,8 @@
 > **Виправлено** у feat-016 (гілка `feat/redis-main-client-timeout`) за планом [`redis-main-client-timeout-plan.md`](./redis-main-client-timeout-plan.md): основний клієнт без offline queue і повторів, з таймаутом `REDIS_COMMAND_TIMEOUT_MS` (500 мс); недоступний Redis дає `503 service_unavailable` з `Retry-After: 1` без тексту ioredis; одна подія Sentry на інцидент (`redis-health.ts`); WS-з'єднання не закриваються, heartbeat не залежить від Redis, upgrade — `503`; `logoutAll` обмежений `REDIS_LOGOUT_ALL_DEADLINE_MS`. Readiness-перевірка (п. 35) — окремо.
 
 ## Що варто зробити далі
+
+> Актуальний порядок і розбиття на фічі (feat-010, feat-018…feat-036) — у [`open-issues-roadmap.md`](./open-issues-roadmap.md). Список нижче — первинна пропозиція аудиту.
 
 Пропоную оформити окремі записи в `feature_list.json` (через PR у `main`):
 
