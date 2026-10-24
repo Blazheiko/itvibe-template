@@ -175,7 +175,7 @@ const cacheDirectory = async (directoryPath: string): Promise<void> => {
 const cacheStaticSource = async (): Promise<Map<string, StaticEntry> | null> => {
     if (appConfig.serveStatic) {
         const stats = await fs.stat(STATIC_PATH).catch(() => null)
-        if (stats === null || !stats.isDirectory()) {
+        if (stats?.isDirectory() !== true) {
             logger.warn(
                 { staticPath: STATIC_PATH },
                 'SERVE_STATIC=true, but the static directory is missing: static files are not served',
@@ -316,11 +316,12 @@ const streamFile = (
             buffer.byteOffset + buffer.byteLength,
         ) as ArrayBuffer
         const startOffset = res.getWriteOffset()
-        let ok = false
-        let done = false
+        // A typed result: locals assigned inside res.cork() stay narrowed to `false`.
+        let result: [boolean, boolean] = [false, false]
         res.cork(() => {
-            ;[ok, done] = res.tryEnd(arrayBuffer, entry.size)
+            result = res.tryEnd(arrayBuffer, entry.size)
         })
+        const [ok, done] = result
         if (done) {
             stream.destroy()
             return
@@ -328,14 +329,11 @@ const streamFile = (
         if (!ok) {
             stream.pause()
             res.onWritable((offset) => {
-                let retryOk = false
-                let retryDone = false
+                let retry: [boolean, boolean] = [false, false]
                 res.cork(() => {
-                    ;[retryOk, retryDone] = res.tryEnd(
-                        arrayBuffer.slice(offset - startOffset),
-                        entry.size,
-                    )
+                    retry = res.tryEnd(arrayBuffer.slice(offset - startOffset), entry.size)
                 })
+                const [retryOk, retryDone] = retry
                 if (retryDone) stream.destroy()
                 else if (retryOk) stream.resume()
                 return retryOk
@@ -344,6 +342,8 @@ const streamFile = (
     })
 }
 
+// async on purpose: a synchronous throw becomes a rejection the caller's .catch handles.
+/* eslint-disable @typescript-eslint/require-await */
 const staticCacheHandler = async (
     res: HttpResponse,
     req: HttpRequest,
@@ -400,7 +400,10 @@ const staticCacheHandler = async (
         res.end(entry.data)
     })
 }
+/* eslint-enable @typescript-eslint/require-await */
 
+// async on purpose: a synchronous throw becomes a rejection the caller's .catch handles.
+/* eslint-disable @typescript-eslint/require-await */
 const staticHandler = async (res: HttpResponse, req: HttpRequest): Promise<void> => {
     const url = req.getUrl()
 
@@ -428,6 +431,7 @@ const staticHandler = async (res: HttpResponse, req: HttpRequest): Promise<void>
         res.end('')
     })
 }
+/* eslint-enable @typescript-eslint/require-await */
 
 export {
     memoryEntry,

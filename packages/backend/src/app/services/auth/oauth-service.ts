@@ -325,7 +325,7 @@ export const oauthService = {
             logger.info(
                 {
                     existingUser: existingUser !== undefined,
-                    userId: existingUser ? String(existingUser.id) : null,
+                    userId: existingUser !== undefined ? String(existingUser.id) : null,
                 },
                 'oauth user by email lookup',
             )

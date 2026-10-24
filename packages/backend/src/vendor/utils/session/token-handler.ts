@@ -3,10 +3,10 @@ import { maskTokenForLogs } from '#vendor/utils/helpers/mask-sensitive.js'
 import crypto from 'node:crypto'
 import appConfig from '#config/app.js'
 
-const SECRET_KEY = appConfig.key || ''
+const SECRET_KEY = appConfig.key ?? ''
 
 // CRITICAL: Validate SECRET_KEY on application startup
-if (!SECRET_KEY || SECRET_KEY.length < 32) {
+if (SECRET_KEY.length < 32) {
     logger.error('SECURITY ERROR: APP_KEY is not set or too short (minimum 32 characters required)')
     logger.error('Please set a strong APP_KEY in your environment variables')
     logger.error('Example: APP_KEY=$(openssl rand -hex 32)')
@@ -67,7 +67,14 @@ const verifySignedToken = (
 
         const [cookieUserToken, sessionId, signature] = parts
 
-        if (!cookieUserToken || !sessionId || !signature) {
+        if (
+            cookieUserToken === undefined ||
+            cookieUserToken === '' ||
+            sessionId === undefined ||
+            sessionId === '' ||
+            signature === undefined ||
+            signature === ''
+        ) {
             logger.warn('Invalid token format: missing parts')
             return null
         }

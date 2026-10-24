@@ -65,7 +65,7 @@ const parseGroups = (
     routeList.forEach((route) => {
         if ('group' in route && Array.isArray(route.group) && route.group.length > 0) {
             const prefixInitial = normalizePath(prefix)
-            const prefixGroup = normalizePath(route.prefix ?? '')
+            const prefixGroup = normalizePath(route.prefix)
             const middlewaresGroup =
                 route.middlewares !== undefined &&
                 Array.isArray(route.middlewares) &&

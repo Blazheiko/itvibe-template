@@ -23,10 +23,10 @@ describe('ws-error', () => {
                           : error._tag === 'Conflict'
                             ? 'conflict'
                             : 'internal_error',
-            ...('reason' in error && error.reason !== undefined ? { reason: error.reason } : {}),
+            ...('reason' in error ? { reason: error.reason } : {}),
         })
 
-        if ('reason' in error && error.reason !== undefined) {
+        if ('reason' in error) {
             expect(wsPayload.reason).toBe(error.reason)
         } else {
             expect(wsPayload.reason).toBeUndefined()

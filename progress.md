@@ -3,33 +3,28 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-034 - Drop users.is_admin (F17 of `docs/plan/open-issues-roadmap.md`, item 66, decision R5)
-**Branch:** `feat/drop-is-admin`
-**Tasks:** `docs/plan/open-issues-tasks.md`, F17
+**Active Feature:** feat-035 - ESLint Strict (F18 of `docs/plan/open-issues-roadmap.md`, item 68)
+**Branch:** `feat/eslint-strict`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F18 (three PRs: backend, frontend, api-playground)
 
 ## Status
 
 ### Done
 
-- [x] F17.S: PR #88 (feat-033 done, feat-034 `in_progress`)
-- [x] F17.1: dev DB `SELECT count(*) FROM users WHERE is_admin <> (role = 'admin')` — **0** mismatches (94 users, 1 admin by both fields)
-- [x] F17.2: `isAdmin` removed from `user-transformer.ts`, the auth spec fixture, the backend README and from the Drizzle schema (separate commit, the column still exists in the DB at that point — the schema field had to go too, otherwise the transformer would start leaking it). Left: frontend `userStore.isAdmin()` (reads `role`), the `isAdminChannelSubscribed` WS flag, an "extra key" fixture in `ws-payload-guards.spec.ts`
-- [x] F17.3: migration `20261024171546_drop_users_is_admin` — `ALTER TABLE "users" DROP COLUMN "is_admin";`
-- [x] F17.D: `database.md` (migration row with the irreversibility note), `roles-capabilities.md`, `repositories-transformers.md`, `architecture.md`, `glossary.md`; code-issues 66 fixed
+- [x] F18.S: PR #90 (feat-034 done, feat-035 `in_progress`)
+- [x] F18.1 backend (PR 1): the backend override block that switched off 35 rules is gone; backend source runs the full `strictTypeChecked` + project rules. Before: 626 errors in 132 files with the overrides removed
 
-## Evidence of Completion
+### Next
 
-- `drizzle-kit check` — clean
-- fresh DB `itvibe_f17`: `db:migrate` (3 migrations) succeeded, no `is_admin` column; `db:seed --demo` succeeded
-- manual golden path on that DB (backend on :3199): admin login `success` with `role: admin`, `GET /api/admin/knowledge-base/init-status` → 200 for the admin and 403 for the user
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` passed; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
-- note: drizzle config reads `PGSQL_DB_NAME`, not `DATABASE_URL` — a `DATABASE_URL=... db:migrate` run went to the dev DB and failed on the init migration (`type "chat_role" already exists`) without changes; the dev DB's migration journal is out of sync with the folder and still has `is_admin`
+- [ ] F18.2 frontend (PR 2), F18.3 api-playground (PR 3), F18.X
+
+## Evidence of Completion — PR 1 (backend)
+
+- Rules still off, backend tests only (`*.spec.ts`, `*.test.ts`, `src/test-support/**`), with reasons in `eslint.config.ts`: `explicit-function-return-type`, `no-explicit-any`, `no-empty-function`, `require-await`, `no-non-null-assertion`, `no-dynamic-delete`
+- Inline `eslint-disable` with reasons: `require-await` around `staticHandler`/`staticCacheHandler` (a sync throw must become a rejection for the caller's `.catch`), `consistent-type-definitions` on `AppErrorHttpPayload` (needs the implicit index signature of a type alias), `no-unnecessary-type-parameters` on a test helper
+- Fixes that matter beyond style: `||` on env strings replaced by `nonEmpty(x) ?? default` (new `vendor/utils/env/non-empty.ts`, same `''`-means-missing behaviour); middleware kernel typed `Record<string, Middleware>` instead of `Function`; `process.on('uncaughtException')` gets a sync wrapper; `switch` over HTTP methods is exhaustive
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` passed (backend 843); `test:redis` with `REDIS_TEST_URL` — 31 passed; `test:pg` with `PG_TEST_URL` — 22 passed; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 
 ## Files Modified
 
-- new: `packages/backend/src/drizzle/migrations/20261024171546_drop_users_is_admin/`
-- updated: `packages/backend/src/database/schema.ts`, `src/app/transformers/user-transformer.ts`, `src/app/services/auth/auth-phone-foundation.spec.ts`, `packages/backend/README.md`, docs listed above, `docs/presentations/PRESENTATION.html`
-
-## Notes for Next Session
-
-- F18 (feat-035): ESLint strictTypeChecked, three PRs
+- `eslint.config.ts`, `documentation/reference/toolchain.md`, `packages/backend/src/**` (58 files, mostly `type` → `interface` autofix and the fixes above)

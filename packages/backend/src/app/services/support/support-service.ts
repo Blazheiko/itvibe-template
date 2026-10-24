@@ -76,7 +76,7 @@ function formatKnowledgeContext(
                 r.screenshotKey !== null
                     ? `\n[This article has a screenshot. Use [screenshot:${String(r.id)}] to show it if relevant.]`
                     : ''
-            return `--- Article ${i + 1} (id: ${String(r.id)}) ---\nTitle: ${r.title}\n${r.content}${screenshotNote}`
+            return `--- Article ${String(i + 1)} (id: ${String(r.id)}) ---\nTitle: ${r.title}\n${r.content}${screenshotNote}`
         })
         .join('\n\n')
 }

@@ -44,11 +44,12 @@ Path aliases бекенду в [`packages/backend/tsconfig.json`](https://github
 
 - база: `eslint.configs.recommended`, `tseslint.configs.strictTypeChecked`, `stylisticTypeChecked`, type-aware режим через `projectService`;
 - глобально як `error`: `explicit-function-return-type`, `explicit-module-boundary-types`, `no-explicit-any`, сімейство `no-unsafe-*`, `strict-boolean-expressions` (без `allowString`/`allowNumber`/`allowNullableObject`), `switch-exhaustiveness-check`, `consistent-type-imports` (inline type imports), `consistent-type-exports`, `no-unused-vars` з ігноруванням `^_`;
-- для `packages/api-playground/**`, `packages/frontend/**` і `packages/backend/**` більшість суворих правил вимкнено (`no-explicit-any`, `no-unsafe-*`, `strict-boolean-expressions`, `no-floating-promises`, `no-misused-promises`, `require-await`, `prefer-nullish-coalescing` та ін.). Для бекенду додатково вимкнено `no-base-to-string`, `no-unsafe-function-type`, `no-constant-binary-expression` тощо;
+- бекенд перевіряється повним профілем. Для тестів бекенду (`*.spec.ts`, `*.test.ts`, `src/test-support`) вимкнено лише `explicit-function-return-type`, `no-explicit-any`, `no-empty-function`, `require-await`, `no-non-null-assertion` і `no-dynamic-delete` — моки та фікстури; причина кожного — коментар у конфігу. Поодинокі винятки в коді позначені `eslint-disable` з поясненням;
+- для `packages/api-playground/**` і `packages/frontend/**` більшість суворих правил поки вимкнено (`no-explicit-any`, `no-unsafe-*`, `strict-boolean-expressions`, `no-floating-promises`, `no-misused-promises`, `require-await`, `prefer-nullish-coalescing` та ін.);
 - `.vue` файли frontend і api-playground коренева конфігурація ігнорує. Їх перевіряють власні `eslint.config.ts` пакетів через `pnpm -r --if-present lint:check`, який запускає кореневий `pnpm lint`.
 
 ::: warning
-Фактично суворий профіль діє лише для `packages/shared` та інших файлів поза трьома пакетами з послабленнями. Бекенд, фронтенд і playground перевіряються значно м'якше, ніж можна подумати з `strictTypeChecked`.
+Фронтенд і playground перевіряються значно м'якше, ніж можна подумати з `strictTypeChecked`; повний профіль діє для `packages/shared`, бекенду та кореневих файлів.
 :::
 
 ## Prettier

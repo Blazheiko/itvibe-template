@@ -121,7 +121,7 @@ const stopSIGTERM = (): void => {
     logger.info('stop SIGTERM')
     void stopGracefully('SIGTERM')
 }
-const stopUncaughtException = async (err: unknown, origin: unknown): Promise<void> => {
+const handleUncaughtException = async (err: unknown, origin: unknown): Promise<void> => {
     logger.error({ err, origin, sentrySkip: true }, 'event uncaughtException')
     sentryService.captureException(err, {
         extra: { origin: String(origin) },
@@ -136,6 +136,10 @@ const stopUncaughtException = async (err: unknown, origin: unknown): Promise<voi
         removeListeners()
         process.exit(1)
     }
+}
+// process.on() ignores the returned promise; handleUncaughtException catches its own errors.
+const stopUncaughtException = (err: unknown, origin: unknown): void => {
+    void handleUncaughtException(err, origin)
 }
 
 start()

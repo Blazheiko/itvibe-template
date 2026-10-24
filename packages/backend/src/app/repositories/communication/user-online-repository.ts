@@ -43,8 +43,9 @@ function buildHistoryWhereClause(
         conditions.push(lt(userOnline.connectedAt, nextDay))
     }
 
-    if ('cursor' in filters && filters.cursor !== undefined) {
-        conditions.push(lt(userOnline.id, filters.cursor))
+    const cursor = 'cursor' in filters ? filters.cursor : undefined
+    if (cursor !== undefined) {
+        conditions.push(lt(userOnline.id, cursor))
     }
 
     if (conditions.length === 1) return conditions[0]

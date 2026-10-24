@@ -111,7 +111,7 @@ export const createRedisHealth = (
     })
 
     return {
-        get state() {
+        get state(): RedisHealthState {
             return state
         },
         markUnavailable,

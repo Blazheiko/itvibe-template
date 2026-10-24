@@ -97,7 +97,7 @@ const postponeAndKill = async (
     cmd: string,
     op: () => Promise<unknown>,
 ): Promise<unknown> => {
-    const id = Number(await target.client('ID'))
+    const id = await target.client('ID')
     const blockedBefore = await readBlockedClients(admin)
     await pause()
     const outcome = op().then(
@@ -152,7 +152,7 @@ describe.skipIf(!hasRedis)('main Redis client against a real server', () => {
 
     describe('waitForPostponed', () => {
         it("sees a postponed SETEX by the client's blocked flag", async () => {
-            const id = Number(await control.client('ID'))
+            const id = await control.client('ID')
             await pause()
             const pending = control.setex('probe', 10, 'v')
             try {
@@ -164,7 +164,7 @@ describe.skipIf(!hasRedis)('main Redis client against a real server', () => {
         })
 
         it('falls back to blocked_clients when the flag signal is off', async () => {
-            const id = Number(await control.client('ID'))
+            const id = await control.client('ID')
             const blockedBefore = await readBlockedClients(admin)
             await pause()
             const pending = control.setex('probe', 10, 'v')
@@ -182,7 +182,7 @@ describe.skipIf(!hasRedis)('main Redis client against a real server', () => {
         })
 
         it('fails with an explicit message when nothing is postponed', async () => {
-            const id = Number(await control.client('ID'))
+            const id = await control.client('ID')
             await expect(waitForPostponed(admin, id, 'setex', { timeoutMs: 200 })).rejects.toThrow(
                 /was not seen postponed/,
             )
@@ -288,7 +288,7 @@ describe.skipIf(!hasRedis)('main Redis client against a real server', () => {
     })
 
     it('dropped connection: commands fail at once, the client reconnects by itself', async () => {
-        const id = Number(await client.client('ID'))
+        const id = await client.client('ID')
         await admin.call('CLIENT', 'KILL', 'ID', String(id))
         await waitFor(() => client.status !== 'ready', 'disconnect')
 

@@ -8,8 +8,9 @@ import authGuard from '#vendor/utils/middlewares/core/auth-guard.js'
 import adminGuard from '#app/middlewares/admin-guard.js'
 import csrfGuard from '#app/middlewares/csrf-guard.js'
 import wsAdminGuard from '#app/middlewares/ws-admin-guard.js'
+import type { Middleware } from '#vendor/types/types.js'
 
-const middlewares: Record<string, Function> = {
+const middlewares: Record<string, Middleware> = {
     session_web: sessionWeb,
     session_api: sessionAPI,
     csrf_guard: csrfGuard,

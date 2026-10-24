@@ -320,7 +320,7 @@ const sendResponse = (
     } else res.end(makeJson(payload))
 }
 
-type CanonicalErrorBody = {
+interface CanonicalErrorBody {
     status: 'error'
     code: string
     message: string
@@ -350,7 +350,7 @@ const sendErrorResponse = (
 //   listenSocket: us_listen_socket | null;
 // }
 
-type HttpSentryContext = {
+interface HttpSentryContext {
     requestId?: string | undefined
     userId?: string | undefined
     route?: string | undefined
@@ -710,7 +710,9 @@ const registerHttpRoute = (server: TemplatedApp, route: RouteItem): void => {
         case 'del':
             server.del(path, handler)
             return
-        default:
+        case 'delete':
+        case 'options':
+        case 'ws':
             throw new Error(`Unsupported HTTP route method: ${route.method}`)
     }
 }

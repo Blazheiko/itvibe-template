@@ -48,6 +48,8 @@ type AdminKnowledgeBaseListQueryInput = typeof AdminKnowledgeBaseListQuerySchema
 type LlmTextUsageQuery = typeof LlmTextUsageQuerySchema.infer
 type LlmTextUsageQueryInput = typeof LlmTextUsageQuerySchema.inferIn
 
+// T is the expected inferred type, supplied by each assertion.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 const validate = <T>(schema: ReturnType<typeof type>, input: unknown): T =>
     (arkValidator(schema as never).validate(input) as { ok: true; value: T }).value
 

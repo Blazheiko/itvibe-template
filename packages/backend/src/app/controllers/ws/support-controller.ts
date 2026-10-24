@@ -7,10 +7,10 @@ import type { SupportChatInput, SupportOpenChatInput } from 'shared/schemas'
 import type { SupportChatResponse, SupportOpenChatResponse } from 'shared/responses'
 
 export default {
-    async openChat(context: WsContext<SupportOpenChatInput>): Promise<SupportOpenChatResponse> {
+    openChat(context: WsContext<SupportOpenChatInput>): Promise<SupportOpenChatResponse> {
         const { userData } = context
         if (userData?.userId === undefined) {
-            return appErrorToWsError(unauthorized())
+            return Promise.resolve(appErrorToWsError(unauthorized()))
         }
 
         const payload = getTypedPayload(context)
@@ -22,13 +22,13 @@ export default {
             payload.language,
         )
 
-        return { status: 'ok' }
+        return Promise.resolve({ status: 'ok' })
     },
 
-    async chat(context: WsContext<SupportChatInput>): Promise<SupportChatResponse> {
+    chat(context: WsContext<SupportChatInput>): Promise<SupportChatResponse> {
         const { userData } = context
         if (userData?.userId === undefined) {
-            return appErrorToWsError(unauthorized())
+            return Promise.resolve(appErrorToWsError(unauthorized()))
         }
 
         const payload = getTypedPayload(context)
@@ -41,6 +41,6 @@ export default {
             payload.language,
         )
 
-        return { status: 'ok' }
+        return Promise.resolve({ status: 'ok' })
     },
 }

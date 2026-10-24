@@ -42,12 +42,12 @@ export function maskEmailForLogs(email: string): string {
     const maskedLocal =
         localPart.length <= 2
             ? `${localPart[0] ?? '*'}${repeatMask(localPart.length)}`
-            : `${localPart[0]}${repeatMask(localPart.length - 2)}${localPart.at(-1) ?? ''}`
+            : `${localPart[0] ?? ''}${repeatMask(localPart.length - 2)}${localPart.at(-1) ?? ''}`
 
     const maskedDomain =
         primaryDomain.length <= 2
             ? `${primaryDomain[0] ?? '*'}${repeatMask(primaryDomain.length)}`
-            : `${primaryDomain[0]}${repeatMask(primaryDomain.length - 2)}${primaryDomain.at(-1) ?? ''}`
+            : `${primaryDomain[0] ?? ''}${repeatMask(primaryDomain.length - 2)}${primaryDomain.at(-1) ?? ''}`
 
     return `${maskedLocal}@${maskedDomain}${tldSuffix}`
 }

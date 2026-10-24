@@ -78,7 +78,11 @@ const route = (url: string, extra: Partial<Parameters<typeof defineRoute>[0]> = 
     middlewares: [],
 })
 
-type Sent = { status: string; body: unknown; onDataCalled: boolean }
+interface Sent {
+    status: string
+    body: unknown
+    onDataCalled: boolean
+}
 
 // `chunks` are delivered to res.onData one by one; the last one has isLast.
 const send = async (

@@ -48,7 +48,7 @@ vi.mock('#vendor/utils/middlewares/core/execute-httpMiddlewares.js', () => ({
     default: vi.fn().mockResolvedValue(true),
 }))
 
-type Setup = {
+interface Setup {
     status?: number
     headers?: Record<string, string>
     cookie?: boolean
@@ -77,7 +77,7 @@ const route = (name: string, setup: Setup) => {
     }
 }
 
-type Sent = {
+interface Sent {
     status: string
     headers: [string, string][]
     body: string | undefined

@@ -1,4 +1,5 @@
 import { env } from 'node:process'
+import { nonEmpty } from '#vendor/utils/env/non-empty.js'
 
 const INTEGER = /^\d+$/
 const errors: string[] = []
@@ -16,10 +17,10 @@ const readPositiveInteger = (name: string, fallback: number): number => {
 }
 
 export default Object.freeze({
-    port: Number(env['REDIS_PORT'] || 6379),
-    host: env['REDIS_HOST'] || '127.0.0.1',
-    password: env['REDIS_PASSWORD'] || null,
-    keyPrefix: env['REDIS_PREFIX'] || 'uwebsocket:', // max 16 characters long, only letters, numbers, :,_,-
+    port: Number(nonEmpty(env['REDIS_PORT']) ?? 6379),
+    host: nonEmpty(env['REDIS_HOST']) ?? '127.0.0.1',
+    password: nonEmpty(env['REDIS_PASSWORD']) ?? null,
+    keyPrefix: nonEmpty(env['REDIS_PREFIX']) ?? 'uwebsocket:', // max 16 characters long, only letters, numbers, :,_,-
     /** Command timeout of the main (sessions, WS tokens) client. */
     commandTimeoutMs: readPositiveInteger('REDIS_COMMAND_TIMEOUT_MS', 500),
     /** Whole SCAN/DEL loop of destroyAllSessions (logoutAll). */

@@ -2,6 +2,7 @@ import { hashPassword, validatePassword } from 'metautil'
 import { Result } from 'better-result'
 import type { Auth, Session } from '#vendor/types/types.js'
 import { smsAuthChallengeRepository, userRepository } from '#app/repositories/index.js'
+import type { UserRow } from '#app/repositories/index.js'
 import { userTransformer } from '#app/transformers/index.js'
 import {
     badRequest,
@@ -52,7 +53,7 @@ import { getSessionCsrfToken } from '#vendor/utils/session/csrf-token.js'
 const REGISTER_PHONE_FLOW: SmsVerificationFlow = 'register_phone'
 const LINK_PHONE_FLOW: SmsVerificationFlow = 'link_phone'
 
-type AuthSuccessPayload = {
+interface AuthSuccessPayload {
     status: 'success'
     user: ReturnType<typeof userTransformer.serialize>
     wsUrl: string
@@ -60,7 +61,7 @@ type AuthSuccessPayload = {
     csrfToken?: string
 }
 
-type GenericAcceptedPayload = {
+interface GenericAcceptedPayload {
     status: 'success'
     message: string
 }
@@ -121,11 +122,14 @@ function normalizePhone(input: string, defaultCountry?: string): AppResult<strin
     }
 }
 
-async function createPasswordHash(password: string) {
+async function createPasswordHash(password: string): Promise<AppResult<string>> {
     return await tryInternal(() => hashPassword(password), 'Failed to hash password')
 }
 
-async function requireCurrentPasswordReauth(userId: bigint, currentPassword: string) {
+async function requireCurrentPasswordReauth(
+    userId: bigint,
+    currentPassword: string,
+): Promise<AppResult<UserRow>> {
     const userResult = await tryInternal(
         () => userRepository.findById(userId),
         'Failed to load user',
@@ -139,12 +143,13 @@ async function requireCurrentPasswordReauth(userId: bigint, currentPassword: str
         return Result.err(notFound('User', 'User not found'))
     }
 
-    if (user.password === null || user.password === '') {
+    const passwordHash = user.password
+    if (passwordHash === null || passwordHash === '') {
         return Result.err(badRequest('Set a password before managing recovery methods'))
     }
 
     const validResult = await tryInternal(
-        () => validatePassword(currentPassword, user.password!),
+        () => validatePassword(currentPassword, passwordHash),
         'Failed to validate current password',
     )
     if (Result.isError(validResult)) {
@@ -589,7 +594,7 @@ export const authService = {
         }
 
         const challenge = challengeResult.value
-        if (challenge === undefined || challenge.flow !== REGISTER_PHONE_FLOW) {
+        if (challenge?.flow !== REGISTER_PHONE_FLOW) {
             return Result.err(notFound('Challenge', 'Phone registration challenge not found'))
         }
 
@@ -654,7 +659,7 @@ export const authService = {
         }
 
         const challenge = challengeResult.value
-        if (challenge === undefined || challenge.flow !== REGISTER_PHONE_FLOW) {
+        if (challenge?.flow !== REGISTER_PHONE_FLOW) {
             return Result.err(notFound('Challenge', 'Phone registration challenge not found'))
         }
 
@@ -908,7 +913,7 @@ export const authService = {
         }
 
         const challenge = challengeResult.value
-        if (challenge === undefined || challenge.flow !== LINK_PHONE_FLOW) {
+        if (challenge?.flow !== LINK_PHONE_FLOW) {
             return Result.err(notFound('Challenge', 'Phone linking challenge not found'))
         }
 
@@ -1133,12 +1138,13 @@ export const authService = {
         }
 
         // Same answer as a wrong password: do not reveal that an OAuth-only account exists.
-        if (user.password === null || user.password === '') {
+        const passwordHash = user.password
+        if (passwordHash === null || passwordHash === '') {
             return invalidCredentials()
         }
 
         const validResult = await tryInternal(
-            () => validatePassword(password, user.password!),
+            () => validatePassword(password, passwordHash),
             'Failed to validate password',
         )
         if (Result.isError(validResult)) {

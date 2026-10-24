@@ -73,7 +73,10 @@ const route = (
     middlewares: [],
 })
 
-type Sent = { status: string; body: unknown }
+interface Sent {
+    status: string
+    body: unknown
+}
 
 const send = async (
     method: 'post' | 'patch',

@@ -383,7 +383,7 @@ export const passwordResetService = {
         }
 
         const user = userResult.value
-        const shouldSendSms = user !== undefined && user.email === null
+        const shouldSendSms = user?.email === null
 
         const pendingChallengeResult = await tryInternal(
             () =>
@@ -601,9 +601,10 @@ export const passwordResetService = {
         const newPasswordHash = newPasswordHashResult.value
         const previousSessionToken = user.sessionToken
 
-        if (user.phone !== null && user.phone !== '') {
+        const userPhone = user.phone
+        if (userPhone !== null && userPhone !== '') {
             const invalidatePhoneChallengesResult = await tryInternal(
-                () => invalidatePendingPhoneChallenges(user.phone!),
+                () => invalidatePendingPhoneChallenges(userPhone),
                 'Failed to invalidate pending phone challenges after email password reset',
             )
             if (Result.isError(invalidatePhoneChallengesResult)) {
@@ -692,7 +693,7 @@ export const passwordResetService = {
         }
 
         const challenge = challengeResult.value
-        if (challenge === undefined || challenge.flow !== RESET_PHONE_FLOW) {
+        if (challenge?.flow !== RESET_PHONE_FLOW) {
             return Result.err(badRequest('Phone reset challenge is invalid'))
         }
 
@@ -732,7 +733,7 @@ export const passwordResetService = {
         }
 
         const user = userResult.value
-        if (user === undefined || user.email !== null || user.phone !== challenge.phone) {
+        if (user?.email !== null || user.phone !== challenge.phone) {
             return Result.err(badRequest('Phone reset challenge is invalid'))
         }
 

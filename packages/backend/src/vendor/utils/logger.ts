@@ -6,7 +6,7 @@ import loggingConfig from '#config/logging.js'
 
 type BackendLogger = ReturnType<typeof pino>
 
-type LogEntry = {
+interface LogEntry {
     level?: number
     msg?: string
     err?: unknown
@@ -20,7 +20,7 @@ type LogEntry = {
     method?: string
 }
 
-type SentryLogContext = {
+interface SentryLogContext {
     requestId?: string
     userId?: string
     route?: string
@@ -29,7 +29,7 @@ type SentryLogContext = {
 
 const ERROR_LEVEL = 50
 const isProduction = appConfig.env === 'prod' || appConfig.env === 'production'
-const buildPretty = isProduction ? undefined : (await import('pino-pretty')).build
+const buildPretty = isProduction ? null : (await import('pino-pretty')).build
 
 function buildSentryContext(entry: LogEntry): SentryLogContext {
     const context: SentryLogContext = {}
@@ -121,11 +121,12 @@ function createLogger(): BackendLogger {
             },
         }
 
-        const mainStream = isProduction
-            ? destination({ sync: false })
-            : buildPretty!({
-                  colorize: true,
-              })
+        const mainStream =
+            buildPretty === null
+                ? destination({ sync: false })
+                : buildPretty({
+                      colorize: true,
+                  })
 
         return pino(
             baseConfig,

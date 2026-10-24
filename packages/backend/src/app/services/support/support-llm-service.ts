@@ -5,6 +5,7 @@ import type { SupportChatRow } from '#app/repositories/index.js'
 import { resolveLanguageName } from 'shared/enums'
 import logger from '#logger'
 import supportConfig from '#config/support.js'
+import { nonEmpty } from '#vendor/utils/env/non-empty.js'
 
 function buildNativeLanguageInstruction(langNative: string): string {
     const nativeLanguageName = resolveLanguageName(langNative)
@@ -23,7 +24,8 @@ export const supportLlmService = {
         signal?: AbortSignal,
     ): AsyncGenerator<string, void, undefined> {
         const systemPromptBase =
-            promptService.getContent('SUPPORT_FIRST_CHAT') || supportConfig.defaultFirstChatPrompt
+            nonEmpty(promptService.getContent('SUPPORT_FIRST_CHAT')) ??
+            supportConfig.defaultFirstChatPrompt
         const temperature =
             promptService.getTemperature('SUPPORT_FIRST_CHAT') ??
             supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.temperature
@@ -56,7 +58,8 @@ export const supportLlmService = {
         signal?: AbortSignal,
     ): AsyncGenerator<string, void, undefined> {
         const systemPromptTemplate =
-            promptService.getContent('SUPPORT_SYSTEM') || supportConfig.defaultSystemPrompt
+            nonEmpty(promptService.getContent('SUPPORT_SYSTEM')) ??
+            supportConfig.defaultSystemPrompt
         const temperature =
             promptService.getTemperature('SUPPORT_SYSTEM') ??
             supportConfig.defaultGeneration.SUPPORT_SYSTEM.temperature

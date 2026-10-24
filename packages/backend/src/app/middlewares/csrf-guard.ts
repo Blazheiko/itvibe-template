@@ -1,10 +1,10 @@
 import { timingSafeEqual } from 'node:crypto'
 
 import csrfConfig from '#config/csrf.js'
-import type { HttpContext, Method, Middleware } from '#vendor/types/types.js'
+import type { HttpContext, Middleware } from '#vendor/types/types.js'
 import { isValidCsrfToken } from '#vendor/utils/session/csrf-token.js'
 
-const UNSAFE_METHODS = new Set<Method | string>(['post', 'put', 'patch', 'delete', 'del'])
+const UNSAFE_METHODS = new Set<string>(['post', 'put', 'patch', 'delete', 'del'])
 
 const normalizeOrigin = (value: string): string | null => {
     try {

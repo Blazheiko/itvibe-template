@@ -23,7 +23,7 @@ export default async function setup(): Promise<(() => Promise<void>) | undefined
 
     const connection = {
         host: url.hostname,
-        port: Number(url.port || 5432),
+        port: Number(url.port === '' ? 5432 : url.port),
         user: decodeURIComponent(url.username),
         password: decodeURIComponent(url.password),
         database,

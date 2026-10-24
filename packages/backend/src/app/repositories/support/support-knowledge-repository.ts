@@ -56,7 +56,7 @@ export const supportKnowledgeRepository = {
                 : db.select({ count: count() }).from(supportKnowledgeBase),
         ])
 
-        const total = Number(totalResult[0]?.count ?? 0)
+        const total = totalResult[0]?.count ?? 0
         return { rows, total }
     },
 
