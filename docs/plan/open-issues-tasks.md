@@ -108,7 +108,7 @@
       **AC:** unit (мок `res`): `upgrade` не викликано, статус 401, `onOpen` не настає.
 - [x] **F03.2** `sendResponse`: `Cache-Control: no-store`, якщо контролер не задав свій (п. 42).
       **AC:** тести: 200 JSON, 204, 4xx мають `no-store`; заголовок з `responseData.headers` не перезаписується; відповіді статики без змін.
-- [x] **F03.D** Шаблон D: `websocket.md`, `caching.md`. **F03.E**, **F03.X**.
+- [x] **F03.D** Шаблон D: `websocket.md`, `caching.md`. **F03.E** ✅, **F03.X** ✅.
 
 ### F04 Push Access & Methods (п. 47, 48, 67)
 
@@ -125,7 +125,7 @@
 
 ### F06 Storage Hardening (п. 32, 44, 45, 46)
 
-- [ ] **F06.S** Шаблон S (M).
+- [x] **F06.S** Шаблон S (M).
 - [ ] **F06.1** `deleteFromS3` через `buildKey`; прибрати `buildFullS3Key` з `avatar-service.ts`, `knowledge-base-service.ts` (п. 44).
       **AC:** unit: відносний ключ → `<prefix>/key`; `grep buildFullS3Key` порожній.
 - [ ] **F06.2** Утиліта `detectFileType(buffer)` за magic bytes (JPEG, PNG, WebP, GIF + типи бази знань).
