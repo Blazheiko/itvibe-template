@@ -11,6 +11,7 @@ function createTextAdapter(): ITextAdapter {
     if (aiConfig.drivers.text === 'xai') {
         return xaiTextAdapter
     }
+    // 'mistral' — validated at start (validateRuntimeConfig), no silent fallback.
     return mistralaiTextAdapter
 }
 

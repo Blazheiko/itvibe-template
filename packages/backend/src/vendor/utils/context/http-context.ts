@@ -20,7 +20,11 @@ const getDefaultAuth = (): Auth => ({
     logoutAll: () => Promise.resolve(0),
 })
 
-export default (httpData: HttpData, responseData: ResponseData): HttpContext => {
+export default (
+    httpData: HttpData,
+    responseData: ResponseData,
+    signal: AbortSignal = new AbortController().signal,
+): HttpContext => {
     const requestId = randomUUID()
     const requestLogger = logger.child({
         requestId,
@@ -33,5 +37,6 @@ export default (httpData: HttpData, responseData: ResponseData): HttpContext => 
         responseData,
         session: getDefaultSession(),
         auth: getDefaultAuth(),
+        signal,
     }
 }

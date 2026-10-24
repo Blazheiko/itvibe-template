@@ -24,6 +24,11 @@ export interface TextStreamOptions {
      * Adapters that do not support tool calling must silently ignore this field.
      */
     toolCallHandler?: ToolCallHandler
+    /**
+     * Cancels the call (HTTP client gone, WS connection closed). Adapters combine it
+     * with AI_REQUEST_TIMEOUT_MS via aiRequestSignal.
+     */
+    signal?: AbortSignal
 }
 
 export interface ITextAdapter {

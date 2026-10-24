@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import aiConfig from '#config/ai.js'
+import { aiRequestSignal } from '#app/services/ai/ai-request-signal.js'
 
 const cfg = aiConfig.openaiEmbedding
 
@@ -17,12 +18,11 @@ export const openaiEmbeddingAdapter = {
         return cfg.apiKey !== ''
     },
 
-    async embed(text: string): Promise<number[]> {
-        const response = await getClient().embeddings.create({
-            model: cfg.model,
-            input: text,
-            dimensions: cfg.dimensions,
-        })
+    async embed(text: string, signal?: AbortSignal): Promise<number[]> {
+        const response = await getClient().embeddings.create(
+            { model: cfg.model, input: text, dimensions: cfg.dimensions },
+            { signal: aiRequestSignal(signal) },
+        )
 
         const data = response.data[0]
         if (data === undefined) {
@@ -31,14 +31,13 @@ export const openaiEmbeddingAdapter = {
         return data.embedding
     },
 
-    async embedBatch(texts: string[]): Promise<number[][]> {
+    async embedBatch(texts: string[], signal?: AbortSignal): Promise<number[][]> {
         if (texts.length === 0) return []
 
-        const response = await getClient().embeddings.create({
-            model: cfg.model,
-            input: texts,
-            dimensions: cfg.dimensions,
-        })
+        const response = await getClient().embeddings.create(
+            { model: cfg.model, input: texts, dimensions: cfg.dimensions },
+            { signal: aiRequestSignal(signal) },
+        )
 
         const sorted = [...response.data].sort((a, b) => a.index - b.index)
         return sorted.map((d) => d.embedding)

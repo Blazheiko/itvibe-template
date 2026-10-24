@@ -7,6 +7,7 @@ import type {
 } from '#vendor/types/types.js'
 
 import logger from '#vendor/utils/logger.js'
+import { connectionSignal } from '#vendor/utils/network/ws-connection-signal.js'
 import { randomUUID } from 'crypto'
 // import getRedisSessionStorage from '#vendor/utils/session/getRedisSessionStorage.js';
 
@@ -50,5 +51,6 @@ export default (
         userData,
         session: null,
         auth: null,
+        signal: connectionSignal(wsData.ws),
     }
 }

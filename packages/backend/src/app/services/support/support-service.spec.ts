@@ -35,6 +35,7 @@ const promptServiceMock = {
 
 const loggerMock = {
     error: vi.fn(),
+    info: vi.fn(),
 }
 
 vi.mock('#app/repositories/support/support-repository.js', () => ({
@@ -123,5 +124,49 @@ describe('supportService', () => {
                 cause: expect.any(Error),
             })
         }
+    })
+
+    describe('cancellation when the WS connection closes (code-issues item 51)', () => {
+        const abortingStream = async function* (): AsyncGenerator<string, void, undefined> {
+            yield 'partial'
+            throw new DOMException('closed', 'AbortError')
+        }
+
+        it('forwards the connection signal and does not report a closed connection as a failure', async () => {
+            supportRepositoryMock.addChatMessage.mockResolvedValue(undefined)
+            supportRepositoryMock.findChatHistory.mockResolvedValue([])
+            supportQueryTranslationServiceMock.translateToEnglish.mockResolvedValue('hello')
+            supportEmbeddingServiceMock.search.mockResolvedValue([])
+            supportLlmServiceMock.chatStream.mockImplementation(abortingStream)
+            const controller = new AbortController()
+
+            const { supportService } = await loadSupportService()
+            await supportService.chat(7n, 'hello', 'conn-1', controller.signal)
+
+            expect(supportLlmServiceMock.chatStream.mock.calls[0]?.at(-1)).toBe(controller.signal)
+            expect(loggerMock.error).not.toHaveBeenCalled()
+            const events = broadcastServiceMock.broadcastMessageToUserConnection.mock.calls.map(
+                (call) => JSON.stringify(call),
+            )
+            // The partial token was streamed (so the spy sees this connection's events)…
+            expect(events.some((event) => event.includes('support_chat_token'))).toBe(true)
+            // …but the abort produced no error event.
+            expect(events.some((event) => event.includes('support_chat_error'))).toBe(false)
+            expect(supportRepositoryMock.addChatMessage).toHaveBeenCalledTimes(1)
+        })
+
+        it('openChat forwards the signal and stays quiet when aborted', async () => {
+            supportRepositoryMock.findChatHistory.mockResolvedValue([])
+            supportLlmServiceMock.openChatStream.mockImplementation(abortingStream)
+            const controller = new AbortController()
+
+            const { supportService } = await loadSupportService()
+            await supportService.openChat(7n, 'conn-1', controller.signal)
+
+            expect(supportLlmServiceMock.openChatStream.mock.calls[0]?.at(-1)).toBe(
+                controller.signal,
+            )
+            expect(loggerMock.error).not.toHaveBeenCalled()
+        })
     })
 })

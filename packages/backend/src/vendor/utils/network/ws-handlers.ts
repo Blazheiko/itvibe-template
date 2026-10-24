@@ -1,4 +1,5 @@
 import logger from '#vendor/utils/logger.js'
+import { abortConnection } from './ws-connection-signal.js'
 import wsApiHandler from '../routing/ws-api-dispatcher.js'
 import { generateUUID } from 'metautil'
 import type {
@@ -366,6 +367,8 @@ const onOpen = (ws: MyWebSocket): void => {
 }
 
 const onClose = async (ws: MyWebSocket, code: number, message: ArrayBuffer): Promise<void> => {
+    // First, so work running for this connection (AI streaming) stops.
+    abortConnection(ws)
     logger.info({ code }, 'onClose code')
     logger.info({ message }, 'onClose message')
     try {

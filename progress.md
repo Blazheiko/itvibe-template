@@ -3,35 +3,37 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-024 - WebSocket Cleanup (F07 of `docs/plan/open-issues-roadmap.md`, items 17, 19)
-**Branch:** `feat/ws-cleanup`
-**Tasks:** `docs/plan/open-issues-tasks.md`, F07
+**Active Feature:** feat-027 - AI Reliability (F10 of `docs/plan/open-issues-roadmap.md`, items 23, 50, 51)
+**Branch:** `feat/ai-reliability`
+**Plan:** `docs/plan/ai-reliability-plan.md`; tasks: `docs/plan/open-issues-tasks.md`, F10
 
 ## Status
 
 ### Done
 
-- [x] F07.S: PR #72 (feat-023 done, feat-024 `in_progress`)
-- [x] F07.1 (item 17): `utils/ws-event.ts` — `normalizeApiPrefix`, `WS_API_PREFIX` from `VITE_API_PATH_PREFIX` (default `api`), `buildWsEvent`; typed in `env.d.ts`, documented in `.env.example`; used by `useWebSocketConnection.websocketApi`
-- [x] F07.2 (feat-009 follow-up): the «Request already in progress» check looked up `${timestamp}_${event}` while the request was stored under `event`, so it never fired and a second request for the same event overwrote the first; `hasPendingRequest` checks the same key
-- [x] F07.3 (item 19): removed `src/app/state/user-storage.ts` (no importers) and the unreachable «Event not found» branch in `onMessage`; `ws-api-dispatcher` return type is `Promise<WsResponseData>`
-- [x] F07.4 (item 19): removed `utils/websocket-base.ts` (637 lines, class unused); types and `buildApiError` moved to `utils/websocket-types.ts`; stale comments in `App.vue`, `base-api.ts`
-- [x] F07.5: manual check with `API_PATH_PREFIX=v1` (below)
-- [x] F07.D: `documentation/backend/websocket.md`, `documentation/frontend/index.md`, `packages/frontend/README.md`; code-issues 17, 19 fixed, new item 73 (HTTP calls still hard-code `/api/`)
+- [x] F10.S: PR #74 (feat-024 done, feat-027 `in_progress`, plan)
+- [x] F10.1 (item 50): `AI_TEXT_DRIVER` ∈ {openai, xai, mistral}, else `configError` → `validateRuntimeConfig()` stops the start
+- [x] F10.2 (item 51): `AI_REQUEST_TIMEOUT_MS` (default 60 000, integer ≥ 1000); `aiRequestSignal(signal?)` = timeout + caller; `aiAbortKind(error)` walks the cause chain
+- [x] F10.3 (item 51): signal in every adapter — OpenAI `fetch` (one deadline for the call incl. the tool round-trip), xAI `abortSignal`, Mistral `fetchOptions.signal`, embeddings `{ signal }`
+- [x] F10.4 (item 51): `HttpContext.signal` (`AbortController` fired by the existing `res.onAborted`), `WsContext.signal` (per-connection signal, `vendor/utils/network/ws-connection-signal.ts`, aborted first thing in `onClose`); Support AI `openChat`/`chat` forward it, an abort is logged as info and sends no `support_chat_error`
+- [x] F10.5 (item 23): `promptTestService.run` via `textAdapter` only; new `AppError` `UpstreamError` (502 `upstream_error`) and `UpstreamTimeout` (504 `upstream_timeout`) + `shared` `ErrorCode`; unconfigured provider → 503; `prompt-controller` has no `fetch`, no `throw new Error`
+- [x] F10.D: `documentation/backend/{ai,configuration,controllers-services,request-lifecycle}.md`, `packages/backend/.env.example`; code-issues 23, 50, 51 fixed. Also fixed an import order slip from feat-025 in `prompt-service.ts` and removed the stale «тонкий контролер» warning (both items it listed are fixed)
 
 ## Evidence of Completion
 
-- RED first: `ws-event.spec.ts` (prefix normalization `undefined`/`''`/`/v1/`/`internal/api`; `api/…`, `v1/…`), `ws-api-response.spec.ts` (`hasPendingRequest`)
-- Manual: backend from source with `API_PATH_PREFIX=v1` on a disposable DB, admin session, Node `WebSocket` client → `v1/admin/subscribe_online_users` → `200`, `api/admin/subscribe_online_users` → `not_found`; `VITE_API_PATH_PREFIX=v1 vite build` → the bundle contains the inlined `"v1"`. Redis keys `manual-feat024:*` removed
-- Process note: a `prettier --write src` in the frontend touched `.vue`/`.css` files outside the project glob (item 71); those changes were reverted before committing, the diff has only the intended files
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 731, frontend 58, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
+- RED first: `config/ai.spec.ts` (11), `prompt-test-service.spec.ts`, then `ai-request-signal.spec.ts`, `adapters/adapter-signal.spec.ts` (OpenAI hangs → `TimeoutError` after 50 ms; caller abort → `AbortError`; xAI/Mistral/embeddings get a live signal), `ws-connection-signal.spec.ts`, `support-service.spec.ts` (signal forwarded; abort → no error event while tokens were streamed), `prompt-controller.spec.ts` (signal passed; 504/502 mapping); `http-response-handlers.spec.ts` now expects 502 `upstream_error`, 504 `upstream_timeout`
+- Manual (backend from source, disposable DB, admin, fake LLM HTTP server on 127.0.0.1:59998; Redis keys `manual-feat027:*` removed):
+    - `AI_TEXT_DRIVER=foo` → `Failed to start application: Error: Invalid AI configuration: AI_TEXT_DRIVER must be one of openai, xai, mistral, got "foo"`
+    - provider never answers, `AI_REQUEST_TIMEOUT_MS=1500` → `POST /api/prompts/SUPPORT_SYSTEM/test` → `504 upstream_timeout` in 1.57 s
+    - provider answers 500 with `secret provider detail` → `502 upstream_error` «AI provider error»; the detail only in the server log
+    - timeout 60 s, client gives up after 1 s (`curl -m 1`) → the fake provider logs `provider connection closed after 997 ms`
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 763, frontend 58, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 
 ## Files Modified
 
-- new: `packages/frontend/src/utils/{ws-event,websocket-types}.ts`, `packages/frontend/src/utils/__tests__/ws-event.spec.ts`
-- removed: `packages/frontend/src/utils/websocket-base.ts`, `packages/backend/src/app/state/user-storage.ts`
-- updated: `packages/frontend/src/{composables/useWebSocketConnection,composables/useBroadcastHandler,utils/ws-api-response,utils/base-api,env.d}.ts`, `packages/frontend/src/App.vue`, `packages/frontend/.env.example`, `packages/frontend/src/utils/__tests__/ws-api-response.spec.ts`, `packages/backend/src/vendor/utils/{network/ws-handlers,routing/ws-api-dispatcher}.ts`, docs listed above, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
+- new: `packages/backend/src/app/services/ai/{ai-request-signal,prompt-test-service}.ts` (+ specs), `packages/backend/src/app/services/ai/adapters/adapter-signal.spec.ts`, `packages/backend/src/vendor/utils/network/ws-connection-signal.ts` (+ spec), `packages/backend/src/config/ai.spec.ts`, `packages/backend/src/app/controllers/http/ai/prompt-controller.spec.ts`
+- updated: `packages/backend/src/config/ai.ts`, `src/app/start/validate-runtime-config.ts`, `src/app/services/ai/{ai-provider,types,prompt-service}.ts`, the four adapters, `src/app/services/shared/errors.ts`, `src/app/services/support/{support-service,support-llm-service}.ts` (+ spec), `src/app/controllers/{http/ai/prompt-controller,ws/support-controller}.ts`, `src/vendor/types/types.d.ts`, `src/vendor/utils/context/{http,ws}-context.ts`, `src/vendor/start/server.ts`, `src/vendor/utils/network/{ws-handlers,http-response-handlers}.ts` (+ spec), `packages/shared/src/errors/error-codes.ts`, `packages/backend/.env.example`, docs listed above, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
 
 ## Notes for Next Session
 
-- Next: F10 AI Reliability (feat-027).
+- Next: F11 AI Usage Accounting (feat-028, depends on feat-027).

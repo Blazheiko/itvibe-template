@@ -86,13 +86,7 @@ export function mapControllerError(
 
 Префікси груп — у [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts); деталі — у [Маршрутизації та middleware](/backend/routing-middlewares).
 
-::: warning Відхилення від конвенції «тонкий контролер»
-
-- [prompt-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/ai/prompt-controller.ts) сам робить `fetch` до OpenAI і кидає `throw new Error(...)` замість повернення `AppError`.
-- [admin-user-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/admin/admin-user-controller.ts) імпортує `userRepository` напряму, минаючи сервіс.
-
-Не беріть ці файли за зразок.
-:::
+Контролери не звертаються до репозиторіїв і зовнішніх API напряму: це перевіряє [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts).
 
 ## Сервіси
 

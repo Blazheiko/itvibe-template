@@ -16,12 +16,8 @@
 
 Вибір адаптера робить [`ai-provider.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/ai-provider.ts):
 
-- `textAdapter` є адаптером за замовчуванням. Його обирає `AI_TEXT_DRIVER`: `openai` (дефолт), `xai`, а будь-яке інше значення дає Mistral.
+- `textAdapter` є адаптером за замовчуванням. Його обирає `AI_TEXT_DRIVER`: `openai` (дефолт), `xai` або `mistral`. Інше значення зупиняє старт помилкою `Invalid AI configuration: AI_TEXT_DRIVER must be one of openai, xai, mistral` (`validateRuntimeConfig`).
 - `getTextAdapterForModel(model)` обирає адаптер за назвою моделі з рядка промпту в БД: `grok` веде до xAI, `mistral` до Mistral, `gpt`/`openai` до OpenAI. Порожнє або невідоме значення повертає `textAdapter`. Модель із промпту потім передається адаптеру як `modelOverride`.
-
-::: warning Неочевидна поведінка
-Якщо в `AI_TEXT_DRIVER` друкарська помилка (наприклад, `OpenAI` з великої літери), застосунок мовчки перемкнеться на Mistral: порівняння в `createTextAdapter()` точне й чутливе до регістру.
-:::
 
 ## Промпти
 
@@ -33,7 +29,7 @@
 
 - `GET /prompts`, `GET /prompts/:type` читають промпти з кешу;
 - `PUT /prompts/:type` оновлює БД, після чого `promptService.update()` перечитує рядок у кеш;
-- `POST /prompts/:type/test` проганяє промпт із довільним повідомленням через `textAdapter`. Якщо адаптер падає, запит повторюється напряму через `fetch` до OpenAI. Це порушення шарів, див. проблему №23 і [Контролери та сервіси](/backend/controllers-services).
+- `POST /prompts/:type/test` проганяє промпт із довільним повідомленням через [`prompt-test-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/prompt-test-service.ts) і `textAdapter` — без власного `fetch` і без запасного виклику OpenAI. Провайдер не налаштований → `503 service_unavailable`; провайдер відповів помилкою → `502 upstream_error`; не вклався в `AI_REQUEST_TIMEOUT_MS` → `504 upstream_timeout`. Текст помилки провайдера йде лише в лог. Якщо клієнт закрив запит, виклик провайдера скасовується (`HttpContext.signal`).
 
 ## Облік використання
 
@@ -101,8 +97,8 @@ sequenceDiagram
 
 ## Надійність, вартість і безпека
 
-- **Таймаутів немає.** Ні `fetch` в OpenAI-адаптері та `prompt-controller`, ні виклики SDK xAI/Mistral/embeddings не отримують `AbortSignal` чи timeout. Якщо провайдер завис, фонова задача чату висить разом із ним.
-- **Помилки.** Будь-яка помилка в `chat()`/`openChat()` ловиться, логується і перетворюється на подію `support_chat_error` з загальним текстом. Ретраїв немає. У тесті промпту помилка повертається як `internalMessage('LLM call failed')`.
+- **Таймаут і скасування.** Кожен виклик провайдера (OpenAI `fetch`, xAI `abortSignal`, Mistral `fetchOptions.signal`, embeddings `{ signal }`) отримує сигнал з [`aiRequestSignal`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/ai-request-signal.ts): `AI_REQUEST_TIMEOUT_MS` (за замовчуванням 60 000 мс) плюс сигнал викликача. Для HTTP це `HttpContext.signal` (клієнт відключився), для Support AI — сигнал WS-з'єднання (`WsContext.signal`, абортиться в `onClose`): закрита вкладка зупиняє генерацію, і це не логується як збій.
+- **Помилки.** Будь-яка помилка в `chat()`/`openChat()` ловиться, логується і перетворюється на подію `support_chat_error` з загальним текстом. Ретраїв немає. Скасування через закрите з'єднання подію не надсилає (відповідати нікому). Тест промпту повертає `502`/`503`/`504`, див. вище.
 - **Rate limit.** Для WS-групи `support` діє ліміт 60 запитів за хвилину на IP для кожної події окремо (ключ IP + URL маршруту), а не на з'єднання: усі вкладки й пристрої за одним IP ділять цей бюджет. Кожне повідомлення коштує мінімум 3 платні виклики: переклад, embedding і відповідь. HTTP-групи `prompts` і `admin/knowledge-base` закриті `admin_guard`, але власного `rateLimit` у визначенні групи не мають.
 - **PII.** Провайдеру йдуть дослівне повідомлення користувача та до 20 останніх повідомлень історії. У `llm_text_usage.final_prompt` той самий текст зберігається повністю й безстроково, а адмін бачить його через `/admin/usage/text`. Фільтрації чи маскування персональних даних немає.
 - **Секрети.** Ключі задаються тільки через env (`OPENAI_API_KEY=<your-openai-key>` тощо). `OPENAI_API_KEY` спільний для чату й embeddings.

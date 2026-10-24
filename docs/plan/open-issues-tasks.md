@@ -207,17 +207,17 @@
 ### F10 AI Reliability (п. 23, 50, 51)
 
 - [x] **F10.S** Шаблон S (M).
-- [ ] **F10.1** `AI_TEXT_DRIVER` ∈ {`openai`, `xai`, `mistral`} у `validate-runtime-config.ts`; `ai-provider.ts` без мовчазного fallback (п. 50).
+- [x] **F10.1** `AI_TEXT_DRIVER` ∈ {`openai`, `xai`, `mistral`} у `validate-runtime-config.ts`; `ai-provider.ts` без мовчазного fallback (п. 50).
       **AC:** тест: `foo` → помилка старту; кожне валідне значення → свій адаптер.
-- [ ] **F10.2** `AI_REQUEST_TIMEOUT_MS` (default 60 000) у конфігу з валідацією.
+- [x] **F10.2** `AI_REQUEST_TIMEOUT_MS` (default 60 000) у конфігу з валідацією.
       **AC:** тест конфігу.
-- [ ] **F10.3** → F10.2. Кожен адаптер приймає `signal`, комбінує з таймаутом (`AbortSignal.any`) (п. 51).
+- [x] **F10.3** → F10.2. Кожен адаптер приймає `signal`, комбінує з таймаутом (`AbortSignal.any`) (п. 51).
       **AC:** unit для кожного адаптера: fake fetch без відповіді → abort після таймауту.
-- [ ] **F10.4** → F10.3. Передача сигналу запиту: HTTP `onAborted`, закриття WS (п. 51).
+- [x] **F10.4** → F10.3. Передача сигналу запиту: HTTP `onAborted`, закриття WS (п. 51).
       **AC:** тести: abort HTTP-запиту (`onAborted`) → сигнал адаптера `aborted`; закриття WS-з'єднання під час AI-виклику → сигнал `aborted`, відповідь у закрите з'єднання не надсилається.
-- [ ] **F10.5** → F10.3. `prompt-controller` → метод AI-сервісу через `textAdapter`; помилки провайдера → `AppError` `502 upstream_error`, таймаут → `504` (п. 23).
+- [x] **F10.5** → F10.3. `prompt-controller` → метод AI-сервісу через `textAdapter`; помилки провайдера → `AppError` `502 upstream_error`, таймаут → `504` (п. 23).
       **AC:** у контролері немає `fetch` і `throw new Error`; тести 502/504 без тексту провайдера у відповіді.
-- [ ] **F10.D** Шаблон D: `ai.md`, `configuration.md`, `.env.example`. **F10.E**, **F10.X**.
+- [x] **F10.D** Шаблон D: `ai.md`, `configuration.md`, `.env.example`. **F10.E**, **F10.X**.
 
 ### F11 AI Usage Accounting (п. 53) → F10
 

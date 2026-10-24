@@ -14,6 +14,9 @@ export const ErrorCode = {
     CsrfInvalid: 'csrf_invalid',
     InternalError: 'internal_error',
     ServiceUnavailable: 'service_unavailable',
+    // An external provider (LLM) failed or did not answer in time.
+    UpstreamError: 'upstream_error',
+    UpstreamTimeout: 'upstream_timeout',
 } as const
 
 export const ErrorCodeValues = [
@@ -29,6 +32,8 @@ export const ErrorCodeValues = [
     'csrf_invalid',
     'internal_error',
     'service_unavailable',
+    'upstream_error',
+    'upstream_timeout',
 ] as const
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]

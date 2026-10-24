@@ -1,3 +1,4 @@
+import aiConfig from '#config/ai.js'
 import appConfig from '#config/app.js'
 import { authConfig } from '#config/auth.js'
 import cspConfig from '#config/csp.js'
@@ -31,6 +32,10 @@ export function validateRuntimeConfig(): void {
 
     if (redisConfig.configError !== null) {
         throw new Error(`Invalid Redis configuration: ${redisConfig.configError}`)
+    }
+
+    if (aiConfig.configError !== null) {
+        throw new Error(`Invalid AI configuration: ${aiConfig.configError}`)
     }
 
     if (throttlePolicyConfigError !== null) {

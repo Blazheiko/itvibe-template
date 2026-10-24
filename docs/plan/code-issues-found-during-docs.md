@@ -25,6 +25,7 @@
 | feat-020 | 18, 42         |
 | feat-023 | 32, 44, 45, 46 |
 | feat-024 | 17, 19         |
+| feat-027 | 23, 50, 51     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -56,7 +57,7 @@
 | 20  | ~~Сервіси push-нотифікацій звертаються до БД напряму~~ ✅                                                         | Середня      | Шари / БД                    |
 | 21  | ~~N+1 у `findByUserIdWithLogs` і статистика в JS~~ ✅                                                             | Середня      | Продуктивність               |
 | 22  | ~~Контролери та middleware оминають сервіси~~ ✅                                                                  | Низька       | Шари                         |
-| 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`                                                           | Середня      | Шари / помилки               |
+| 23  | ~~`prompt-controller` сам викликає OpenAI і кидає `Error`~~ ✅                                                    | Середня      | Шари / помилки               |
 | 24  | ~~Repositories barrel неповний, змішані стилі імпорту~~ ✅                                                        | Низька       | Структура                    |
 | 25  | ~~`clearEmbedding` — два запити без транзакції, сирий SQL з назвами~~ ✅                                          | Низька       | БД                           |
 | 26  | ~~ArkType-адаптер віддає лише `summary`, без помилок по полях~~ ✅                                                | Низька       | Валідація                    |
@@ -83,8 +84,8 @@
 | 47  | ~~Підписка push перепризначається іншому користувачу за endpoint~~ ✅                                             | Низька       | Push / безпека               |
 | 48  | ~~`GET /test-push` з побічними ефектами (оминає CSRF)~~ ✅                                                        | Низька       | Push / безпека               |
 | 49  | ~~Push надсилається лише з `test-push`, послідовно без батчів~~ ✅                                                | Низька       | Push                         |
-| 50  | Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral                                                                     | Низька       | AI / конфігурація            |
-| 51  | Виклики AI-провайдерів без timeout/`AbortSignal`                                                                  | Середня      | AI / надійність              |
+| 50  | ~~Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral~~ ✅                                                              | Низька       | AI / конфігурація            |
+| 51  | ~~Виклики AI-провайдерів без timeout/`AbortSignal`~~ ✅                                                           | Середня      | AI / надійність              |
 | 52  | Support AI: `langNative = 'ru'` зашито в коді                                                                     | Середня      | AI / i18n                    |
 | 53  | Неповний облік використання AI (переклад, тест промпту, embeddings, Mistral без usage)                            | Низька       | AI                           |
 | 54  | Embeddings: `vector(1536)` зашито, `reindexAll` без батчів, пошук без порогу                                      | Низька       | AI / БД                      |
@@ -307,6 +308,8 @@
 
 ### 23. `prompt-controller` сам викликає OpenAI і кидає `Error`
 
+> **Виправлено** у feat-027 (гілка `feat/ai-reliability`) за планом [`ai-reliability-plan.md`](./ai-reliability-plan.md): `promptTestService.run` через `textAdapter`, без власного `fetch` і fallback на сирий OpenAI; нові `AppError` `UpstreamError` → `502 upstream_error` і `UpstreamTimeout` → `504 upstream_timeout` (коди в `shared` `ErrorCode`), не налаштований провайдер → `503`. Текст провайдера лише в лозі.
+
 - **Що:** `src/app/controllers/http/ai/prompt-controller.ts` робить `fetch` до OpenAI і кидає `throw new Error(...)` замість `AppError`/`Result` через сервіс. Помилки провайдера йдуть клієнту як `500`.
 - **Пропозиція:** винести в AI-сервіс (є `textAdapter`), повертати доменні помилки.
 
@@ -506,10 +509,14 @@
 
 ### 50. Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral
 
+> **Виправлено** у feat-027 (гілка `feat/ai-reliability`) за планом [`ai-reliability-plan.md`](./ai-reliability-plan.md): `config/ai.ts` приймає лише `openai`, `xai`, `mistral`, інакше `configError` → `validateRuntimeConfig()` зупиняє старт.
+
 - **Що:** `src/app/services/ai/ai-provider.ts` повертає `mistralaiTextAdapter` для будь-якого значення, крім `openai` і `xai`, тож друкарська помилка не помітна.
 - **Пропозиція:** валідація в `validate-runtime-config.ts` з помилкою на старті.
 
 ### 51. Виклики AI-провайдерів без timeout
+
+> **Виправлено** у feat-027 (гілка `feat/ai-reliability`) за планом [`ai-reliability-plan.md`](./ai-reliability-plan.md): `AI_REQUEST_TIMEOUT_MS` (60 000) і `aiRequestSignal` в усіх адаптерах; `HttpContext.signal` (з `res.onAborted`) і `WsContext.signal` (сигнал з'єднання, abort в `onClose`) передаються в тест промпту й Support AI. Наживо: завислий провайдер → 504 за 1,57 с при ліміті 1,5 с; клієнт пішов через 1 с → з'єднання з провайдером закрито на 997 мс.
 
 - **Що:** адаптери в `src/app/services/ai/adapters/*` і `prompt-controller.ts` не передають timeout чи `AbortSignal`.
 - **Пропозиція:** таймаут і скасування при закритті WS/HTTP.

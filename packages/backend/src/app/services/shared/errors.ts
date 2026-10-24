@@ -11,6 +11,9 @@ export type AppError =
     | { _tag: 'Internal'; publicMessage: string; cause?: unknown }
     // A dependency (Redis) is temporarily down; answered with Retry-After.
     | { _tag: 'ServiceUnavailable'; message: string; retryAfterSeconds: number; cause?: unknown }
+    // An external provider (LLM) answered with an error / did not answer in time.
+    | { _tag: 'UpstreamError'; message: string; cause?: unknown }
+    | { _tag: 'UpstreamTimeout'; message: string; cause?: unknown }
 
 export type AppErrorCode = Extract<
     ErrorCode,
@@ -22,6 +25,8 @@ export type AppErrorCode = Extract<
     | 'rate_limited'
     | 'internal_error'
     | 'service_unavailable'
+    | 'upstream_error'
+    | 'upstream_timeout'
 >
 
 export type AppResult<T> = ResultType<T, AppError>
@@ -35,6 +40,8 @@ const APP_ERROR_CODE_MAP: Record<AppError['_tag'], AppErrorCode> = {
     RateLimited: 'rate_limited',
     Internal: 'internal_error',
     ServiceUnavailable: 'service_unavailable',
+    UpstreamError: 'upstream_error',
+    UpstreamTimeout: 'upstream_timeout',
 }
 
 const APP_ERROR_STATUS_MAP: Record<AppError['_tag'], number> = {
@@ -46,6 +53,8 @@ const APP_ERROR_STATUS_MAP: Record<AppError['_tag'], number> = {
     RateLimited: 429,
     Internal: 500,
     ServiceUnavailable: 503,
+    UpstreamError: 502,
+    UpstreamTimeout: 504,
 }
 
 export function badRequest(message: string, reason?: string): AppError {
@@ -109,6 +118,18 @@ export function serviceUnavailable(cause?: unknown): AppError {
         retryAfterSeconds: 1,
         ...(cause !== undefined ? { cause } : {}),
     }
+}
+
+// The provider's own error text stays in the log (cause), never in the response.
+export function upstreamError(cause?: unknown, message = 'AI provider error'): AppError {
+    return { _tag: 'UpstreamError', message, ...(cause !== undefined ? { cause } : {}) }
+}
+
+export function upstreamTimeout(
+    cause?: unknown,
+    message = 'AI provider did not answer in time',
+): AppError {
+    return { _tag: 'UpstreamTimeout', message, ...(cause !== undefined ? { cause } : {}) }
 }
 
 export function internalMessage(publicMessage = 'Internal error'): AppError {
