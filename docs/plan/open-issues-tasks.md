@@ -42,13 +42,13 @@
       **AC:** `pnpm format:check` — 0 файлів; `git diff -w --ignore-blank-lines --stat` для коміту на вибірці не показує змін логіки; typecheck, lint, test, e2e зелені.
 - [x] **F00.6** → F00.5. `.git-blame-ignore-revs` з хешем коміту F00.5; рядок у `README.md` про `git config blame.ignoreRevsFile`.
       **AC:** `git blame` на зміненому файлі пропускає коміт.
-- [ ] **F00.E** Шаблон E. **F00.X** Шаблон X + повідомлення власникам гілок про rebase.
+- [x] **F00.E** Шаблон E. **F00.X** Шаблон X + повідомлення власникам гілок про rebase.
 
 ## Хвиля 2 — інфраструктура перевірок (паралельно)
 
 ### F01 App CI (п. 36, 37, 38)
 
-- [ ] **F01.S** Шаблон S.
+- [x] **F01.S** Шаблон S.
 - [ ] **F01.1** `playwright.config.ts`: `npm run preview` / `npm run dev` → `pnpm preview` / `pnpm dev` (п. 38).
       **AC:** `CI=1 pnpm --filter frontend test:e2e` локально піднімає preview через pnpm.
 - [ ] **F01.2** `packages/backend/vitest.config.ts`: `testTimeout: 15_000`, `maxWorkers` з env (п. 37).
@@ -62,7 +62,7 @@
 - [ ] **F01.6** Negative control: тимчасовий коміт з падаючим тестом і lint-помилкою.
       **AC:** `quality` червоний з очікуваної причини; коміт видалено; посилання на run у evidence.
 - [ ] **F01.6a** Розмежування з `redis-tests.yml`: `ci.yml` не задає `REDIS_TEST_URL` і не викликає `test:redis`.
-      **AC:** у логах `quality` `*.redis.test.ts` позначені як skipped; `test:redis` запускається лише в `redis-tests.yml` (`grep test:redis .github/workflows`).
+      **AC:** `*.redis.test.ts` виключені з `pnpm test` через `exclude` у `vitest.config.ts` (у логах `quality` їх немає); `test:redis` запускається лише в `redis-tests.yml` (`grep test:redis .github/workflows`).
 - [ ] **F01.7** Branch protection: `quality` і `e2e` обов'язкові (вручну власником репозиторію).
       **AC:** опис/скріншот налаштування в evidence.
 - [ ] **F01.D** Шаблон D: `testing.md` (CI, coverage, зв'язок з `redis-tests.yml`). **F01.E**, **F01.X**.
