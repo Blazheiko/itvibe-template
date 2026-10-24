@@ -9,6 +9,8 @@ on:
       - "packages/backend/README.md"
       - "packages/backend/src/scripts/README.md"
       - "docs/reference/**"
+      - "docs/adr/**"
+      - "docs/security/**"
       - "docs/screenshots/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

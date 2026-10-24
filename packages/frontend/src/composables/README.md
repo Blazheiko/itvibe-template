@@ -36,30 +36,32 @@ websocketOpen(data.wsUrl as string, data.wsToken as string)
 ### В любом компоненте
 
 ```typescript
-const { isConnected, sendMessage, websocketApi } = useWebSocketConnection()
+const { isConnected, websocketApi } = useWebSocketConnection()
 
+// Запрос-ответ через WebSocket: отправляется событие `api/<route>`
+// (здесь `api/support/support_open_chat`), ответ ждётся 10 с — как в SupportView.vue
 if (isConnected.value) {
-    sendMessage({ event: 'support_open_chat', timestamp: Date.now(), payload: {} })
+    const response = await websocketApi('support/support_open_chat', {})
 }
 
-// Запрос-ответ через WebSocket: событие `api/<route>`, таймаут 10 с
-const response = await websocketApi('main/get_user_info', { userId: 123 })
+// sendMessage отправляет событие как есть: для WS-маршрута нужен полный путь
+// `api/<group>/<route>`, иначе диспетчер его не найдёт
 ```
 
 ## API
 
 Возвращаемые значения:
 
-| Имя                                               | Что это                                                                                          |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `statusWebSocket`                                 | статус VueUse: `'CONNECTING' \| 'OPEN' \| 'CLOSED'`                                              |
-| `isConnected` / `isConnecting` / `isDisconnected` | computed по `statusWebSocket`                                                                    |
-| `isInitialized`                                   | `true` после открытия соединения / события `connection_established`                              |
-| `websocketOpen(url, token)`                       | открыть или переоткрыть соединение                                                               |
-| `websocketClose()`                                | закрыть соединение и отменить ожидающие API-запросы                                              |
-| `sendMessage(data: SendPayload)`                  | отправить `{ event, timestamp, payload }`; если соединение не открыто, сообщение не отправляется |
-| `websocketApi(route, payload?)`                   | API-запрос через WebSocket; Promise, отклоняется по таймауту (10 с) или при закрытии соединения  |
-| `ws`                                              | сырой `WebSocket` (для отладки)                                                                  |
+| Имя                                               | Что это                                                                                                                                                                     |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `statusWebSocket`                                 | статус VueUse: `'CONNECTING' \| 'OPEN' \| 'CLOSED'`                                                                                                                         |
+| `isConnected` / `isConnecting` / `isDisconnected` | computed по `statusWebSocket`                                                                                                                                               |
+| `isInitialized`                                   | `true` после открытия соединения / события `connection_established`                                                                                                         |
+| `websocketOpen(url, token)`                       | открыть или переоткрыть соединение                                                                                                                                          |
+| `websocketClose()`                                | закрыть соединение и отменить ожидающие API-запросы                                                                                                                         |
+| `sendMessage(data: SendPayload)`                  | отправить `{ event, timestamp, payload }` как есть (`event` — полный путь, например `api/support/support_open_chat`); если соединение не открыто, сообщение не отправляется |
+| `websocketApi(route, payload?)`                   | API-запрос через WebSocket; Promise, отклоняется по таймауту (10 с) или при закрытии соединения                                                                             |
+| `ws`                                              | сырой `WebSocket` (для отладки)                                                                                                                                             |
 
 ## Поведение соединения
 

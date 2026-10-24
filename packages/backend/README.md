@@ -333,7 +333,8 @@ End-to-end pipeline of a single HTTP request, with the module that owns each ste
              ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │  readAndParseBody  (server.ts)  —  post / put / patch only       │
-│  • no Content-Type: validator ? 422/{} or 415 if framed : null   │
+│  • no Content-Type + validator: validate {} (422 if it fails),   │
+│    415 if a body is framed; no validator: payload = null         │
 │  • Content-Type ∉ allowedContentTypes  ──►  415                  │
 │  • Content-Length > APP_MAX_*_BODY_SIZE ──►  413 (no read)       │
 │  • read up to the per-kind limit (413 while streaming)           │
@@ -583,7 +584,7 @@ Limits are applied per content-type kind before the body is read. Override via e
 
 Values are bytes: a positive safe integer written in digits; anything else (`1.5`, `1e6`, `Infinity`, `0`) falls back to the default.
 
-Requests that exceed the limit receive **413 Payload Too Large** — early when `Content-Length` is larger, otherwise as soon as the bytes read pass the limit (a body of exactly the limit is accepted). Requests with an unexpected `Content-Type` (not in `allowedContentTypes`) receive **415 Unsupported Media Type**. A route with a `validator` and no `Content-Type` gets 422 when there is no body (it is validated as `{}`) or 415 when a body is framed. Details: [Request lifecycle](https://blazheiko.github.io/itvibe-template/backend/request-lifecycle#тіло-запиту-типи-і-ліміти).
+Requests that exceed the limit receive **413 Payload Too Large** — early when `Content-Length` is larger, otherwise as soon as the bytes read pass the limit (a body of exactly the limit is accepted). Requests with an unexpected `Content-Type` (not in `allowedContentTypes`) receive **415 Unsupported Media Type**. A route with a `validator` and no `Content-Type`: without a body it is validated as `{}` — 422 only if `{}` fails the schema (optional fields and defaults pass); with a framed body (`Transfer-Encoding` or a non-zero `Content-Length`) — 415. Details: [Request lifecycle](https://blazheiko.github.io/itvibe-template/backend/request-lifecycle#тіло-запиту-типи-і-ліміти).
 
 ### Rate Limiting
 

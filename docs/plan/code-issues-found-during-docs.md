@@ -36,9 +36,9 @@
 | 10  | ~~`db:seed` — порожня заглушка~~ ✅                                                                               | Низька       | DX / БД                      |
 | 11  | ~~`src/drizzle/schema/index.ts` порожній~~ ✅                                                                     | Низька       | Структура                    |
 | 12  | ~~Тіло запиту читається лише для `post`/`put`~~ ✅                                                                | Низька       | HTTP                         |
-| 13  | `sendResponse` при `payload === null` віддає `String(status)` як JSON                                             | Низька       | HTTP                         |
-| 14  | Прогалини плану body limits: тести, `.env.example`, playground                                                    | Низька       | HTTP / тести                 |
-| 15  | Застарілі внутрішні документи                                                                                     | Низька       | Документація                 |
+| 13  | ~~`sendResponse` при `payload === null` віддає `String(status)` як JSON~~ ✅                                      | Низька       | HTTP                         |
+| 14  | ~~Прогалини плану body limits: тести, `.env.example`, playground~~ ✅                                             | Низька       | HTTP / тести                 |
+| 15  | ~~Застарілі внутрішні документи~~ ✅                                                                              | Низька       | Документація                 |
 | 16  | Стиль коду бекенду не відповідає `AGENTS.md`                                                                      | Інформаційна | Стиль                        |
 | 17  | Фронтенд вшиває префікс `api/` у WS-події                                                                         | Середня      | WebSocket / frontend         |
 | 18  | WS upgrade без валідної сесії не відхиляється                                                                     | Низька       | WebSocket / безпека          |
@@ -92,7 +92,7 @@
 | 66  | `users.isAdmin` — мертве поле поруч із `role`                                                                     | Низька       | БД / ролі                    |
 | 67  | Push-група без `auth_guard`, перевірка в контролері                                                               | Низька       | Безпека / ролі               |
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
-| 69  | `AGENTS.md`: застаріле «checkout does not include .git history»                                                   | Інформаційна | Документація                 |
+| 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
 
 ## Безпека
