@@ -261,8 +261,8 @@
             "owner": "",
             "branch": "",
             "dependencies": ["feat-010"],
-            "status": "not-started",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #65 (merge 18af90b): per-field issues in 422/WS details, dead validation code removed, ADR 0001 leftovers decided; flip missed in chore PR #66, recorded in the final chore PR"
         },
         {
             "id": "feat-027",
@@ -351,8 +351,8 @@
             "owner": "Blazheiko",
             "branch": "feat/eslint-strict",
             "dependencies": ["feat-010", "feat-018"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PRs #91 (backend), #92 (frontend), #93 (api-playground): strictTypeChecked for all three, relaxations with reasons, dead root blocks removed; typecheck, lint, test (+redis, pg), build, e2e, docs:build + docs:verify; evidence in progress.md on feat/eslint-strict"
         },
         {
             "id": "feat-036",
