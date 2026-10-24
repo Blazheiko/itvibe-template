@@ -82,8 +82,8 @@
       "owner": "Blazheiko",
       "branch": "feat/internal-docs-cleanup",
       "dependencies": [],
-      "status": "in_progress",
-      "evidence": ""
+      "status": "done",
+      "evidence": "PR #49 (merge aef99ce): stale internal docs removed or replaced (backend src/docs, SECURITY_ANALYSIS -> docs/security/security-analysis-status.md with traceability of 15 findings, validator plan -> docs/adr/0001, api-playground docs merged into documentation/playground); root/backend/frontend/composables READMEs and AGENTS.md aligned with code; status lines for finished plans; docs.yml paths; typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), docs:build + docs:verify, link check 852 links / 0 violations; evidence in progress.md on feat/internal-docs-cleanup"
     },
     {
       "id": "feat-010",
