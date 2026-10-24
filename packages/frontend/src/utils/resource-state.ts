@@ -96,7 +96,8 @@ export function createResource<T = void>(ttlMs = 30_000) {
         state.isLoading = true
         state.error = null
 
-        let request: Promise<T> | null = null
+        // Widened: TypeScript would keep it narrowed to null inside the async closure.
+        let request = null as Promise<T> | null
         request = (async () => {
             try {
                 const result = await loader({

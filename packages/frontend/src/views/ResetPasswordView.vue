@@ -24,7 +24,7 @@ const passwordConfirmError = ref('')
 const message = ref('')
 
 const token = computed(() => {
-    const rawToken = route.query['token']
+    const rawToken = route.query.token
     return typeof rawToken === 'string' ? rawToken.trim() : ''
 })
 

@@ -177,7 +177,7 @@ export const useStateStore = defineStore('state', () => {
             // Создаем новую подписку
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey!).buffer as ArrayBuffer,
+                applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
             })
 
             pushSubscription.value = subscription
@@ -237,7 +237,7 @@ export const useStateStore = defineStore('state', () => {
     const getVapidPublicKey = async (): Promise<string | null> => {
         try {
             const response = await pushSubscriptionApi.getVapidPublicKey()
-            if (response.data !== null && response.data.vapidPublicKey) {
+            if (response.data?.vapidPublicKey) {
                 return response.data.vapidPublicKey
             }
         } catch (error) {
@@ -248,7 +248,7 @@ export const useStateStore = defineStore('state', () => {
     }
 
     // Проверка валидности VAPID ключа
-    const isValidVapidKey = (key: string | null): boolean => {
+    const isValidVapidKey = (key: string | null): key is string => {
         if (!key) return false
         if (key === 'YOUR_VAPID_PUBLIC_KEY_HERE') return false
         if (key.length < 80) return false // VAPID ключи обычно длиннее
@@ -325,16 +325,8 @@ export const useStateStore = defineStore('state', () => {
     }
 
     // Получение IP адреса (приблизительно через внешний сервис или будет установлен на сервере)
-    const getClientIP = async (): Promise<string | null> => {
-        try {
-            // В реальном приложении IP будет определяться на сервере
-            // Это только для демонстрации - можно убрать или использовать внешний API
-            return null // Сервер сам определит IP из request headers
-        } catch (error) {
-            console.warn('Could not determine client IP:', error)
-            return null
-        }
-    }
+    // Сервер сам определяет IP из request headers
+    const getClientIP = (): Promise<string | null> => Promise.resolve(null)
 
     // Отправка подписки на сервер
     const sendSubscriptionToServer = async (subscription: PushSubscription): Promise<void> => {
@@ -365,7 +357,7 @@ export const useStateStore = defineStore('state', () => {
                 throw new Error(
                     getResponseMessage(
                         response.data,
-                        response.error.message ?? 'Push subscription request failed',
+                        response.error.message || 'Push subscription request failed',
                     ),
                 )
             }
@@ -396,7 +388,7 @@ export const useStateStore = defineStore('state', () => {
                     throw new Error(
                         getResponseMessage(
                             response.data,
-                            response.error.message ?? 'Push subscription request failed',
+                            response.error.message || 'Push subscription request failed',
                         ),
                     )
                 }
@@ -420,7 +412,7 @@ export const useStateStore = defineStore('state', () => {
                     throw new Error(
                         getResponseMessage(
                             response.data,
-                            response.error.message ?? 'Failed to load push subscriptions',
+                            response.error.message || 'Failed to load push subscriptions',
                         ),
                     )
                 }
@@ -510,6 +502,8 @@ export const useStateStore = defineStore('state', () => {
         document.documentElement.style.fontSize = `${clampedFontSize}px`
         document.documentElement.style.setProperty('--app-font-scale', String(scale))
 
+        // document.body is null while the <head> is still being parsed.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (document.body) {
             // Never scale the whole page; font size setting should only affect typography.
             document.body.style.zoom = ''

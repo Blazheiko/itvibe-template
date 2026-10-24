@@ -1,5 +1,9 @@
 import pluginVue from 'eslint-plugin-vue'
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
+import {
+    configureVueProject,
+    defineConfigWithVueTs,
+    vueTsConfigs,
+} from '@vue/eslint-config-typescript'
 import pluginVitest from '@vitest/eslint-plugin'
 import pluginPlaywright from 'eslint-plugin-playwright'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
@@ -13,6 +17,10 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const monorepoRootDir = resolve(__dirname, '../..')
+
+// The type-aware presets scan .vue files from rootDir (default: cwd). Pin it to this
+// package so the root `pnpm lint` (cwd = repo root) sees the same files.
+configureVueProject({ rootDir: __dirname })
 
 export default defineConfigWithVueTs(
     {
@@ -47,36 +55,13 @@ export default defineConfigWithVueTs(
     {
         files: ['**/*.{ts,mts,tsx,vue}'],
         rules: {
-            '@typescript-eslint/explicit-function-return-type': 'off',
-            '@typescript-eslint/explicit-module-boundary-types': 'off',
-            '@typescript-eslint/no-explicit-any': 'off',
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unnecessary-condition': 'off',
-            '@typescript-eslint/strict-boolean-expressions': 'off',
-            '@typescript-eslint/no-dynamic-delete': 'off',
-            '@typescript-eslint/no-redundant-type-constituents': 'off',
-            '@typescript-eslint/no-invalid-void-type': 'off',
-            '@typescript-eslint/no-unnecessary-type-conversion': 'off',
-            '@typescript-eslint/prefer-nullish-coalescing': 'off',
-            '@typescript-eslint/prefer-optional-chain': 'off',
-            '@typescript-eslint/restrict-template-expressions': 'off',
-            '@typescript-eslint/restrict-plus-operands': 'off',
-            '@typescript-eslint/switch-exhaustiveness-check': 'off',
-            '@typescript-eslint/no-unsafe-enum-comparison': 'off',
-            '@typescript-eslint/no-non-null-assertion': 'off',
-            '@typescript-eslint/consistent-type-definitions': 'off',
-            '@typescript-eslint/require-await': 'off',
-            '@typescript-eslint/no-floating-promises': 'off',
-            '@typescript-eslint/no-unnecessary-type-parameters': 'off',
-            '@typescript-eslint/no-empty-function': 'off',
-            '@typescript-eslint/no-misused-promises': 'off',
-            '@typescript-eslint/prefer-for-of': 'off',
-            '@typescript-eslint/prefer-promise-reject-errors': 'off',
-            '@typescript-eslint/no-empty-object-type': 'off',
+            // Numbers in template literals format predictably.
+            '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+            // `||` on strings deliberately treats '' (empty env, empty API message) as missing.
+            '@typescript-eslint/prefer-nullish-coalescing': [
+                'error',
+                { ignorePrimitives: { string: true } },
+            ],
             'no-restricted-imports': [
                 'error',
                 {
@@ -99,7 +84,17 @@ export default defineConfigWithVueTs(
     },
 
     pluginVue.configs['flat/essential'],
-    vueTsConfigs.recommended,
+    vueTsConfigs.strictTypeChecked,
+    vueTsConfigs.stylisticTypeChecked,
+
+    {
+        // Tests: no-op mocks and assertions on fixtures the test has just created.
+        files: ['src/**/__tests__/**', 'e2e/**', 'e2e-csp/**'],
+        rules: {
+            '@typescript-eslint/no-empty-function': 'off',
+            '@typescript-eslint/no-non-null-assertion': 'off',
+        },
+    },
 
     {
         ...pluginVitest.configs.recommended,

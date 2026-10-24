@@ -47,15 +47,11 @@ const getRoutePath = (): string => {
 }
 
 const getRouteName = (): string => {
-    const currentRoute = boundRouter?.currentRoute.value
-    if (currentRoute?.name === undefined || currentRoute?.name === null) {
-        return 'unknown'
-    }
-
-    return String(currentRoute.name)
+    const name = boundRouter?.currentRoute.value.name
+    return name === undefined ? 'unknown' : String(name)
 }
 
-const getLocale = (): string => String(unref(i18n.global.locale) || 'en')
+const getLocale = (): string => unref(i18n.global.locale)
 
 const maskUrl = (value: string): string => {
     try {

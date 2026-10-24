@@ -100,6 +100,8 @@ async function reportServiceWorkerErrorAndFallback<T>(
 async function queueServiceWorkerError(payload: ServiceWorkerErrorPayload): Promise<void> {
     const cache = await caches.open(serviceWorkerErrorQueueCacheName)
     await pruneQueuedServiceWorkerErrors(cache)
+    // randomUUID is missing in older service worker runtimes.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const requestId = `${Date.now()}-${crypto.randomUUID?.() ?? Math.random().toString(16).slice(2)}`
     const request = new Request(`${serviceWorkerErrorQueueRequestPrefix}${requestId}`)
     await cache.put(
@@ -164,13 +166,14 @@ async function readQueuedServiceWorkerErrors(cache: Cache): Promise<
         }
 
         try {
-            const queued = (await response.clone().json()) as QueuedServiceWorkerErrorEntry
+            const raw: unknown = await response.clone().json()
+            if (typeof raw !== 'object' || raw === null) continue
+            const queued = raw as Partial<QueuedServiceWorkerErrorEntry>
             if (
-                !queued ||
-                typeof queued !== 'object' ||
                 typeof queued.queuedAt !== 'number' ||
-                !queued.payload ||
-                typeof queued.payload !== 'object'
+                typeof queued.payload !== 'object' ||
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- JSON from the cache
+                queued.payload === null
             ) {
                 continue
             }
@@ -247,7 +250,7 @@ self.addEventListener('activate', function (e: ExtendableEvent) {
                 )
                 await self.clients.claim()
                 if (hasOldCache) {
-                    sendMessageToAll({
+                    void sendMessageToAll({
                         type: 'NEW_VERSION',
                         buildTimestamp: BUILD_TIMESTAMP,
                     })
@@ -276,7 +279,7 @@ self.addEventListener('fetch', function (e: FetchEvent) {
                     .match(e.request)
                     .then(function (response) {
                         return (
-                            response ||
+                            response ??
                             fetch(e.request).then(function (fetchResponse) {
                                 if (fetchResponse.status === 200 && isCacheableRequest(e.request)) {
                                     const responseClone = fetchResponse.clone()
@@ -339,7 +342,7 @@ self.addEventListener('fetch', function (e: FetchEvent) {
                             error,
                             caches.match(e.request).then(function (cachedResponse) {
                                 return (
-                                    cachedResponse || new Response('Network error', { status: 503 })
+                                    cachedResponse ?? new Response('Network error', { status: 503 })
                                 )
                             }),
                         )
@@ -370,7 +373,7 @@ self.addEventListener('fetch', function (e: FetchEvent) {
                             caches.match(e.request).then(function (cachedResponse) {
                                 if (cachedResponse) return cachedResponse
                                 return caches.match('/').then(function (indexResponse) {
-                                    return indexResponse || new Response('Offline', { status: 503 })
+                                    return indexResponse ?? new Response('Offline', { status: 503 })
                                 })
                             }),
                         )
@@ -406,7 +409,7 @@ self.addEventListener('fetch', function (e: FetchEvent) {
                             )
                         })
 
-                    return response || fetchPromise
+                    return response ?? fetchPromise
                 }),
             )
         }
@@ -443,7 +446,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
     try {
         void flushQueuedServiceWorkerErrors()
 
-        if (event?.data?.type === 'GET_BUILD_TIMESTAMP') {
+        if (event.data?.type === 'GET_BUILD_TIMESTAMP') {
             const buildInfo = {
                 type: 'BUILD_INFO',
                 buildTimestamp: BUILD_TIMESTAMP,
@@ -460,7 +463,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
             }
         }
 
-        if (event?.data) {
+        if (event.data) {
             if (event.data.message) {
                 console.log('SW MESSAGE: ', event.data.message, event.data.data)
             }
@@ -554,13 +557,14 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
             })
             .then((clientList) => {
                 // Проверяем, есть ли уже открытое окно приложения
-                for (let i = 0; i < clientList.length; i++) {
-                    const client = clientList[i]
+                for (const client of clientList) {
                     if (client.url.includes(url) && 'focus' in client) {
                         return client.focus()
                     }
                 }
                 // Если нет открытого окна, открываем новое
+                // openWindow is missing in some browsers.
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 if (self.clients.openWindow) {
                     return self.clients.openWindow(url)
                 }

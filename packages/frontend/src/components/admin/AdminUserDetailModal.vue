@@ -8,9 +8,7 @@ defineProps<{
   user: AdminOnlineUserDetail | null
 }>()
 
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+const emit = defineEmits<(e: 'close') => void>()
 
 function closeModal() {
   emit('close')

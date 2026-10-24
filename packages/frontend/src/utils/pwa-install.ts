@@ -111,6 +111,10 @@ async function handleBeforeInstallPrompt(event: Event): Promise<void> {
     }
 }
 
+function onBeforeInstallPrompt(event: Event): void {
+    void handleBeforeInstallPrompt(event)
+}
+
 function handleAppInstalled(): void {
     deferredPromptEvent.value = null
     isInstallAvailable.value = false
@@ -137,12 +141,12 @@ export function initializePwaInstallTracking(): void {
     }
 
     isInitialized = true
-    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.removeEventListener('appinstalled', handleAppInstalled)
     window.removeEventListener('focus', handleWindowFocus)
     window.removeEventListener('pageshow', handleWindowPageShow)
     document.removeEventListener('visibilitychange', handleWindowVisibilityChange)
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', handleAppInstalled)
     window.addEventListener('focus', handleWindowFocus)
     window.addEventListener('pageshow', handleWindowPageShow)

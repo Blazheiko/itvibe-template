@@ -31,7 +31,8 @@ interface ApiMethods {
     ws: <T = HttpResponse>(route: string, body?: Record<string, unknown>) => Promise<T | null>
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | string
+// `string & {}` keeps editor suggestions for the common methods.
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | (string & {})
 
 interface HttpRequestInit {
     method: HttpMethod
@@ -229,8 +230,6 @@ const api: ApiMethods = {
         route: string,
         body: Record<string, unknown> = {},
     ): Promise<T | null> => {
-        if (!websocketApi) return null
-
         try {
             // console.log('websocketApi ws route', route)
             // console.log('websocketApi ws body', body)

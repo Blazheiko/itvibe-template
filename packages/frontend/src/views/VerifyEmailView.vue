@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { authApi, mainApi } from '@/utils/api'
-import { useUserStore, type User } from '@/stores/user'
+import { useUserStore } from '@/stores/user'
 
 defineOptions({
     name: 'VerifyEmailView',
@@ -18,7 +18,7 @@ const status = ref<'loading' | 'success' | 'error'>('loading')
 const message = ref('')
 
 const token = computed(() => {
-    const rawToken = route.query['token']
+    const rawToken = route.query.token
     return typeof rawToken === 'string' ? rawToken.trim() : ''
 })
 
@@ -51,7 +51,7 @@ async function verifyEmail(): Promise<void> {
     if (userStore.user) {
         const { data: initData, error: initError } = await mainApi.init()
         if (!initError && initData?.user) {
-            userStore.setUser(initData.user as User)
+            userStore.setUser(initData.user)
         }
     }
 }

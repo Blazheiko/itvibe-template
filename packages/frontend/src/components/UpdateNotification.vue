@@ -2,10 +2,7 @@
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
-const emit = defineEmits<{
-    (e: 'refresh'): void
-    (e: 'dismiss'): void
-}>()
+const emit = defineEmits<(e: 'refresh' | 'dismiss') => void>()
 </script>
 
 <template>

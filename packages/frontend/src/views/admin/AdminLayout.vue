@@ -15,7 +15,7 @@ const navItems = [
 ]
 
 function goBack() {
-    router.push('/account')
+    void router.push('/account')
 }
 
 async function subscribeAdminChannel() {
