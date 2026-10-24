@@ -241,8 +241,8 @@
             "owner": "Blazheiko",
             "branch": "feat/ws-cleanup",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #73 (merge caf4c99): WS events from VITE_API_PATH_PREFIX, pending-request check fixed (feat-009 follow-up), user-storage/unreachable branch/WebsocketBase removed; frontend 58, backend 731, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual WS with API_PATH_PREFIX=v1; new code-issues item 73; evidence in progress.md on feat/ws-cleanup"
         },
         {
             "id": "feat-025",
@@ -268,10 +268,10 @@
             "id": "feat-027",
             "name": "AI Reliability",
             "description": "validate AI_TEXT_DRIVER, AI_REQUEST_TIMEOUT_MS with AbortSignal and cancellation on HTTP abort/WS close, prompt-controller through AI service with domain errors 502/504 (code-issues items 23, 50, 51). Roadmap F10: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/ai-reliability",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {

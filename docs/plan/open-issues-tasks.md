@@ -200,13 +200,13 @@
       **AC:** `useWebSocketConnection` компілюється; e2e зелені.
 - [x] **F07.5** Ручна перевірка: backend `API_PATH_PREFIX=v1` + frontend `VITE_API_PATH_PREFIX=v1`.
       **AC:** WS-виклики відповідають, не `not_found`; кроки в evidence.
-- [x] **F07.D** Шаблон D: `websocket.md`, frontend README. **F07.E**, **F07.X**.
+- [x] **F07.D** Шаблон D: `websocket.md`, frontend README. **F07.E** ✅, **F07.X** ✅.
 
 ## Хвиля 5 — AI (F10 → F11; F12 паралельно)
 
 ### F10 AI Reliability (п. 23, 50, 51)
 
-- [ ] **F10.S** Шаблон S (M).
+- [x] **F10.S** Шаблон S (M).
 - [ ] **F10.1** `AI_TEXT_DRIVER` ∈ {`openai`, `xai`, `mistral`} у `validate-runtime-config.ts`; `ai-provider.ts` без мовчазного fallback (п. 50).
       **AC:** тест: `foo` → помилка старту; кожне валідне значення → свій адаптер.
 - [ ] **F10.2** `AI_REQUEST_TIMEOUT_MS` (default 60 000) у конфігу з валідацією.
