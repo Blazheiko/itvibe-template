@@ -221,8 +221,8 @@
             "owner": "Blazheiko",
             "branch": "feat/push-data-access",
             "dependencies": ["feat-021", "feat-036"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #61: push-notification-log-repository, findByUserIdWithLogs in 2 queries, SQL statistics, sendToUser with concurrency 5 and one batch write; test:pg 15 (deep-equal to verbatim legacy copies, query counts), sender unit 5, backend 691, frontend 45, typecheck, lint, build, docs:build + docs:verify, manual HTTP check on a disposable DB; new code-issues item 72; evidence in progress.md on feat/push-data-access"
         },
         {
             "id": "feat-023",
@@ -248,10 +248,10 @@
             "id": "feat-025",
             "name": "Layering Cleanup",
             "description": "controllers and ws-coordinator go through services, complete repositories barrel, no logger in repositories, clearEmbedding in a transaction (code-issues items 22, 24, 25). Roadmap F08: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/layering-cleanup",
             "dependencies": ["feat-036"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {

@@ -155,11 +155,11 @@
       **AC:** unit: максимум одночасних відправок = 5; один виклик запису логів на виклик `sendToUser`.
 - [x] **F05.6** Новий пункт у `code-issues-found-during-docs.md`: підключення push до бізнес-подій (`skipIfOnline`, `notificationType`).
       **AC:** пункт з номером додано; п. 49 позначено виправленим з посиланням на нього.
-- [x] **F05.D** Шаблон D: `mail-push.md`, `repositories-transformers.md`. **F05.E**, **F05.X**.
+- [x] **F05.D** Шаблон D: `mail-push.md`, `repositories-transformers.md`. **F05.E** ✅, **F05.X** ✅.
 
 ### F08 Layering Cleanup (п. 22, 24, 25) → F19
 
-- [ ] **F08.S** Шаблон S.
+- [x] **F08.S** Шаблон S.
 - [ ] **F08.1** Barrel `repositories/index.ts` експортує всі репозиторії; імпорти через barrel (п. 24).
       **AC:** `grep` прямих імпортів `repositories/.../*-repository` поза barrel порожній.
 - [ ] **F08.2** `logger` прибрано з `user-online-repository.ts`, логування перенесено в сервіс (п. 24).
