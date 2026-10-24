@@ -1,0 +1,16 @@
+<!--
+  Example bucket CORS for production with a separate staging origin. Browsers
+  only read objects; uploads and deletes go through the backend with server-side
+  credentials, so PUT/POST/DELETE are not allowed from browsers. Local dev
+  (http://localhost:5173) belongs in a dev bucket, not here.
+-->
+<CORSConfiguration>
+ <CORSRule>
+   <AllowedOrigin>https://app.example.com</AllowedOrigin>
+   <AllowedOrigin>https://staging.app.example.com</AllowedOrigin>
+   <AllowedMethod>GET</AllowedMethod>
+   <AllowedMethod>HEAD</AllowedMethod>
+   <ExposeHeader>ETag</ExposeHeader>
+   <MaxAgeSeconds>3600</MaxAgeSeconds>
+ </CORSRule>
+</CORSConfiguration>

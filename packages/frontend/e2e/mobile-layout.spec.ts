@@ -109,6 +109,8 @@ test.describe('mobile layout regression', () => {
         await expectBottomInsideViewport(page, 'support message input', messageInput)
 
         // Handshakes keep failing: one immediate refresh, then at most one per 5 s.
+        // A fixed wait is the point here: the assertion is about the rate over time.
+        // eslint-disable-next-line playwright/no-wait-for-timeout
         await page.waitForTimeout(3000)
         expect(wsTokenRefreshes).toBeGreaterThanOrEqual(1)
         expect(wsTokenRefreshes).toBeLessThanOrEqual(2)

@@ -126,17 +126,17 @@
 ### F06 Storage Hardening (п. 32, 44, 45, 46)
 
 - [x] **F06.S** Шаблон S (M).
-- [ ] **F06.1** `deleteFromS3` через `buildKey`; прибрати `buildFullS3Key` з `avatar-service.ts`, `knowledge-base-service.ts` (п. 44).
+- [x] **F06.1** `deleteFromS3` через `buildKey`; прибрати `buildFullS3Key` з `avatar-service.ts`, `knowledge-base-service.ts` (п. 44).
       **AC:** unit: відносний ключ → `<prefix>/key`; `grep buildFullS3Key` порожній.
-- [ ] **F06.2** Утиліта `detectFileType(buffer)` за magic bytes (JPEG, PNG, WebP, GIF + типи бази знань).
+- [x] **F06.2** Утиліта `detectFileType(buffer)` за magic bytes (JPEG, PNG, WebP, GIF + типи бази знань).
       **AC:** unit на кожну сигнатуру і на невідомий вміст.
-- [ ] **F06.3** → F06.2. Аватари і база знань перевіряють вміст, розширення — з виявленого типу (п. 46).
+- [x] **F06.3** → F06.2. Аватари і база знань перевіряють вміст, розширення — з виявленого типу (п. 46).
       **AC:** тести: `image/png` з не-PNG вмістом → 415/422; `x.exe` з PNG → ключ `.png`.
-- [ ] **F06.4** Аватари з `publicRead` (Р1, п. 45).
+- [x] **F06.4** Аватари з `publicRead` (Р1, п. 45).
       **AC:** unit: параметри виклику S3 містять ACL `public-read`.
-- [ ] **F06.5** `corsS3.xml`: placeholder-домени, лише `GET`/`HEAD`; `corsS3.prod.example.xml` (п. 32).
+- [x] **F06.5** `corsS3.xml`: placeholder-домени, лише `GET`/`HEAD`; `corsS3.prod.example.xml` (п. 32).
       **AC:** у файлах немає `*` і `PUT`/`POST`.
-- [ ] **F06.D** Шаблон D: `storage.md`. **F06.E**, **F06.X**.
+- [x] **F06.D** Шаблон D: `storage.md`. **F06.E**, **F06.X**.
 
 ## Хвиля 4 — дані і шари (після F19)
 

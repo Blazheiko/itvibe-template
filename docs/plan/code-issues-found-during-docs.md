@@ -23,6 +23,7 @@
 | feat-026 | 26, 27         |
 | feat-019 | 28, 29, 30     |
 | feat-020 | 18, 42         |
+| feat-023 | 32, 44, 45, 46 |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -63,7 +64,7 @@
 | 29  | ~~Контейнер працює від root, без `HEALTHCHECK`~~ ✅                                                               | Середня      | Docker / безпека             |
 | 30  | ~~`CMD` через `sh -c`: міграції на кожному старті, сигнали~~ ✅                                                   | Середня      | Docker / експлуатація        |
 | 31  | ~~Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`~~ ✅                                                        | Низька       | Docker / конфігурація        |
-| 32  | `corsS3.xml`: `AllowedOrigin *` разом з `PUT`                                                                     | Середня      | Безпека / S3                 |
+| 32  | ~~`corsS3.xml`: `AllowedOrigin *` разом з `PUT`~~ ✅                                                              | Середня      | Безпека / S3                 |
 | 33  | `handleError` логує без `requestId`, контекст без `userId`                                                        | Низька       | Observability                |
 | 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                                                            | Низька       | Observability                |
 | 35  | Немає readiness-перевірки (DB/Redis)                                                                              | Середня      | Observability / експлуатація |
@@ -75,9 +76,9 @@
 | 41  | Статика повністю в RAM без стиснення і ліміту                                                                     | Низька       | Продуктивність               |
 | 42  | ~~API JSON без `Cache-Control: no-store`~~ ✅                                                                     | Середня      | Кешування / безпека          |
 | 43  | Кеш промптів у пам'яті процесу без TTL                                                                            | Низька       | Кешування / AI               |
-| 44  | `deleteFromS3` без `buildKey`, логіка префікса в трьох місцях                                                     | Низька       | Сховище                      |
-| 45  | Аватари без `public-read`, але читаються напряму через CDN                                                        | Низька       | Сховище                      |
-| 46  | MIME-тип довіряється заголовку клієнта                                                                            | Середня      | Сховище / безпека            |
+| 44  | ~~`deleteFromS3` без `buildKey`, логіка префікса в трьох місцях~~ ✅                                              | Низька       | Сховище                      |
+| 45  | ~~Аватари без `public-read`, але читаються напряму через CDN~~ ✅                                                 | Низька       | Сховище                      |
+| 46  | ~~MIME-тип довіряється заголовку клієнта~~ ✅                                                                     | Середня      | Сховище / безпека            |
 | 47  | ~~Підписка push перепризначається іншому користувачу за endpoint~~ ✅                                             | Низька       | Push / безпека               |
 | 48  | ~~`GET /test-push` з побічними ефектами (оминає CSRF)~~ ✅                                                        | Низька       | Push / безпека               |
 | 49  | ~~Push надсилається лише з `test-push`, послідовно без батчів~~ ✅                                                | Низька       | Push                         |
@@ -371,6 +372,8 @@
 
 ### 32. `corsS3.xml`: `AllowedOrigin *` разом з `PUT`
 
+> **Виправлено** у feat-023 (гілка `feat/storage-hardening`) за планом [`storage-hardening-plan.md`](./storage-hardening-plan.md): лише `GET`/`HEAD` з placeholder-origin застосунку, `MaxAgeSeconds`; приклад для кількох оточень — `corsS3.prod.example.xml`.
+
 - **Що:** CORS-конфіг бакета дозволяє будь-яке джерело для `GET`/`POST`/`PUT`.
 - **Пропозиція:** обмежити `AllowedOrigin` доменами застосунку; для продакшну тримати окремий файл.
 
@@ -453,15 +456,21 @@
 
 ### 44. `deleteFromS3` без `buildKey`
 
+> **Виправлено** у feat-023 (гілка `feat/storage-hardening`) за планом [`storage-hardening-plan.md`](./storage-hardening-plan.md): `buildKey` експортується як `buildObjectKey`, `deleteFromS3` приймає відносний ключ, як решта функцій; обидві копії `buildFullS3Key` видалено (CDN URL скриншота — через `buildObjectKey`).
+
 - **Що:** у `src/vendor/utils/storage/s3.ts` `upload`/`getSignedUrl`/`download` застосовують `buildKey` (префікс), а `deleteFromS3` — ні. Тому `avatar-service.ts` і `knowledge-base-service.ts` мають власні копії `buildFullS3Key`. Виклик з відносним ключем мовчки нічого не видаляє.
 - **Пропозиція:** `buildKey` у `deleteFromS3`, прибрати дублікати.
 
 ### 45. Аватари без `public-read`
 
+> **Виправлено** у feat-023 (гілка `feat/storage-hardening`) за планом [`storage-hardening-plan.md`](./storage-hardening-plan.md): за рішенням Р1 аватари завантажуються з `publicRead: true`; про старі приватні об'єкти — у `storage.md`.
+
 - **Що:** `src/app/services/user/avatar-service.ts` завантажує аватари без `publicRead`, а фронтенд читає їх напряму за CDN URL. Вони відображаються лише тоді, коли бакет або CDN зроблено публічними поза кодом.
 - **Пропозиція:** явно задати політику: `publicRead` для аватарів або видача через signed URL.
 
 ### 46. MIME-тип довіряється заголовку клієнта
+
+> **Виправлено** у feat-023 (гілка `feat/storage-hardening`) за планом [`storage-hardening-plan.md`](./storage-hardening-plan.md): `detectImageType` (magic bytes PNG/JPEG/WebP); аватари й скриншоти приймаються, лише коли тип за вмістом дозволений і збігається з заявленим, інакше `400`. `ContentType` і розширення ключа — з виявленого типу, ім'я файлу клієнта не використовується.
 
 - **Що:** `avatar-service.ts` і `knowledge-base-service.ts` перевіряють MIME за multipart-заголовком, без перевірки сигнатури вмісту. Розширення аватара береться з імені файлу клієнта.
 - **Пропозиція:** перевіряти magic bytes; розширення виводити з перевіреного типу.
