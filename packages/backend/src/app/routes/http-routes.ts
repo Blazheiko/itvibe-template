@@ -19,7 +19,7 @@ import {
     LlmTextUsageQuerySchema,
     OAuthCallbackQuerySchema,
     OAuthRedirectQuerySchema,
-    PushSubscriptionTestQuerySchema,
+    PushSubscriptionTestInputSchema,
 } from 'shared/schemas'
 import * as ResponseSchemas from 'shared/responses'
 
@@ -272,11 +272,12 @@ export default [
             }),
             defineRoute({
                 url: '/test-push',
-                method: 'get',
+                method: 'post',
                 handler: PushSubscriptionController.testPush.bind(PushSubscriptionController),
-                queryValidator: PushSubscriptionTestQuerySchema,
+                validator: PushSubscriptionTestInputSchema,
                 ResponseSchema: ResponseSchemas.TestPushResponseSchema,
                 description: 'Send a test push notification to the current user',
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/',
@@ -285,6 +286,7 @@ export default [
                     PushSubscriptionController,
                 ),
                 ResponseSchema: ResponseSchemas.GetSubscriptionsResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/',
@@ -294,6 +296,7 @@ export default [
                 ),
                 validator: CreateSubscriptionInputSchema,
                 ResponseSchema: ResponseSchemas.CreateSubscriptionResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/:subscriptionId',
@@ -302,6 +305,7 @@ export default [
                     PushSubscriptionController,
                 ),
                 ResponseSchema: ResponseSchemas.GetSubscriptionResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/:subscriptionId',
@@ -311,6 +315,7 @@ export default [
                 ),
                 validator: UpdateSubscriptionInputSchema,
                 ResponseSchema: ResponseSchemas.UpdateSubscriptionResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/:subscriptionId',
@@ -319,6 +324,7 @@ export default [
                     PushSubscriptionController,
                 ),
                 ResponseSchema: ResponseSchemas.DeleteSubscriptionResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/:subscriptionId/logs',
@@ -327,6 +333,7 @@ export default [
                     PushSubscriptionController,
                 ),
                 ResponseSchema: ResponseSchemas.GetSubscriptionLogsResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/:subscriptionId/statistics',
@@ -335,6 +342,7 @@ export default [
                     PushSubscriptionController,
                 ),
                 ResponseSchema: ResponseSchemas.GetSubscriptionStatisticsResponseSchema,
+                middlewares: ['auth_guard'],
             }),
             defineRoute({
                 url: '/:subscriptionId/deactivate',
@@ -344,6 +352,7 @@ export default [
                 ),
                 validator: EmptyFormInputSchema,
                 ResponseSchema: ResponseSchemas.DeactivateSubscriptionResponseSchema,
+                middlewares: ['auth_guard'],
             }),
         ],
         description: 'Push Subscription routes',

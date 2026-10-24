@@ -20,7 +20,7 @@ import type {
 import type {
     CreateSubscriptionInput,
     EmptyFormInput,
-    PushSubscriptionTestQuery,
+    PushSubscriptionTestInput,
     UpdateSubscriptionInput,
 } from 'shared/schemas'
 
@@ -249,7 +249,7 @@ export default {
         }
     },
 
-    async testPush(context: HttpContext<unknown, PushSubscriptionTestQuery>): Promise<{
+    async testPush(context: HttpContext<PushSubscriptionTestInput>): Promise<{
         status: string
         message: string
         sent?: number
@@ -266,8 +266,9 @@ export default {
             return mapControllerError(context, internalMessage('VAPID keys not configured'))
         }
 
-        const title = context.httpData.query.title ?? 'Test Push'
-        const body = context.httpData.query.body ?? 'This is a test push notification'
+        const payload = getTypedPayload(context)
+        const title = payload.title ?? 'Test Push'
+        const body = payload.body ?? 'This is a test push notification'
 
         const result = await pushNotificationSenderService.sendToUser(userId, {
             title,

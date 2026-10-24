@@ -2,7 +2,7 @@ import type { CreateSubscriptionInput, UpdateSubscriptionInput } from 'shared/sc
 import { Result } from 'better-result'
 import { pushSubscriptionRepository } from '#app/repositories/index.js'
 import { pushSubscriptionTransformer } from '#app/transformers/index.js'
-import { internalMessage, notFound, type AppResult } from '#app/services/shared/errors.js'
+import { conflict, internalMessage, notFound, type AppResult } from '#app/services/shared/errors.js'
 import { tryInternal } from '#app/services/shared/result-helpers.js'
 import { getPushSubscriptionStatistics } from '#app/services/statistics/push-subscription-statistics-service.js'
 
@@ -46,6 +46,17 @@ export const pushSubscriptionService = {
         const existingSubscription = existingSubscriptionResult.value
 
         if (existingSubscription !== undefined) {
+            // The endpoint is unique across users. Moving it to another account is
+            // allowed only when the caller also proves possession of the browser's
+            // keys (same device, account switch); a leaked endpoint alone is not enough.
+            const ownedByAnotherUser = existingSubscription.userId !== userId
+            const sameKeys =
+                existingSubscription.p256dhKey === payload.p256dhKey &&
+                existingSubscription.authKey === payload.authKey
+            if (ownedByAnotherUser && !sameKeys) {
+                return Result.err(conflict('Push subscription belongs to another user'))
+            }
+
             const updatedResult = await tryInternal(
                 () =>
                     pushSubscriptionRepository.updateByEndpoint(payload.endpoint, userId, {
