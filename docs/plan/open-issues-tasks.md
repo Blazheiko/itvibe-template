@@ -328,7 +328,7 @@
 
 ### F18 ESLint Strict (п. 68) → F01
 
-- [ ] **F18.S** Шаблон S.
+- [x] **F18.S** Шаблон S.
       Кожен із трьох PR проходить повний DoD (шаблон E: typecheck, lint, test, e2e для frontend/playground, evidence-блок у `progress.md` окремо для PR); статус `done` (X) — лише після третього.
 
 - [ ] **F18.1** Backend: увімкнути вимкнені правила `strictTypeChecked`, виправити; свідомо вимкнені — з коментарем-причиною. Окремий PR.
