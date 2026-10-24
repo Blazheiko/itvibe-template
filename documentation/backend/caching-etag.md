@@ -96,5 +96,5 @@ curl -I -H 'If-None-Match: "3n0Yq…"' http://localhost:3000/index.html
 - **Dev:** фронтенд віддає Vite dev-сервер, `SERVE_STATIC` зазвичай `false`. **Prod:** або `SERVE_STATIC=true` з каталогом `public` в образі (у Dockerfile змінна не задана, проблема 31), або окремий хостинг/CDN (`CDN_URL`). У випадку CDN заголовки кешування задає CDN. Див. [Розгортання](/backend/deployment).
 
 ::: info Історія
-[`etag-improvements.md`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/etag-improvements.md) описує старий ETag на основі довжини файлу й застарів: зараз ETag рахується як хеш вмісту (проблема 15).
+Раніше ETag будувався з довжини файлу й URL. Зараз це SHA1-хеш вмісту, порахований один раз при старті; чому так — у коментарі в [static-server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts). Нотатку `etag-improvements.md` з варіантами MD5 / mtime / CRC32 видалено у feat-009 ([остання версія](https://github.com/Blazheiko/itvibe-template/blob/8f3479f/packages/backend/src/docs/etag-improvements.md)).
 :::

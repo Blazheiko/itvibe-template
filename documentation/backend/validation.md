@@ -136,7 +136,7 @@ HTTP-відповідь (обробник помилок у [server.ts](https://
 
 ## Що лишилося ArkType-специфічним
 
-Рефакторинг за [VALIDATOR_ABSTRACTION_PLAN.md](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/VALIDATOR_ABSTRACTION_PLAN.md) в основному виконано: `vendor/start/server.ts` і `ws-api-dispatcher.ts` працюють тільки з `Validator<T>`. Свідомо прив'язаними до ArkType лишаються:
+Рішення про абстракцію валідатора записане в [ADR 0001](https://github.com/Blazheiko/itvibe-template/blob/main/docs/adr/0001-validator-abstraction.md) і реалізоване: `vendor/start/server.ts` і `ws-api-dispatcher.ts` працюють тільки з `Validator<T>`. Свідомо прив'язаними до ArkType лишаються:
 
 - `ResponseSchema?: BaseType` у `vendor/types/types.d.ts`;
 - `defineRoute`/`defineWsRoute` і `InferQuery` типізовані через `Type` з `@arktype/type`;
@@ -144,7 +144,7 @@ HTTP-відповідь (обробник помилок у [server.ts](https://
 - схема WS-конверта в `ws-message-validator.ts`.
 
 ::: warning План
-Не реалізовано з плану: експорт `InputSchema` з `app/validate/index.ts` (§3.6); демонстраційний `nativeValidator(predicate)` (§9); перенесення `RouteConfig`/`ResponseSchema` з `vendor/types` в `app/routing/types.ts` (§5.6, окремий PR).
+Не реалізовано з початкового плану (див. ADR 0001): експорт `InputSchema` з `app/validate/index.ts` (§3.6); демонстраційний `nativeValidator(predicate)` (§9); перенесення `RouteConfig`/`ResponseSchema` з `vendor/types` в `app/routing/types.ts` (§5.6, окремий PR).
 :::
 
 ## Рецепт: валідація для нового маршруту
@@ -156,4 +156,4 @@ HTTP-відповідь (обробник помилок у [server.ts](https://
 
 ### Заміна бібліотеки валідації
 
-Код це підтримує лише як **глобальну** заміну: новий адаптер, що реалізує `Validator<T>`, і зміна експорту `defaultValidator` в `app/validate/index.ts`. Але доведеться також переписати всі схеми в `shared`, типи `defineRoute`/`defineWsRoute`/`InferQuery` (вони на `Type` ArkType), `ws-message-validator.ts` і doc-серіалізацію. Змішувати движки по маршрутах план прямо забороняє (§3.6).
+Код це підтримує лише як **глобальну** заміну: новий адаптер, що реалізує `Validator<T>`, і зміна експорту `defaultValidator` в `app/validate/index.ts`. Але доведеться також переписати всі схеми в `shared`, типи `defineRoute`/`defineWsRoute`/`InferQuery` (вони на `Type` ArkType), `ws-message-validator.ts` і doc-серіалізацію. Проєкт використовує один валідатор: маршрути передають сиру схему (`validator: SomeSchema`), обгортку робить `defineRoute`, а змішувати движки по маршрутах не можна ([ADR 0001](https://github.com/Blazheiko/itvibe-template/blob/main/docs/adr/0001-validator-abstraction.md)).

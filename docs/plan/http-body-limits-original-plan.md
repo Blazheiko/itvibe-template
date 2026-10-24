@@ -1,6 +1,8 @@
 # HTTP Body Limits Plan
 
-> **Стан (feat-008, п. 14).** Defaults из этого плана (1 / 50 / 100 / 1 MB) не применены: оставлены 2 MiB (JSON и остальное), 50 MiB (multipart), 50 MiB (octet) — обоснование в [`docs/plan/http-body-limits-plan.md`](../../../../docs/plan/http-body-limits-plan.md) и в `documentation/backend/configuration.md`. Тесты из раздела 7 сделаны: `http-request-handlers.spec.ts`, `http-body-limits.spec.ts`, `http-body-limits.transport.spec.ts`, `config/app.spec.ts`; лимиты в playground (6.3) — `bodyLimits` в `serializeRoutes`. `parseSize` теперь принимает только положительное безопасное целое.
+> **Статус:** виконано; план замінено рішеннями feat-008 (п. 14, PR #46). Перенесено з `packages/backend/src/docs/` у feat-009. Defaults из этого плана (1 / 50 / 100 / 1 MB) не применены: оставлены 2 MiB (JSON и остальное), 50 MiB (multipart), 50 MiB (octet) — обоснование в [`http-body-limits-plan.md`](./http-body-limits-plan.md) и в `documentation/backend/configuration.md`. Тесты из раздела 7 сделаны: `http-request-handlers.spec.ts`, `http-body-limits.spec.ts`, `http-body-limits.transport.spec.ts`, `config/app.spec.ts`; лимиты в playground (6.3) — `bodyLimits` в `serializeRoutes`. `parseSize` теперь принимает только положительное безопасное целое.
+>
+> **Устарело в тексте ниже** (актуально — [Життєвий цикл запиту](https://blazheiko.github.io/itvibe-template/backend/request-lifecycle#тіло-запиту-типи-і-ліміти)): номера строк в §2; формат 413 — теперь `{ status, code, message, details: { kind, limit, contentType } }`; тело без `Content-Type` на маршруте с `validator` — 422 (валидация `{}`) или 415 при framing; `PATCH` читает тело, `DELETE` — нет по политике; `allowedContentTypes` задаётся на маршруте; `readData` использует общий `RequestAbortSignal`, а не свой `res.onAborted`.
 
 ## 1. Контекст и цель
 
