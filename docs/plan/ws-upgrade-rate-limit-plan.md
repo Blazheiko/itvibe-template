@@ -1,5 +1,7 @@
 # План: rate limit на WebSocket upgrade і глобальний per-IP ліміт (feat-005, пункт 2)
 
+> **Статус:** виконано у feat-005, п. 2 (PR #22, merge `70bb473`, 2026-10-20; PR #23, merge `e774d15`, 2026-10-21). Шляхи й посилання — на момент написання.
+
 Джерело: пункт 2 у [code-issues-found-during-docs.md](./code-issues-found-during-docs.md), залишок finding C-2. Редакція 3, з урахуванням двох рев'ю.
 
 ## Поточний стан (перевірено в коді)

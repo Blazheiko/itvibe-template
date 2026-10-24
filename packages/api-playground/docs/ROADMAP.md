@@ -1,5 +1,7 @@
 # 🗺️ Roadmap - API Playground
 
+> **Internal note** — ideas and analysis, not a description of current behaviour. Current behaviour: [documentation/playground](https://blazheiko.github.io/itvibe-template/playground/).
+
 API testing functionality development roadmap
 
 ## 🎯 Current Version: v1.0

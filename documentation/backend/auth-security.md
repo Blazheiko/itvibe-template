@@ -299,6 +299,10 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 - [`auth-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/auth-guard.ts) повертає `401 unauthorized`, якщо `auth.check()` хибне.
 - [`admin-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/middlewares/admin-guard.ts) завантажує користувача з БД і повертає `403 forbidden`, якщо `role !== 'admin'`. Адмінські групи підключають `["session_web", "csrf_guard", "auth_guard", "admin_guard"]`.
 
+## Аудит безпеки
+
+Початковий аудит бекенду (15 findings) закрито: стан кожного finding — виправлення, коміт або PR, тест — у [docs/security/security-analysis-status.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/security/security-analysis-status.md). Там же перелічено findings, виправлення яких не покриває жоден тест.
+
 ## Чекліст для production
 
 Чекліст складено за кодом конфігурації (див. також [Конфігурація](/backend/configuration)):

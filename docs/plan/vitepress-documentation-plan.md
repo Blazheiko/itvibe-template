@@ -1,5 +1,7 @@
 # План: документація шаблону itvibe на VitePress (GitHub Pages)
 
+> **Статус:** виконано у feat-003 (PR #2, merge `bc32821`, 2026-10-19) і feat-011 (етап 6, PR #9–#18, останній merge `8515b09`, 2026-10-20). Документи з `packages/backend/src/docs/`, `SECURITY_ANALYSIS.md` і `directory-structure.md`, на які посилається план, у feat-009 видалено або перенесено — див. [`internal-docs-cleanup-plan.md`](./internal-docs-cleanup-plan.md).
+
 > Ревізія 3: враховано рев'ю (OpenAPI, CI на PR, TS/ESLint, env-довідник, статус історичних
 > документів, перевірка відрендереного контенту, зменшений перший випуск); деплой лише з `main`,
 > уточнені правила `docs:verify`, посилання в README — одразу після деплою v1.

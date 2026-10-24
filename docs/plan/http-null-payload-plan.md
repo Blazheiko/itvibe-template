@@ -1,5 +1,7 @@
 # План: відповідь при `payload === null` (п. 13)
 
+> **Статус:** виконано у feat-008, п. 13 (PR #46, merge `8ee410b`, 2026-10-23).
+
 Пункт 13 з [`code-issues-found-during-docs.md`](./code-issues-found-during-docs.md). Фіча: **feat-008 «HTTP Body Fixes»** (разом із п. 12 і 14).
 Шляхи відносно `packages/backend/`, якщо не вказано інше.
 

@@ -25,8 +25,6 @@ workspace package.
   password reset flows (`Login.vue`, `VerifyEmailView.vue`, `ResetPasswordView.vue`)
 - **User account** — account settings and avatar editing with image cropping
   (`UserAccount.vue`, `AvatarEditorModal.vue`)
-- **News / notes** — list, detail, and create views (`News.vue`,
-  `NewsDetail.vue`, `CreateNews.vue`)
 - **Support** — support page backed by a knowledge base (`SupportView.vue`)
 - **Admin panel** — knowledge base, users, online users, and online history,
   gated by an admin route guard (`views/admin/*`)
@@ -48,7 +46,7 @@ src/
 ├── router/          # routes + auth/admin navigation guards
 ├── stores/          # Pinia stores (user, state, support, toast, …)
 ├── utils/           # api/base-api, csrf-token, websocket-base, sentry-*, pwa-install, …
-├── views/           # routed pages (auth, account, news, support, admin, policies)
+├── views/           # routed pages (auth, account, support, admin, policies)
 ├── App.vue          # root component
 ├── main.ts          # app bootstrap (Pinia, router, i18n, Sentry, PWA)
 └── service-worker.ts

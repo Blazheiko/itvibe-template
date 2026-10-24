@@ -178,6 +178,6 @@ sequenceDiagram
 
 Про сесії, CSRF і автентифікацію — див. [/backend/auth-security](/backend/auth-security).
 
-::: warning План
-За [HTTP_BODY_LIMITS_PLAN.md](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/docs/HTTP_BODY_LIMITS_PLAN.md) ще не зроблено: опис змінних `APP_MAX_*_BODY_SIZE` у `packages/backend/.env.example`; інтеграційні тести лімітів (413 при перевищенні, межа «рівно ліміт», розділення лімітів octet/json); вивід розрахункового ліміту в API playground (`serializeRoutes`). Per-route ліміти тіла й окремий налаштовуваний ліміт для WS план свідомо залишає поза рамками. Тіло `PATCH` читається; `DELETE` тіло свідомо не читає (див. [Роутинг → Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
+::: info Поза рамками
+Ліміти тіла задаються лише за типом тіла: per-route лімітів немає, WS-ліміт (`maxPayloadLength`, 1 MB) не налаштовується через env. Історія рішень — [початковий план](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/http-body-limits-original-plan.md) і [план feat-008](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/http-body-limits-plan.md). Тіло `PATCH` читається; `DELETE` тіло свідомо не читає (див. [Роутинг → Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
 :::

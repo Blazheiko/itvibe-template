@@ -7,11 +7,10 @@ on:
     paths: &docs_paths
       - "documentation/**"
       - "packages/backend/README.md"
-      - "packages/backend/src/docs/**"
       - "packages/backend/src/scripts/README.md"
-      - "packages/backend/src/vendor/directory-structure.md"
-      - "packages/backend/src/vendor/start/*.md"
       - "docs/reference/**"
+      - "docs/adr/**"
+      - "docs/security/**"
       - "docs/screenshots/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

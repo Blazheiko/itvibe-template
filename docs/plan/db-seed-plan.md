@@ -1,5 +1,7 @@
 # План: `db:seed` замість порожньої заглушки (п. 10)
 
+> **Статус:** виконано у feat-007, п. 10 (PR #43, merge `aaa46cf`, 2026-10-21).
+
 Пункт 10 з [`code-issues-found-during-docs.md`](./code-issues-found-during-docs.md). Фіча: **feat-007 «Database DX»** (разом із п. 7 і 11).
 Шляхи відносно `packages/backend/`, якщо не вказано інше.
 

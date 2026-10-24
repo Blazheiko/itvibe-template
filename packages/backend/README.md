@@ -319,27 +319,34 @@ End-to-end pipeline of a single HTTP request, with the module that owns each ste
 └────────────┬─────────────────────────────────────────────────────┘
              ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  Rate limit  —  src/vendor/utils/network/rate-limit.ts           │
-│  per-IP × per-route sliding window                               │
+│  Rate limit  —  src/vendor/utils/rate-limit/http-rate-limit.ts   │
+│  L1: one budget per IP for all API requests, then the route /    │
+│  group sliding window; both synchronous, before the body         │
 │  exceeded? ──►  429  +  Retry-After  +  X-RateLimit-* headers    │
 └────────────┬─────────────────────────────────────────────────────┘
              ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  Content-Type & body-size guards                                 │
-│  • Content-Type ∉ allowedContentTypes  ──►  415                  │
-│  • Content-Length > APP_MAX_*_BODY_SIZE ──►  413                 │
+│  validateQuery  —  route.queryValidator                          │
+│  set? ──► validate flattened query or ValidationError → 422      │
+│  not set? ──► httpData.query = null                              │
 └────────────┬─────────────────────────────────────────────────────┘
              ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  readAndParseBody  (server.ts)                                   │
-│  • read body up to the per-kind limit                            │
+│  readAndParseBody  (server.ts)  —  post / put / patch only       │
+│  • no Content-Type + validator: validate {} (422 if it fails),   │
+│    415 if a body is framed; no validator: payload = null         │
+│  • Content-Type ∉ allowedContentTypes  ──►  415                  │
+│  • Content-Length > APP_MAX_*_BODY_SIZE ──►  413 (no read)       │
+│  • read up to the per-kind limit (413 while streaming)           │
 │  • parse JSON / multipart / urlencoded / text / octet            │
 └────────────┬─────────────────────────────────────────────────────┘
              ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │  Route validator  (route.validator)                              │
-│  validator set?  ──►  validate or  ValidationError → 400         │
-│  validator NOT set?  ──►  httpData.payload = null  (body dropped)│
+│  set?  ──►  validate or  ValidationError → 422                   │
+│  not set?  ──►  httpData.payload = null  (body dropped)          │
+│  get / delete never read a body: a validator there is a          │
+│  startup error (defineRoute type + routesHandler)                │
 └────────────┬─────────────────────────────────────────────────────┘
              ▼
 ┌──────────────────────────────────────────────────────────────────┐
@@ -379,6 +386,8 @@ End-to-end pipeline of a single HTTP request, with the module that owns each ste
 │  ↓                                                               │
 │  sendResponse  (server.ts)                                       │
 │  status + headers + cookies + JSON body  ──►  res.end()          │
+│  null/undefined payload: 200 → 204 (no body), other 2xx → same   │
+│  status without body, 4xx/5xx → { status, code, message }        │
 └────────────┬─────────────────────────────────────────────────────┘
              ▼
                     ┌─────────────────────────┐
@@ -490,7 +499,7 @@ Individual routes can also declare their own `middlewares`, `rateLimit`, and `al
 | `url`                 | `string`     | —           | URL path (`:param` for path params)                                                                          |
 | `method`              | `string`     | —           | `get`, `post`, `put`, `patch`, `delete`, `ws`                                                                |
 | `handler`             | `Function`   | —           | Controller method                                                                                            |
-| `validator`           | `ArkType`    | `undefined` | ArkType schema for request body; payload is validated before the handler                                     |
+| `validator`           | `ArkType`    | `undefined` | ArkType schema for request body (`post`/`put`/`patch` only); payload is validated before the handler         |
 | `queryValidator`      | `ArkType`    | `undefined` | ArkType schema for query params; query is validated before the handler and exposed as typed `httpData.query` |
 | `queryAllowExtra`     | `boolean`    | `false`     | Allows undeclared query keys and strips them from the validated object instead of rejecting the request      |
 | `queryArrays`         | `string[]`   | `[]`        | Declares query keys that may appear multiple times and should be collected as arrays                         |
@@ -573,7 +582,9 @@ Limits are applied per content-type kind before the body is read. Override via e
 | `APP_MAX_OCTET_BODY_SIZE`     | 52 428 800 (50 MB) | `application/octet-stream`                               |
 | `APP_MAX_BODY_SIZE`           | 2 097 152 (2 MB)   | `application/x-www-form-urlencoded`, `text/plain`, other |
 
-Requests that exceed the limit receive **413 Payload Too Large**. Requests with an unexpected `Content-Type` (not in `allowedContentTypes`) receive **415 Unsupported Media Type**.
+Values are bytes: a positive safe integer written in digits; anything else (`1.5`, `1e6`, `Infinity`, `0`) falls back to the default.
+
+Requests that exceed the limit receive **413 Payload Too Large** — early when `Content-Length` is larger, otherwise as soon as the bytes read pass the limit (a body of exactly the limit is accepted). Requests with an unexpected `Content-Type` (not in `allowedContentTypes`) receive **415 Unsupported Media Type**. A route with a `validator` and no `Content-Type`: without a body it is validated as `{}` — 422 only if `{}` fails the schema (optional fields and defaults pass); with a framed body (`Transfer-Encoding` or a non-zero `Content-Length`) — 415. Details: [Request lifecycle](https://blazheiko.github.io/itvibe-template/backend/request-lifecycle#тіло-запиту-типи-і-ліміти).
 
 ### Rate Limiting
 
@@ -804,7 +815,9 @@ async createNote(context: HttpContext<CreateNoteInput>) {
 
 ### Routes without a validator
 
-If a route does **not** declare `validator`, the framework discards any incoming body and the controller receives `httpData.payload = null` — even on POST/PUT with a JSON body. The raw body is **not** forwarded to the handler.
+Only `post`, `put` and `patch` read a body. A `validator` on `get` / `delete` is a type error in `defineRoute` and a startup error in `routesHandler`: pass data there via `:params` or `queryValidator`.
+
+If a route does **not** declare `validator`, the framework discards any incoming body and the controller receives `httpData.payload = null` — even on POST/PUT/PATCH with a JSON body. The raw body is **not** forwarded to the handler.
 
 ```ts
 defineRoute({
@@ -1525,7 +1538,9 @@ pnpm clean                          # rm -rf dist .tsbuildinfo
 pnpm typecheck                      # tsc --noEmit
 pnpm test                           # vitest run
 pnpm test:watch                     # vitest (watch mode)
+pnpm test:redis                     # vitest against a real Redis (vitest.redis.config.ts)
 pnpm db:create                      # bootstrap empty database (src/db/create-database.ts)
+pnpm db:create:prod                 # node dist/db/create-database.js
 pnpm db:generate                    # drizzle-kit generate
 pnpm db:migrate                     # drizzle-kit migrate
 pnpm db:studio                      # drizzle-kit studio
