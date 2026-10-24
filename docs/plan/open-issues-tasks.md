@@ -160,19 +160,19 @@
 ### F08 Layering Cleanup (п. 22, 24, 25) → F19
 
 - [x] **F08.S** Шаблон S.
-- [ ] **F08.1** Barrel `repositories/index.ts` експортує всі репозиторії; імпорти через barrel (п. 24).
+- [x] **F08.1** Barrel `repositories/index.ts` експортує всі репозиторії; імпорти через barrel (п. 24).
       **AC:** `grep` прямих імпортів `repositories/.../*-repository` поза barrel порожній.
-- [ ] **F08.2** `logger` прибрано з `user-online-repository.ts`, логування перенесено в сервіс (п. 24).
+- [x] **F08.2** `logger` прибрано з `user-online-repository.ts`, логування перенесено в сервіс (п. 24).
       **AC:** жоден файл у `repositories/` не імпортує logger.
-- [ ] **F08.3** `admin-user-controller.ts` → `adminUserService`; `ws-coordinator.ts` → сервіс (п. 22). Перед стартом — rebase на F07, якщо вона влита.
+- [x] **F08.3** `admin-user-controller.ts` → `adminUserService`; `ws-coordinator.ts` → сервіс (п. 22). Перед стартом — rebase на F07, якщо вона влита.
       **AC:** контролери й `ws-coordinator` не імпортують репозиторії; тести зелені.
-- [ ] **F08.4** Типи в `prompt-controller.ts`, `llm-usage-controller.ts` — з shared або сервісу (п. 22).
+- [x] **F08.4** Типи в `prompt-controller.ts`, `llm-usage-controller.ts` — з shared або сервісу (п. 22).
       **AC:** контролери не імпортують модулі репозиторіїв навіть як `type`.
-- [ ] **F08.5** `admin-guard.ts` — задокументований виняток у `architecture.md` (п. 22).
+- [x] **F08.5** `admin-guard.ts` — задокументований виняток у `architecture.md` (п. 22).
       **AC:** розділ «Дозволені винятки» в `architecture.md`.
-- [ ] **F08.6** `clearEmbedding` у `db.transaction`, колонки через об'єкти схеми (п. 25).
+- [x] **F08.6** `clearEmbedding` у `db.transaction`, колонки через об'єкти схеми (п. 25).
       **AC:** pg-тест: помилка другого запиту відкочує перший.
-- [ ] **F08.D** Шаблон D: `architecture.md`, `repositories-transformers.md`. **F08.E**, **F08.X**.
+- [x] **F08.D** Шаблон D: `architecture.md`, `repositories-transformers.md`. **F08.E**, **F08.X**.
 
 ### F09 Validation Cleanup (п. 26, 27)
 

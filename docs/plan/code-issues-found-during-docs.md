@@ -19,6 +19,7 @@
 | feat-018 | 36, 37, 38     |
 | feat-021 | 47, 48, 67     |
 | feat-022 | 20, 21, 49     |
+| feat-025 | 22, 24, 25     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -49,10 +50,10 @@
 | 19  | Мертвий код у WebSocket-шарі                                                                                      | Низька       | WebSocket / структура        |
 | 20  | ~~Сервіси push-нотифікацій звертаються до БД напряму~~ ✅                                                         | Середня      | Шари / БД                    |
 | 21  | ~~N+1 у `findByUserIdWithLogs` і статистика в JS~~ ✅                                                             | Середня      | Продуктивність               |
-| 22  | Контролери та middleware оминають сервіси                                                                         | Низька       | Шари                         |
+| 22  | ~~Контролери та middleware оминають сервіси~~ ✅                                                                  | Низька       | Шари                         |
 | 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`                                                           | Середня      | Шари / помилки               |
-| 24  | Repositories barrel неповний, змішані стилі імпорту                                                               | Низька       | Структура                    |
-| 25  | `clearEmbedding` — два запити без транзакції, сирий SQL з назвами                                                 | Низька       | БД                           |
+| 24  | ~~Repositories barrel неповний, змішані стилі імпорту~~ ✅                                                        | Низька       | Структура                    |
+| 25  | ~~`clearEmbedding` — два запити без транзакції, сирий SQL з назвами~~ ✅                                          | Низька       | БД                           |
 | 26  | ArkType-адаптер віддає лише `summary`, без помилок по полях                                                       | Низька       | Валідація                    |
 | 27  | Мертвий і застарілий код валідації та контролерів                                                                 | Низька       | Структура                    |
 | 28  | Немає `.dockerignore`                                                                                             | Середня      | Docker / безпека             |
@@ -286,6 +287,8 @@
 
 ### 22. Контролери та middleware оминають сервіси
 
+> **Виправлено** у feat-025 (гілка `feat/layering-cleanup`): `admin-user-controller` → `adminUserService.listUsers`; `ws-coordinator` і `admin_guard` → `userRoleService.findRole`, тож задокументований виняток для guard'а не знадобився; контролери беруть `PromptType`/`PromptUpdate`/`TextFilter` із сервісів. Правила імпорту закріплює `src/app/layering.spec.ts`.
+
 - **Що:** `src/app/controllers/http/admin/admin-user-controller.ts`, `src/app/middlewares/admin-guard.ts`, `src/app/websocket/ws-coordinator.ts` викликають `userRepository` напряму. `prompt-controller.ts` і `ai/usage/llm-usage-controller.ts` імпортують типи з модулів репозиторіїв.
 - **Наслідок:** ланцюжок Controller → Service → Repository із `documentation/backend/architecture.md` не суворий.
 - **Пропозиція:** перенести виклики в сервіси або явно задокументувати дозволені винятки (наприклад, guard).
@@ -297,10 +300,14 @@
 
 ### 24. Repositories barrel неповний
 
+> **Виправлено** у feat-025 (гілка `feat/layering-cleanup`): barrel експортує `promptRepository`, `supportRepository`, `supportKnowledgeRepository` і їхні типи, усі імпорти поза `app/repositories` — через нього; попередження з `user-online-repository` перенесено в `userOnlineService`.
+
 - **Що:** `src/app/repositories/index.ts` не експортує `promptRepository`, `supportRepository`, `supportKnowledgeRepository`, тому частина коду імпортує через barrel, а частина напряму. `user-online-repository.ts` імпортує `logger` (логування в шарі даних).
 - **Пропозиція:** доповнити barrel, прибрати логування з репозиторію.
 
 ### 25. `clearEmbedding` без транзакції
+
+> **Виправлено** у feat-025 (гілка `feat/layering-cleanup`): замість транзакції — один `UPDATE` (`embedding = NULL` разом з `updatedAt`), атомарний сам по собі; `setEmbedding` і `searchByEmbedding` посилаються на колонки через об'єкти схеми. pg-тест: один запит, вектор скинуто.
 
 - **Що:** `src/app/repositories/support/support-knowledge-repository.ts` → `clearEmbedding` робить два запити без `db.transaction`; SQL для embedding містить назви таблиці й колонок рядками.
 - **Пропозиція:** транзакція і посилання на колонки через `sql` з об'єктами схеми.
