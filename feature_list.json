@@ -291,17 +291,17 @@
             "owner": "Blazheiko",
             "branch": "feat/ai-quality",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #79 (merge 074c648): answer language from the UI locale with SUPPORT_DEFAULT_LANGUAGE, embedding dimension check, batched reindexAll, SUPPORT_SEARCH_MAX_DISTANCE, prompt cache TTL with background refresh; backend 797, test:pg 22, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/ai-quality"
         },
         {
             "id": "feat-030",
             "name": "Observability",
             "description": "LOG_LEVEL, requestId/userId in error logs, GET /ready with DB and Redis checks, HEALTHCHECK on /ready (code-issues items 33, 34, 35). Roadmap F13: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/observability",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
