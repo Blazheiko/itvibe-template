@@ -45,7 +45,7 @@ src/
 ├── plugins/         # i18n setup
 ├── router/          # routes + auth/admin navigation guards
 ├── stores/          # Pinia stores (user, state, support, toast, …)
-├── utils/           # api/base-api, csrf-token, websocket-base, sentry-*, pwa-install, …
+├── utils/           # api/base-api, csrf-token, websocket-types, ws-event, sentry-*, pwa-install, …
 ├── views/           # routed pages (auth, account, support, admin, policies)
 ├── App.vue          # root component
 ├── main.ts          # app bootstrap (Pinia, router, i18n, Sentry, PWA)

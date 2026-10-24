@@ -21,6 +21,8 @@ declare module 'vue-router' {
 declare global {
     interface ImportMetaEnv {
         readonly VITE_BASE_URL?: string
+        /** Backend API_PATH_PREFIX; WS events are `<prefix>/<route>`. Default `api`. */
+        readonly VITE_API_PATH_PREFIX?: string
     }
 
     interface ImportMeta {

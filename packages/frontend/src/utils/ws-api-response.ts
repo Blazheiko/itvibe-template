@@ -1,5 +1,5 @@
-import { buildApiError } from '@/utils/websocket-base'
-import type { ApiError, WebsocketMessage } from '@/utils/websocket-base'
+import { buildApiError } from '@/utils/websocket-types'
+import type { ApiError, WebsocketMessage } from '@/utils/websocket-types'
 import { hasResponseError } from '@/utils/response-normalizer'
 
 export interface ApiResolveItem {
@@ -13,6 +13,12 @@ export interface ApiResolveItem {
  * response (e.g. `service_unavailable` while Redis is down) rejects at once
  * instead of waiting for the client timeout; the connection is left alone.
  */
+// The pending entry is stored under the request's event name.
+export const hasPendingRequest = (
+    pending: Record<string, ApiResolveItem>,
+    event: string,
+): boolean => pending[event] !== undefined
+
 export const settleApiResponse = (
     pending: Record<string, ApiResolveItem>,
     data: WebsocketMessage,

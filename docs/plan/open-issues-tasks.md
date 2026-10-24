@@ -190,17 +190,17 @@
 ### F07 WebSocket Cleanup (п. 17, 19)
 
 - [x] **F07.S** Шаблон S.
-- [ ] **F07.1** `VITE_API_PATH_PREFIX` (default `api`) у `env.d.ts`, `.env.example` фронтенду; формування події в `useWebSocketConnection.ts` (п. 17).
+- [x] **F07.1** `VITE_API_PATH_PREFIX` (default `api`) у `env.d.ts`, `.env.example` фронтенду; формування події в `useWebSocketConnection.ts` (п. 17).
       **AC:** unit: префікси `api` і `v1` дають `api/x` і `v1/x`.
-- [ ] **F07.2** Follow-up feat-009: `websocketApiResolve[key]` vs ключ `event` — виправити або зафіксувати тестом поточну правильну поведінку.
+- [x] **F07.2** Follow-up feat-009: `websocketApiResolve[key]` vs ключ `event` — виправити або зафіксувати тестом поточну правильну поведінку.
       **AC:** тест на резолв відповіді за ключем події.
-- [ ] **F07.3** Видалити `src/app/state/user-storage.ts`, гілку «Event not found» в `onMessage` (п. 19).
+- [x] **F07.3** Видалити `src/app/state/user-storage.ts`, гілку «Event not found» в `onMessage` (п. 19).
       **AC:** `grep` порожній; WS-тести зелені.
-- [ ] **F07.4** `websocket-base.ts`: прибрати reconnect/ping, лишити (або перенести) типи (п. 19).
+- [x] **F07.4** `websocket-base.ts`: прибрати reconnect/ping, лишити (або перенести) типи (п. 19).
       **AC:** `useWebSocketConnection` компілюється; e2e зелені.
-- [ ] **F07.5** Ручна перевірка: backend `API_PATH_PREFIX=v1` + frontend `VITE_API_PATH_PREFIX=v1`.
+- [x] **F07.5** Ручна перевірка: backend `API_PATH_PREFIX=v1` + frontend `VITE_API_PATH_PREFIX=v1`.
       **AC:** WS-виклики відповідають, не `not_found`; кроки в evidence.
-- [ ] **F07.D** Шаблон D: `websocket.md`, frontend README. **F07.E**, **F07.X**.
+- [x] **F07.D** Шаблон D: `websocket.md`, frontend README. **F07.E**, **F07.X**.
 
 ## Хвиля 5 — AI (F10 → F11; F12 паралельно)
 

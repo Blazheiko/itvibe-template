@@ -109,8 +109,6 @@ onBeforeUnmount(() => {
 
 // Обработка broadcast событий теперь происходит в useBroadcastHandler composable
 
-// let websocketBase: WebsocketBase | null = null
-
 const PUBLIC_PATHS = new Set([
     '/',
     '/login',

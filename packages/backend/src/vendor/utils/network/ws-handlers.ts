@@ -281,19 +281,9 @@ const onMessage = async (
             const { session } = sessionResult
             event = message.event
             timestamp = message.timestamp
+            // The dispatcher always answers, an unknown route included (not_found).
             const result = await wsApiHandler(message, ws, userData, session, wsRoutesByUrl)
-            if (result !== null) {
-                sendJson(ws, result)
-            } else {
-                logger.error('onMessage result is null')
-                sendJson(ws, {
-                    status: 'error',
-                    error: createWsErrorEnvelope('not_found', 'Event not found'),
-                    event: message.event,
-                    timestamp: message.timestamp,
-                    data: null,
-                })
-            }
+            sendJson(ws, result)
         }
     } catch (err: unknown) {
         logger.error({ err }, 'Error parse onMessage')

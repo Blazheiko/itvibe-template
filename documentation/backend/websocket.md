@@ -175,7 +175,7 @@ Presence публікується лише якщо в каналі `admin` є �
 
 - `protocols` — масив `[wsToken, 'app-web']`, який мутується перед перепідключенням;
 - heartbeat з [websocket-heartbeat.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/websocket-heartbeat.ts): `ping` кожні 10 с, закриття, якщо `pong` не прийшов за 5 с. Планувальник створюється з `immediate: false` — після виправлення «don't start the heartbeat interval before the socket connects» інтервал запускає сам `useWebSocket` при підключенні, а не з моменту завантаження модуля (інакше pong-таймаут міг закрити сокет ще під час handshake);
-- `websocketApi(route, payload)` надсилає `event` у форматі `api/<route>`, чекає відповідь з тим самим `event` до 10 с;
+- `websocketApi(route, payload)` надсилає `event` у форматі `<prefix>/<route>` ([`ws-event.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/ws-event.ts): `prefix` — `VITE_API_PATH_PREFIX`, за замовчуванням `api`, слеші на краях обрізаються) і чекає відповідь з тим самим `event` до 10 с. Одночасно для однієї події може чекати лише один запит: другий отримує `Request already in progress`;
 - повідомлення розбираються за префіксом: `broadcast:` → [useBroadcastHandler.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/composables/useBroadcastHandler.ts), `service:` → сервісні обробники, `api` → резолв запиту.
 
 Перепідключення (вбудований `autoReconnect` vueuse закоментовано, логіка своя в `handleWebSocketClose`):
@@ -187,8 +187,8 @@ Presence публікується лише якщо в каналі `admin` є �
 - коди `4000–4099` (крім `4001`) → без перепідключення;
 - інші коди (зокрема `4201` при зупинці сервера) → `open()` через 5 с. Оскільки токен на сервері вже відкликано, такий повтор, найімовірніше, отримає `4001` і піде гілкою оновлення токена.
 
-::: warning Префікс `api` захардкоджено на клієнті
-Клієнт формує `event` як `api/<route>`, а ключі маршрутів на сервері залежать від `API_PATH_PREFIX` ([config/app.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts)). При іншому префіксі WS-запити отримають `not_found`. Окремо в репозиторії лежить старий клас [websocket-base.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/websocket-base.ts) з власною логікою reconnect/ping; композабл використовує з нього лише типи.
+::: tip Нестандартний `API_PATH_PREFIX`
+Ключі WS-маршрутів на сервері — `<API_PATH_PREFIX>/<route>`. Фронтенд, зібраний з тим самим `VITE_API_PATH_PREFIX`, формує ті самі події; з іншим префіксом сервер відповідає `not_found`. HTTP-виклики фронтенду поки ходять на `/api/...` незалежно від цієї змінної (п. 73 у [code-issues](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)), тож для повністю іншого префікса потрібна ще й переадресація HTTP на проксі.
 :::
 
 ## Обмеження та безпека
