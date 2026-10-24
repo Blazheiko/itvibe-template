@@ -3,74 +3,57 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-010 - Format Baseline (F00 of `docs/plan/open-issues-roadmap.md`, item 16 + Prettier part of item 68)
-**Branch:** `feat/format-baseline`
-**Tasks:** `docs/plan/open-issues-tasks.md`, wave 1
+**Active Feature:** feat-018 - App CI (F01 of `docs/plan/open-issues-roadmap.md`, items 36, 37, 38)
+**Branch:** `feat/app-ci`
+**Plan:** `docs/plan/app-ci-plan.md`; tasks: `docs/plan/open-issues-tasks.md`, F01
 
 ## Status
 
 ### Done
 
-- [x] F00.S: PR #52 (feat-010 → `in_progress`); no open PRs at start (freeze); `./init.sh` green on `0fb0ad1`
-- [x] F00.1: inventory (below)
-- [x] F00.2: root `.prettierrc.json` (4 spaces, `'`, no `;`, 100); package configs of `documentation`, `frontend`, `api-playground` removed (no package had a reason to differ; playground's `tabWidth` 2 was undocumented). `prettier --find-config-path` → `.prettierrc.json` for a file of every package
-- [x] F00.3: `.prettierignore` (build output, reports, drizzle migrations, lockfile, `graphify-out`)
-- [x] F00.4: no conflict — root ESLint has no formatting rules (`stylisticTypeChecked` is type-aware code style), frontend/playground already extend `@vue/eslint-config-prettier`; `pnpm lint` green after formatting
-- [x] F00.5: commit `60c735c` — only `pnpm format`, 422 files
-- [x] F00.6: `.git-blame-ignore-revs` with `60c735c…`; README section; `git blame` on `packages/shared/src/index.ts` skips the commit
-- [x] Docs: `documentation/reference/toolchain.md` Prettier section; code-issues item 16 fixed, item 68 Prettier part, new item 71 (`.vue`/`.js`/`.mjs`/`.css` outside the glob)
+- [x] F01.S: PR #54 (feat-010 done, feat-018 `in_progress`, plan); `./init.sh` green
+- [x] F01.1: `pnpm run preview` / `pnpm run dev` in `playwright.config.ts`, `pnpm run build-sw` in frontend `build`; Playwright on CI adds a `list` reporter (test names with project in the job log)
+- [x] F01.2: backend `testTimeout: 15_000`, `maxWorkers` from `VITEST_MAX_WORKERS`
+- [x] F01.3: `.github/workflows/ci.yml`, job `quality`
+- [x] F01.4: job `e2e` (frontend build, `playwright install --with-deps`, cache by Playwright version)
+- [x] F01.5: `@vitest/coverage-v8` + `test:coverage` in backend and frontend, artifact `coverage`; `coverage/` in `.gitignore`
+- [x] F01.6: negative controls (lint, test)
+- [x] F01.6a: `*.redis.test.ts` excluded from `pnpm test` by `vitest.config.ts`, `test:redis` only in `redis-tests.yml`
+- [x] F01.D: `documentation/backend/testing.md` (Vitest config, coverage, CI table, gaps), `documentation/reference/scripts.md` (`test:coverage`, `pnpm run build-sw`)
 
-### Inventory (F00.1, `main` at `0fb0ad1`)
+### Waiting for the repository owner
 
-`pnpm format:check` (glob `**/*.{ts,tsx,json,md}`): 206 files.
-
-| Area                      | Files |
-| ------------------------- | ----- |
-| `packages/backend`        | 132   |
-| `packages/frontend`       | 31    |
-| `packages/shared`         | 26    |
-| `packages/api-playground` | 7     |
-| `docs`                    | 6     |
-| `documentation`           | 2     |
-| `eslint.config.ts`        | 1     |
-| `feature_list.json`       | 1     |
-
-Prettier configs before the change:
-
-| Config                                     | Settings                                          |
-| ------------------------------------------ | ------------------------------------------------- |
-| root                                       | none → Prettier defaults (2 spaces, `"`, `;`, 80) |
-| `documentation/.prettierrc.json`           | 4 spaces, `'`, no `;`, 100                        |
-| `packages/frontend/.prettierrc.json`       | 4 spaces, `'`, no `;`, 100                        |
-| `packages/api-playground/.prettierrc.json` | `'`, no `;`, 100, **tabWidth default 2**          |
-
-`.prettierignore` before: only `documentation/.vitepress/{cache,dist}/`.
-
-ESLint: root uses `tseslint.configs.stylisticTypeChecked` (type-aware code-style rules such as `prefer-nullish-coalescing`, no formatting rules); frontend and api-playground already use `@vue/eslint-config-prettier`.
-
-Scope note: the root glob does not cover `.vue`, `.js`, `.mjs`, `.css`; extending it is out of scope for feat-010 (recorded as a new code-issues item).
+- [ ] F01.7: branch protection on `main` — required checks `quality` and `e2e` (Settings → Branches → rule for `main` → Require status checks)
 
 ## Evidence of Completion
 
-On `feat/format-baseline` after `60c735c` (macOS, Node 24.20.0):
+CI runs on PR #55:
 
-- `pnpm format:check` — `All matched files use Prettier code style!` (before: 206 files on defaults, 423 with the new config)
-- `pnpm typecheck` — exit 0
-- `pnpm lint` — exit 0
-- `pnpm test` — backend 88 files / 671 tests, frontend 8 / 45, shared pass 3, documentation pass 26
-- `pnpm build` — exit 0
-- `pnpm --filter frontend test:e2e` — 12 passed (chromium, firefox, webkit, Mobile Safari)
+| Run                                                                                  | Commit                         | Result                                                                                                                                                  |
+| ------------------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [40089711640](https://github.com/Blazheiko/itvibe-template/actions/runs/40089711640) | `ci.yml` added                 | first run, no cache (`pnpm cache is not found`, `Cache not found for input keys: playwright-Linux-1.64.1`): `quality` ✅ 2 min 26 s, `e2e` ✅ 2 min 8 s |
+| [40089935251](https://github.com/Blazheiko/itvibe-template/actions/runs/40089935251) | TEMP lint error + failing test | `quality` ❌ at `pnpm lint` (negative control)                                                                                                          |
+| [40090062773](https://github.com/Blazheiko/itvibe-template/actions/runs/40090062773) | TEMP failing test only         | `quality` ❌ at `pnpm test`: `negative control — AssertionError: expected 1 to be 2`                                                                    |
+| [40090215969](https://github.com/Blazheiko/itvibe-template/actions/runs/40090215969) | negative control removed       | `quality` ✅, `e2e` ✅, caches restored (pnpm, `playwright-Linux-1.64.1`)                                                                               |
+
+From the first run log:
+
+- `quality`: backend 671 passed, frontend 45 passed, shared pass 3, documentation pass 26; coverage lines backend 74.11 %, frontend 50.88 %; artifact `coverage` (561 565 bytes); no `redis.test` in the log
+- `e2e`: `12 passed (20.7s)`, 3 tests in each project `[chromium]`, `[firefox]`, `[webkit]`, `[Mobile Safari]`
+
+Local (macOS, Node 24.20.0):
+
+- `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm build` — exit 0
+- `pnpm test` — backend 671, frontend 45, shared pass 3, documentation pass 26
+- `CI=1 pnpm --filter frontend test:e2e` — 12 passed, server started by `pnpm run preview`
+- timeout: a temporary 7 s test passes with the new config (would fail at the 5 s default); backend 671 with `VITEST_MAX_WORKERS=2`
 - `pnpm docs:build && pnpm docs:verify` — `verify-dist: all checks passed`
-- No logic change: script comparing the TypeScript AST (node kinds + identifier/literal values, parentheses ignored) of every changed `.ts`/`.tsx` file before/after — `checked 385, differ 0` once `EmptyStatement` is ignored. The only 5 files that differ before that filter get Prettier's ASI guard (`;({ a } = b)`), required with `semi: false`. Negative control: a mutation (`return` → `return !`) in `packages/shared/src/utils/phone.ts` is reported (`differ 6`), then reverted
-- Golden path: `git blame` with `blame.ignoreRevsFile` attributes lines to the original commits, not `60c735c`
 
 ## Files Modified
 
-- new: `.prettierrc.json`, `.git-blame-ignore-revs`
-- removed: `documentation/.prettierrc.json`, `packages/frontend/.prettierrc.json`, `packages/api-playground/.prettierrc.json`
-- updated: `.prettierignore`, `README.md`, `documentation/reference/toolchain.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`, `progress.md`
-- formatted only (commit `60c735c`): 422 files
+- new: `.github/workflows/ci.yml`, `docs/plan/app-ci-plan.md` (PR #54)
+- updated: `packages/frontend/playwright.config.ts`, `packages/frontend/package.json`, `packages/backend/vitest.config.ts`, `packages/backend/package.json`, `pnpm-lock.yaml`, `.gitignore`, `documentation/backend/testing.md`, `documentation/reference/scripts.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`, `progress.md`
 
 ## Notes for Next Session
 
-- After merge: notify branch owners to rebase; formatting commit hash is in `.git-blame-ignore-revs`.
+- After F01.7 and merge: done PR for feat-018; next wave-2 feature F19 PG Test Harness (feat-036) or F02 Docker (feat-019).

@@ -7,10 +7,12 @@
 Конфіг [packages/backend/vitest.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/vitest.config.ts) мінімальний:
 
 - `environment: "node"`;
-- `exclude`: стандартні `configDefaults.exclude` плюс `dist/**`. Окремого `include` немає, тож Vitest підхоплює стандартні шаблони `*.spec.ts` / `*.test.ts`;
+- `exclude`: стандартні `configDefaults.exclude` плюс `dist/**` і `**/*.redis.test.ts` (Redis-тести запускає окремий `pnpm --filter backend test:redis` з [vitest.redis.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/vitest.redis.config.ts) і змінною `REDIS_TEST_URL`). Окремого `include` немає, тож Vitest підхоплює стандартні шаблони `*.spec.ts` / `*.test.ts`;
+- `testTimeout: 15_000` — 15 с на тест замість стандартних 5 с: під паралельним навантаженням (typecheck + lint) 5 с не вистачало;
+- `maxWorkers` береться з `VITEST_MAX_WORKERS`, якщо змінну задано (у CI — `2`); без неї діє значення Vitest за замовчуванням;
 - аліаси `#app`, `#config`, `#vendor`, `#database`, `#drizzle` вказують на відповідні каталоги `src/`, а `#logger` — на `src/vendor/utils/logger.ts`.
 
-`setupFiles`, глобальних таймаутів і налаштувань coverage у конфігу немає, тож діють стандартні значення Vitest (5 с на тест).
+`setupFiles` і секції `coverage` у конфігу немає.
 
 Скрипти пакета ([packages/backend/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/package.json)):
 
@@ -44,12 +46,19 @@
 
 ## Coverage
 
-Скрипту чи конфігурації coverage немає в жодному пакеті: у `vitest.config.ts` backend і frontend немає секції `coverage`, а в `package.json` немає відповідних скриптів.
+Backend і frontend мають скрипт `test:coverage` (`vitest run --coverage` з провайдером [`@vitest/coverage-v8`](https://vitest.dev/guide/coverage), звіти `text-summary` у консоль і `html` у `coverage/`):
+
+```bash
+pnpm --filter backend test:coverage
+pnpm --filter frontend test:coverage
+```
+
+Порогу немає: CI лише публікує звіт. Coverage рахується по файлах, які завантажили тести, а не по всьому `src/`. Стартові значення (рядки, жовтень 2026): backend ~74 %, frontend ~51 %.
 
 ## Інші пакети
 
 - **shared** — `"test": "pnpm build && node --test test/*.test.js"` ([package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/package.json)): спочатку збірка, потім `node:test` над [test/languages.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/languages.test.js).
-- **frontend** — Vitest у `jsdom` поверх `vite.config`, з виключенням `e2e/**` і `e2e-csp/**` ([vitest.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vitest.config.ts)); unit-тести в `src/**/__tests__`. Скрипти: `test` (`vitest run`), `test:unit` (`vitest`), `test:e2e` (`playwright test`). Playwright ([playwright.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.config.ts)) бере тести з `e2e/`, проєкти chromium, firefox, webkit і Mobile Safari, а `webServer` сам піднімає `npm run dev` на 5173 (на CI — `npm run preview` на 4173) або перевикористовує запущений. Backend Playwright не запускає. CSP перевіряє окремий конфіг [playwright.csp.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.csp.config.ts) з тестами в `e2e-csp/`: `test:e2e:csp` збирає production-статику (`scripts/prod-local.sh --build-only`) і двічі запускає бекенд з `SERVE_STATIC=true` — у режимі enforce і report-only. Перевіряються дозволені сценарії: реєстрація, WebSocket (до кінця handshake — очікується фрейм `pong` у відповідь на heartbeat `ping`), шрифти, service worker offline і зображення з `CDN_URL` (`naturalWidth > 0`; роль CDN грає заглушка `e2e-csp/cdn-stub.mjs`). Заборонені: inline-скрипт (`effectiveDirective` `script-src-elem`), `fetch` поза `connect-src` і зображення поза `img-src` на локальний probe-origin, з перевіркою `disposition` (`enforce` / `report`). Потрібні PostgreSQL і Redis.
+- **frontend** — Vitest у `jsdom` поверх `vite.config`, з виключенням `e2e/**` і `e2e-csp/**` ([vitest.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vitest.config.ts)); unit-тести в `src/**/__tests__`. Скрипти: `test` (`vitest run`), `test:unit` (`vitest`), `test:e2e` (`playwright test`). Playwright ([playwright.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.config.ts)) бере тести з `e2e/`, проєкти chromium, firefox, webkit і Mobile Safari, а `webServer` сам піднімає `pnpm run dev` на 5173 (на CI — `pnpm run preview` на 4173) або перевикористовує запущений. Backend Playwright не запускає. CSP перевіряє окремий конфіг [playwright.csp.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/playwright.csp.config.ts) з тестами в `e2e-csp/`: `test:e2e:csp` збирає production-статику (`scripts/prod-local.sh --build-only`) і двічі запускає бекенд з `SERVE_STATIC=true` — у режимі enforce і report-only. Перевіряються дозволені сценарії: реєстрація, WebSocket (до кінця handshake — очікується фрейм `pong` у відповідь на heartbeat `ping`), шрифти, service worker offline і зображення з `CDN_URL` (`naturalWidth > 0`; роль CDN грає заглушка `e2e-csp/cdn-stub.mjs`). Заборонені: inline-скрипт (`effectiveDirective` `script-src-elem`), `fetch` поза `connect-src` і зображення поза `img-src` на локальний probe-origin, з перевіркою `disposition` (`enforce` / `report`). Потрібні PostgreSQL і Redis.
 
 ::: warning Не покрито
 Бекенд запускається з `APP_ENV=local` по http, тому production-гілка (`upgrade-insecure-requests`, HTTPS/WSS) і реальні S3/CDN (завантаження аватара, редирект `/support/screenshot/:id`) у браузерних тестах не перевіряються.
@@ -59,7 +68,17 @@
 
 ## CI і локальний запуск
 
-У `.github/workflows` є лише [docs.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/docs.yml): він запускає `typecheck`, `test`, `docs:build` і `docs:verify` тільки для пакета `documentation`. Тести backend, frontend і shared у CI не запускаються. Локально все проганяє [init.sh](https://github.com/Blazheiko/itvibe-template/blob/main/init.sh) (install, typecheck, lint, `pnpm test`). E2e він не запускає.
+У `.github/workflows` три workflow:
+
+| Workflow                                                                                                    | Коли                                          | Що робить                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [ci.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/ci.yml)                   | кожен PR і push у `main`, без фільтра `paths` | job `quality`: `pnpm install --frozen-lockfile` → `pnpm --filter shared build` → `format:check` → `typecheck` → `lint` → `test` → `test:coverage` (artifact `coverage`); job `e2e`: shared build → `pnpm --filter frontend build` → `playwright install --with-deps` (усі браузери; кеш `~/.cache/ms-playwright` за версією Playwright) → `test:e2e` на 4 проєктах (artifact `playwright-report` при падінні) |
+| [redis-tests.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/redis-tests.yml) | PR і push зі змінами backend/shared           | `pnpm --filter backend test:redis` із сервісом `redis:7-alpine`; єдине місце, де запускаються `*.redis.test.ts`                                                                                                                                                                                                                                                                                               |
+| [docs.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/docs.yml)               | зміни документації                            | `typecheck`, `test`, `docs:build`, `docs:verify` для пакета `documentation` і деплой на GitHub Pages з `main`                                                                                                                                                                                                                                                                                                 |
+
+`shared` збирається перед перевірками, бо typecheck і тести backend/frontend імпортують `shared/dist`. Playwright у CI запускає `pnpm run preview` по зібраному `dist`, тож `frontend build` іде перед e2e.
+
+Локально те саме, крім e2e і coverage, проганяє [init.sh](https://github.com/Blazheiko/itvibe-template/blob/main/init.sh) (install, typecheck, lint, `pnpm test`, build).
 
 ## Рецепти
 
@@ -80,9 +99,7 @@ pnpm --filter frontend test:e2e:csp            # CSP на production-збірц�
 
 ::: warning Прогалини
 
-- Немає тестів репозиторіїв і інтеграційних тестів з реальною БД чи Redis: увесь шар даних мокається.
-- Немає unit-тестів для `detectBodyKind` / `resolveMaxBodySize` і тестів на 413 (п. 14 у [docs/plan/code-issues-found-during-docs.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)).
-- Немає coverage і немає CI для тестів застосунку.
-- Одного разу під сильним паралельним навантаженням машини тести backend падали за таймаутом (стандартні 5 с Vitest, власного `testTimeout` немає). У звичайному прогоні не відтворилося.
+- Немає тестів репозиторіїв і інтеграційних тестів з реальною БД: шар даних мокається (з реальним Redis працюють лише `*.redis.test.ts`).
+- Coverage без порогу і лише по завантажених тестами файлах.
 
 :::
