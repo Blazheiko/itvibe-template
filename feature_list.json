@@ -321,17 +321,17 @@
             "owner": "Blazheiko",
             "branch": "feat/shared-cleanup",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #85 (merge ecbf624): 13 real shared tests, guards re-exported from the root, branded EntityId with a type test; shared 13, backend 843, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/shared-cleanup"
         },
         {
             "id": "feat-033",
             "name": "Frontend & Playground",
             "description": "relative VITE_BASE_URL fallback, typed VITE_* vars, playground prefix/wss/no fake queue (decision R4), /health in playground (code-issues items 59, 61, 62, 63, 64). Roadmap F16: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/frontend-playground",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
