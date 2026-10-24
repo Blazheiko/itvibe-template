@@ -69,8 +69,17 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Включаем corepack для использования pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+# Включаем corepack для использования pnpm. COREPACK_HOME вне /root, чтобы
+# пользователь app (one-shot `pnpm db:migrate`) брал уже скачанный pnpm без сети.
+ENV COREPACK_HOME=/opt/corepack \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
+    && chmod -R a+rX /opt/corepack
+
+# Непривилегированный пользователь (code-issues item 29). Домашний каталог нужен
+# pnpm для кэша при one-shot запусках миграций.
+RUN groupadd --system app \
+    && useradd --system --gid app --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 
 # Копируем файлы для установки зависимостей
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -107,6 +116,21 @@ COPY --from=builder /app/docs/support-knowledge-base ./docs/support-knowledge-ba
 # Открываем порт 3000
 EXPOSE 3000
 
-# Запускаем миграции и приложение
 WORKDIR /app/packages/backend
-CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]
+
+# Файлы приложения принадлежат root и только читаются; процесс работает от app.
+USER app
+
+# Liveness через /api/ping. Проверяется тело, а не только код: при SERVE_STATIC
+# неизвестный путь отдаёт index.html со статусом 200 (SPA fallback). Если задан
+# другой PORT или API_PATH_PREFIX, переопределите проверку при запуске
+# (--health-cmd), см. documentation/backend/deployment.md.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${PORT:-3000}/api/ping" | grep -q '"status":"ok"' || exit 1
+
+# PID 1 — Node, поэтому SIGTERM от `docker stop` доходит до stopGracefully.
+# Миграции не запускаются на старте (code-issues item 30): это отдельные one-shot
+# запуски того же образа перед rollout:
+#   docker run --rm --env-file .env <image> pnpm db:create:prod
+#   docker run --rm --env-file .env <image> pnpm db:migrate
+CMD ["node", "dist/index.js"]

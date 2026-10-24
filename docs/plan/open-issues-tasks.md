@@ -83,21 +83,21 @@
 ### F02 Docker Hardening (п. 28, 29, 30)
 
 - [x] **F02.S** Шаблон S (M: детальний план).
-- [ ] **F02.1** Baseline: розмір образу, час збірки, розмір `transferring context`.
+- [x] **F02.1** Baseline: розмір образу, час збірки, розмір `transferring context`.
       **AC:** числа в `progress.md`.
-- [ ] **F02.2** `.dockerignore` (перелік з roadmap) (п. 28).
+- [x] **F02.2** `.dockerignore` (перелік з roadmap) (п. 28).
       **AC:** `docker build` успішний; `transferring context` менший (допоміжне свідчення).
-- [ ] **F02.3** → F02.2. Canary-перевірки: маркер у `.env` і `packages/backend/.env`; `--target builder` + `grep`; `docker save` + `grep` по шарах; `docker history --no-trunc`.
+- [x] **F02.3** → F02.2. Canary-перевірки: маркер у `.env` і `packages/backend/.env`; `--target builder` + `grep`; `docker save` + `grep` по шарах; `docker history --no-trunc`.
       **AC:** усі три порожні; команди і вивід у evidence; canary-файли видалено.
-- [ ] **F02.4** Користувач `app` (`groupadd/useradd --system`), `chown` лише записуваних каталогів, `USER app` після `COPY` (п. 29).
+- [x] **F02.4** Користувач `app` (`groupadd/useradd --system`), `chown` лише записуваних каталогів, `USER app` після `COPY` (п. 29).
       **AC:** `docker exec <c> id -u` ≠ 0; застосунок стартує і віддає статику.
-- [ ] **F02.5** `HEALTHCHECK` через `curl -fsS http://127.0.0.1:${APP_PORT:-3000}/api/ping` з `interval/timeout/start-period/retries` (п. 29).
+- [x] **F02.5** `HEALTHCHECK` через `curl -fsS http://127.0.0.1:${APP_PORT:-3000}/api/ping` з `interval/timeout/start-period/retries` (п. 29).
       **AC:** `healthy` при живому застосунку; з `API_PATH_PREFIX=v1` контейнер працює, але стає `unhealthy` після `retries`.
-- [ ] **F02.6** `CMD ["node", "dist/index.js"]`; міграції — окремі one-shot запуски: `docker run --rm <img> pnpm db:create:prod`, потім `docker run --rm <img> pnpm db:migrate` (п. 30).
+- [x] **F02.6** `CMD ["node", "dist/index.js"]`; міграції — окремі one-shot запуски: `docker run --rm <img> pnpm db:create:prod`, потім `docker run --rm <img> pnpm db:migrate` (п. 30).
       **AC:** старт контейнера не запускає міграції (логи); one-shot міграція на чистій БД успішна; `docker stop` → shutdown-лог з `src/index.ts`, exit 0/143 без SIGKILL.
-- [ ] **F02.7** → F02.2–F02.6. Повторні вимірювання: розмір образу, час збірки (той самий кеш-стан, що в F02.1), `transferring context`.
+- [x] **F02.7** → F02.2–F02.6. Повторні вимірювання: розмір образу, час збірки (той самий кеш-стан, що в F02.1), `transferring context`.
       **AC:** таблиця до/після в evidence; зростання розміру образу пояснено.
-- [ ] **F02.D** Шаблон D: `deployment.md` (one-shot міграції, порядок rollout, healthcheck і префікс). **F02.E**, **F02.X**.
+- [x] **F02.D** Шаблон D: `deployment.md` (one-shot міграції, порядок rollout, healthcheck і префікс). **F02.E**, **F02.X**.
 
 ## Хвиля 3 — безпека і доступ (паралельно, після F00)
 
