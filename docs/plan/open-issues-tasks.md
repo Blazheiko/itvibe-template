@@ -294,11 +294,11 @@
       **AC:** імпорт з обраного шляху компілюється в backend.
 - [x] **F15.3** `EntityIdSchema.brand('EntityId')`; виправити використання (п. 58).
       **AC:** `// @ts-expect-error` тест на передачу plain string.
-- [x] **F15.D** Шаблон D: `documentation/shared` (тести, guards, брендовані id). **F15.E**, **F15.X**.
+- [x] **F15.D** Шаблон D: `documentation/shared` (тести, guards, брендовані id). **F15.E** ✅, **F15.X** ✅.
 
 ### F16 Frontend & Playground (п. 59, 61, 62, 63, 64)
 
-- [ ] **F16.S** Шаблон S.
+- [x] **F16.S** Шаблон S.
 - [ ] **F16.1** Fallback `VITE_BASE_URL` → відносний шлях (п. 59).
       **AC:** dev без змінної — запити через proxy (DevTools, evidence).
 - [ ] **F16.2** Типізація всіх `VITE_*` в `env.d.ts`; чистка `main.ts` (п. 61).
