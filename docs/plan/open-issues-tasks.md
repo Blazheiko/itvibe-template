@@ -63,13 +63,13 @@
       **AC:** `quality` червоний з очікуваної причини; коміт видалено; посилання на run у evidence.
 - [x] **F01.6a** Розмежування з `redis-tests.yml`: `ci.yml` не задає `REDIS_TEST_URL` і не викликає `test:redis`.
       **AC:** `*.redis.test.ts` виключені з `pnpm test` через `exclude` у `vitest.config.ts` (у логах `quality` їх немає); `test:redis` запускається лише в `redis-tests.yml` (`grep test:redis .github/workflows`).
-- [ ] **F01.7** Branch protection: `quality` і `e2e` обов'язкові (вручну власником репозиторію).
+- [x] **F01.7** Branch protection: `quality` і `e2e` обов'язкові (налаштовано через `gh api` 2026-10-24: `strict`, без force-push, `enforce_admins: false`).
       **AC:** опис/скріншот налаштування в evidence.
-- [x] **F01.D** Шаблон D: `testing.md` (CI, coverage, зв'язок з `redis-tests.yml`). **F01.E**, **F01.X**.
+- [x] **F01.D** Шаблон D: `testing.md` (CI, coverage, зв'язок з `redis-tests.yml`). **F01.E** ✅, **F01.X** ✅.
 
 ### F19 PG Test Harness (передумова для F05, F08)
 
-- [ ] **F19.S** Шаблон S.
+- [x] **F19.S** Шаблон S.
 - [ ] **F19.1** `vitest.pg.config.ts` (include `**/*.pg.test.ts`), скрипт `test:pg`; основний `vitest.config.ts` виключає `*.pg.test.ts`.
       **AC:** `pnpm --filter backend test` не запускає pg-тести; `test:pg` без `PG_TEST_URL` пропускає їх.
 - [ ] **F19.2** Хелпер `test/pg/setup.ts`: тимчасова БД на прогін (`CREATE DATABASE … ` з унікальним суфіксом), `CREATE EXTENSION vector`, міграції, `DROP DATABASE` після.

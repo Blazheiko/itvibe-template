@@ -181,8 +181,8 @@
             "owner": "Blazheiko",
             "branch": "feat/app-ci",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #55 (merge 7e649c6): ci.yml quality + e2e, first run without caches green (run 40089711640), negative controls red at lint (40089935251) and test (40090062773), coverage artifact, testTimeout 15 s, pnpm in Playwright; branch protection on main requires quality and e2e (strict); evidence in progress.md on feat/app-ci"
         },
         {
             "id": "feat-019",
@@ -358,10 +358,10 @@
             "id": "feat-036",
             "name": "PG Test Harness",
             "description": "*.pg.test.ts convention, test:pg, temporary DB with migrations, pg-tests.yml with pgvector/pgvector:pg16 (prerequisite for feat-022 and feat-025). Roadmap F19: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/pg-test-harness",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         }
     ]
