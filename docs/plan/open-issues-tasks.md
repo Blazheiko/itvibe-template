@@ -30,11 +30,11 @@
 Решта фіч стартує лише після F00 `done`.
 
 - [ ] **F00.S** Шаблон S. Перед стартом — оголошення заморозки: усі відкриті гілки влиті або запушені.
-- [ ] **F00.1** Інвентар: `pnpm format:check` (кількість файлів по пакетах), наявні конфіги Prettier у пакетах, стильові правила ESLint.
+- [x] **F00.1** Інвентар: `pnpm format:check` (кількість файлів по пакетах), наявні конфіги Prettier у пакетах, стильові правила ESLint.
       **AC:** таблиця в `progress.md`.
-- [ ] **F00.2** Кореневий `.prettierrc` (`tabWidth: 4`, `singleQuote: true`, `semi: false`, `printWidth: 100`); пакетні конфіги прибрати або звести до кореневого, якщо пакет не має причини відрізнятися (причину записати).
+- [x] **F00.2** Кореневий `.prettierrc` (`tabWidth: 4`, `singleQuote: true`, `semi: false`, `printWidth: 100`); пакетні конфіги прибрати або звести до кореневого, якщо пакет не має причини відрізнятися (причину записати).
       **AC:** `prettier --find-config-path` для файлу кожного пакета вказує на очікуваний конфіг.
-- [ ] **F00.3** `.prettierignore`: `dist`, `node_modules`, `coverage`, `playwright-report`, `test-results`, `src/drizzle/migrations`, `documentation/.vitepress/cache`, `documentation/.vitepress/dist`, `pnpm-lock.yaml`, `graphify-out`.
+- [x] **F00.3** `.prettierignore`: `dist`, `node_modules`, `coverage`, `playwright-report`, `test-results`, `src/drizzle/migrations`, `documentation/.vitepress/cache`, `documentation/.vitepress/dist`, `pnpm-lock.yaml`, `graphify-out`.
       **AC:** `prettier --check` не заходить у ці каталоги (`--log-level debug` на вибірці).
 - [ ] **F00.4** ESLint: стильові правила, що конфліктують з Prettier, вимкнено (`eslint-config-prettier` або явне вимкнення).
       **AC:** `pnpm lint` після F00.5 не дає стильових помилок.
