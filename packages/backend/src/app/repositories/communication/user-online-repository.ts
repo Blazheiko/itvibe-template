@@ -1,6 +1,5 @@
 import { db } from '#database/db.js'
 import { userOnline } from '#database/schema.js'
-import logger from '#vendor/utils/logger.js'
 import { and, count, desc, eq, gte, lt } from 'drizzle-orm'
 import type { InferInsertModel, InferSelectModel, SQL } from 'drizzle-orm'
 
@@ -78,12 +77,7 @@ export const userOnlineRepository: IUserOnlineRepository = {
             .where(eq(userOnline.socketUuid, socketUuid))
             .returning({ id: userOnline.id })
 
-        if (rows.length === 0) {
-            logger.warn({ socketUuid }, 'user_online: no record found on disconnect')
-            return false
-        }
-
-        return true
+        return rows.length > 0
     },
 
     async listByUserId(userId, limit = 50) {

@@ -1,7 +1,7 @@
 import { getTextAdapterForModel } from '#app/services/ai/ai-provider.js'
 import { promptService } from '#app/services/ai/prompt-service.js'
 import type { TextUsageCompleteHandler } from '#app/services/ai/types.js'
-import type { SupportChatRow } from '#app/repositories/support/support-repository.js'
+import type { SupportChatRow } from '#app/repositories/index.js'
 import { resolveLanguageName } from 'shared/enums'
 import logger from '#logger'
 import supportConfig from '#config/support.js'

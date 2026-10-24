@@ -36,6 +36,8 @@ const kbArticleSelect = {
     embeddingIndexed: sql<boolean>`embedding IS NOT NULL`,
 }
 
+const toVectorLiteral = (vector: number[]): string => `[${vector.join(',')}]`
+
 export const supportKnowledgeRepository = {
     async findAll(opts: KbListOptions = {}): Promise<{ rows: KbArticleRow[]; total: number }> {
         const { category, limit = 50, offset = 0 } = opts
@@ -128,29 +130,30 @@ export const supportKnowledgeRepository = {
     },
 
     async setEmbedding(id: bigint, vector: number[]): Promise<void> {
-        const vecStr = `[${vector.join(',')}]`
-        await db.execute(
-            sql`UPDATE support_knowledge_base SET embedding = ${vecStr}::vector WHERE id = ${id}`,
-        )
+        await db
+            .update(supportKnowledgeBase)
+            .set({ embedding: toVectorLiteral(vector) })
+            .where(eq(supportKnowledgeBase.id, id))
     },
 
+    // One statement, so the vector and updatedAt change together or not at all.
     async clearEmbedding(id: bigint): Promise<void> {
         await db
             .update(supportKnowledgeBase)
-            .set({ updatedAt: new Date() })
+            .set({ embedding: null, updatedAt: new Date() })
             .where(eq(supportKnowledgeBase.id, id))
-        await db.execute(sql`UPDATE support_knowledge_base SET embedding = NULL WHERE id = ${id}`)
     },
 
     async searchByEmbedding(queryVector: number[], limit: number): Promise<KbSearchResult[]> {
-        const vecStr = `[${queryVector.join(',')}]`
+        const kb = supportKnowledgeBase
         const result = await db.execute(
             sql`
-                SELECT id, title, content, screenshot_key, screenshot_mime,
-                       embedding <=> ${vecStr}::vector AS distance
-                FROM support_knowledge_base
-                WHERE is_active = true
-                  AND embedding IS NOT NULL
+                SELECT ${kb.id} AS id, ${kb.title} AS title, ${kb.content} AS content,
+                       ${kb.screenshotKey} AS screenshot_key, ${kb.screenshotMime} AS screenshot_mime,
+                       ${kb.embedding} <=> ${toVectorLiteral(queryVector)}::vector AS distance
+                FROM ${kb}
+                WHERE ${kb.isActive} = true
+                  AND ${kb.embedding} IS NOT NULL
                 ORDER BY distance ASC
                 LIMIT ${limit}
             `,

@@ -1,4 +1,4 @@
-import { userRepository } from '#app/repositories/index.js'
+import { adminUserService } from '#app/services/admin/admin-user-service.js'
 import { mapControllerError } from '#app/controllers/shared/controller-error.js'
 import { badRequest } from '#app/services/shared/errors.js'
 import type { HttpContext } from '#vendor/types/types.js'
@@ -24,17 +24,8 @@ export default {
             limit: query.limit,
         }
 
-        const result = await userRepository.listAdminUsers(filters)
+        const result = await adminUserService.listUsers(filters)
 
-        return {
-            status: 'success',
-            items: result.items.map((user) => ({
-                id: String(user.id),
-                name: user.name,
-                email: user.email ?? '',
-                registeredAt: user.createdAt.toISOString(),
-            })),
-            total: result.total,
-        }
+        return { status: 'success', items: result.items, total: result.total }
     },
 }

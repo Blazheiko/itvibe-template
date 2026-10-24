@@ -8,13 +8,22 @@ export { emailLinkVerificationRepository } from './auth/email-link-verification-
 export { passwordResetRepository } from './auth/password-reset-repository.js'
 export { userOnlineRepository } from './communication/user-online-repository.js'
 export { smsAuthChallengeRepository } from './auth/sms-auth-challenge-repository.js'
+export { promptRepository } from './ai/prompt-repository.js'
+export { supportRepository } from './support/support-repository.js'
+export { supportKnowledgeRepository } from './support/support-knowledge-repository.js'
 
-export type { UserRow, UserInsert, UserUpdate } from './user/user-repository.js'
+export type {
+    UserRow,
+    UserInsert,
+    UserUpdate,
+    AdminUserListFilters,
+} from './user/user-repository.js'
 export type {
     LlmTextUsageRow,
     LlmTextUsageInsert,
     TextFeature,
     TextStatRow,
+    TextFilter,
 } from './ai/usage/llm-usage-repository.js'
 export type {
     UserOnlineRow,
@@ -51,3 +60,11 @@ export type {
     SmsAuthChallengeInsert,
     SmsAuthChallengeFlow,
 } from './auth/sms-auth-challenge-repository.js'
+export type { PromptRow, PromptType, PromptUpdate } from './ai/prompt-repository.js'
+export type { SupportChatRow } from './support/support-repository.js'
+export type {
+    KbRow,
+    KbArticleRow,
+    KbSearchResult,
+    KbListOptions,
+} from './support/support-knowledge-repository.js'

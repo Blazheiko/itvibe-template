@@ -1,11 +1,13 @@
-import { llmUsageRepository } from '#app/repositories/ai/usage/llm-usage-repository.js'
+import { llmUsageRepository } from '#app/repositories/index.js'
 import type {
     LlmTextUsageRow,
     TextFeature,
     TextStatRow,
     TextFilter,
-} from '#app/repositories/ai/usage/llm-usage-repository.js'
+} from '#app/repositories/index.js'
 import logger from '#logger'
+
+export type { TextFilter }
 
 export const llmUsageService = {
     recordText(params: {

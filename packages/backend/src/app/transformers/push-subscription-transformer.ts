@@ -1,8 +1,5 @@
 import { DateTime } from 'luxon'
-import type {
-    PushSubscriptionRow,
-    PushSubscriptionWithLogs,
-} from '#app/repositories/notifications/push-subscription-repository.js'
+import type { PushSubscriptionRow, PushSubscriptionWithLogs } from '#app/repositories/index.js'
 
 export type SerializedPushSubscription = Omit<
     PushSubscriptionRow,

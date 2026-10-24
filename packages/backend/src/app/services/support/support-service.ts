@@ -1,4 +1,4 @@
-import { supportRepository } from '#app/repositories/support/support-repository.js'
+import { supportRepository } from '#app/repositories/index.js'
 import { supportEmbeddingService } from '#app/services/support/support-embedding-service.js'
 import { supportLlmService } from '#app/services/support/support-llm-service.js'
 import { supportQueryTranslationService } from '#app/services/support/support-query-translation-service.js'
