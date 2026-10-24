@@ -288,13 +288,13 @@
 ### F15 Shared Cleanup (п. 56, 57, 58)
 
 - [x] **F15.S** Шаблон S.
-- [ ] **F15.1** Тести shared: enums мов, `utils/phone`, `isWsChannel`, ключові схеми; порожній `languages.test.js` замінено (п. 56).
+- [x] **F15.1** Тести shared: enums мов, `utils/phone`, `isWsChannel`, ключові схеми; порожній `languages.test.js` замінено (п. 56).
       **AC:** `pnpm --filter shared test` — ≥ 1 реальний тест на кожен модуль.
-- [ ] **F15.2** `guards`: реекспорт у `src/index.ts` або підшлях задокументовано, відповідно до фактичних імпортів (п. 57).
+- [x] **F15.2** `guards`: реекспорт у `src/index.ts` або підшлях задокументовано, відповідно до фактичних імпортів (п. 57).
       **AC:** імпорт з обраного шляху компілюється в backend.
-- [ ] **F15.3** `EntityIdSchema.brand('EntityId')`; виправити використання (п. 58).
+- [x] **F15.3** `EntityIdSchema.brand('EntityId')`; виправити використання (п. 58).
       **AC:** `// @ts-expect-error` тест на передачу plain string.
-- [ ] **F15.D** Шаблон D: `documentation/shared` (тести, guards, брендовані id). **F15.E**, **F15.X**.
+- [x] **F15.D** Шаблон D: `documentation/shared` (тести, guards, брендовані id). **F15.E**, **F15.X**.
 
 ### F16 Frontend & Playground (п. 59, 61, 62, 63, 64)
 

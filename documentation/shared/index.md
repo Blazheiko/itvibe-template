@@ -35,11 +35,8 @@ Backend і frontend підключають пакет як `"shared": "workspace
 
 Про правила написання схем (`'+': 'reject'`, query-морфи) див. [«Валідація»](/backend/validation). Чому DTO трансформерів не беруться з `shared/responses`, пояснено в розділі [«Репозиторії та трансформери»](/backend/repositories-transformers).
 
-::: warning Розбіжності в коді
-
-- [src/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/index.ts) реекспортує всі розділи, крім `guards` (рядок закоментовано), хоча підшлях `shared/guards` є в `exports`.
-- `EntityIdSchema` лежить у `brands`, але це рядковий regex `/^[1-9]\d*$/` без `.brand(...)`, тобто фактично не branded-тип.
-  :::
+- [src/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/index.ts) реекспортує всі розділи, зокрема `guards`; підшляхи з `exports` (`shared/guards` тощо) працюють так само.
+- `EntityIdSchema` — справжній branded-тип: `type(/^[1-9]\d*$/).brand('EntityId')`. Рядок стає `EntityId` лише після перевірки схемою; присвоєння звичайного рядка — помилка typecheck (перевіряє [`shared-brands.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/shared-brands.spec.ts) у backend).
 
 ## Використання в backend
 
@@ -71,9 +68,14 @@ defineRoute({
 
 Скрипт `test` виконує `pnpm build && node --test test/*.test.js`, тобто вбудований раннер Node проганяє JS-файли з `test/` на зібраному `dist`. Кореневий `pnpm test` (`pnpm -r test`) запускає його разом з іншими пакетами.
 
-::: warning
-Єдиний файл [test/languages.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/languages.test.js) містить лише два імпорти (`node:test`, `node:assert/strict`) і жодного тест-кейсу. Тож поки що пакет фактично не покритий тестами.
-:::
+Що покрито:
+
+| Файл                                                                                                                   | Що перевіряє                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [languages.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/languages.test.js)     | `resolveLanguageCode` (локаль браузера → код застосунку або `en`), `isAppLocaleCode`, назви мов для кожного `APP_LOCALE_CODES` |
+| [phone.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/phone.test.js)             | `normalizePhoneNumber` → E.164 і відмова для порожніх/невалідних, `looksLikePhoneNumber`                                       |
+| [ws-channels.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/ws-channels.test.js) | `isWsChannel`                                                                                                                  |
+| [contracts.test.js](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/test/contracts.test.js)     | `ErrorCode` = `ErrorCodeValues`, `EntityIdSchema`, ліміти й `'+': 'reject'` вибраних схем вводу, реекспорт guards з кореня     |
 
 ## Як додати контракт
 

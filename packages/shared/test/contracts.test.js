@@ -1,0 +1,42 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { type } from "@arktype/type";
+
+import { ErrorCode, ErrorCodeValues } from "../dist/errors/index.js";
+import { EntityIdSchema } from "../dist/brands/index.js";
+import {
+  PushSubscriptionTestInputSchema,
+  SupportChatInputSchema,
+} from "../dist/schemas/index.js";
+import * as root from "../dist/index.js";
+
+test("ErrorCode and ErrorCodeValues list the same codes", () => {
+  assert.deepEqual([...ErrorCodeValues].sort(), Object.values(ErrorCode).sort());
+  assert.equal(new Set(ErrorCodeValues).size, ErrorCodeValues.length);
+});
+
+test("EntityIdSchema accepts canonical positive integer ids only", () => {
+  assert.equal(EntityIdSchema("42"), "42");
+  for (const value of ["0", "007", "-1", "1.5", "", "abc", " 1"]) {
+    assert.ok(EntityIdSchema(value) instanceof type.errors, JSON.stringify(value));
+  }
+});
+
+test("input schemas reject unknown keys and keep their limits", () => {
+  assert.ok(PushSubscriptionTestInputSchema({ extra: 1 }) instanceof type.errors);
+  assert.ok(
+    PushSubscriptionTestInputSchema({ title: "x".repeat(201) }) instanceof type.errors,
+  );
+  assert.deepEqual(PushSubscriptionTestInputSchema({ title: "t" }), { title: "t" });
+  assert.ok(SupportChatInputSchema({ message: "" }) instanceof type.errors);
+  assert.deepEqual(SupportChatInputSchema({ message: "hi", language: "uk" }), {
+    message: "hi",
+    language: "uk",
+  });
+});
+
+test("the package root re-exports the guards", () => {
+  assert.equal(typeof root.isWsChannel, "function");
+  assert.ok(Array.isArray(root.WS_CHANNELS));
+});

@@ -30,6 +30,7 @@
 | feat-029 | 43, 52, 54     |
 | feat-030 | 33, 34, 35     |
 | feat-031 | 39, 40, 41     |
+| feat-032 | 56, 57, 58     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -94,9 +95,9 @@
 | 53  | ~~Неповний облік використання AI (переклад, тест промпту, embeddings, Mistral без usage)~~ ✅                     | Низька       | AI                           |
 | 54  | ~~Embeddings: `vector(1536)` зашито, `reindexAll` без батчів, пошук без порогу~~ ✅                               | Низька       | AI / БД                      |
 | 55  | `llm_text_usage.final_prompt` безстроково зберігає повні тексти (PII)                                             | Середня      | AI / приватність             |
-| 56  | Тест shared не містить жодного тесту (`pass 1` — порожній файл)                                                   | Середня      | Тести / shared               |
-| 57  | `guards` у shared порожні й закоментовані в `index.ts`                                                            | Низька       | shared                       |
-| 58  | `EntityIdSchema` без `.brand()` — не брендований тип                                                              | Низька       | shared                       |
+| 56  | ~~Тест shared не містить жодного тесту (`pass 1` — порожній файл)~~ ✅                                            | Середня      | Тести / shared               |
+| 57  | ~~`guards` у shared порожні й закоментовані в `index.ts`~~ ✅                                                     | Низька       | shared                       |
+| 58  | ~~`EntityIdSchema` без `.brand()` — не брендований тип~~ ✅                                                       | Низька       | shared                       |
 | 59  | Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`                                           | Середня      | Frontend / DX                |
 | 60  | ~~Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`~~ ✅                                            | Середня      | Frontend / безпека           |
 | 61  | Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі                                                       | Низька       | Frontend                     |
@@ -570,15 +571,21 @@
 
 ### 56. Тест shared не містить жодного тесту
 
+> **Виправлено** у feat-032 (гілка `feat/shared-cleanup`): 13 тестів у `languages.test.js`, `phone.test.js`, `contracts.test.js` (і наявний `ws-channels.test.js`): мови, телефони, коди помилок, `EntityIdSchema`, вибрані схеми вводу.
+
 - **Що:** `packages/shared/test/languages.test.js` має лише два імпорти (`node:test`, `node:assert/strict`) без жодного тест-кейсу. Тому `pnpm test` для shared показує `pass 1`: це «пройдений» файл, а не реальний тест.
 - **Пропозиція:** тести для schemas/utils (наприклад, `utils/phone`, enums мов) або прибрати скрипт.
 
 ### 57. `guards` у shared порожні
 
+> **Виправлено** у feat-032 (гілка `feat/shared-cleanup`): guards (з feat-005 — `isWsChannel`) реекспортуються з кореня `shared`, підшлях `shared/guards` лишився.
+
 - **Що:** `packages/shared/src/guards/index.ts` містить лише `export {}`; реекспорт закоментовано в `src/index.ts`, але `./guards` є в `exports` `package.json`.
 - **Пропозиція:** видалити з `exports` або наповнити.
 
 ### 58. `EntityIdSchema` не брендований
+
+> **Виправлено** у feat-032 (гілка `feat/shared-cleanup`): `.brand('EntityId')`; тест типів у backend (`@ts-expect-error` на присвоєнні рядка) — без бренду typecheck падає (перевірено).
 
 - **Що:** `packages/shared/src/brands/ids.ts` описує `EntityIdSchema` як regex-тип без `.brand(...)`, тож тека `brands` не дає брендованих типів.
 
