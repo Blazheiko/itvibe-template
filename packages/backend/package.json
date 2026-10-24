@@ -26,6 +26,7 @@
         "db:seed:prod": "node dist/db/seed.js",
         "mail:test": "tsx src/scripts/send-test-email.ts",
         "test": "vitest run",
+        "test:coverage": "vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=html",
         "test:watch": "vitest",
         "test:redis": "vitest run --config vitest.redis.config.ts"
     },
@@ -62,6 +63,7 @@
         "@types/pg": "^8.23.1",
         "@types/web-push": "^3.6.4",
         "@types/ws": "^8.18.2",
+        "@vitest/coverage-v8": "^5.0.5",
         "tsx": "^4.23.15",
         "typescript": "6.0.3",
         "vitest": "^5.0.5"
