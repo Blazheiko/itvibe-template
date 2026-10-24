@@ -51,7 +51,7 @@ flowchart LR
 - **Controller** — отримує `HttpContext`, викликає сервіс, мапить помилку `Result` у HTTP-відповідь через `mapControllerError`.
 - **Service** — бізнес-логіка, повертає `Result.ok(...)` / `Result.err(...)`.
 - **Repository** — запити Drizzle (див. [/backend/database](/backend/database)).
-- **Transformer** — прибирає чутливі поля (`password`, `isAdmin`) і нормалізує дати.
+- **Transformer** — прибирає чутливі поля (`password`) і нормалізує дати.
 
 Правила імпорту між шарами перевіряє [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts) (статичний аналіз імпортів, без завантаження модулів):
 

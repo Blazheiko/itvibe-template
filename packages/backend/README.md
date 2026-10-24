@@ -1273,14 +1273,7 @@ export type SerializedUser = Omit<
 
 export const userTransformer = {
     serialize(user: UserRow): SerializedUser {
-        const {
-            id,
-            password: _password,
-            createdAt,
-            updatedAt,
-            emailVerifiedAt,
-            ...rest
-        } = user
+        const { id, password: _password, createdAt, updatedAt, emailVerifiedAt, ...rest } = user
         return {
             ...rest,
             id: String(id), // bigint → string for safe JSON
