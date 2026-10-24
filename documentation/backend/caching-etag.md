@@ -8,15 +8,15 @@
 
 - **Коли:** лише при `appConfig.serveStatic`. Функція `cacheStaticSource()` один раз на старті рекурсивно читає `./public` (при `APP_ENV=manual-test` — `./public-test`) відносно `process.cwd()`. Файли й каталоги, чиї імена починаються з `.`, пропускаються.
 - **Що:** беруться лише файли з розширеннями з whitelist `ALLOWED_STATIC_EXTENSIONS` (html, css, js, mjs, json, webmanifest, зображення, шрифти, аудіо/відео). Решта ігнорується. Бінарні файли зберігаються як `Buffer`, текстові як `utf8`-рядок ([`isBinaryExtension`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/helpers/file-utils.ts)).
-- **Ліміти розміру:** немає. Весь каталог лежить у RAM процесу. Зміни на диску після старту не підхоплюються, потрібен рестарт.
+- **Ліміти пам'яті:** у RAM кладуться файли до `STATIC_MAX_MEMORY_FILE_SIZE` (за замовчуванням 1 MiB), доки сума (разом зі стислими варіантами) не перевищить `STATIC_MAX_MEMORY_TOTAL` (64 MiB). Решта віддається **стрімінгом з диска** (`fs.createReadStream` з backpressure uWS: `tryEnd` / `onWritable`) — їхній вміст на старті не читається. `index.html` завжди в пам'яті: його віддає SPA fallback. На старті в лог пишеться `Static files cached` з `files`, `memoryBytes` і `streamedFromDisk`. Зміни на диску після старту не підхоплюються, потрібен рестарт.
 - **Маршрути:** у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) (`configureHttp`) для кожного закешованого шляху реєструється окремий `server.get(key, …)` → `staticCacheHandler`. Шлях `/` отримує копію `/index.html`.
-- **Стиснення:** немає (ні gzip/brotli на льоту, ні precompressed). У коді про це є коментар `Compression not implemented yet`. Стискайте на reverse proxy або CDN.
+- **Стиснення:** для текстових типів (`html`, `js`, `mjs`, `css`, `svg`, `json`, `webmanifest`, `txt`, `xml`) від 1 KiB сервер на старті готує варіанти `br` (якість 9) і `gzip` (рівень 9) і тримає їх у пам'яті, якщо вони менші за оригінал. Варіант обирається за `Accept-Encoding` (`br` → `gzip` → без стиснення; `q=0` вимикає кодування) з `Content-Encoding`; відповідь на такий файл завжди має `Vary: Accept-Encoding`. Наприклад, головний бандл 873 428 B віддається як 251 055 B у `br`. Файли зі стрімінгу не стискаються.
 
 ## ETag
 
-`computeEtag` рахує SHA-1 від вмісту файлу в base64url і бере результат у лапки (strong ETag, наприклад `"q1w2…"`). Хеші обчислюються один раз на старті й лежать у мапі `etags`. Коментар у коді пояснює, чому validator має залежати від вмісту, а не від довжини: після ребілду `index.html` зазвичай змінює лише хеші асетів однакової довжини.
+`computeEtag` рахує SHA-1 від вмісту файлу в base64url і бере результат у лапки (strong ETag, наприклад `"q1w2…"`). Хеші обчислюються один раз на старті й зберігаються в записі кешу. Для файлів зі стрімінгу ETag слабкий, з розміру й `mtime`: `W/"<size hex>-<mtime hex>"`. Коментар у коді пояснює, чому validator має залежати від вмісту, а не від довжини: після ребілду `index.html` зазвичай змінює лише хеші асетів однакової довжини.
 
-`If-None-Match` порівнюється з ETag **точним рядковим збігом**. Списки (`"a", "b"`), `*` і weak-префікс `W/` не розбираються. Якщо значення збіглося, сервер відповідає `304` без тіла.
+`If-None-Match` розбирає [`matchesIfNoneMatch`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/if-none-match.ts) за RFC 9110 §13.1.2: `*` збігається з будь-яким файлом, список через кому перевіряється поелементно, порівняння слабке (`W/"x"` = `"x"`). Збіг → `304` без тіла.
 
 ```mermaid
 sequenceDiagram
@@ -34,16 +34,13 @@ sequenceDiagram
 
 ## Cache-Control за типом файлу
 
-| Тип                               | `Cache-Control`                                             | Інші заголовки                                                                                 |
-| --------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| HTML (`.html`, `/`, SPA fallback) | `public, max-age=0, must-revalidate` (`HTML_CACHE_CONTROL`) | `ETag`, `content-type`, `setSecurityHeaders` (nosniff, X-Frame-Options, Referrer-Policy, HSTS) |
-| Усе інше з whitelist              | `public, max-age=31536000, immutable`                       | `ETag`, `Content-Type`, `Content-Length`, `X-Content-Type-Options: nosniff`                    |
+| Тип                                                                           | `Cache-Control`                                                       | Інші заголовки                                                                                     |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| HTML (`.html`, `/`, SPA fallback)                                             | `public, max-age=0, must-revalidate` (`HTML_CACHE_CONTROL`)           | `ETag`, `content-type`, `setSecurityHeaders` (nosniff, X-Frame-Options, Referrer-Policy, HSTS)     |
+| `/assets/*` (імена з хешем від Vite)                                          | `public, max-age=31536000, immutable`                                 | `ETag`, `Content-Type`, `X-Content-Type-Options: nosniff`, `Vary` / `Content-Encoding` для стислих |
+| Усе інше з whitelist (`manifest.json`, `service-worker.js`, іконки, аудіо, …) | `no-cache` — браузер кешує, але щоразу перевіряє ETag (дешевий `304`) | ті самі                                                                                            |
 
 MIME-тип береться з [`MIME_TYPES`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/constants/mime-types.ts) за розширенням. Якщо розширення немає в мапі, береться `default`.
-
-::: warning Immutable і для файлів без хешу в імені
-Річний `immutable` віддається для **всіх** не-HTML файлів, а не лише для хешованих Vite-асетів із `/assets/`. Він же стоїть на `manifest.json`, `favicon.svg`, `/icons/*`, `/audio/*` і `service-worker.js`. Якщо такий файл зміниться без зміни імені, браузери можуть до року тримати стару версію. Для самого скрипта `service-worker.js` ризик менший: браузер перевіряє його оновлення в обхід HTTP-кешу (за замовчуванням `updateViaCache: 'imports'`, і HTTP-кеш скрипта SW обмежений 24 годинами). Але `manifest.json`, іконки та аудіо оновлюються лише після закінчення `max-age`.
-:::
 
 ## SPA fallback і безпека
 
@@ -91,7 +88,8 @@ curl -I -H 'If-None-Match: "3n0Yq…"' http://localhost:3000/index.html
 
 ## Як змінити поведінку
 
-- Значення `Cache-Control` захардкоджені в `static-server.ts` (`HTML_CACHE_CONTROL`, `maxAge = 31536000`). Щоб, наприклад, давати `immutable` лише `/assets/*`, потрібно змінити `staticCacheHandler`.
+- Значення `Cache-Control` задані константами в `static-server.ts` (`HTML_CACHE_CONTROL`, `IMMUTABLE_CACHE_CONTROL`, `REVALIDATE_CACHE_CONTROL`); правило «`immutable` лише для `/assets/`» — у `cacheControlFor`.
+- Ліміти пам'яті — `STATIC_MAX_MEMORY_FILE_SIZE`, `STATIC_MAX_MEMORY_TOTAL` ([Конфігурація](/backend/configuration)).
 - Whitelist розширень задається в `ALLOWED_STATIC_EXTENSIONS`.
 - **Dev:** фронтенд віддає Vite dev-сервер, `SERVE_STATIC` зазвичай `false`. **Prod:** або `SERVE_STATIC=true` з каталогом `public` в образі (у Dockerfile змінна не задана, проблема 31), або окремий хостинг/CDN (`CDN_URL`). У випадку CDN заголовки кешування задає CDN. Див. [Розгортання](/backend/deployment).
 

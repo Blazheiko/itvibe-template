@@ -72,6 +72,10 @@ const config = Object.freeze({
     reasonableCookieKeyLimit: 255, // Reasonable limit for cookie key length
     maxUrlLength: 2048, // Reasonable limit for url length
     accessTokenLength: 16, // Reasonable limit for access token length
+    // Static files: kept in RAM up to these sizes, the rest is streamed from disk
+    // (code-issues item 41).
+    staticMaxMemoryFileSize: parseSize(env['STATIC_MAX_MEMORY_FILE_SIZE'], 1_048_576),
+    staticMaxMemoryTotal: parseSize(env['STATIC_MAX_MEMORY_TOTAL'], 67_108_864),
     maxBodySize: parseSize(env['APP_MAX_BODY_SIZE'], 2_097_152),
     maxJsonBodySize: parseSize(env['APP_MAX_JSON_BODY_SIZE'], 2_097_152),
     maxMultipartBodySize: parseSize(env['APP_MAX_MULTIPART_BODY_SIZE'], 52_428_800),

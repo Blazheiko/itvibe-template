@@ -5,10 +5,15 @@ import process from 'node:process'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('#config/app.js', () => ({
-    default: { env: 'manual-test', serveStatic: true },
+    default: {
+        env: 'manual-test',
+        serveStatic: true,
+        staticMaxMemoryFileSize: 1_048_576,
+        staticMaxMemoryTotal: 67_108_864,
+    },
 }))
 
-const { cacheFile, staticCacheHandler } = await import('./static-server.js')
+const { cacheFile, memoryEntry, staticCacheHandler } = await import('./static-server.js')
 
 const STATIC_PATH = path.join(process.cwd(), './public-test')
 const HTML_NAME = 'static-server-etag-fixture.html'
@@ -61,7 +66,7 @@ const requestHtml = async (data: string, ifNoneMatch: string): Promise<CapturedR
         getHeader: (name: string) => (name === 'if-none-match' ? ifNoneMatch : ''),
     }
 
-    await staticCacheHandler(createRes(captured) as never, req as never, data)
+    await staticCacheHandler(createRes(captured) as never, req as never, memoryEntry(data, 'html'))
 
     return captured
 }

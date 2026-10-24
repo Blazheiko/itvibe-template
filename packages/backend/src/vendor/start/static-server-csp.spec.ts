@@ -11,7 +11,12 @@ import {
 } from '#vendor/utils/network/csp.js'
 
 vi.mock('#config/app.js', () => ({
-    default: { env: 'manual-test', serveStatic: true },
+    default: {
+        env: 'manual-test',
+        serveStatic: true,
+        staticMaxMemoryFileSize: 1_048_576,
+        staticMaxMemoryTotal: 67_108_864,
+    },
 }))
 
 const DOCUMENT_POLICY = "default-src 'self'; script-src 'self'"
@@ -80,7 +85,11 @@ const viaCache = async (
     ifNoneMatch = '',
 ): Promise<CapturedResponse> => {
     const { res, captured } = createRes()
-    await server.staticCacheHandler(res as never, createReq(url, ifNoneMatch) as never, data)
+    await server.staticCacheHandler(
+        res as never,
+        createReq(url, ifNoneMatch) as never,
+        server.memoryEntry(data),
+    )
     return captured
 }
 

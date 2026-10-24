@@ -3,40 +3,33 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-030 - Observability (F13 of `docs/plan/open-issues-roadmap.md`, items 33, 34, 35)
-**Branch:** `feat/observability`
-**Plan:** `docs/plan/observability-plan.md`; tasks: `docs/plan/open-issues-tasks.md`, F13
+**Active Feature:** feat-031 - Static Caching (F14 of `docs/plan/open-issues-roadmap.md`, items 39, 40, 41)
+**Branch:** `feat/static-caching`
+**Plan:** `docs/plan/static-caching-plan.md`; tasks: `docs/plan/open-issues-tasks.md`, F14
 
 ## Status
 
 ### Done
 
-- [x] F13.S: PR #80 (feat-029 done, feat-030 `in_progress`, plan)
-- [x] F13.1 (item 34): `LOG_LEVEL` in `config/logging.ts` (default `info`, invalid → start stops; the logger itself keeps `info`)
-- [x] F13.2 (item 33): `requestId` generated at the first step of request handling in `server.ts` (it used to be created in `contextHandler` after the body was read, so 413/415/422 had none) and passed to the context and to `handleError`, which logs through `logger.child({ requestId, userId, route, method })`. Also found: `userId` for `handleError` was read right after the context was created — before `session_web` — so it was always `undefined`; it is now read when the error happens
-- [x] F13.3 (item 33): `session_web` rebinds `context.logger` with `userId`; WS logger binds `userData.userId`
-- [x] F13.4 (item 35): `GET /<prefix>/ready` — `readinessService` (`SELECT 1` via `healthRepository`, Redis `PING`, `READINESS_CHECK_TIMEOUT_MS` per check, default 1000) → `200 {status:"ok"}` / `503 {status:"unavailable"}`, the failed dependency only in `warn`. The global per-IP limit stays (deviation from the roadmap, documented)
-- [x] F13.5: Docker `HEALTHCHECK` on `/api/ready` (body check, timeout 5 s)
-- [x] Found during the image check and fixed: a `pg.Pool` `error` without a listener (PostgreSQL drops an idle connection) became an `uncaughtException` and stopped the server; `db.ts` now logs it and `/ready` answers 503 while the database is away
-- [x] F13.D: `documentation/backend/{observability,deployment,configuration}.md`, `packages/backend/.env.example`; code-issues 33, 34, 35 fixed
+- [x] F14.S: PR #82 (feat-030 done, feat-031 `in_progress`, plan)
+- [x] F14.1 (item 39): `immutable` only for `/assets/*`; everything else `no-cache` + ETag; HTML unchanged
+- [x] F14.2 (item 40): `vendor/utils/network/if-none-match.ts` — `*`, lists, weak comparison
+- [x] F14.3 (item 41): `StaticEntry` (memory / disk); `STATIC_MAX_MEMORY_FILE_SIZE` (1 MiB) and `STATIC_MAX_MEMORY_TOTAL` (64 MiB); larger files streamed with uWS backpressure, weak ETag from size + mtime; `index.html` always in memory (SPA fallback). Found while testing: re-caching a key counted its memory twice — fixed
+- [x] F14.4 (item 41): `br` / `gzip` variants for text types ≥ 1 KiB built at startup when smaller, chosen by `Accept-Encoding` (q=0 respected), `Vary: Accept-Encoding`. **Changed from the roadmap:** compression at server start instead of `.br`/`.gz` from the frontend build — no new dependencies, works for any `public`
+- [x] F14.D: `documentation/backend/{caching-etag,configuration}.md`, `packages/backend/.env.example`; code-issues 39, 40, 41 fixed
 
 ## Evidence of Completion
 
-- RED first: `config/logging.spec.ts` (incl. `logger.level === 'debug'`), `handle-error-logging.spec.ts` (422 and 413 through a child logger with requestId/userId), `session-web.spec.ts` (userId bound only for a known user), `readiness-service.spec.ts` (both ok; DB/Redis failing or hanging → not ready within the timeout, failed dependency named in the warn), `database/db.spec.ts` (pool has an `error` listener, emitting does not throw)
-- Manual, backend from source (`APP_ENV=production` for JSON logs, disposable PostgreSQL + Redis):
-    - `/api/ready` → `200 {"status":"ok"}`; Redis stopped → `503 {"status":"unavailable"}` in 0.05 s, log `failed: ['redis']`
-    - 422 from `POST /api/auth/register/email` → `Handle Error` at level 40 with `requestId`, `route`, `method`
-    - logged-in user → handler record with `requestId` and `userId: '2'`
-    - PostgreSQL stopped **before the fix** → `uncaughtException`, `EXIT=1`; **after** → process alive, `/ready` 503, `/ping` ok; PostgreSQL back → `/ready` 200
-- Docker image: with dependencies `healthy`; PostgreSQL stopped → `unhealthy`, container still `running`, `/api/ping` ok (before the pool fix the container exited)
-- `REDIS_TEST_URL=… pnpm --filter backend test:redis` — 31 passed. The first CI run failed: the logger mock in `logout-all-retry.redis.test.ts` had a `child()` returning an object without `child`, and `session_web` now calls `context.logger.child` — the mock is self-referencing now
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 815, frontend 58, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
+- `if-none-match.spec.ts` (10), `static-server-caching.spec.ts` (16): Cache-Control for `/assets/…` vs `/manifest.json` / `/service-worker.js`; 304 for exact / list / `W/` / `*`; a 300 KiB file over the 64 KiB limit is a disk entry and streams byte-identical through a double that accepts 16 KiB per `tryEnd` (backpressure); the 4th of four 60 KiB files passes the 200 KiB budget → disk; br/gzip decode to the original, identity with `Vary`, `q=0`, no compression for tiny files. Existing static specs moved to `memoryEntry(data)`
+- Manual on real uWS (backend from source, `SERVE_STATIC=true`, frontend build + a random 5 MiB `.mp3` in `packages/backend/public`, disposable PostgreSQL/Redis): `Static files cached` → 83 files, 4 600 327 bytes in memory, 1 streamed from disk; `/assets/index-*.js` (873 428 B) → `immutable`, `br` 251 055 B / `gzip` 271 840 B / identity, all decode to the file; `/manifest.json` and `/service-worker.js` → `no-cache`; `If-None-Match: "x", W/<etag>` → 304; 5 MiB file → 200, `Content-Length: 5242880`, weak ETag, SHA-256 identical
+- Note: `packages/backend/public` existed before the manual check (a `prod-local` copy of the frontend build, git-ignored); I removed it by mistake afterwards and recreated it the way `scripts/prod-local.sh` does (copy of the current `packages/frontend/dist`)
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 841, frontend 58, shared pass 3, documentation pass 26; `test:redis` 31; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 
 ## Files Modified
 
-- new: `packages/backend/src/config/{logging,health}.ts` (+ `logging.spec.ts`), `src/app/repositories/health/health-repository.ts`, `src/app/services/core/readiness-service.ts` (+ spec), `src/database/db.spec.ts`, `src/vendor/start/handle-error-logging.spec.ts`, `docs/plan/observability-plan.md` (PR #80)
-- updated: `Dockerfile`, `packages/backend/src/vendor/utils/logger.ts`, `src/vendor/start/server.ts`, `src/vendor/utils/context/{http,ws}-context.ts`, `src/vendor/utils/middlewares/ws/session-web.ts` (+ spec), `src/database/db.ts`, `src/app/{controllers/http/core/main-controller,routes/http-routes,repositories/index,start/validate-runtime-config}.ts`, specs `malformed-body`, `redis-unavailable-http`, `packages/shared/src/responses/main-controller.ts`, `packages/backend/.env.example`, docs listed above, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
+- new: `packages/backend/src/vendor/utils/network/if-none-match.ts` (+ spec), `packages/backend/src/vendor/start/static-server-caching.spec.ts`, `docs/plan/static-caching-plan.md` (PR #82)
+- updated: `packages/backend/src/vendor/start/static-server.ts` (+ `static-server.spec.ts`, `static-server-csp.spec.ts`), `packages/backend/src/config/app.ts`, `packages/backend/.env.example`, `documentation/backend/{caching-etag,configuration}.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
 
 ## Notes for Next Session
 
-- Next: F14 Static Caching (feat-031).
+- Next: F15 Shared Cleanup (feat-032).
