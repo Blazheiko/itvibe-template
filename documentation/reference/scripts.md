@@ -49,6 +49,8 @@
 | `test`           | `vitest run`                                                                      | Одноразовий прогін Vitest                                                                                                                             |
 | `test:coverage`  | `vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=html` | Прогін з coverage (`@vitest/coverage-v8`), звіт у `coverage/`                                                                                         |
 | `test:watch`     | `vitest`                                                                          | Vitest у watch-режимі                                                                                                                                 |
+| `test:redis`     | `vitest run --config vitest.redis.config.ts`                                      | Інтеграційні `*.redis.test.ts` з реальним Redis (`REDIS_TEST_URL`); без змінної пропускаються                                                         |
+| `test:pg`        | `vitest run --config vitest.pg.config.ts`                                         | Інтеграційні `*.pg.test.ts` на тимчасовій базі з міграціями (`PG_TEST_URL`); без змінної пропускаються                                                |
 
 ## frontend
 

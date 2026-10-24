@@ -3,57 +3,43 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-018 - App CI (F01 of `docs/plan/open-issues-roadmap.md`, items 36, 37, 38)
-**Branch:** `feat/app-ci`
-**Plan:** `docs/plan/app-ci-plan.md`; tasks: `docs/plan/open-issues-tasks.md`, F01
+**Active Feature:** feat-036 - PG Test Harness (F19 of `docs/plan/open-issues-roadmap.md`, prerequisite for feat-022 and feat-025)
+**Branch:** `feat/pg-test-harness`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F19
 
 ## Status
 
 ### Done
 
-- [x] F01.S: PR #54 (feat-010 done, feat-018 `in_progress`, plan); `./init.sh` green
-- [x] F01.1: `pnpm run preview` / `pnpm run dev` in `playwright.config.ts`, `pnpm run build-sw` in frontend `build`; Playwright on CI adds a `list` reporter (test names with project in the job log)
-- [x] F01.2: backend `testTimeout: 15_000`, `maxWorkers` from `VITEST_MAX_WORKERS`
-- [x] F01.3: `.github/workflows/ci.yml`, job `quality`
-- [x] F01.4: job `e2e` (frontend build, `playwright install --with-deps`, cache by Playwright version)
-- [x] F01.5: `@vitest/coverage-v8` + `test:coverage` in backend and frontend, artifact `coverage`; `coverage/` in `.gitignore`
-- [x] F01.6: negative controls (lint, test)
-- [x] F01.6a: `*.redis.test.ts` excluded from `pnpm test` by `vitest.config.ts`, `test:redis` only in `redis-tests.yml`
-- [x] F01.D: `documentation/backend/testing.md` (Vitest config, coverage, CI table, gaps), `documentation/reference/scripts.md` (`test:coverage`, `pnpm run build-sw`)
-
-### Waiting for the repository owner
-
-- [ ] F01.7: branch protection on `main` — required checks `quality` and `e2e` (Settings → Branches → rule for `main` → Require status checks)
+- [x] F19.S: PR #56 (feat-018 done, feat-036 `in_progress`); `./init.sh` green
+- [x] F19.1: `vitest.pg.config.ts` (`include: src/**/*.pg.test.ts`, `fileParallelism: false`, global setup), `test:pg`; `vitest.config.ts` excludes `*.pg.test.ts`; `eslint.config.ts` ignores the new config like `vitest.redis.config.ts`
+- [x] F19.2: `src/test-support/pg-global-setup.ts` — `CREATE DATABASE itvibe_test_<12 hex>` from `PG_TEST_URL`, `CREATE EXTENSION vector`, drizzle `migrate` into `drizzle.__drizzle_migrations` (same as `drizzle.config.ts`), `PGSQL_*` for the workers, `DROP DATABASE … WITH (FORCE)` in teardown; `src/test-support/pg-test-db.ts` (`hasPg`, `MIGRATIONS_FOLDER`)
+- [x] F19.3: `src/database/harness.pg.test.ts` — the app's `db` reaches the throwaway database, `vector` is installed, every migration folder applied, `users` exists
+- [x] F19.4: `.github/workflows/pg-tests.yml` (service `pgvector/pgvector:pg16`, same `paths` as `redis-tests.yml`)
+- [x] F19.D: `documentation/backend/testing.md` (section «Інтеграційні тести з Redis і PostgreSQL», CI table, gaps), `documentation/reference/scripts.md` (`test:redis`, `test:pg`)
 
 ## Evidence of Completion
 
-CI runs on PR #55:
+CI on PR #57:
 
-| Run                                                                                  | Commit                         | Result                                                                                                                                                  |
-| ------------------------------------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [40089711640](https://github.com/Blazheiko/itvibe-template/actions/runs/40089711640) | `ci.yml` added                 | first run, no cache (`pnpm cache is not found`, `Cache not found for input keys: playwright-Linux-1.64.1`): `quality` ✅ 2 min 26 s, `e2e` ✅ 2 min 8 s |
-| [40089935251](https://github.com/Blazheiko/itvibe-template/actions/runs/40089935251) | TEMP lint error + failing test | `quality` ❌ at `pnpm lint` (negative control)                                                                                                          |
-| [40090062773](https://github.com/Blazheiko/itvibe-template/actions/runs/40090062773) | TEMP failing test only         | `quality` ❌ at `pnpm test`: `negative control — AssertionError: expected 1 to be 2`                                                                    |
-| [40090215969](https://github.com/Blazheiko/itvibe-template/actions/runs/40090215969) | negative control removed       | `quality` ✅, `e2e` ✅, caches restored (pnpm, `playwright-Linux-1.64.1`)                                                                               |
+- [PG tests 40091167699](https://github.com/Blazheiko/itvibe-template/actions/runs/40091167699) ✅ — `Test Files 1 passed (1)`, `Tests 3 passed (3)` (run, not skipped)
+- [CI 40091167686](https://github.com/Blazheiko/itvibe-template/actions/runs/40091167686) ✅ `quality`, `e2e`; [Redis tests 40091167743](https://github.com/Blazheiko/itvibe-template/actions/runs/40091167743) ✅
 
-From the first run log:
+Local (macOS, Node 24.20.0, disposable `pgvector/pgvector:pg16` on `127.0.0.1:55433`):
 
-- `quality`: backend 671 passed, frontend 45 passed, shared pass 3, documentation pass 26; coverage lines backend 74.11 %, frontend 50.88 %; artifact `coverage` (561 565 bytes); no `redis.test` in the log
-- `e2e`: `12 passed (20.7s)`, 3 tests in each project `[chromium]`, `[firefox]`, `[webkit]`, `[Mobile Safari]`
-
-Local (macOS, Node 24.20.0):
-
-- `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm build` — exit 0
-- `pnpm test` — backend 671, frontend 45, shared pass 3, documentation pass 26
-- `CI=1 pnpm --filter frontend test:e2e` — 12 passed, server started by `pnpm run preview`
-- timeout: a temporary 7 s test passes with the new config (would fail at the 5 s default); backend 671 with `VITEST_MAX_WORKERS=2`
+- `PG_TEST_URL=… pnpm --filter backend test:pg` — 3 passed; afterwards `select count(*) from pg_database where datname like 'itvibe_test_%'` → `0`
+- negative control: an assertion changed to fail → `1 failed | 2 passed`, the database is still dropped (`0`); change reverted
+- without `PG_TEST_URL`: `1 skipped`, `3 skipped`
+- `pnpm --filter backend test` — 671 passed, the pg test is not picked up
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — clean
 - `pnpm docs:build && pnpm docs:verify` — `verify-dist: all checks passed`
 
 ## Files Modified
 
-- new: `.github/workflows/ci.yml`, `docs/plan/app-ci-plan.md` (PR #54)
-- updated: `packages/frontend/playwright.config.ts`, `packages/frontend/package.json`, `packages/backend/vitest.config.ts`, `packages/backend/package.json`, `pnpm-lock.yaml`, `.gitignore`, `documentation/backend/testing.md`, `documentation/reference/scripts.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`, `progress.md`
+- new: `packages/backend/vitest.pg.config.ts`, `packages/backend/src/test-support/pg-global-setup.ts`, `packages/backend/src/test-support/pg-test-db.ts`, `packages/backend/src/database/harness.pg.test.ts`, `.github/workflows/pg-tests.yml`
+- updated: `packages/backend/vitest.config.ts`, `packages/backend/package.json`, `eslint.config.ts`, `documentation/backend/testing.md`, `documentation/reference/scripts.md`, `docs/plan/open-issues-tasks.md`, `progress.md`
 
 ## Notes for Next Session
 
-- After F01.7 and merge: done PR for feat-018; next wave-2 feature F19 PG Test Harness (feat-036) or F02 Docker (feat-019).
+- After merge: done PR for feat-036. Next: F02 Docker (feat-019), or F04 (feat-021) → F05 (feat-022) which uses this harness.
+- `PG Tests` is not a required check (it has a `paths` filter, like `redis-tests.yml`).

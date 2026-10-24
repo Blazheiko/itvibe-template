@@ -70,15 +70,15 @@
 ### F19 PG Test Harness (передумова для F05, F08)
 
 - [x] **F19.S** Шаблон S.
-- [ ] **F19.1** `vitest.pg.config.ts` (include `**/*.pg.test.ts`), скрипт `test:pg`; основний `vitest.config.ts` виключає `*.pg.test.ts`.
+- [x] **F19.1** `vitest.pg.config.ts` (include `**/*.pg.test.ts`), скрипт `test:pg`; основний `vitest.config.ts` виключає `*.pg.test.ts`.
       **AC:** `pnpm --filter backend test` не запускає pg-тести; `test:pg` без `PG_TEST_URL` пропускає їх.
-- [ ] **F19.2** Хелпер `test/pg/setup.ts`: тимчасова БД на прогін (`CREATE DATABASE … ` з унікальним суфіксом), `CREATE EXTENSION vector`, міграції, `DROP DATABASE` після.
+- [x] **F19.2** Хелпер `test/pg/setup.ts`: тимчасова БД на прогін (`CREATE DATABASE … ` з унікальним суфіксом), `CREATE EXTENSION vector`, міграції, `DROP DATABASE` після.
       **AC:** після прогону тимчасових БД не лишається (`\l`).
-- [ ] **F19.3** Smoke `harness.pg.test.ts`: міграції застосовано, `SELECT 1`, розширення `vector` є.
+- [x] **F19.3** Smoke `harness.pg.test.ts`: міграції застосовано, `SELECT 1`, розширення `vector` є.
       **AC:** зелений локально з Docker `pgvector/pgvector:pg16`.
-- [ ] **F19.4** `.github/workflows/pg-tests.yml` за зразком `redis-tests.yml`: сервіс `pgvector/pgvector:pg16` з healthcheck, `PG_TEST_URL`, shared build, `test:pg`; ті самі `paths`.
+- [x] **F19.4** `.github/workflows/pg-tests.yml` за зразком `redis-tests.yml`: сервіс `pgvector/pgvector:pg16` з healthcheck, `PG_TEST_URL`, shared build, `test:pg`; ті самі `paths`.
       **AC:** job зелений на PR.
-- [ ] **F19.D** Шаблон D: `testing.md` (локальний запуск pg-тестів). **F19.E**, **F19.X**.
+- [x] **F19.D** Шаблон D: `testing.md` (локальний запуск pg-тестів). **F19.E**, **F19.X**.
 
 ### F02 Docker Hardening (п. 28, 29, 30)
 

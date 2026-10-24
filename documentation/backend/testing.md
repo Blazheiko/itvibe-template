@@ -7,7 +7,7 @@
 Конфіг [packages/backend/vitest.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/vitest.config.ts) мінімальний:
 
 - `environment: "node"`;
-- `exclude`: стандартні `configDefaults.exclude` плюс `dist/**` і `**/*.redis.test.ts` (Redis-тести запускає окремий `pnpm --filter backend test:redis` з [vitest.redis.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/vitest.redis.config.ts) і змінною `REDIS_TEST_URL`). Окремого `include` немає, тож Vitest підхоплює стандартні шаблони `*.spec.ts` / `*.test.ts`;
+- `exclude`: стандартні `configDefaults.exclude` плюс `dist/**`, `**/*.redis.test.ts` і `**/*.pg.test.ts` (їх запускають окремі `test:redis` і `test:pg`, див. розділ «Інтеграційні тести з Redis і PostgreSQL» нижче). Окремого `include` немає, тож Vitest підхоплює стандартні шаблони `*.spec.ts` / `*.test.ts`;
 - `testTimeout: 15_000` — 15 с на тест замість стандартних 5 с: під паралельним навантаженням (typecheck + lint) 5 с не вистачало;
 - `maxWorkers` береться з `VITEST_MAX_WORKERS`, якщо змінну задано (у CI — `2`); без неї діє значення Vitest за замовчуванням;
 - аліаси `#app`, `#config`, `#vendor`, `#database`, `#drizzle` вказують на відповідні каталоги `src/`, а `#logger` — на `src/vendor/utils/logger.ts`.
@@ -44,6 +44,28 @@
 
 Жоден spec-файл не мокає `#database/db.js` і не згадує Redis, тож для `pnpm --filter backend test` **не потрібні ні БД, ні Redis**.
 
+## Інтеграційні тести з Redis і PostgreSQL
+
+| Суфікс            | Конфіг                                                                                                                   | Скрипт                             | Змінна           | CI                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| `*.redis.test.ts` | [vitest.redis.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/vitest.redis.config.ts) | `pnpm --filter backend test:redis` | `REDIS_TEST_URL` | [redis-tests.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/redis-tests.yml) |
+| `*.pg.test.ts`    | [vitest.pg.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/vitest.pg.config.ts)       | `pnpm --filter backend test:pg`    | `PG_TEST_URL`    | [pg-tests.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/pg-tests.yml)       |
+
+Без змінної всі suites пропускаються (`describe.skipIf`), тож скрипти безпечно запускати будь-де. Файли виконуються послідовно (`fileParallelism: false`).
+
+**PostgreSQL.** Перед тестами [pg-global-setup.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/test-support/pg-global-setup.ts) через `PG_TEST_URL` (адмінське з'єднання, зазвичай до бази `postgres`) створює тимчасову базу `itvibe_test_<random>`, вмикає `vector`, застосовує міграції з `src/drizzle/migrations` у ту саму таблицю `drizzle.__drizzle_migrations`, що й `db:migrate`, і виставляє `PGSQL_*` на цю базу. Тому `db` з `#database/db.js` і всі репозиторії в тестах працюють зі справжньою схемою без моків. Після прогону база видаляється (`DROP DATABASE … WITH (FORCE)`). Потрібен образ з pgvector — той самий `pgvector/pgvector:pg16`, що в CI.
+
+Локальний запуск:
+
+```bash
+docker run -d --rm --name itvibe-pg-test -e POSTGRES_PASSWORD=postgres \
+  -p 127.0.0.1:55433:5432 pgvector/pgvector:pg16
+PG_TEST_URL=postgres://postgres:postgres@127.0.0.1:55433/postgres pnpm --filter backend test:pg
+docker stop itvibe-pg-test
+```
+
+Новий pg-тест: файл `<name>.pg.test.ts` поруч із кодом, `describe.skipIf(!hasPg)` з [pg-test-db.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/test-support/pg-test-db.ts), `#database/db.js` імпортується динамічно всередині `describe`, а в `afterAll` — `pool.end()`. Тестові дані кожен файл створює й прибирає сам: база спільна для всього прогону. Зразок — [harness.pg.test.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/harness.pg.test.ts).
+
 ## Coverage
 
 Backend і frontend мають скрипт `test:coverage` (`vitest run --coverage` з провайдером [`@vitest/coverage-v8`](https://vitest.dev/guide/coverage), звіти `text-summary` у консоль і `html` у `coverage/`):
@@ -73,6 +95,7 @@ pnpm --filter frontend test:coverage
 | Workflow                                                                                                    | Коли                                          | Що робить                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [ci.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/ci.yml)                   | кожен PR і push у `main`, без фільтра `paths` | job `quality`: `pnpm install --frozen-lockfile` → `pnpm --filter shared build` → `format:check` → `typecheck` → `lint` → `test` → `test:coverage` (artifact `coverage`); job `e2e`: shared build → `pnpm --filter frontend build` → `playwright install --with-deps` (усі браузери; кеш `~/.cache/ms-playwright` за версією Playwright) → `test:e2e` на 4 проєктах (artifact `playwright-report` при падінні) |
+| [pg-tests.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/pg-tests.yml)       | PR і push зі змінами backend/shared           | `pnpm --filter backend test:pg` із сервісом `pgvector/pgvector:pg16`; єдине місце, де запускаються `*.pg.test.ts`                                                                                                                                                                                                                                                                                             |
 | [redis-tests.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/redis-tests.yml) | PR і push зі змінами backend/shared           | `pnpm --filter backend test:redis` із сервісом `redis:7-alpine`; єдине місце, де запускаються `*.redis.test.ts`                                                                                                                                                                                                                                                                                               |
 | [docs.yml](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/docs.yml)               | зміни документації                            | `typecheck`, `test`, `docs:build`, `docs:verify` для пакета `documentation` і деплой на GitHub Pages з `main`                                                                                                                                                                                                                                                                                                 |
 
@@ -99,7 +122,7 @@ pnpm --filter frontend test:e2e:csp            # CSP на production-збірц�
 
 ::: warning Прогалини
 
-- Немає тестів репозиторіїв і інтеграційних тестів з реальною БД: шар даних мокається (з реальним Redis працюють лише `*.redis.test.ts`).
+- Тестів репозиторіїв поки немає: інфраструктура `*.pg.test.ts` є, але, крім smoke-тесту, шар даних у тестах мокається.
 - Coverage без порогу і лише по завантажених тестами файлах.
 
 :::
