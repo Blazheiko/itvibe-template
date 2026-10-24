@@ -7,5 +7,5 @@ it('negative control', () => {
 
 export async function negativeControlLint(): Promise<void> {
     void Promise.resolve()
-    return await Promise.resolve()
+    await Promise.resolve()
 }
