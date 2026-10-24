@@ -331,17 +331,17 @@
             "owner": "Blazheiko",
             "branch": "feat/frontend-playground",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #87 (merge 16d0ff5): same-origin VITE_BASE_URL fallback, typed VITE_*, prefix-aware playground (routes, /ping, proxy), wss, no fake queue; playground 11 tests, backend 843, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/frontend-playground"
         },
         {
             "id": "feat-034",
             "name": "Drop users.is_admin",
             "description": "remove is_admin, role is the only source (decision R5): code first, then DROP COLUMN migration (code-issues items 66). Roadmap F17: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/drop-is-admin",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
