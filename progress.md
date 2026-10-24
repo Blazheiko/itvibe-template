@@ -29,6 +29,7 @@
     - logged-in user → handler record with `requestId` and `userId: '2'`
     - PostgreSQL stopped **before the fix** → `uncaughtException`, `EXIT=1`; **after** → process alive, `/ready` 503, `/ping` ok; PostgreSQL back → `/ready` 200
 - Docker image: with dependencies `healthy`; PostgreSQL stopped → `unhealthy`, container still `running`, `/api/ping` ok (before the pool fix the container exited)
+- `REDIS_TEST_URL=… pnpm --filter backend test:redis` — 31 passed. The first CI run failed: the logger mock in `logout-all-retry.redis.test.ts` had a `child()` returning an object without `child`, and `session_web` now calls `context.logger.child` — the mock is self-referencing now
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 815, frontend 58, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 
 ## Files Modified

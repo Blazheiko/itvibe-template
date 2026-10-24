@@ -18,11 +18,17 @@ const { PREFIX } = vi.hoisted(() => {
     return { PREFIX: `test:${crypto.randomUUID()}:` }
 })
 
-const silent = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() }
-vi.mock('#logger', () => ({ default: { ...silent, child: () => silent } }))
-vi.mock('#vendor/utils/logger.js', () => ({
-    default: { ...silent, child: () => silent },
-}))
+// child() returns the same mock: request loggers are children of children
+// (context, then session_web binds userId).
+const silent = {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    child: (): unknown => silent,
+}
+vi.mock('#logger', () => ({ default: silent }))
+vi.mock('#vendor/utils/logger.js', () => ({ default: silent }))
 vi.mock('#config/redis.js', async (importActual) => {
     const actual = await importActual<{ default: object }>()
     return { default: { ...actual.default, keyPrefix: PREFIX } }
