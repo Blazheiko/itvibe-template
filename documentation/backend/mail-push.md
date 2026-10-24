@@ -117,15 +117,15 @@ cd packages/backend && npx web-push generate-vapid-keys
 }
 ```
 
-Кожна спроба пишеться в `pushNotificationLogs` зі статусом `SENT` (і `statusCode` відповіді) або `FAILED` (з `errorMessage`). Після успіху оновлюється `lastUsedAt` підписки.
+Активні підписки (з урахуванням `notificationType`) обробляються паралельно, не більше `PUSH_SEND_CONCURRENCY = 5` запитів до push-сервісу одночасно. Результат кожної спроби — рядок `pushNotificationLogs` зі статусом `SENT` (і `statusCode` відповіді) або `FAILED` (з `errorMessage`); після всіх відправок рядки пишуться одним `insertMany` через [`push-notification-log-repository.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/notifications/push-notification-log-repository.ts), а `lastUsedAt` успішних підписок оновлюється одним `touchLastUsed`. Якщо запис не вдався, помилка логується, а результат `{ sent, failed }` відповідає фактичним відповідям push-сервісу.
 
 **Прострочені підписки:** відповідь push-сервісу `410` або `404` деактивує підписку (`pushSubscriptionRepository.deactivate`). Окремої фонової очистки чи видалення неактивних записів немає.
 
-Наразі єдиний виклик `sendToUser` у коді — ендпоінт `test-push`; бізнес-подій, що надсилають push, немає.
+Наразі єдиний виклик `sendToUser` у коді — ендпоінт `test-push`; бізнес-подій, що надсилають push, немає (п. 72 у [code-issues](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)).
 
 ### Статистика
 
-[`push-subscription-statistics-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/statistics/push-subscription-statistics-service.ts) рахує `totalNotifications`, `sentNotifications`, `failedNotifications`, `pendingNotifications`, `successRate` (%), `last7DaysCount`, `lastUsed`, `isActive`.
+[`push-subscription-statistics-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/statistics/push-subscription-statistics-service.ts) рахує `totalNotifications`, `sentNotifications`, `failedNotifications`, `pendingNotifications`, `successRate` (%), `last7DaysCount`, `lastUsed`, `isActive`. Лічильники дає один SQL-запит `countsBySubscription` (`count(case …)`), межу 7 днів обчислює застосунок і передає параметром.
 
 ::: warning Відомі проблеми
 Сервіси відправки та статистики звертаються до `db` напряму, оминаючи репозиторії (проблема №20), а статистика завантажує всі логи і рахує їх у JS (№21) — див. `docs/plan/code-issues-found-during-docs.md`.

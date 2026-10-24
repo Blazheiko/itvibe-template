@@ -143,19 +143,19 @@
 ### F05 Push Data Access (п. 20, 21, 49) → F04, F19
 
 - [x] **F05.S** Шаблон S (M).
-- [ ] **F05.1** pg-тест-фікстура: 3 підписки (7 / 2 / 0 логів, різні `createdAt`, `sentAt`); копія поточної `findByUserIdWithLogs` у тесті як еталон.
+- [x] **F05.1** pg-тест-фікстура: 3 підписки (7 / 2 / 0 логів, різні `createdAt`, `sentAt`); копія поточної `findByUserIdWithLogs` у тесті як еталон.
       **AC:** тест еталона зелений на фікстурі.
-- [ ] **F05.2** → F05.1. `findByUserIdWithLogs`: 2 запити (`row_number() over (partition by subscription_id order by sent_at desc) <= 5` + `inArray`), групування в JS зі збереженням порядку; порожній список — без другого запиту (п. 21).
+- [x] **F05.2** → F05.1. `findByUserIdWithLogs`: 2 запити (`row_number() over (partition by subscription_id order by sent_at desc) <= 5` + `inArray`), групування в JS зі збереженням порядку; порожній список — без другого запиту (п. 21).
       **AC:** результат deep-equal еталону; ≤ 5 логів, `sentAt desc`, `[]` для третьої; лічильник запитів = 2 (і 1 для користувача без підписок).
-- [ ] **F05.3** `push-notification-log-repository.ts`: `insertMany`, запити агрегатів (п. 20).
+- [x] **F05.3** `push-notification-log-repository.ts`: `insertMany`, запити агрегатів (п. 20).
       **AC:** pg-тести для кожного методу.
-- [ ] **F05.4** → F05.3. Статистика через `count()`/`group by`; сервіс без `db` (п. 20, 21).
+- [x] **F05.4** → F05.3. Статистика через `count()`/`group by`; сервіс без `db` (п. 20, 21).
       **AC:** pg-тест: відповідь сервісу deep-equal відповіді старої реалізації на фікстурі (ті самі ключі, типи, вкладеність і порядок елементів, не лише числа); shared-схема/тип відповіді не змінені; `grep "from '#database" ` у сервісах push порожній.
-- [ ] **F05.5** → F05.3. `sendToUser`: паралельно з лімітом 5, один `insertMany` логів після відправки (п. 49).
+- [x] **F05.5** → F05.3. `sendToUser`: паралельно з лімітом 5, один `insertMany` логів після відправки (п. 49).
       **AC:** unit: максимум одночасних відправок = 5; один виклик запису логів на виклик `sendToUser`.
-- [ ] **F05.6** Новий пункт у `code-issues-found-during-docs.md`: підключення push до бізнес-подій (`skipIfOnline`, `notificationType`).
+- [x] **F05.6** Новий пункт у `code-issues-found-during-docs.md`: підключення push до бізнес-подій (`skipIfOnline`, `notificationType`).
       **AC:** пункт з номером додано; п. 49 позначено виправленим з посиланням на нього.
-- [ ] **F05.D** Шаблон D: `mail-push.md`, `repositories-transformers.md`. **F05.E**, **F05.X**.
+- [x] **F05.D** Шаблон D: `mail-push.md`, `repositories-transformers.md`. **F05.E**, **F05.X**.
 
 ### F08 Layering Cleanup (п. 22, 24, 25) → F19
 
