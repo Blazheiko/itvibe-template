@@ -201,8 +201,8 @@
             "owner": "Blazheiko",
             "branch": "feat/response-safety",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #69 (merge 73184a3): 401 before WS upgrade without a session + frontend refreshes the token after a failed handshake (bounded, e2e negative control 28 -> <=2 refreshes), Cache-Control no-store on API responses; backend 715, frontend 50, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual check on a running backend; evidence in progress.md on feat/response-safety"
         },
         {
             "id": "feat-021",
@@ -228,10 +228,10 @@
             "id": "feat-023",
             "name": "Storage Hardening",
             "description": "buildKey in deleteFromS3, magic-bytes file type check, publicRead avatars (decision R1), restricted corsS3.xml (code-issues items 32, 44, 45, 46). Roadmap F06: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/storage-hardening",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
