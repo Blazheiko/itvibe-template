@@ -187,7 +187,7 @@ done
 ## Redis і S3
 
 - Redis обов'язковий: у ньому зберігаються сесії, і під час shutdown застосунок закриває з'єднання з ним. Див. [Redis](/backend/database#redis) і [Конфігурація → Redis](/backend/configuration#redis).
-- [`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml) у корені — це CORS-конфігурація для бакета S3/MinIO: дозволено `GET`/`POST`/`PUT` з будь-якого origin з будь-якими заголовками. Вона потрібна, щоб браузер міг напряму вантажити файли за presigned URL. Застосовується вручну до бакета, код її не читає. Для production замініть `<AllowedOrigin>*</AllowedOrigin>` на свій домен. Параметри S3 описано в розділі [Сховище S3](/backend/configuration#сховище-s3).
+- [`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml) у корені — CORS-конфігурація бакета S3/MinIO: лише `GET`/`HEAD` з origin застосунку (placeholder `https://app.example.com`). Файли вантажить і видаляє бекенд, тож браузеру запис у бакет не потрібен. Застосовується вручну до бакета, код її не читає. Для кількох оточень див. [`corsS3.prod.example.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.prod.example.xml).
 
 ## CI/CD
 

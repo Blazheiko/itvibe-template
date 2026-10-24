@@ -19,6 +19,26 @@ async function loadS3() {
     return import('./s3.js')
 }
 
+describe('s3 object keys (code-issues item 44)', () => {
+    it('buildObjectKey adds the configured prefixes', async () => {
+        const s3 = await loadS3()
+        expect(s3.buildObjectKey('avatars/7/a.png')).toBe('app/uploads/avatars/7/a.png')
+    })
+
+    it('deleteFromS3 deletes the prefixed key, like upload and presign', async () => {
+        const { S3Client } = await import('@aws-sdk/client-s3')
+        const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValue({} as never)
+        try {
+            const s3 = await loadS3()
+            await s3.deleteFromS3('avatars/7/a.png')
+            const command = send.mock.calls[0]?.[0] as { input: { Bucket: string; Key: string } }
+            expect(command.input).toEqual({ Bucket: 'bucket', Key: 'app/uploads/avatars/7/a.png' })
+        } finally {
+            send.mockRestore()
+        }
+    })
+})
+
 describe('s3 storage client', () => {
     afterEach(() => {
         diskConfigMock.s3Region = ''

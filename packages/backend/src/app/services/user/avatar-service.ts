@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import path from 'node:path'
 import type { UploadedFile } from '#vendor/types/types.js'
 import { Result } from 'better-result'
 import { userRepository } from '#app/repositories/index.js'
 import { uploadToS3, deleteFromS3 } from '#vendor/utils/storage/s3.js'
-import diskConfig from '#config/disk.js'
+import {
+    detectImageType,
+    IMAGE_EXTENSIONS,
+    type DetectedImageType,
+} from '#vendor/utils/storage/detect-image-type.js'
 import logger from '#logger'
 import {
     badRequest,
@@ -15,7 +18,11 @@ import {
 import { tryInternal } from '#app/services/shared/result-helpers.js'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const ALLOWED_TYPES: ReadonlySet<DetectedImageType> = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+])
 
 interface AvatarUserPayload {
     id: string
@@ -24,13 +31,12 @@ interface AvatarUserPayload {
     avatar: string | null
 }
 
-function buildFullS3Key(key: string): string {
-    const s3DynamicDataPrefix = (diskConfig.s3DynamicDataPrefix ?? 'uploads').replace(
-        /^\/+|\/+$/g,
-        '',
-    )
-    const prefix = (diskConfig.s3Prefix ?? 'app').replace(/^\/+|\/+$/g, '')
-    return `${prefix}/${s3DynamicDataPrefix}/${key}`
+// The declared multipart type must match the file's bytes (code-issues item 46).
+function verifiedImageType(file: UploadedFile): DetectedImageType | undefined {
+    const detected = detectImageType(file.data)
+    return detected !== undefined && ALLOWED_TYPES.has(detected) && detected === file.type
+        ? detected
+        : undefined
 }
 
 function serializeUser(user: {
@@ -60,7 +66,8 @@ export const avatarService = {
             return Result.err(badRequest('File size exceeds 10 MB limit'))
         }
 
-        if (!ALLOWED_TYPES.has(file.type)) {
+        const imageType = verifiedImageType(file)
+        if (imageType === undefined) {
             return Result.err(badRequest('Invalid file type. Allowed: jpeg, png, webp'))
         }
 
@@ -76,13 +83,12 @@ export const avatarService = {
             return Result.err(notFound('User', 'User not found'))
         }
 
-        const extname = path.extname(file.filename)
-        const ext = extname === '' ? '.webp' : extname
-        const uniqueName = `${randomUUID()}${ext}`
-        const s3Key = `avatars/${String(userId)}/${uniqueName}`
+        // Extension from the verified type; the client's file name is not used.
+        const s3Key = `avatars/${String(userId)}/${randomUUID()}.${IMAGE_EXTENSIONS[imageType]}`
 
         const uploadResult = await tryInternal(
-            () => uploadToS3(s3Key, Buffer.from(file.data), file.type),
+            // Public like KB screenshots: the frontend loads avatars from CDN_URL (decision R1).
+            () => uploadToS3(s3Key, Buffer.from(file.data), imageType, { publicRead: true }),
             'Failed to upload avatar',
         )
         if (Result.isError(uploadResult)) {
@@ -92,7 +98,7 @@ export const avatarService = {
         const oldAvatarKey = user.avatar
         if (oldAvatarKey !== null && oldAvatarKey !== undefined) {
             const deleteOldAvatarResult = await tryInternal(
-                () => deleteFromS3(buildFullS3Key(oldAvatarKey)),
+                () => deleteFromS3(oldAvatarKey),
                 'Failed to delete old avatar',
             )
             if (Result.isError(deleteOldAvatarResult)) {
@@ -137,7 +143,7 @@ export const avatarService = {
         const avatarKey = user.avatar
         if (avatarKey !== null && avatarKey !== undefined) {
             const deleteAvatarResult = await tryInternal(
-                () => deleteFromS3(buildFullS3Key(avatarKey)),
+                () => deleteFromS3(avatarKey),
                 'Failed to delete avatar',
             )
             if (Result.isError(deleteAvatarResult)) {

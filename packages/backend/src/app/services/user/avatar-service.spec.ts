@@ -1,6 +1,13 @@
 import { Result } from 'better-result'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import {
+    JPEG_BYTES,
+    NOT_AN_IMAGE,
+    PNG_BYTES,
+    WEBP_BYTES,
+} from '../../../test-support/image-fixtures.js'
+
 const userRepositoryMock = {
     findById: vi.fn(),
     update: vi.fn(),
@@ -55,7 +62,7 @@ describe('avatarService', () => {
         const result = await avatarService.uploadAvatar(7n, {
             filename: 'avatar',
             type: 'image/webp',
-            data: new Uint8Array([1, 2, 3]).buffer,
+            data: WEBP_BYTES,
         } as never)
 
         expect(Result.isOk(result)).toBe(true)
@@ -67,6 +74,67 @@ describe('avatarService', () => {
                 avatar: 'avatars/7/avatar.webp',
             })
         }
+    })
+
+    describe('content check and storage (code-issues items 44, 45, 46)', () => {
+        const user = { id: 7n, name: 'Alice', email: 'alice@example.com', avatar: null }
+
+        it('stores a PNG publicly under a .png key, ignoring the client file name', async () => {
+            userRepositoryMock.findById.mockResolvedValue(user)
+            uploadToS3Mock.mockResolvedValue(undefined)
+            userRepositoryMock.update.mockResolvedValue({ ...user, avatar: 'avatars/7/x.png' })
+
+            const { avatarService } = await loadAvatarService()
+            const result = await avatarService.uploadAvatar(7n, {
+                filename: 'evil.exe',
+                type: 'image/png',
+                data: PNG_BYTES,
+            } as never)
+
+            expect(Result.isOk(result)).toBe(true)
+            expect(uploadToS3Mock).toHaveBeenCalledWith(
+                expect.stringMatching(/^avatars\/7\/[0-9a-f-]{36}\.png$/),
+                expect.any(Buffer),
+                'image/png',
+                { publicRead: true },
+            )
+        })
+
+        it.each([
+            ['bytes that are not an image', 'image/png', NOT_AN_IMAGE],
+            ['a JPEG declared as PNG', 'image/png', JPEG_BYTES],
+        ])('rejects %s with 400 and uploads nothing', async (_name, type, data) => {
+            userRepositoryMock.findById.mockResolvedValue(user)
+
+            const { avatarService } = await loadAvatarService()
+            const result = await avatarService.uploadAvatar(7n, {
+                filename: 'a.png',
+                type,
+                data,
+            } as never)
+
+            expect(Result.isError(result)).toBe(true)
+            if (Result.isError(result)) {
+                expect(result.error).toMatchObject({ _tag: 'BadRequest' })
+            }
+            expect(uploadToS3Mock).not.toHaveBeenCalled()
+        })
+
+        it('deletes the old avatar by its stored relative key', async () => {
+            userRepositoryMock.findById.mockResolvedValue({ ...user, avatar: 'avatars/7/old.webp' })
+            uploadToS3Mock.mockResolvedValue(undefined)
+            deleteFromS3Mock.mockResolvedValue(undefined)
+            userRepositoryMock.update.mockResolvedValue({ ...user, avatar: 'avatars/7/new.webp' })
+
+            const { avatarService } = await loadAvatarService()
+            await avatarService.uploadAvatar(7n, {
+                filename: 'a.webp',
+                type: 'image/webp',
+                data: WEBP_BYTES,
+            } as never)
+
+            expect(deleteFromS3Mock).toHaveBeenCalledWith('avatars/7/old.webp')
+        })
     })
 
     it('logs best-effort avatar cleanup failures without failing upload', async () => {
@@ -89,7 +157,7 @@ describe('avatarService', () => {
         const result = await avatarService.uploadAvatar(7n, {
             filename: 'avatar.webp',
             type: 'image/webp',
-            data: new Uint8Array([1, 2, 3]).buffer,
+            data: WEBP_BYTES,
         } as never)
 
         expect(Result.isOk(result)).toBe(true)

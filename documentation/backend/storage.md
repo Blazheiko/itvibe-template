@@ -20,29 +20,25 @@
 
 ## Ключі об'єктів
 
-`buildKey(key)` формує повний ключ так: `${S3_PREFIX ?? 'app'}/${S3_DYNAMIC_DATA_PREFIX ?? 'uploads'}/${key}`. Слеші на краях префіксів обрізаються. У базі зберігається лише **відносний** ключ:
+`buildObjectKey(key)` (експортується з `s3.ts`) формує повний ключ так: `${S3_PREFIX ?? 'app'}/${S3_DYNAMIC_DATA_PREFIX ?? 'uploads'}/${key}`. Слеші на краях префіксів обрізаються. У базі зберігається лише **відносний** ключ:
 
 | Дані               | Відносний ключ                            | Де формується                                                                                                                                           |
 | ------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Аватар             | `avatars/<userId>/<uuid><ext>`            | [avatar-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.ts)                    |
+| Аватар             | `avatars/<userId>/<uuid>.<ext>`           | [avatar-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.ts)                    |
 | Скриншот статті KB | `knowledge-base/<articleId>/<uuid>.<ext>` | [knowledge-base-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts) |
 
-Розширення аватара береться з імені файлу клієнта (якщо його немає, буде `.webp`). Розширення скриншота визначає `getExtFromMime`: `png`, `webp`, інакше `jpg`.
+Розширення (`jpg`, `png`, `webp`) і `ContentType` об'єкта беруться з типу, визначеного за вмістом файлу (див. нижче); ім'я файлу клієнта на ключ не впливає.
 
 ## Операції модуля
 
-| Функція                                        | Що робить                                                                                                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `uploadToS3(key, body, contentType, options?)` | `PutObjectCommand` з `buildKey(key)`, `ContentType` і `ContentLength`. Опційно передає `ACL: 'public-read'` (`publicRead`) і `ContentDisposition` |
-| `deleteFromS3(key)`                            | `DeleteObjectCommand`. **`buildKey` тут не застосовується**, тому викликач передає повний ключ                                                    |
-| `presignUrl(key, expirySeconds = 3600)`        | Presigned **GET** URL через `@aws-sdk/s3-request-presigner` (`getSignedUrl`)                                                                      |
-| `downloadFromS3(key)`                          | `GetObjectCommand`, повертає `{ data: Buffer, contentType }`                                                                                      |
+| Функція                                        | Що робить                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uploadToS3(key, body, contentType, options?)` | `PutObjectCommand` з `buildObjectKey(key)`, `ContentType` і `ContentLength`. Опційно передає `ACL: 'public-read'` (`publicRead`) і `ContentDisposition` |
+| `deleteFromS3(key)`                            | `DeleteObjectCommand` з `buildObjectKey(key)` — як і решта функцій, приймає відносний ключ                                                              |
+| `presignUrl(key, expirySeconds = 3600)`        | Presigned **GET** URL через `@aws-sdk/s3-request-presigner` (`getSignedUrl`)                                                                            |
+| `downloadFromS3(key)`                          | `GetObjectCommand`, повертає `{ data: Buffer, contentType }`                                                                                            |
 
 Presigned PUT і multipart-upload з браузера напряму в бакет у коді **не реалізовано**.
-
-::: warning Несиметричні ключі
-`uploadToS3`, `presignUrl` і `downloadFromS3` самі додають префікс, а `deleteFromS3` ні. Тому сервіси мають власну копію `buildFullS3Key()` і передають у `deleteFromS3` повний ключ ([avatar-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.ts), [knowledge-base-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts)). Логіка префікса продубльована у трьох місцях. Якщо в новому коді викликати `deleteFromS3(relativeKey)`, об'єкт тихо не видалиться.
-:::
 
 ## Як відбувається завантаження
 
@@ -59,6 +55,8 @@ Presigned PUT і multipart-upload з браузера напряму в баке
 | -------- | ------------ | --------------------------------------- |
 | Аватар   | 10 MB        | `image/jpeg`, `image/png`, `image/webp` |
 | Скриншот | 5 MB         | `image/png`, `image/jpeg`, `image/webp` |
+
+Тип перевіряється **за вмістом**: [`detectImageType`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/storage/detect-image-type.ts) читає сигнатуру файлу (PNG `89 50 4E 47 0D 0A 1A 0A`, JPEG `FF D8 FF`, WebP `RIFF…WEBP`). Файл приймається, лише коли виявлений тип дозволений **і** збігається з заявленим у multipart `Content-Type`; інакше `400 bad_request` («Invalid file type»). GIF, SVG та інші формати не розпізнаються й відхиляються.
 
 Після успішного завантаження сервіс видаляє попередній об'єкт (best-effort: помилка лише пишеться в лог як `warn`) і записує новий відносний ключ у БД.
 
@@ -82,15 +80,15 @@ sequenceDiagram
 
 ## Як файли віддаються
 
-- **Аватари** читаються напряму з CDN. Бекенд віддає фронтенду `cdnUrl` (`CDN_URL`), `s3Prefix` і `s3DynamicDataPrefix` ([main-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts)). Фронтенд будує URL у `getStorageFileUrl` ([state.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/stores/state.ts), [avatar-url.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/avatar-url.ts)). Якщо `CDN_URL` порожній, аватар не показується.
+- **Аватари** завантажуються з `ACL: public-read` (рішення Р1) і читаються напряму з CDN. Бекенд віддає фронтенду `cdnUrl` (`CDN_URL`), `s3Prefix` і `s3DynamicDataPrefix` ([main-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts)). Фронтенд будує URL у `getStorageFileUrl` ([state.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/stores/state.ts), [avatar-url.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/avatar-url.ts)). Якщо `CDN_URL` порожній, аватар не показується.
 - **Скриншоти KB** публічні: це довідковий контент, не секрет. Адмін завантажує їх з `ACL: public-read` ([knowledge-base-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts)). `GET /support/screenshot/:articleId` (потрібен `auth_guard`) відповідає `302` з `Location: <CDN_URL>/<повний ключ>` ([support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Якщо `CDN_URL` порожній, маршрут повертає `404`.
 
 ::: warning Правило: медіа чату підтримки лише з нашого CDN
 Зображення й посилання, які бачить користувач у чаті підтримки, мають вести тільки на наш origin або на `CDN_URL`. Прямі посилання на S3-endpoint, presigned URL і сторонні хости заборонені: `img-src` у CSP дозволяє лише `'self'` і origin `CDN_URL`, і браузер перевіряє origin також після редиректу. Скриншоти, завантажені до цієї зміни без `public-read`, треба зробити публічними (ACL або політика бакета для префікса `knowledge-base/`), інакше CDN віддасть `403`.
 :::
 
-::: warning Публічність аватарів
-`uploadAvatar` викликає `uploadToS3` **без** `publicRead`, але фронтенд відкриває аватар за прямим CDN-URL. Отже, аватари доступні лише тоді, коли бакет або префікс публічні на рівні політики сховища чи CDN. Це налаштовується поза кодом.
+::: warning Аватари, завантажені до feat-023
+Раніше аватари йшли в бакет без `public-read`. Якщо бакет або префікс не відкриті політикою сховища чи CDN, такі старі об'єкти лишаються приватними: їх треба перезалити або виставити ACL окремо.
 :::
 
 ## Локальна розробка з MinIO
@@ -119,15 +117,15 @@ CDN_URL=http://localhost:9000/<bucket>
 
 Для `localhost` path-style вмикається автоматично. Щоб аватари відображалися, дайте префіксу `app/uploads/avatars/` анонімний доступ на читання.
 
-CORS бакета описує [`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml), див. [Деплой](/backend/deployment). Оскільки всі завантаження йдуть через бекенд, браузеру CORS бакета потрібен лише для GET-запитів. Дозвіл `PUT` з `AllowedOrigin *` зайвий і ризикований (п. 32 у [`code-issues-found-during-docs.md`](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)).
+CORS бакета описує [`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml): лише `GET` і `HEAD` з origin застосунку (placeholder `https://app.example.com` — замініть своїм). Усі завантаження й видалення йдуть через бекенд із серверними ключами, тож браузеру `PUT`/`POST` не потрібні. Приклад для кількох оточень — [`corsS3.prod.example.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.prod.example.xml). Застосовується вручну до бакета, код ці файли не читає.
 
 ## Безпека
 
 - Скриншоти KB і аватари публічні й віддаються через `CDN_URL`. `presignUrl` (TTL за замовчуванням 3600 с) у браузерних сценаріях не використовується: його host — S3-endpoint, якого немає в CSP `img-src`.
-- `ACL: public-read` підтримується модулем, але жоден поточний виклик його не використовує.
+- `ACL: public-read` використовують обидва завантаження: аватари й скриншоти KB.
 - Імена об'єктів генеруються сервером (`randomUUID`), тому клієнт не може обрати шлях або перезаписати чужий файл.
 - Секрети `S3_*` зберігайте лише в оточенні, див. [Безпека та автентифікація](/backend/auth-security).
 
-::: warning Перевірка типу файлу
-MIME береться із заголовка частини multipart, тобто його задає клієнт. Перевірки за вмістом (magic bytes) немає ([http-request-handlers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-request-handlers.ts)). Розширення аватара береться з імені файлу клієнта й може не відповідати MIME. Розмір перевіряється вже після того, як усе тіло буферизовано (до ліміту multipart у 50 MB).
+::: warning Розмір файлу
+Розмір перевіряється вже після того, як усе тіло буферизовано (до ліміту multipart у 50 MB).
 :::

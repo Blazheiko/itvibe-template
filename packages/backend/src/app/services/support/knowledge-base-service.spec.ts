@@ -1,6 +1,8 @@
 import { Result } from 'better-result'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { JPEG_BYTES, PNG_BYTES } from '../../../test-support/image-fixtures.js'
+
 const supportKnowledgeRepositoryMock = {
     findAll: vi.fn(),
     findById: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock('#logger', () => ({
 }))
 
 vi.mock('#vendor/utils/storage/s3.js', () => ({
+    buildObjectKey: (key: string) => `app/uploads/${key}`,
     uploadToS3: uploadToS3Mock,
     deleteFromS3: vi.fn(() => Promise.resolve(undefined)),
 }))
@@ -201,7 +204,7 @@ describe('knowledgeBaseService', () => {
             name: 'screenshot.png',
             filename: 'screenshot.png',
             type: 'image/png',
-            data: new Uint8Array([1, 2, 3]).buffer,
+            data: PNG_BYTES,
         })
 
         expect(Result.isOk(result)).toBe(true)
@@ -223,6 +226,22 @@ describe('knowledgeBaseService', () => {
                 screenshotKey: expect.stringContaining('knowledge-base/11/'),
             })
         }
+    })
+
+    it('rejects a screenshot whose bytes do not match the declared type (item 46)', async () => {
+        const { knowledgeBaseService } = await loadKnowledgeBaseService()
+        const result = await knowledgeBaseService.uploadScreenshot(11n, {
+            name: 'screenshot.png',
+            filename: 'screenshot.png',
+            type: 'image/png',
+            data: JPEG_BYTES,
+        })
+
+        expect(Result.isError(result)).toBe(true)
+        if (Result.isError(result)) {
+            expect(result.error).toMatchObject({ _tag: 'BadRequest' })
+        }
+        expect(uploadToS3Mock).not.toHaveBeenCalled()
     })
 
     it('returns not found for deleteScreenshot on missing article', async () => {

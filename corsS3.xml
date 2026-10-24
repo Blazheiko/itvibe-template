@@ -1,9 +1,14 @@
+<!--
+  CORS for the S3 bucket (code-issues item 32). Uploads go through the backend,
+  so browsers only read objects (avatars, knowledge-base screenshots): GET/HEAD
+  from the app's origin. Replace the placeholder with your domain; for several
+  environments see corsS3.prod.example.xml.
+-->
 <CORSConfiguration>
  <CORSRule>
-   <AllowedOrigin>*</AllowedOrigin>
+   <AllowedOrigin>https://app.example.com</AllowedOrigin>
    <AllowedMethod>GET</AllowedMethod>
-   <AllowedMethod>POST</AllowedMethod>
-   <AllowedMethod>PUT</AllowedMethod>
-   <AllowedHeader>*</AllowedHeader>
+   <AllowedMethod>HEAD</AllowedMethod>
+   <MaxAgeSeconds>3600</MaxAgeSeconds>
  </CORSRule>
 </CORSConfiguration>

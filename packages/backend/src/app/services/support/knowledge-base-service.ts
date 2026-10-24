@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import type { UploadedFile } from '#vendor/types/types.js'
 import appConfig from '#config/app.js'
-import diskConfig from '#config/disk.js'
 import { supportKnowledgeRepository } from '#app/repositories/index.js'
 import type { KbArticleRow, KbRow } from '#app/repositories/index.js'
 import { supportEmbeddingService } from '#app/services/support/support-embedding-service.js'
-import { deleteFromS3, uploadToS3 } from '#vendor/utils/storage/s3.js'
+import { buildObjectKey, deleteFromS3, uploadToS3 } from '#vendor/utils/storage/s3.js'
+import {
+    detectImageType,
+    IMAGE_EXTENSIONS,
+    type DetectedImageType,
+} from '#vendor/utils/storage/detect-image-type.js'
 import logger from '#logger'
 import { Result } from 'better-result'
 import {
@@ -17,21 +21,20 @@ import {
 import { tryInternal } from '#app/services/shared/result-helpers.js'
 
 const MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024 // 5 MB
-const ALLOWED_SCREENSHOT_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
+const ALLOWED_SCREENSHOT_TYPES: ReadonlySet<DetectedImageType> = new Set([
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+])
 
-function buildFullS3Key(key: string): string {
-    const s3DynamicDataPrefix = (diskConfig.s3DynamicDataPrefix ?? 'uploads').replace(
-        /^\/+|\/+$/g,
-        '',
-    )
-    const prefix = (diskConfig.s3Prefix ?? 'app').replace(/^\/+|\/+$/g, '')
-    return `${prefix}/${s3DynamicDataPrefix}/${key}`
-}
-
-function getExtFromMime(mime: string): string {
-    if (mime === 'image/png') return 'png'
-    if (mime === 'image/webp') return 'webp'
-    return 'jpg'
+// The declared multipart type must match the file's bytes (code-issues item 46).
+function verifiedScreenshotType(file: UploadedFile): DetectedImageType | undefined {
+    const detected = detectImageType(file.data)
+    return detected !== undefined &&
+        ALLOWED_SCREENSHOT_TYPES.has(detected) &&
+        detected === file.type
+        ? detected
+        : undefined
 }
 
 export interface KbItemData {
@@ -204,7 +207,7 @@ export const knowledgeBaseService = {
         if (existing.screenshotKey !== null) {
             const screenshotKey = existing.screenshotKey
             const deleteScreenshotResult = await tryInternal(
-                () => deleteFromS3(buildFullS3Key(screenshotKey)),
+                () => deleteFromS3(screenshotKey),
                 'Failed to delete KB screenshot from S3',
             )
             if (Result.isError(deleteScreenshotResult)) {
@@ -236,7 +239,8 @@ export const knowledgeBaseService = {
         if (file.data.byteLength > MAX_SCREENSHOT_SIZE) {
             return Result.err(badRequest('File size exceeds 5 MB limit'))
         }
-        if (!ALLOWED_SCREENSHOT_TYPES.has(file.type)) {
+        const imageType = verifiedScreenshotType(file)
+        if (imageType === undefined) {
             return Result.err(badRequest('Invalid file type. Allowed: png, jpeg, webp'))
         }
 
@@ -256,7 +260,7 @@ export const knowledgeBaseService = {
         if (existing.screenshotKey !== null) {
             const screenshotKey = existing.screenshotKey
             const deleteScreenshotResult = await tryInternal(
-                () => deleteFromS3(buildFullS3Key(screenshotKey)),
+                () => deleteFromS3(screenshotKey),
                 'Failed to delete old KB screenshot',
             )
             if (Result.isError(deleteScreenshotResult)) {
@@ -267,13 +271,12 @@ export const knowledgeBaseService = {
             }
         }
 
-        const ext = getExtFromMime(file.type)
-        const s3Key = `knowledge-base/${String(id)}/${randomUUID()}.${ext}`
+        const s3Key = `knowledge-base/${String(id)}/${randomUUID()}.${IMAGE_EXTENSIONS[imageType]}`
         const uploadResult = await tryInternal(
             // Screenshots are public help content: the browser loads them from CDN_URL, the
             // only media origin allowed by the CSP img-src.
             () =>
-                uploadToS3(s3Key, Buffer.from(file.data), file.type, {
+                uploadToS3(s3Key, Buffer.from(file.data), imageType, {
                     publicRead: true,
                 }),
             'Failed to upload knowledge base screenshot',
@@ -283,7 +286,7 @@ export const knowledgeBaseService = {
         }
 
         const setScreenshotResult = await tryInternal(
-            () => supportKnowledgeRepository.setScreenshot(id, s3Key, file.type),
+            () => supportKnowledgeRepository.setScreenshot(id, s3Key, imageType),
             'Failed to update knowledge base screenshot',
         )
         if (Result.isError(setScreenshotResult)) {
@@ -318,7 +321,7 @@ export const knowledgeBaseService = {
         if (existing.screenshotKey !== null) {
             const screenshotKey = existing.screenshotKey
             const deleteScreenshotResult = await tryInternal(
-                () => deleteFromS3(buildFullS3Key(screenshotKey)),
+                () => deleteFromS3(screenshotKey),
                 'Failed to delete KB screenshot from S3',
             )
             if (Result.isError(deleteScreenshotResult)) {
@@ -379,7 +382,7 @@ export const knowledgeBaseService = {
             return Result.ok({ url: null })
         }
 
-        return Result.ok({ url: `${cdnUrl}/${buildFullS3Key(screenshotKey)}` })
+        return Result.ok({ url: `${cdnUrl}/${buildObjectKey(screenshotKey)}` })
     },
 
     async reindexArticle(id: bigint): Promise<AppResult<{ indexed: number }>> {
