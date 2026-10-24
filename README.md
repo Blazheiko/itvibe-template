@@ -219,6 +219,14 @@ pnpm lint
 pnpm test
 ```
 
+Code style is defined by the root `.prettierrc.json` (4 spaces, single quotes, no
+semicolons, width 100); `pnpm format:check` must pass. The one-off mass formatting
+commit is listed in `.git-blame-ignore-revs`, so `git blame` skips it after:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 Before opening a PR, run the full verification chain with `./init.sh`
 (`install → typecheck → lint → test → build`) to confirm a clean checkout:
 
