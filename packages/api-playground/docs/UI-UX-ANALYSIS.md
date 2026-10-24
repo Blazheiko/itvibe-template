@@ -1,5 +1,7 @@
 # UI/UX Analysis — API Playground
 
+> **Internal note** — ideas and analysis, not a description of current behaviour. Current behaviour: [documentation/playground](https://blazheiko.github.io/itvibe-template/playground/).
+
 ## General Assessment
 
 The application is well-structured: three-column layout, dark/light mode, mobile adaptivity, accessible touch targets (44px). However, there are significant issues with visual consistency, information density, proportions, and readability that reduce the overall quality of the experience.

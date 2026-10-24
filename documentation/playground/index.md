@@ -57,6 +57,18 @@ flowchart LR
 
 Картка маршруту ([`ApiRoute.vue`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/components/api/ApiRoute.vue)) показує метод, URL, middleware, схеми й rate limit. Якщо в маршруту немає власного ліміту, показується ліміт групи з позначкою `route`/`group`. Є також окрема сторінка маршруту `/route/:routeId` ([`router/index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/router/index.ts)).
 
+## Будова інтерфейсу
+
+Головна сторінка ([`ApiHomeView.vue`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/views/ApiHomeView.vue)) має три колонки під шапкою `ApiHeader`:
+
+| Колонка                | Компонент                                                                                                                                           | Що показує                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ліва (від ширини `xl`) | [`SiteNavigation.vue`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/components/navigation/SiteNavigation.vue) | дерево груп і маршрутів (`TreeGroup.vue`), перемикач HTTP / WebSocket |
+| центральна             | `ApiGroup.vue` → `ApiRoute.vue`                                                                                                                     | групи та картки маршрутів                                             |
+| права (від `xl`)       | [`OnThisPage.vue`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/components/navigation/OnThisPage.vue)         | зміст сторінки з підсвіткою активного розділу                         |
+
+На вужчих екранах навігацію дає `MobileNavigation.vue` (з `MobileGroupItem.vue`). `RouteGroupsMenu.vue` — меню груп. Окремий маршрут відкривається на `/route/:routeId` (`RouteDetailView.vue`).
+
 ## Що реалізовано
 
 ### HTTP-запити
@@ -101,12 +113,23 @@ flowchart LR
 
 Історії запитів і збережених запитів немає: стан форми ніде не зберігається.
 
+## Типові проблеми
+
+| Симптом                                                                    | Що перевірити                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| маршрути не завантажуються, `Failed to fetch` або 404 на `/api/doc/routes` | backend запущений на `:3000`; у `packages/backend/.env` задано `APP_ENV=manual-test`, `DOC_PAGE=true`, `SERVE_STATIC=true` (без усіх трьох endpoint не реєструється); `API_PATH_PREFIX` — `api` (див. «Обмеження») |
+| HTTP-запити йдуть не туди                                                  | `VITE_API_BASE_URL` і `baseUrl` / override у налаштуваннях: порожнє значення означає «через Vite proxy»                                                                                                            |
+| WebSocket не підключається                                                 | URL і токен у формі підключення; токен береться з відповіді, що містить `wsUrl` і `wsToken`; закриття з кодом `4001` — токен недійсний                                                                             |
+| помилки CORS у консолі                                                     | запити йдуть повз proxy (заданий `baseUrl` на інший origin); тоді origin playground має бути в CORS-whitelist backend ([Автентифікація та безпека](/backend/auth-security))                                        |
+
+Кнопка **Test Connection** у налаштуваннях робить `GET <baseUrl>/health`. Такого маршруту в backend немає (є `/api/ping`), тож результат перевірки не означає, що API доступне; надійніше відкрити `/api/doc/routes` чи `/api/ping`.
+
 ## Обмеження
 
 - Немає скрипта `test` і тестів у `src/`.
 - Скрипт `build` існує (`vite build`), але production-розгортання playground у репозиторії не налаштоване. Застосунок розрахований на dev-сервер із proxy.
 - Шлях `/api/doc/routes` жорстко заданий у коді. Якщо змінити `API_PATH_PREFIX` ([`config/app.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts)), маршрути не завантажаться, а proxy так само налаштований лише на `/api`.
-- Нотатки в `packages/api-playground/docs/` (ROADMAP, UI-UX-ANALYSIS тощо) — внутрішні чернетки. Вони не описують фактичну поведінку.
+- У `packages/api-playground/docs/` лишились дві внутрішні нотатки — `ROADMAP.md` і `UI-UX-ANALYSIS.md`. Це ідеї та аналіз, а не опис фактичної поведінки.
 
 ::: danger Безпека
 Ніколи не вмикайте `APP_ENV=manual-test` і `DOC_PAGE=true` у production. `/doc/routes` розкриває повну карту API: URL, middleware, схеми валідації та rate limits. Див. [Автентифікація та безпека](/backend/auth-security) і [Маршрутизація](/backend/routing-middlewares).
