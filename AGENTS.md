@@ -48,7 +48,7 @@ Before ending, commit + push the feature branch with an updated `progress.md` (c
 This is a pnpm workspace with packages under `packages/*`.
 
 - `packages/frontend`: Vue 3 + Vite app. Source lives in `src/`, static assets in `public/`, unit tests near code in `src/**/__tests__`, and Playwright tests in `e2e/`.
-- `packages/backend`: TypeScript uWebSockets.js API/WebSocket server. Source is in `src/`, with app logic in `src/app`, configuration in `src/config`, database and Drizzle code in `src/database`, `src/db`, and `src/drizzle`, and scripts in `src/scripts`.
+- `packages/backend`: TypeScript uWebSockets.js API/WebSocket server. Source is in `src/`, with app logic in `src/app`, configuration in `src/config`, the Drizzle schema and relations in `src/database`, database create/seed scripts in `src/db`, migrations in `src/drizzle/migrations`, and scripts in `src/scripts`.
 - `packages/shared`: workspace package for shared schemas, enums, guards, responses, utilities, and tests in `test/`.
 
 Generated output such as `dist/`, `node_modules/`, Playwright reports, and coverage should not be edited by hand.
@@ -82,7 +82,7 @@ Backend and frontend unit tests use Vitest. Shared package tests use Node's buil
 
 ## Commit & Pull Request Guidelines
 
-This checkout does not include `.git` history. Use concise, intent-first commit messages and include useful trailers when relevant, for example `Tested: pnpm test` or `Not-tested: requires production credentials`. Pull requests should describe the change, list verification performed, link related issues, and include screenshots or screen recordings for visible frontend changes.
+Use concise, intent-first commit messages and include useful trailers when relevant, for example `Tested: pnpm test` or `Not-tested: requires production credentials`. Pull requests should describe the change, list verification performed, link related issues, and include screenshots or screen recordings for visible frontend changes.
 
 ## Security & Configuration Tips
 

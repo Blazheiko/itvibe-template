@@ -239,18 +239,21 @@ Before opening a PR, run the full verification chain with `./init.sh`
 
 Run from the repository root:
 
-| Command                                  | Description                                                                       |
-| ---------------------------------------- | --------------------------------------------------------------------------------- |
-| `pnpm dev`                               | Build `shared` + `backend`, then run backend and frontend dev servers in parallel |
-| `pnpm dev:backend` / `pnpm dev:frontend` | Run a single package in dev mode                                                  |
-| `pnpm build`                             | Build every package recursively                                                   |
-| `pnpm build:shared`                      | Build only the `shared` package                                                   |
-| `pnpm start`                             | Start the built backend (`node dist/index.js`)                                    |
-| `pnpm typecheck`                         | TypeScript checks across all packages                                             |
-| `pnpm lint` / `pnpm lint:fix`            | Lint (and auto-fix) the whole repo with ESLint                                    |
-| `pnpm format` / `pnpm format:check`      | Write / check Prettier formatting                                                 |
-| `pnpm test`                              | Run all package test suites                                                       |
-| `pnpm clean`                             | Clean build artifacts and `node_modules`                                          |
+| Command                                  | Description                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| `pnpm dev`                               | Build `shared` + `backend`, then run backend and frontend dev servers in parallel     |
+| `pnpm dev:backend` / `pnpm dev:frontend` | Run a single package in dev mode                                                      |
+| `pnpm build`                             | Build every package recursively                                                       |
+| `pnpm build:shared`                      | Build only the `shared` package                                                       |
+| `pnpm start`                             | Start the built backend (`node dist/index.js`)                                        |
+| `pnpm typecheck`                         | TypeScript checks across all packages                                                 |
+| `pnpm lint` / `pnpm lint:fix`            | Lint (and auto-fix) the whole repo with ESLint                                        |
+| `pnpm format` / `pnpm format:check`      | Write / check Prettier formatting                                                     |
+| `pnpm test`                              | Run all package test suites                                                           |
+| `pnpm clean`                             | Clean build artifacts and `node_modules`                                              |
+| `pnpm docs:dev` / `pnpm docs:preview`    | Run the VitePress documentation site in dev mode / preview the built site             |
+| `pnpm docs:build` / `pnpm docs:verify`   | Build the documentation site / check the build (links, anchors, key pages)            |
+| `pnpm prod:local`                        | Production-like local run: the backend serves the built SPA (`scripts/prod-local.sh`) |
 
 Frontend e2e tests use Playwright:
 
@@ -330,7 +333,7 @@ When you fork this template into a real product, work through:
 - [ ] Rename package/app branding (names, titles, manifest, metadata)
 - [ ] Replace the default legal/policy pages (privacy, terms, cookies, AI policy)
 - [ ] Configure the `.env` files (backend and frontend)
-- [ ] Create and migrate the database (`pnpm --filter backend db:create db:migrate`)
+- [ ] Create and migrate the database (`pnpm --filter backend db:create && pnpm --filter backend db:migrate`)
 - [ ] Decide which optional integrations to enable (SMTP, S3, push, AI, Sentry)
 - [ ] Replace the demo/support knowledge-base content
 - [ ] Configure production CORS, CSRF, CSP, proxy trust, cookies, and Sentry
