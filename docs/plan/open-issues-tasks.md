@@ -104,11 +104,11 @@
 ### F03 HTTP/WS Response Safety (п. 18, 42)
 
 - [x] **F03.S** Шаблон S.
-- [ ] **F03.1** `ws-handlers.ts`: `dataAccess === null` → `401` до `res.upgrade` (п. 18).
+- [x] **F03.1** `ws-handlers.ts`: `dataAccess === null` → `401` до `res.upgrade` (п. 18).
       **AC:** unit (мок `res`): `upgrade` не викликано, статус 401, `onOpen` не настає.
-- [ ] **F03.2** `sendResponse`: `Cache-Control: no-store`, якщо контролер не задав свій (п. 42).
+- [x] **F03.2** `sendResponse`: `Cache-Control: no-store`, якщо контролер не задав свій (п. 42).
       **AC:** тести: 200 JSON, 204, 4xx мають `no-store`; заголовок з `responseData.headers` не перезаписується; відповіді статики без змін.
-- [ ] **F03.D** Шаблон D: `websocket.md`, `caching.md`. **F03.E**, **F03.X**.
+- [x] **F03.D** Шаблон D: `websocket.md`, `caching.md`. **F03.E**, **F03.X**.
 
 ### F04 Push Access & Methods (п. 47, 48, 67)
 

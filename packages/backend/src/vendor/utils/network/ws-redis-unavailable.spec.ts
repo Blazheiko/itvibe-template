@@ -239,8 +239,18 @@ describe('handleUpgrade while Redis is unavailable', () => {
         expect(res.calls).toEqual([])
     })
 
-    it('missing still upgrades (closed later in onOpen, item 18)', async () => {
+    it('missing session answers 401 before res.upgrade (code-issues item 18)', async () => {
         onUpgrade.mockResolvedValue({ kind: 'missing' })
+        const res = createRes()
+
+        await handlers.handleUpgrade(res as never, req as never, {})
+
+        expect(res.calls).toEqual(['cork', '401 Unauthorized', 'end'])
+        expect(res.calls).not.toContain('upgrade')
+    })
+
+    it('a live session upgrades', async () => {
+        onUpgrade.mockResolvedValue({ kind: 'ok', sessionId: 's1', userId: '1', userToken: 'u1' })
         const res = createRes()
 
         await handlers.handleUpgrade(res as never, req as never, {})

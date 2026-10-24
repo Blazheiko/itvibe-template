@@ -485,8 +485,18 @@ const handleUpgrade = async (
         return
     }
 
-    // "missing" still upgrades and is closed in onOpen with 4001 (item 18).
-    const dataAccess = tokenResult.kind === 'ok' ? tokenResult : null
+    // No live session for a well-formed token: refuse before upgrading instead of
+    // opening a connection only to close it in onOpen (code-issues item 18). The
+    // browser sees a failed handshake (close 1006); the frontend then refreshes
+    // the WS token over HTTP, as it does for 4001.
+    if (tokenResult.kind === 'missing') {
+        res.cork(() => {
+            res.writeStatus('401 Unauthorized').end('Session expired')
+        })
+        return
+    }
+
+    const dataAccess = tokenResult
     res.cork(() => {
         const userData: UserData = {
             ip,
@@ -494,9 +504,9 @@ const handleUpgrade = async (
             token,
             user: null,
             uuid: generateUUID(),
-            sessionId: dataAccess !== null ? dataAccess.sessionId : undefined,
-            userId: dataAccess !== null ? dataAccess.userId : undefined,
-            userToken: dataAccess !== null ? dataAccess.userToken : undefined,
+            sessionId: dataAccess.sessionId,
+            userId: dataAccess.userId,
+            userToken: dataAccess.userToken,
             timeStart: Date.now(),
             userAgent,
             appType,

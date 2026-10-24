@@ -66,6 +66,23 @@ test.describe('mobile layout regression', () => {
             })
         })
 
+        // The fake socket never opens, so the client refreshes the WS token over
+        // HTTP (a failed handshake is handled like 4001). Answer it here instead
+        // of letting the dev-server proxy reach whatever listens on port 3000.
+        let wsTokenRefreshes = 0
+        await page.route('**/api/main/update-ws-token', async (route) => {
+            wsTokenRefreshes++
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    status: 'success',
+                    wsUrl: 'ws://127.0.0.1:65535',
+                    wsToken: 'e2eWsToken000001',
+                }),
+            })
+        })
+
         await page.route('**/api/support/chat/history', async (route) => {
             await route.fulfill({
                 status: 200,
@@ -90,5 +107,10 @@ test.describe('mobile layout regression', () => {
         const messageInput = page.locator('.support-input')
         await expect(messageInput).toBeVisible()
         await expectBottomInsideViewport(page, 'support message input', messageInput)
+
+        // Handshakes keep failing: one immediate refresh, then at most one per 5 s.
+        await page.waitForTimeout(3000)
+        expect(wsTokenRefreshes).toBeGreaterThanOrEqual(1)
+        expect(wsTokenRefreshes).toBeLessThanOrEqual(2)
     })
 })

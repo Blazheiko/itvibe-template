@@ -103,6 +103,15 @@ export const setSecurityHeaders = (
     }
 }
 
+// API responses carry session and personal data: no browser or proxy cache unless
+// the controller chose a policy itself (code-issues item 42). Static files set
+// their own Cache-Control in static-server.ts.
+export const setApiCacheHeader = (res: HttpResponse, headers: Header[] = []): void => {
+    if (!hasHeader(headers, 'cache-control')) {
+        res.writeHeader('Cache-Control', 'no-store')
+    }
+}
+
 /*  example responseData.cookies
 |[
 |  {

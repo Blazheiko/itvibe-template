@@ -35,6 +35,7 @@ import {
     setHeaders,
     setCookies,
     setSecurityHeaders,
+    setApiCacheHeader,
     writeHttpStatus,
 } from '#vendor/utils/network/http-response-handlers.js'
 import executeMiddlewares from '#vendor/utils/middlewares/core/execute-httpMiddlewares.js'
@@ -298,6 +299,7 @@ const sendResponse = (
     writeHttpStatus(res, sentStatus)
     if (!noBody) res.writeHeader('content-type', 'application/json')
     setSecurityHeaders(res, responseData.headers)
+    setApiCacheHeader(res, responseData.headers)
     // A response without a body has no controller-set Content-Type or
     // Content-Length: uWS frames it itself (res.end writes Content-Length: 0,
     // endWithoutBody writes none, as 204 requires).
@@ -333,6 +335,7 @@ const sendErrorResponse = (
     res.cork(() => {
         writeHttpStatus(res, status)
         setSecurityHeaders(res)
+        setApiCacheHeader(res)
         for (const [name, value] of Object.entries(headers)) {
             res.writeHeader(name, value)
         }

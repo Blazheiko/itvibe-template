@@ -3,57 +3,32 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-019 - Docker Hardening (F02 of `docs/plan/open-issues-roadmap.md`, items 28, 29, 30)
-**Branch:** `feat/docker-hardening`
-**Plan:** `docs/plan/docker-hardening-plan.md`; tasks: `docs/plan/open-issues-tasks.md`, F02
+**Active Feature:** feat-020 - HTTP/WS Response Safety (F03 of `docs/plan/open-issues-roadmap.md`, items 18, 42)
+**Branch:** `feat/response-safety`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F03
 
 ## Status
 
 ### Done
 
-- [x] F02.S: PR #66 (feat-026 done, feat-019 `in_progress`, plan)
-- [x] F02.1: baseline (below)
-- [x] F02.2: `.dockerignore`
-- [x] F02.3: canary checks
-- [x] F02.4: system user `app` (uid 999, home `/home/app`), `COREPACK_HOME=/opt/corepack` readable by all, `USER app` after the `COPY`s
-- [x] F02.5: `HEALTHCHECK` on `/api/ping`; **changed during verification:** it checks the body for `"status":"ok"`, because with `SERVE_STATIC=true` any unknown path returns `index.html` with 200 (SPA fallback) — a status-only check stayed `healthy` with `API_PATH_PREFIX=v1`
-- [x] F02.6: `CMD ["node", "dist/index.js"]`, migrations as one-shot runs
-- [x] F02.7: measurements after
-- [x] F02.D: `documentation/backend/deployment.md` (Dockerfile, commands incl. one-shot migrations and Compose/Kubernetes notes, healthcheck override, verification, runtime, DB, checklist), root `README.md`; code-issues 28, 29, 30 fixed
+- [x] F03.S: PR #68 (feat-019 done, feat-020 `in_progress`)
+- [x] F03.1 (item 18): `handleUpgrade` answers `401 Session expired` before `res.upgrade` when `onUpgrade` returns `missing`. **Needed a frontend change:** the browser reports a refused upgrade as close `1006` without `open`, while the frontend refreshed the WS token only on `4001`, so it would have retried the stale token every 5 s forever. New pure `resolveWebSocketCloseAction` (`packages/frontend/src/utils/websocket-close.ts`): 4001 or a handshake that never opened → refresh the token (first time at once, then every 5 s, so an unreachable WS endpoint with a working HTTP API does not loop); used by `useWebSocketConnection.ts`
+- [x] F03.2 (item 42): `setApiCacheHeader` → `Cache-Control: no-store` on every API response (`sendResponse`, `sendErrorResponse`) unless the controller set its own `Cache-Control`; static untouched
+- [x] F03.D: `documentation/backend/{websocket,auth-security,caching-etag}.md`; code-issues 18, 42 fixed
 
 ## Evidence of Completion
 
-`docker build --no-cache` (macOS, Docker Desktop):
-
-|               | Before (`main`) | After                                                                 |
-| ------------- | --------------- | --------------------------------------------------------------------- |
-| Build context | 83.45 MB        | 124.7 kB                                                              |
-| Build time    | 337 s           | 172 s                                                                 |
-| Image size    | 813 MB          | 813 MB (dominated by Node and production deps; unchanged as expected) |
-
-Secrets (canary marker written to a new root `.env` and `packages/shared/.env`, both removed afterwards; the existing local `.env` files were not touched):
-
-- builder stage (`--target builder`): `grep -rl <marker> /` — nothing; `find /app -name .env` — nothing
-- every layer of the final image (`docker save` + `grep` per layer) — nothing; no `.env` entries in any layer
-- `docker history --no-trunc` — 0 matches
-- positive controls with the same commands: `find` lists the three `.env.example` in the builder stage; `stopGracefully` is found in a layer; `docker history` shows `dist/index.js`
-
-Runtime (disposable `pgvector/pgvector:pg16` and `redis:7-alpine` in a docker network):
-
-- `docker run --rm … pnpm db:create:prod` → `Database "itvibe_f02" created successfully`, `Extension "vector" ensured`; `… pnpm db:migrate` → `migrations applied successfully` (as user `app`)
-- app container: `id -u` → `999`, `id -un` → `app`; PID 1 is Node (process title `uwebsockets-api`); `healthy`; no migration lines in the startup log; `/api/ping` → `{"status":"ok"}`, `/` → 200 (static)
-- `API_PATH_PREFIX=v1`, default healthcheck → container `running` but `unhealthy`; with `--health-cmd` on `/v1/ping` → `healthy`
-- `docker stop -t 10` → log `stop SIGTERM`, `server stop type: SIGTERM`; stopped in 1 s; exit code 0, not OOM/killed
-- First run without `APP_URL` failed fast with `SESSION_COOKIE_HOST_PREFIX=true requires APP_URL to use https://` — expected production config validation, not an image problem
-
-Checks: `pnpm format:check` clean; `pnpm docs:build && pnpm docs:verify` passed. No application code changed.
+- RED first: `ws-redis-unavailable.spec.ts` (`missing` → `['cork', '401 Unauthorized', 'end']`, no `upgrade`; live session upgrades); `http-cache-control.spec.ts` (200, 204, 201, 403, cookie, thrown 500 → `no-store`; controller `Cache-Control` in any case kept) — 7 failing first; `ws-upgrade-shared-disabled.spec.ts` used `missing` only as a stub to reach the upgrade, switched to a live session
+- frontend `websocket-close.spec.ts` — 4001, first/next handshake failures, dropped open connection, 4000–4099
+- e2e `mobile-layout.spec.ts` «support input»: the fake socket never opens → the test now mocks `update-ws-token` (before, the unmocked call went through the Vite proxy to whatever listens on `127.0.0.1:3000` — locally another app answered 401 and the test signed the user out) and asserts ≤ 2 token refreshes in 3 s. Negative control without the delay: `Received: 28`
+- Manual (backend from source on 3999, disposable DB, `SERVE_STATIC=false`; Redis keys `manual-feat020:*` removed): `/api/ping`, `/api/main/init`, 404, login → `Cache-Control: no-store`; upgrade with a well-formed unknown 16-char token → `401 Session expired`, Node `WebSocket` client sees `{"opened":false,"code":1006}`; logged-in user's token → opened, closed 1000
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 715, frontend 50, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 
 ## Files Modified
 
-- new: `.dockerignore`, `docs/plan/docker-hardening-plan.md` (PR #66)
-- updated: `Dockerfile`, `README.md`, `documentation/backend/deployment.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`, `progress.md`
+- new: `packages/backend/src/vendor/start/http-cache-control.spec.ts`, `packages/frontend/src/utils/websocket-close.ts` (+ spec)
+- updated: `packages/backend/src/vendor/utils/network/{ws-handlers,http-response-handlers}.ts`, `packages/backend/src/vendor/start/server.ts`, specs `ws-redis-unavailable`, `ws-upgrade-shared-disabled`; `packages/frontend/src/composables/useWebSocketConnection.ts`, `packages/frontend/e2e/mobile-layout.spec.ts`; docs listed above; `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
 
 ## Notes for Next Session
 
-- Breaking change for deploys: migrations are no longer run by the container start.
-- Next: F03 HTTP/WS Response Safety (feat-020).
+- Next: F06 Storage Hardening (feat-023).

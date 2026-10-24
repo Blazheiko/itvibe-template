@@ -16,6 +16,7 @@ import { mainApi } from '@/utils/api'
 import { getCurrentAppType } from '@/utils/app-type'
 import { sentryService } from '@/utils/sentry-service'
 import { settleApiResponse, type ApiResolveItem } from '@/utils/ws-api-response'
+import { resolveWebSocketCloseAction } from '@/utils/websocket-close'
 
 interface SendPayload {
     event: string
@@ -109,6 +110,9 @@ const handleServiceError = (data: WebsocketMessage): void => {
 
 let isUpdatingWsToken = false
 let reconnectTimeout: number | null = null
+// Whether the current socket reached "open"; a refused upgrade closes without it.
+let connectionOpened = false
+let handshakeFailuresInARow = 0
 
 const clearReconnectTimeout = () => {
     if (reconnectTimeout !== null) {
@@ -162,27 +166,39 @@ const handleWebSocketClose = (event: CloseEvent): void => {
     // Clear any pending reconnect attempts to prevent multiple reconnection timers
     clearReconnectTimeout()
 
-    // Code 4001: Unauthorized - need to refresh token
-    if (event.code === 4001) {
-        console.warn('WebSocket closed due to authentication error (4001)')
-        unauthorized()
+    const wasOpened = connectionOpened
+    connectionOpened = false
+    handshakeFailuresInARow = wasOpened ? 0 : handshakeFailuresInARow + 1
+    const action = resolveWebSocketCloseAction(event.code, wasOpened, handshakeFailuresInARow)
+
+    // 4001, or the server refused the upgrade (no live session): refresh the token
+    if (action.kind === 'refresh-token') {
+        console.warn(`WebSocket closed due to authentication error (${event.code})`)
+        if (action.delayMs === 0) {
+            unauthorized()
+        } else {
+            reconnectTimeout = window.setTimeout(() => {
+                reconnectTimeout = null
+                unauthorized()
+            }, action.delayMs)
+        }
         return
     }
 
     // Codes 4000-4099: Cannot reconnect
-    if (event.code >= 4000 && event.code < 4100) {
+    if (action.kind === 'stop') {
         console.error(`WebSocket closed with code ${event.code}. Reconnection is not allowed.`)
         websocketClose()
         return
     }
 
     // For other codes, attempt to reconnect after delay
-    console.log('WebSocket will attempt to reconnect in 5 seconds')
+    console.log(`WebSocket will attempt to reconnect in ${String(action.delayMs / 1000)} seconds`)
     reconnectTimeout = window.setTimeout(() => {
         reconnectTimeout = null
         console.log('Attempting to reconnect...')
         open()
-    }, 5000)
+    }, action.delayMs)
 }
 
 // API response handling
@@ -250,6 +266,8 @@ const { status, send, close, open, ws } = useWebSocket(wsUrl, {
     heartbeat: createHeartbeatOptions(),
     onConnected() {
         console.log('WebSocket connected')
+        connectionOpened = true
+        handshakeFailuresInARow = 0
         isInitialized.value = true
         if (ws.value) {
             ws.value.binaryType = 'arraybuffer'

@@ -30,7 +30,9 @@ describe('handleUpgrade with level 2 disabled', () => {
     it('never calls Redis and still answers 429 from level 1', async () => {
         const handlers = await import('./ws-handlers.js')
         handlers.registerWsAppHooks({
-            onUpgrade: vi.fn().mockResolvedValue({ kind: 'missing' }),
+            onUpgrade: vi
+                .fn()
+                .mockResolvedValue({ kind: 'ok', sessionId: 's1', userId: '1', userToken: 'u1' }),
             onConnected: vi.fn(),
             onDisconnected: vi.fn(),
             onRefreshToken: vi.fn(),
