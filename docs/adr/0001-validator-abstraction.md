@@ -10,7 +10,7 @@ ArkType (`@arktype/type`) протікав у ядро фреймворку `pac
 
 ## Рішення
 
-1. **Контракт у ядрі.** `vendor/contracts/validator.ts` задає `Validator<T>` з `validate(input) → { ok: true, value } | { ok: false, messages }` і необов'язковим `describe()` для документації. `vendor/` працює лише з цим інтерфейсом.
+1. **Контракт у ядрі.** `vendor/contracts/validator.ts` задає `Validator<T>` з `validate(input) → { ok: true, value } | { ok: false, messages }` і необов'язковим `describe()` для документації. Шлях валідації запитів у `vendor/` (HTTP у `server.ts`, WS у `ws-api-dispatcher.ts`) працює лише з цим інтерфейсом; свідомі винятки — у п. 5.
 2. **Адаптер у застосунку.** `app/validate/adapters/arktype-adapter.ts` реалізує `Validator<T>` для ArkType; `app/validate/index.ts` експортує його як `defaultValidator`.
 3. **Обгортання в `defineRoute` / `defineWsRoute`** (`app/routing/`). Маршрути передають сиру схему (`validator: SomeSchema`), обгортку робить `defineRoute`. `RouteItem.validator` — `Validator<unknown>`.
 4. **Один валідатор на проєкт.** Змішувати движки по маршрутах не можна: заміна бібліотеки — глобальна (новий адаптер і зміна `defaultValidator`).
