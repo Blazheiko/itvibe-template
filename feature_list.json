@@ -341,17 +341,17 @@
             "owner": "Blazheiko",
             "branch": "feat/drop-is-admin",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #89 (merge e303033): isAdmin removed from code and schema, migration 20261024171546_drop_users_is_admin; 0 is_admin/role mismatches on dev DB; fresh-DB migrate + seed + admin login 200 / user 403; typecheck, lint, test, build, e2e, docs:build + docs:verify; evidence in progress.md on feat/drop-is-admin"
         },
         {
             "id": "feat-035",
             "name": "ESLint Strict",
             "description": "enable strictTypeChecked rules for backend, frontend, api-playground (three PRs) (code-issues items 68). Roadmap F18: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/eslint-strict",
             "dependencies": ["feat-010", "feat-018"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
