@@ -49,23 +49,23 @@
 ### F01 App CI (п. 36, 37, 38)
 
 - [x] **F01.S** Шаблон S.
-- [ ] **F01.1** `playwright.config.ts`: `npm run preview` / `npm run dev` → `pnpm preview` / `pnpm dev` (п. 38).
+- [x] **F01.1** `playwright.config.ts`: `npm run preview` / `npm run dev` → `pnpm preview` / `pnpm dev` (п. 38).
       **AC:** `CI=1 pnpm --filter frontend test:e2e` локально піднімає preview через pnpm.
-- [ ] **F01.2** `packages/backend/vitest.config.ts`: `testTimeout: 15_000`, `maxWorkers` з env (п. 37).
+- [x] **F01.2** `packages/backend/vitest.config.ts`: `testTimeout: 15_000`, `maxWorkers` з env (п. 37).
       **AC:** тести зелені; навмисно повільний тест (тимчасово) падає за 15 с, не за 5.
-- [ ] **F01.3** `.github/workflows/ci.yml`, job `quality`: checkout → `pnpm/action-setup` → `setup-node` (`.nvmrc`, `cache: pnpm`) → `pnpm install --frozen-lockfile` → `pnpm --filter shared build` → `format:check` → `typecheck` → `lint` → `test`. `concurrency` як у `redis-tests.yml`.
+- [x] **F01.3** `.github/workflows/ci.yml`, job `quality`: checkout → `pnpm/action-setup` → `setup-node` (`.nvmrc`, `cache: pnpm`) → `pnpm install --frozen-lockfile` → `pnpm --filter shared build` → `format:check` → `typecheck` → `lint` → `test`. `concurrency` як у `redis-tests.yml`.
       **AC:** перший прогін job на PR зелений без кешу pnpm і Playwright (кеш ще не створено або скинуто; посилання на run у evidence).
-- [ ] **F01.4** → F01.1, F01.3. Job `e2e`: install → shared build → `pnpm --filter frontend build` → `pnpm --filter frontend exec playwright install --with-deps` (chromium, firefox, webkit) → `test:e2e`; кеш `~/.cache/ms-playwright`; `playwright-report` artifact при падінні.
+- [x] **F01.4** → F01.1, F01.3. Job `e2e`: install → shared build → `pnpm --filter frontend build` → `pnpm --filter frontend exec playwright install --with-deps` (chromium, firefox, webkit) → `test:e2e`; кеш `~/.cache/ms-playwright`; `playwright-report` artifact при падінні.
       **AC:** звіт містить проєкти `chromium`, `firefox`, `webkit`, `Mobile Safari`.
-- [ ] **F01.5** `@vitest/coverage-v8` у backend і frontend, скрипт `test:coverage`; у CI — окремий крок з artifact звіту, без порогу.
+- [x] **F01.5** `@vitest/coverage-v8` у backend і frontend, скрипт `test:coverage`; у CI — окремий крок з artifact звіту, без порогу.
       **AC:** artifact з `coverage/` присутній у run.
-- [ ] **F01.6** Negative control: тимчасовий коміт з падаючим тестом і lint-помилкою.
+- [x] **F01.6** Negative control: тимчасовий коміт з падаючим тестом і lint-помилкою.
       **AC:** `quality` червоний з очікуваної причини; коміт видалено; посилання на run у evidence.
-- [ ] **F01.6a** Розмежування з `redis-tests.yml`: `ci.yml` не задає `REDIS_TEST_URL` і не викликає `test:redis`.
+- [x] **F01.6a** Розмежування з `redis-tests.yml`: `ci.yml` не задає `REDIS_TEST_URL` і не викликає `test:redis`.
       **AC:** `*.redis.test.ts` виключені з `pnpm test` через `exclude` у `vitest.config.ts` (у логах `quality` їх немає); `test:redis` запускається лише в `redis-tests.yml` (`grep test:redis .github/workflows`).
 - [ ] **F01.7** Branch protection: `quality` і `e2e` обов'язкові (вручну власником репозиторію).
       **AC:** опис/скріншот налаштування в evidence.
-- [ ] **F01.D** Шаблон D: `testing.md` (CI, coverage, зв'язок з `redis-tests.yml`). **F01.E**, **F01.X**.
+- [x] **F01.D** Шаблон D: `testing.md` (CI, coverage, зв'язок з `redis-tests.yml`). **F01.E**, **F01.X**.
 
 ### F19 PG Test Harness (передумова для F05, F08)
 

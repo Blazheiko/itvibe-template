@@ -16,6 +16,7 @@
 | feat-014 | 60             |
 | feat-016 | 70             |
 | feat-010 | 16             |
+| feat-018 | 36, 37, 38     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -60,9 +61,9 @@
 | 33  | `handleError` логує без `requestId`, контекст без `userId`                                                        | Низька       | Observability                |
 | 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                                                            | Низька       | Observability                |
 | 35  | Немає readiness-перевірки (DB/Redis)                                                                              | Середня      | Observability / експлуатація |
-| 36  | Немає CI для тестів застосунку і coverage                                                                         | Середня      | Тести / CI                   |
-| 37  | `vitest.config.ts` без `testTimeout`, таймаути під навантаженням                                                  | Низька       | Тести                        |
-| 38  | Playwright `webServer` використовує `npm` у pnpm-workspace                                                        | Низька       | Тести / frontend             |
+| 36  | ~~Немає CI для тестів застосунку і coverage~~ ✅                                                                  | Середня      | Тести / CI                   |
+| 37  | ~~`vitest.config.ts` без `testTimeout`, таймаути під навантаженням~~ ✅                                           | Низька       | Тести                        |
+| 38  | ~~Playwright `webServer` використовує `npm` у pnpm-workspace~~ ✅                                                 | Низька       | Тести / frontend             |
 | 39  | Річний `immutable` для всіх не-HTML файлів, зокрема без хешу                                                      | Середня      | Кешування                    |
 | 40  | `If-None-Match` порівнюється як точний рядок                                                                      | Низька       | Кешування                    |
 | 41  | Статика повністю в RAM без стиснення і ліміту                                                                     | Низька       | Продуктивність               |
@@ -368,15 +369,21 @@
 
 ### 36. Немає CI для тестів застосунку і coverage
 
+> **Виправлено** у feat-018 (гілка `feat/app-ci`) за планом [`app-ci-plan.md`](./app-ci-plan.md): `.github/workflows/ci.yml` на кожен PR і push у `main` — job `quality` (`format:check`, `typecheck`, `lint`, `test`, coverage як artifact) і `e2e` (усі 4 проєкти Playwright). `@vitest/coverage-v8` і `test:coverage` у backend і frontend, без порогу. Redis-тести лишаються в `redis-tests.yml`.
+
 - **Що:** єдиний workflow — `.github/workflows/docs.yml`, і він тестує лише пакет `documentation`. Backend-, frontend- і shared-тести, typecheck та lint в CI не запускаються, лише локально через `./init.sh`. Coverage-інструментів чи скриптів немає в жодному пакеті.
 - **Пропозиція:** workflow `ci.yml` на PR (`pnpm typecheck`, `pnpm lint`, `pnpm test`, за потреби e2e); `@vitest/coverage-v8` зі звітом.
 
 ### 37. `vitest.config.ts` без `testTimeout`
 
+> **Виправлено** у feat-018 (гілка `feat/app-ci`) за планом [`app-ci-plan.md`](./app-ci-plan.md): `testTimeout: 15_000` у backend; `maxWorkers` з `VITEST_MAX_WORKERS` (у CI — 2).
+
 - **Що:** `packages/backend/vitest.config.ts` не задає `testTimeout`, тож діє default 5 с. Під час feat-003 7 з 268 тестів один раз впали з таймаутом при паралельному навантаженні (typecheck + lint). При повторних прогонах — 268/268.
 - **Пропозиція:** явний `testTimeout` і/або обмеження `poolOptions` для CI.
 
 ### 38. Playwright `webServer` використовує `npm`
+
+> **Виправлено** у feat-018 (гілка `feat/app-ci`) за планом [`app-ci-plan.md`](./app-ci-plan.md): `pnpm run dev` / `pnpm run preview`; заодно `pnpm run build-sw` у скрипті `build` фронтенду.
 
 - **Що:** `packages/frontend/playwright.config.ts` запускає `npm run dev` / `npm run preview`, хоча репозиторій — pnpm-workspace.
 - **Пропозиція:** `pnpm dev` / `pnpm preview`.
