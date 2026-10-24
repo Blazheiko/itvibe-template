@@ -1,17 +1,20 @@
 import { globalIgnores } from 'eslint/config'
-import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript'
+import {
+    configureVueProject,
+    defineConfigWithVueTs,
+    vueTsConfigs,
+} from '@vue/eslint-config-typescript'
 import pluginVue from 'eslint-plugin-vue'
 import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// To allow more languages other than `ts` in `.vue` files, uncomment the following lines:
-// import { configureVueProject } from '@vue/eslint-config-typescript'
-// configureVueProject({ scriptLangs: ['ts', 'tsx'] })
-// More info at https://github.com/vuejs/eslint-config-typescript/#advanced-setup
-
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const monorepoRootDir = resolve(__dirname, '../..')
+
+// The type-aware presets scan .vue files from rootDir (default: cwd). Pin it to this
+// package so the root `pnpm lint` (cwd = repo root) sees the same files.
+configureVueProject({ rootDir: __dirname })
 
 export default defineConfigWithVueTs(
     {
@@ -32,32 +35,27 @@ export default defineConfigWithVueTs(
     },
 
     pluginVue.configs['flat/essential'],
-    vueTsConfigs.recommended,
+    vueTsConfigs.strictTypeChecked,
+    vueTsConfigs.stylisticTypeChecked,
     {
         files: ['**/*.{ts,mts,tsx,vue}'],
         rules: {
-            '@typescript-eslint/explicit-function-return-type': 'off',
-            '@typescript-eslint/explicit-module-boundary-types': 'off',
-            '@typescript-eslint/no-explicit-any': 'off',
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unnecessary-condition': 'off',
-            '@typescript-eslint/strict-boolean-expressions': 'off',
-            '@typescript-eslint/no-dynamic-delete': 'off',
-            '@typescript-eslint/no-redundant-type-constituents': 'off',
-            '@typescript-eslint/no-invalid-void-type': 'off',
-            '@typescript-eslint/no-unnecessary-type-conversion': 'off',
-            '@typescript-eslint/prefer-nullish-coalescing': 'off',
-            '@typescript-eslint/prefer-optional-chain': 'off',
-            '@typescript-eslint/restrict-template-expressions': 'off',
-            '@typescript-eslint/restrict-plus-operands': 'off',
-            '@typescript-eslint/switch-exhaustiveness-check': 'off',
-            '@typescript-eslint/no-unsafe-enum-comparison': 'off',
+            // Numbers in template literals format predictably.
+            '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+            // `||` on primitives is deliberate: '' (empty setting), 0 (no HTTP status) and
+            // false (no search match) fall through to the next value; `??` would not.
+            '@typescript-eslint/prefer-nullish-coalescing': [
+                'error',
+                { ignorePrimitives: { string: true, number: true, boolean: true } },
+            ],
+        },
+    },
+    {
+        // Tests: no-op mocks and assertions on fixtures the test has just created.
+        files: ['src/**/__tests__/**'],
+        rules: {
+            '@typescript-eslint/no-empty-function': 'off',
             '@typescript-eslint/no-non-null-assertion': 'off',
-            '@typescript-eslint/consistent-type-definitions': 'off',
         },
     },
     {

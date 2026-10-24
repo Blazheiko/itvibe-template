@@ -8,7 +8,10 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 export default defineConfig(({ mode }) => {
     // Proxy the backend's API_PATH_PREFIX, not a hard-coded /api (code-issues item 62).
     const env = loadEnv(mode, process.cwd(), 'VITE_')
-    const prefix = (env['VITE_API_PATH_PREFIX'] ?? '').trim().replace(/^\/+|\/+$/g, '') || 'api'
+    // loadEnv() types every key as present; the variable may be unset.
+    const prefix =
+        ((env.VITE_API_PATH_PREFIX as string | undefined) ?? '').trim().replace(/^\/+|\/+$/g, '') ||
+        'api'
     return {
         plugins: [vue(), vueDevTools()],
         resolve: {

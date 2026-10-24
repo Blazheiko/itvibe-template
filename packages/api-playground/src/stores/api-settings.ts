@@ -65,7 +65,7 @@ export const useApiSettingsStore = defineStore('api-settings', () => {
     }
 
     const removeGlobalHeader = (key: string) => {
-        delete globalHeaders.value[key]
+        Reflect.deleteProperty(globalHeaders.value, key)
         saveToLocalStorage()
     }
 
@@ -104,16 +104,14 @@ export const useApiSettingsStore = defineStore('api-settings', () => {
         try {
             const saved = localStorage.getItem('api-settings')
             if (saved) {
-                const settingsData = JSON.parse(saved) as ApiSettings
+                // localStorage may hold settings from an older version.
+                const settingsData = JSON.parse(saved) as Partial<ApiSettings>
                 const savedBaseUrl = settingsData.baseUrl?.trim()
                 persistedBaseUrl.value =
                     !savedBaseUrl || savedBaseUrl === LEGACY_BASE_URL ? BASE_URL : savedBaseUrl
                 pathPrefix.value = settingsData.pathPrefix || ''
-                globalHeaders.value = settingsData.globalHeaders || {}
-                enableGlobalHeaders.value =
-                    settingsData.enableGlobalHeaders !== undefined
-                        ? settingsData.enableGlobalHeaders
-                        : true
+                globalHeaders.value = settingsData.globalHeaders ?? {}
+                enableGlobalHeaders.value = settingsData.enableGlobalHeaders ?? true
                 console.log('API settings loaded from localStorage:', settingsData)
             } else {
                 console.log('No API settings found in localStorage, using defaults')

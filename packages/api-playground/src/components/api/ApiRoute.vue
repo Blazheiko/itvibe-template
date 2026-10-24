@@ -101,15 +101,11 @@ const shouldShowExpressionFallback = (schema: ArkSchema | null): boolean => {
 }
 
 const routeRateLimit = computed(() => {
-  const rateLimit = props.route.rateLimit || props.route.groupRateLimit
+  const rateLimit = props.route.rateLimit ?? props.route.groupRateLimit
   return formatRateLimit(rateLimit)
 })
 
 const toggleExpanded = () => {
-  if (props.route.id === undefined || props.route.id === null) {
-    return
-  }
-
   apiStore.setSelectedRoute(props.route.id)
   apiStore.setActiveRoute(props.route.id)
 
@@ -121,10 +117,6 @@ const toggleExpanded = () => {
 }
 
 const openTesting = () => {
-  if (props.route.id === undefined || props.route.id === null) {
-    return
-  }
-
   if (!isExpanded.value) {
     apiStore.setExpandedRoute(props.route.id)
   }

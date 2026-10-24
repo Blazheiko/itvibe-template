@@ -7,9 +7,7 @@ interface Props {
   isOpen: boolean
 }
 
-interface Emits {
-  (e: 'close'): void
-}
+type Emits = (e: 'close') => void
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
@@ -18,7 +16,7 @@ const apiSettingsStore = useApiSettingsStore()
 
 const localUseBaseUrlOverride = ref(false)
 const localBaseUrl = ref(apiSettingsStore.baseUrlOverride || apiSettingsStore.envBaseUrl)
-const localHeaders = ref<Array<{ key: string; value: string }>>([])
+const localHeaders = ref<{ key: string; value: string }[]>([])
 const serverStatus = ref<'checking' | 'online' | 'offline' | null>(null)
 
 const convertHeadersToArray = () => {

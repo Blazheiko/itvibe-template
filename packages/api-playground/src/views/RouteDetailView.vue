@@ -38,7 +38,7 @@ onMounted(async () => {
 
   // Check if route exists and routeId is valid
   if (!currentRoute.value || routeId.value === 0) {
-    router.push('/')
+    void router.push('/')
   } else {
     // Устанавливаем selectedRoute для корректной подсветки в навигации
     apiStore.setSelectedRoute(routeId.value)
@@ -47,7 +47,7 @@ onMounted(async () => {
 })
 
 const goBack = () => {
-  router.push('/')
+  void router.push('/')
 }
 </script>
 

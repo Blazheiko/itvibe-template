@@ -1,6 +1,6 @@
 export interface Events {
     broadcast: unknown
-    unauthorized: void
+    unauthorized: undefined
 }
 
 type EventKey = keyof Events
@@ -11,7 +11,7 @@ interface EventBus {
     off<K extends EventKey>(event: K, handler: EventHandler<Events[K]>): void
     emit<K extends EventKey>(
         event: K,
-        ...args: Events[K] extends void ? [] : [payload: Events[K]]
+        ...args: Events[K] extends undefined ? [] : [payload: Events[K]]
     ): void
 }
 
@@ -36,7 +36,8 @@ const emitter: EventBus = {
         getListeners(event).delete(handler)
     },
     emit(event, ...args) {
-        const payload = args[0]!
+        // No-payload events pass undefined, which their handlers expect.
+        const payload = args[0]
         for (const handler of getListeners(event)) {
             handler(payload)
         }

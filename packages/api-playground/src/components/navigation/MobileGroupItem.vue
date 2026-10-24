@@ -33,7 +33,7 @@ const toggleGroup = () => {
 const scrollToRoute = (route: ApiRoute) => {
   // Находим маршрут с правильным ID по fullUrl и method
   const routeWithId = apiStore.findRouteById(route.id)
-  if (routeWithId && routeWithId.id) {
+  if (routeWithId?.id) {
     emit('scroll-to-route', routeWithId.id)
   } else {
     console.error(
@@ -53,7 +53,7 @@ const isRouteActive = (route: ApiRoute) => {
 
 const isGroupActive = () => {
   const selectedRoute = apiStore.selectedRoute
-  return (selectedRoute && selectedRoute.fullUrl?.startsWith(groupPath.value)) || false
+  return (selectedRoute?.fullUrl?.startsWith(groupPath.value)) || false
 }
 
 const getMethodColor = (method: string) => {

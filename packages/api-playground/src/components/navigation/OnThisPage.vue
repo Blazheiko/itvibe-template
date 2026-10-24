@@ -39,10 +39,11 @@ const currentRoutes = computed(() => {
 
 // Computed для группировки маршрутов
 const groupedRoutes = computed(() => {
-  const groups: { [key: string]: ApiRoute[] } = {}
+  const groups: Record<string, ApiRoute[]> = {}
 
   currentRoutes.value.forEach((route) => {
     const groupKey = route.fullUrl?.split('/').slice(0, -1).join('/') || 'root'
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- first route of a group
     if (!groups[groupKey]) {
       groups[groupKey] = []
     }
@@ -81,10 +82,6 @@ const generateToc = () => {
 
     // Добавляем маршруты как элементы второго уровня
     routes.forEach((route) => {
-      if (route.id === undefined || route.id === null) {
-        console.error('Route has invalid id:', route)
-        return
-      }
 
       const displayUrl = getRouteDisplayUrl(route, groupPath)
       if (!displayUrl) {
