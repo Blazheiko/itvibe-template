@@ -254,12 +254,15 @@ const { status, send, close, open, ws } = useWebSocket(wsUrl, {
 // ============================================================================
 
 // Send messages
-const sendMessage = (data: SendPayload) => {
+// There is no queue: without an open connection the message is not sent, and the
+// caller learns it from the return value (code-issues item 64).
+const sendMessage = (data: SendPayload): boolean => {
     if (status.value === 'OPEN') {
         send(JSON.stringify(data))
-    } else {
-        console.warn('WebSocket not connected, message queued')
+        return true
     }
+    console.error('WebSocket is not connected: message not sent', data.event)
+    return false
 }
 
 // API method — route is used directly as the event name (full path, e.g. 'api/ws/test')

@@ -18,7 +18,8 @@
         "typecheck": "vue-tsc --build --force",
         "lint": "eslint . --fix",
         "format": "prettier --write src/",
-        "lint:check": "eslint ."
+        "lint:check": "eslint .",
+        "test": "vitest run"
     },
     "dependencies": {
         "@vue/devtools-api": "^8.2.1",
@@ -44,6 +45,7 @@
         "typescript": "6.0.3",
         "vite": "^7.3.7",
         "vite-plugin-vue-devtools": "^8.2.1",
+        "vitest": "^5.0.5",
         "vue-tsc": "^3.3.13"
     }
 }

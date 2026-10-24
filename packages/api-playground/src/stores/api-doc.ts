@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { apiUrl } from '@/utils/api-path'
 import { ref, computed } from 'vue'
 import { useApiSettingsStore } from './api-settings'
 import { normalizePath } from '@/utils/api-helpers'
@@ -275,7 +276,9 @@ export const useApiStore = defineStore('api', () => {
         error.value = null
 
         try {
-            const response = await fetch('/api/doc/routes')
+            const response = await fetch(
+                apiUrl(useApiSettingsStore().settings.baseUrl, 'doc/routes'),
+            )
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`)

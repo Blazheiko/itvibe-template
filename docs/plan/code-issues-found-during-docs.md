@@ -31,6 +31,7 @@
 | feat-030 | 33, 34, 35     |
 | feat-031 | 39, 40, 41     |
 | feat-032 | 56, 57, 58     |
+| feat-033 | 59, 61, 62–64  |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -98,12 +99,12 @@
 | 56  | ~~Тест shared не містить жодного тесту (`pass 1` — порожній файл)~~ ✅                                            | Середня      | Тести / shared               |
 | 57  | ~~`guards` у shared порожні й закоментовані в `index.ts`~~ ✅                                                     | Низька       | shared                       |
 | 58  | ~~`EntityIdSchema` без `.brand()` — не брендований тип~~ ✅                                                       | Низька       | shared                       |
-| 59  | Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`                                           | Середня      | Frontend / DX                |
+| 59  | ~~Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`~~ ✅                                    | Середня      | Frontend / DX                |
 | 60  | ~~Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`~~ ✅                                            | Середня      | Frontend / безпека           |
-| 61  | Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі                                                       | Низька       | Frontend                     |
-| 62  | Playground: `/api/doc/routes` зашито, ігнорує `baseUrl` і `API_PATH_PREFIX`                                       | Низька       | Playground                   |
-| 63  | Playground: `https://` → `ws://` замість `wss://`                                                                 | Низька       | Playground                   |
-| 64  | Playground: «message queued», хоча повідомлення відкидається                                                      | Низька       | Playground                   |
+| 61  | ~~Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі~~ ✅                                                | Низька       | Frontend                     |
+| 62  | ~~Playground: `/api/doc/routes` зашито, ігнорує `baseUrl` і `API_PATH_PREFIX`~~ ✅                                | Низька       | Playground                   |
+| 63  | ~~Playground: `https://` → `ws://` замість `wss://`~~ ✅                                                          | Низька       | Playground                   |
+| 64  | ~~Playground: «message queued», хоча повідомлення відкидається~~ ✅                                               | Низька       | Playground                   |
 | 65  | ~~`POST /main/save-user`: анонімне створення користувача з паролем у відкритому тексті~~ ✅ виправлено (feat-012) | **Критична** | Безпека                      |
 | 66  | `users.isAdmin` — мертве поле поруч із `role`                                                                     | Низька       | БД / ролі                    |
 | 67  | ~~Push-група без `auth_guard`, перевірка в контролері~~ ✅                                                        | Низька       | Безпека / ролі               |
@@ -591,6 +592,8 @@
 
 ### 59. Фронтенд: fallback `VITE_BASE_URL`
 
+> **Виправлено** у feat-033 (гілка `feat/frontend-playground`): без змінної (і з порожнім значенням у `.env.example`) запити йдуть same-origin — через Vite proxy у dev; домену-прикладу в бандлі немає.
+
 - **Що:** `packages/frontend/src/utils/base-api.ts` без `VITE_BASE_URL` бере `https://itvibe-template.example`, тож у dev запити оминають Vite proxy, доки змінну не задано.
 - **Пропозиція:** fallback на відносний шлях (same-origin через proxy).
 
@@ -603,9 +606,13 @@
 
 ### 61. Фронтенд: нетипізовані змінні та застарілі коментарі
 
+> **Виправлено** у feat-033 (гілка `feat/frontend-playground`): `env.d.ts` типізує всі `VITE_*`, які читає код; закоментований код push-дозволів і хибний коментар «щохвилини» з `main.ts` прибрано. Захисту від звертання до неоголошеної змінної немає: `vite/client` має індексну сигнатуру в `ImportMetaEnv`.
+
 - **Що:** `packages/frontend/src/env.d.ts` типізує лише `VITE_BASE_URL`, а не `VITE_AUTH_PHONE_ENABLED` і `VITE_SENTRY_*`. У `main.ts` закоментований код push-дозволів і коментар про перевірку оновлень «щохвилини», хоча вона одноразова.
 
 ### 62–64. API Playground
+
+> **Виправлено** у feat-033 (гілка `feat/frontend-playground`): **62:** `utils/api-path.ts` — шлях маршрутів і health-check під `VITE_API_PATH_PREFIX` з урахуванням `baseUrl`, proxy з тієї ж змінної; **63:** `https` → `wss`; **64:** `sendMessage` без з'єднання нічого не обіцяє — помилка в консоль і `false` (рішення Р4). Також: Test Connection б'є в `/<prefix>/ping` замість неіснуючого `/health`; у playground з'явився скрипт `test` (Vitest, 11 тестів).
 
 - **62:** `packages/api-playground/src/stores/api-doc.ts` викликає `fetch('/api/doc/routes')`, ігноруючи `baseUrl` і `API_PATH_PREFIX`; Vite proxy теж обмежений `/api`.
 - **63:** `src/components/api/TestFormWs.vue` перетворює `https://` на `ws://` замість `wss://`.
