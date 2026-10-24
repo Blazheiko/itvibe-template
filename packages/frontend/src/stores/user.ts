@@ -34,7 +34,7 @@ export const useUserStore = defineStore('user', () => {
 
     function setUser(userData: User) {
         user.value = userData
-        sentry.setUser({ id: String(userData.id) })
+        sentry.setUser({ id: userData.id })
     }
 
     function clearUser() {

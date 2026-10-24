@@ -3,9 +3,9 @@ import type { EventType } from 'mitt'
 
 export interface Events extends Record<EventType, unknown> {
     toggle_notifications: { enabled: boolean }
-    init_app: void
-    unauthorized: void
-    destroy_websocket_base: void
+    init_app: undefined
+    unauthorized: undefined
+    destroy_websocket_base: undefined
     support_chat_token: {
         token: string
     }
@@ -27,7 +27,7 @@ export interface Events extends Record<EventType, unknown> {
     admin_user_online_remove: {
         id: string
     }
-    update_available: void
+    update_available: undefined
 }
 
 const emitter = mitt<Events>()

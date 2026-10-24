@@ -10,7 +10,11 @@ import { CDN_URL } from '../playwright.csp.config'
  * CSP_REPORT_ONLY=false and project `report-only` against one with CSP_REPORT_ONLY=true.
  */
 
-type Violation = { effectiveDirective: string; disposition: string; blockedURI: string }
+interface Violation {
+    effectiveDirective: string
+    disposition: string
+    blockedURI: string
+}
 
 declare global {
     interface Window {
@@ -172,8 +176,12 @@ const loadImage = (page: Page, src: string) =>
         (url) =>
             new Promise<number>((resolve) => {
                 const img = new Image()
-                img.onload = () => resolve(img.naturalWidth)
-                img.onerror = () => resolve(0)
+                img.onload = () => {
+                    resolve(img.naturalWidth)
+                }
+                img.onerror = () => {
+                    resolve(0)
+                }
                 img.src = url
                 document.body.appendChild(img)
             }),

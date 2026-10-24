@@ -67,7 +67,7 @@ describe('websocket heartbeat', () => {
         // the handshake pending for longer than the pong timeout.
         vi.advanceTimersByTime(12_000)
         socket.open()
-        const ws = FakeWebSocket.instances[0]!
+        const ws = FakeWebSocket.instances[0]
         vi.advanceTimersByTime(HEARTBEAT_PONG_TIMEOUT_MS + 1_000)
 
         expect(ws.readyState).toBe(FakeWebSocket.CONNECTING)
@@ -95,7 +95,7 @@ describe('websocket heartbeat', () => {
         )!
 
         socket.open()
-        const ws = FakeWebSocket.instances[0]!
+        const ws = FakeWebSocket.instances[0]
         ws.finishHandshake()
 
         vi.advanceTimersByTime(HEARTBEAT_INTERVAL_MS + HEARTBEAT_PONG_TIMEOUT_MS + 100)

@@ -20,7 +20,7 @@ const user = computed(() => userStore.user)
 const fileInput = ref<HTMLInputElement | null>(null)
 const showAvatarEditor = ref(false)
 const selectedFile = ref<Blob | null>(null)
-const avatarUrl = computed(() => buildAvatarUrl(user.value?.avatar as string | null | undefined))
+const avatarUrl = computed(() => buildAvatarUrl(user.value?.avatar))
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -45,7 +45,7 @@ const isLinkingEmail = ref(false)
 const darkMode = ref(stateStore.darkMode)
 const fontSize = computed({
     get: () => stateStore.fontSize,
-    set: (value: number) => stateStore.setFontSize(value),
+    set: (value: number) => { stateStore.setFontSize(value); },
 })
 const colorThemes = [
     { value: 'ocean', label: 'Ocean', accent: '#4E7FA8' },
@@ -96,9 +96,10 @@ async function handleAvatarSave(blob: Blob): Promise<void> {
         return
     }
 
-    if (data?.status === 'ok' && data.user) {
+    const currentUser = userStore.user
+    if (data?.status === 'ok' && data.user && currentUser !== null) {
         userStore.setUser({
-            ...userStore.user!,
+            ...currentUser,
             avatar: data.user.avatar ?? null,
         })
     }
@@ -116,9 +117,10 @@ async function deleteAvatar(): Promise<void> {
         return
     }
 
-    if (data?.status === 'ok' && data.user) {
+    const currentUser = userStore.user
+    if (data?.status === 'ok' && data.user && currentUser !== null) {
         userStore.setUser({
-            ...userStore.user!,
+            ...currentUser,
             avatar: null,
         })
     }
@@ -195,7 +197,7 @@ async function startPhoneLink(): Promise<void> {
             return
         }
 
-        linkPhoneChallengeId.value = data.challengeId ?? ''
+        linkPhoneChallengeId.value = data.challengeId
         linkPhoneStep.value = 'confirm'
         linkPhoneMessage.value = t('account.contactMethods.linkPhoneCodeSent')
     } finally {

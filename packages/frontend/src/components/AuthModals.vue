@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import { useEventBus } from '@/utils/event-bus'
 import { authApi } from '@/utils/api'
 import { useUserStore } from '@/stores/user'
-import type { User } from '@/stores/user'
 import { getResponseMessage, hasResponseError } from '@/utils/response-normalizer'
 import { ErrorCode } from 'shared/errors'
 
@@ -239,10 +238,10 @@ async function handleLogin(): Promise<void> {
         }
 
         if (data?.status === 'success' && data.user) {
-            userStore.setUser(data.user as User)
+            userStore.setUser(data.user)
             emit('close')
             emit('auth-success')
-            router.push({ name: 'UserAccount' })
+            void router.push({ name: 'UserAccount' })
             eventBus.emit('init_app')
             return
         }
@@ -505,10 +504,10 @@ async function handleEmailRegister(): Promise<void> {
         }
 
         if (data?.status === 'success' && data.user) {
-            userStore.setUser(data.user as User)
+            userStore.setUser(data.user)
             emit('close')
             emit('auth-success')
-            router.push({ name: 'UserAccount' })
+            void router.push({ name: 'UserAccount' })
             eventBus.emit('init_app')
             return
         }
@@ -603,7 +602,7 @@ async function handlePhoneConfirm(): Promise<void> {
             return
         }
 
-        if (data?.status === 'success' && data.verified) {
+        if (data?.status === 'success') {
             registerStep.value = 'phone-complete'
             return
         }
@@ -669,10 +668,10 @@ async function handlePhoneComplete(): Promise<void> {
         }
 
         if (data?.status === 'success' && data.user) {
-            userStore.setUser(data.user as User)
+            userStore.setUser(data.user)
             emit('close')
             emit('auth-success')
-            router.push({ name: 'UserAccount' })
+            void router.push({ name: 'UserAccount' })
             eventBus.emit('init_app')
             return
         }

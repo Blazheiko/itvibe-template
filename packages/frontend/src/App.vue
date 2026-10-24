@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import { useStateStore } from '@/stores/state'
 import { useUserStore } from '@/stores/user'
 import { useRouter, useRoute } from 'vue-router'
-import type { User } from '@/stores/user'
 import { mainApi } from '@/utils/api'
 import { useEventBus } from '@/utils/event-bus'
 import AppHeader from '@/components/AppHeader.vue'
@@ -53,7 +52,7 @@ const destroyWebsocketBase = () => {
 }
 
 // Пропсы для глобального хедера из meta маршрута
-const headerTitle = computed(() => (route.meta.title as string) || '')
+const headerTitle = computed(() => route.meta.title ?? '')
 const headerShowBack = computed(() => Boolean(route.meta.showBack))
 
 const SCROLLABLE_ROUTES = new Set(['/privacy-policy', '/terms', '/cookies', '/ai-policy'])
@@ -63,6 +62,14 @@ const isScrollablePage = computed(() => SCROLLABLE_ROUTES.has(route.path))
 // const handleResize = () => {
 //     windowWidth.value = window.innerWidth
 // }
+
+// mitt ignores handler results: start the async handlers without awaiting them.
+const onInitAppEvent = () => {
+    void initializeApp()
+}
+const onUnauthorizedEvent = () => {
+    void onReauthorize()
+}
 
 // Определяем тему при загрузке приложения
 onMounted(async () => {
@@ -82,8 +89,8 @@ onMounted(async () => {
 
     await initializeApp()
     isLoading.value = false
-    eventBus.on('init_app', initializeApp)
-    eventBus.on('unauthorized', onReauthorize)
+    eventBus.on('init_app', onInitAppEvent)
+    eventBus.on('unauthorized', onUnauthorizedEvent)
     eventBus.on('destroy_websocket_base', destroyWebsocketBase)
     eventBus.on('update_available', handleUpdateAvailable)
 })
@@ -91,8 +98,8 @@ onMounted(async () => {
 // Удаляем слушатель при размонтировании компонента
 onBeforeUnmount(() => {
     // window.removeEventListener('resize', handleResize)
-    eventBus.off('init_app', initializeApp)
-    eventBus.off('unauthorized', onReauthorize)
+    eventBus.off('init_app', onInitAppEvent)
+    eventBus.off('unauthorized', onUnauthorizedEvent)
     eventBus.off('update_available', handleUpdateAvailable)
     eventBus.off('destroy_websocket_base', destroyWebsocketBase)
 })
@@ -136,7 +143,7 @@ const initializeApp = async () => {
             }
             return null
         } else if (data && !hasResponseError(data) && data.user && data.wsUrl && data.wsToken) {
-            userStore.setUser(data.user as User)
+            userStore.setUser(data.user)
             stateStore.setStorageConfig({
                 cdnUrl: data.storage?.cdnUrl ?? '',
                 s3Prefix: data.storage?.s3Prefix ?? '',
@@ -148,7 +155,7 @@ const initializeApp = async () => {
             // console.log(`Data in initialization: route - ${String(routeName)}, path - ${routePath}`)
 
             if (routePath === '/' || routePath === '/login' || routePath === '/register') {
-                const intended = route.query['redirect'] as string | undefined
+                const intended = route.query.redirect as string | undefined
                 if (intended !== undefined && intended !== '') {
                     void router.push(intended)
                 } else {
@@ -156,7 +163,7 @@ const initializeApp = async () => {
                 }
             }
 
-            websocketOpen(data.wsUrl as string, data.wsToken as string)
+            websocketOpen(data.wsUrl, data.wsToken)
         }
     } catch (error) {
         console.error('Error in initialization:', error)

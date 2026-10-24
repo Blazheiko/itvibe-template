@@ -15,19 +15,19 @@ export interface ApiResolveItem {
  */
 // The pending entry is stored under the request's event name.
 export const hasPendingRequest = (
-    pending: Record<string, ApiResolveItem>,
+    pending: Partial<Record<string, ApiResolveItem>>,
     event: string,
 ): boolean => pending[event] !== undefined
 
 export const settleApiResponse = (
-    pending: Record<string, ApiResolveItem>,
+    pending: Partial<Record<string, ApiResolveItem>>,
     data: WebsocketMessage,
 ): void => {
     const cb = pending[data.event]
     if (!cb) return
 
     window.clearTimeout(cb.timeout)
-    delete pending[data.event]
+    Reflect.deleteProperty(pending, data.event)
 
     if (!hasResponseError(data)) {
         cb.resolve(data)

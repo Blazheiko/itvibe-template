@@ -9,7 +9,7 @@ export const useBroadcastHandler = () => {
     const isObject = (value: unknown): value is Record<string, unknown> =>
         typeof value === 'object' && value !== null
 
-    const handlers: Record<string, (event: WebsocketMessage) => void> = {
+    const handlers: Partial<Record<string, (event: WebsocketMessage) => void>> = {
         support_chat_token: (event) => {
             if (!isObject(event.payload) || typeof event.payload.token !== 'string') {
                 reportValidationFailure('support_chat_token', 'payload_shape', event.payload)

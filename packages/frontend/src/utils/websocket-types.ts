@@ -16,7 +16,8 @@ export interface WebsocketMessage {
     status: number | string
     timestamp: number
     payload: WebsocketPayload
-    code?: number | string | ErrorCode
+    // string covers ErrorCode as well as legacy codes.
+    code?: number | string
     error?: WebsocketErrorPayload | null
 }
 

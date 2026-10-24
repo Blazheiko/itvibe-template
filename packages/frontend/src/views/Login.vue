@@ -26,7 +26,7 @@ const showLoginModal = () => {
     isLoginModalVisible.value = true
     isRegisterModalVisible.value = false
     if (route.name !== 'Login') {
-        router.replace({ name: 'Login' })
+        void router.replace({ name: 'Login' })
     }
 }
 
@@ -34,7 +34,7 @@ const showRegisterModal = () => {
     isLoginModalVisible.value = false
     isRegisterModalVisible.value = true
     if (route.name !== 'Register') {
-        router.replace({ name: 'Register' })
+        void router.replace({ name: 'Register' })
     }
 }
 
@@ -42,7 +42,7 @@ const closeAuthModals = () => {
     isLoginModalVisible.value = false
     isRegisterModalVisible.value = false
     if (route.name === 'Login' || route.name === 'Register') {
-        router.replace({ name: 'Home' })
+        void router.replace({ name: 'Home' })
     }
 }
 
@@ -80,21 +80,21 @@ watch(
 // Эффект печатающего текста для лого
 onMounted(() => {
     // Handle OAuth success redirect
-    const queryOauth = route.query['oauth']
-    const queryError = route.query['error']
+    const queryOauth = route.query.oauth
+    const queryError = route.query.error
 
     if (queryOauth === 'success') {
         // Clear the query params
-        router.replace({ query: {} })
+        void router.replace({ query: {} })
         // Trigger app initialization (fetches user via mainApi.init)
         eventBus.emit('init_app')
-        router.push({ name: 'UserAccount' })
+        void router.push({ name: 'UserAccount' })
         return
     }
 
     if (queryError === 'oauth_failed') {
         oauthError.value = t('login.socialLoginFailed')
-        router.replace({ query: {} })
+        void router.replace({ query: {} })
     }
 
     const text = 'ITVIBE'

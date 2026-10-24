@@ -225,11 +225,12 @@ class ServiceWorkerManager {
     private setupUpdateHandlers(): void {
         if (!this.registration) return
 
-        this.registration.addEventListener('updatefound', () => {
+        const registration = this.registration
+        registration.addEventListener('updatefound', () => {
             console.log('[SW] New service worker found')
             // Only notify on UPDATE (active SW exists), not on first install
-            if (this.registration!.active) {
-                this.watchWorker(this.registration!.installing)
+            if (registration.active) {
+                this.watchWorker(registration.installing)
             }
         })
 
@@ -392,7 +393,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 
 // Регистрацию SW запускаем после полной загрузки страницы
 if (document.readyState === 'complete') {
-    initializeServiceWorker()
+    void initializeServiceWorker()
 } else {
-    window.addEventListener('load', initializeServiceWorker)
+    window.addEventListener('load', () => {
+        void initializeServiceWorker()
+    })
 }

@@ -214,7 +214,7 @@ describe('sentry service', () => {
             },
         })
 
-        const breadcrumb = beforeBreadcrumb?.({
+        const breadcrumb = beforeBreadcrumb({
             category: 'navigation',
             data: {
                 url: 'https://example.com/path?token=secret&code=123',

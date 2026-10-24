@@ -162,12 +162,12 @@ watch([() => stateStore.colorTheme, () => stateStore.darkMode], syncPwaStyles)
 // Переход в аккаунт
 const goToAccount = () => {
     closeMenu()
-    router.push('/account')
+    void router.push('/account')
 }
 
 const goTo = (path: string) => {
     closeMenu()
-    router.push(path)
+    void router.push(path)
 }
 
 // Переключение темы
