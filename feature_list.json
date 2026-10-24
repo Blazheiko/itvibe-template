@@ -231,17 +231,17 @@
             "owner": "Blazheiko",
             "branch": "feat/storage-hardening",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #71 (merge fa1342d): buildObjectKey + deleteFromS3 with relative keys, detectImageType (magic bytes) for avatars and KB screenshots, public avatars, GET/HEAD-only bucket CORS; specs RED first, backend 731, frontend 50, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual upload against MinIO; evidence in progress.md on feat/storage-hardening"
         },
         {
             "id": "feat-024",
             "name": "WebSocket Cleanup",
             "description": "WS event prefix from VITE_API_PATH_PREFIX, remove dead WS code (user-storage, unreachable branch, websocket-base reconnect) (code-issues items 17, 19). Roadmap F07: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/ws-cleanup",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
