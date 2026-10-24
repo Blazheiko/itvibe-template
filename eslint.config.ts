@@ -14,6 +14,7 @@ export default tseslint.config(
             'eslint.config.ts',
             'packages/backend/vitest.config.ts',
             'packages/backend/vitest.redis.config.ts',
+            'packages/backend/vitest.pg.config.ts',
             'packages/backend/drizzle.config.ts',
         ],
     },

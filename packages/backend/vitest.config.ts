@@ -12,8 +12,9 @@ export default defineConfig({
         testTimeout: 15_000,
         // CI sets VITEST_MAX_WORKERS to keep runners from oversubscribing.
         ...(maxWorkers ? { maxWorkers: Number(maxWorkers) } : {}),
-        // *.redis.test.ts need a real Redis: run them with `pnpm test:redis`.
-        exclude: [...configDefaults.exclude, 'dist/**', '**/*.redis.test.ts'],
+        // *.redis.test.ts and *.pg.test.ts need a real Redis / PostgreSQL:
+        // run them with `pnpm test:redis` / `pnpm test:pg`.
+        exclude: [...configDefaults.exclude, 'dist/**', '**/*.redis.test.ts', '**/*.pg.test.ts'],
     },
     resolve: {
         alias: {
