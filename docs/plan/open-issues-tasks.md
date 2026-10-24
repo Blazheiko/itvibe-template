@@ -97,13 +97,13 @@
       **AC:** старт контейнера не запускає міграції (логи); one-shot міграція на чистій БД успішна; `docker stop` → shutdown-лог з `src/index.ts`, exit 0/143 без SIGKILL.
 - [x] **F02.7** → F02.2–F02.6. Повторні вимірювання: розмір образу, час збірки (той самий кеш-стан, що в F02.1), `transferring context`.
       **AC:** таблиця до/після в evidence; зростання розміру образу пояснено.
-- [x] **F02.D** Шаблон D: `deployment.md` (one-shot міграції, порядок rollout, healthcheck і префікс). **F02.E**, **F02.X**.
+- [x] **F02.D** Шаблон D: `deployment.md` (one-shot міграції, порядок rollout, healthcheck і префікс). **F02.E** ✅, **F02.X** ✅.
 
 ## Хвиля 3 — безпека і доступ (паралельно, після F00)
 
 ### F03 HTTP/WS Response Safety (п. 18, 42)
 
-- [ ] **F03.S** Шаблон S.
+- [x] **F03.S** Шаблон S.
 - [ ] **F03.1** `ws-handlers.ts`: `dataAccess === null` → `401` до `res.upgrade` (п. 18).
       **AC:** unit (мок `res`): `upgrade` не викликано, статус 401, `onOpen` не настає.
 - [ ] **F03.2** `sendResponse`: `Cache-Control: no-store`, якщо контролер не задав свій (п. 42).
