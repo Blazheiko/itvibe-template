@@ -191,17 +191,17 @@
             "owner": "Blazheiko",
             "branch": "feat/docker-hardening",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #67 (merge 1d10df8): .dockerignore (context 83.45 MB -> 124.7 kB, build 337 -> 172 s), user app uid 999, HEALTHCHECK checking the ping body, exec CMD, one-shot migrations; canary absent in builder stage, layers and history (positive controls); healthy/unhealthy scenarios; docker stop exit 0; docs:build + docs:verify; evidence in progress.md on feat/docker-hardening"
         },
         {
             "id": "feat-020",
             "name": "HTTP/WS Response Safety",
             "description": "401 before res.upgrade without a live session; Cache-Control: no-store on API responses by default (code-issues items 18, 42). Roadmap F03: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/response-safety",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
