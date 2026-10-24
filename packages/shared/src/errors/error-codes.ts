@@ -33,9 +33,18 @@ export const ErrorCodeValues = [
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
 
+export interface ValidationIssue {
+    /** Dot-separated field path (`nested.name`); `''` for the whole payload. */
+    path: string
+    message: string
+}
+
 export interface ValidationErrorDetails {
     kind: 'validation'
+    /** One human-readable line per problem. */
     messages: string[]
+    /** The same problems mapped to field paths. */
+    issues?: ValidationIssue[]
     fields?: string[]
 }
 

@@ -65,4 +65,43 @@ describe('handleError', () => {
         expect(calls).toContain('header:content-type')
         expect(calls.at(-1)).toContain('"message":"Validation failure"')
     })
+
+    it('puts per-field issues next to messages in the 422 details (code-issues item 26)', async () => {
+        const { handleError } = await import('./server.js')
+        let body = ''
+        const res = {
+            cork: vi.fn((callback: () => void) => {
+                callback()
+                return res
+            }),
+            writeStatus: vi.fn(() => res),
+            writeHeader: vi.fn(() => res),
+            end: vi.fn((value: string) => {
+                body = value
+                return res
+            }),
+        } as unknown as HttpResponse
+        const issues = [
+            { path: 'email', message: 'email must be an email address (was "x")' },
+            { path: 'nested.name', message: 'nested.name must be at least length 2 (was 1)' },
+        ]
+
+        handleError(
+            res,
+            new ValidationError(
+                issues.map((issue) => issue.message),
+                undefined,
+                issues,
+            ),
+        )
+
+        expect(JSON.parse(body)).toMatchObject({
+            code: 'validation_failed',
+            details: {
+                kind: 'validation',
+                messages: issues.map((issue) => issue.message),
+                issues,
+            },
+        })
+    })
 })

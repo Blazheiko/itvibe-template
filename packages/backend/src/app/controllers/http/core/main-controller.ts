@@ -18,11 +18,6 @@ export default {
         return mainService.ping()
     },
 
-    testSentryError({ logger }: HttpContext): never {
-        logger.info('testSentryError')
-        throw new Error('Sentry test error')
-    },
-
     testHeaders({ httpData, logger }: HttpContext): TestHeadersResponse {
         logger.info('testHeaders')
         return mainService.testHeaders(httpData)

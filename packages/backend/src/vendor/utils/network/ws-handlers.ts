@@ -249,6 +249,9 @@ const onMessage = async (
                     details: {
                         kind: 'validation',
                         messages: validatedMessage.messages,
+                        ...(validatedMessage.issues !== undefined
+                            ? { issues: validatedMessage.issues }
+                            : {}),
                     },
                 }),
                 event,

@@ -7,7 +7,14 @@
 [vendor/contracts/validator.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/contracts/validator.ts):
 
 ```ts
-export type ValidationResult<T> = { ok: true; value: T } | { ok: false; messages: string[] }
+// One problem of a field; `path` is dot-separated (`nested.name`), `''` for the root.
+export interface ValidationIssue {
+    path: string
+    message: string
+}
+
+export type ValidationResult<T> =
+    { ok: true; value: T } | { ok: false; messages: string[]; issues?: ValidationIssue[] }
 
 export interface Validator<T> {
     validate(input: unknown): ValidationResult<T>
@@ -22,7 +29,7 @@ export type InferPayload<V> = V extends Validator<infer T> ? T : unknown
 
 ### ArkType-адаптер
 
-[app/validate/adapters/arktype-adapter.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/validate/adapters/arktype-adapter.ts) — `arkValidator(schema)` викликає схему, і якщо результат — `type.errors`, повертає `{ ok: false, messages: [summary] }` (тобто **одне** повідомлення — `summary` ArkType). `describe()` повертає саму схему.
+[app/validate/adapters/arktype-adapter.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/validate/adapters/arktype-adapter.ts) — `arkValidator(schema)` викликає схему, і якщо результат — `type.errors`, повертає `{ ok: false, messages, issues }`: `issues` — по запису `{ path, message }` на кожну помилку ArkType (`path` — `propString`, наприклад `nested.name`; `''` для кореня), `messages` — ті самі `message` рядками. Власний адаптер може не повертати `issues`, тоді в помилці буде лише `messages`. `describe()` повертає саму схему.
 
 Активний движок фіксується одним рядком у [app/validate/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/validate/index.ts):
 
@@ -56,7 +63,7 @@ defineRoute({
 
 ## Де виконується валідація
 
-Усі шляхи зводяться до [validateRoutePayload](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/validation/validate-route-payload.ts): виклик `validator.validate`, а при `ok: false` — `throw new ValidationError(messages)`.
+Усі шляхи зводяться до [validateRoutePayload](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/validation/validate-route-payload.ts): виклик `validator.validate`, а при `ok: false` — `throw new ValidationError(messages, undefined, issues)`.
 
 ```mermaid
 flowchart LR
@@ -113,7 +120,7 @@ export type RegisterInput = (typeof RegisterInputSchema)['inferIn']
 
 ## Формат помилок
 
-[ValidationError](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/validate/errors/validation-error.ts) має `code = "validation_failed"`, `statusCode = 422` і `messages: string[]`.
+[ValidationError](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/validate/errors/validation-error.ts) має `code = "validation_failed"`, `statusCode = 422`, `messages: string[]` і `issues?: ValidationIssue[]`.
 
 HTTP-відповідь (обробник помилок у [server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)) — статус **422**:
 
@@ -122,13 +129,25 @@ HTTP-відповідь (обробник помилок у [server.ts](https://
     "status": "error",
     "code": "validation_failed",
     "message": "Validation failure",
-    "details": { "kind": "validation", "messages": ["..."] }
+    "details": {
+        "kind": "validation",
+        "messages": [
+            "email must be an email address (was \"x\")",
+            "password must be at least length 8 (was 3)"
+        ],
+        "issues": [
+            { "path": "email", "message": "email must be an email address (was \"x\")" },
+            { "path": "password", "message": "password must be at least length 8 (was 3)" }
+        ]
+    }
 }
 ```
 
+`messages` — по рядку на кожне поле (раніше — один рядок `summary` з усіма помилками); клієнти, що показують `messages`, працюють як і раніше. Для підсвічування полів у формі беріть `issues[].path`. Тип — `ValidationErrorDetails` у [`shared/src/errors/error-codes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/errors/error-codes.ts).
+
 Помилка параметра шляху — статус **400**, `code: "bad_request"`, `details.kind: "parameter_validation"`, `details.parameter`.
 
-У WS (і для конверта, і для payload) повертається `status: "error"` з конвертом `error`, створеним `createWsErrorEnvelope("validation_failed", "Validation failure", { details: { kind: "validation", messages } })`. HTTP-статусу немає. Формат конверта — див. [WebSocket](/backend/websocket).
+У WS (і для конверта, і для payload) повертається `status: "error"` з конвертом `error`, створеним `createWsErrorEnvelope("validation_failed", "Validation failure", { details: { kind: "validation", messages, issues } })` — ті самі `messages` і `issues`, що й у HTTP. HTTP-статусу немає. Формат конверта — див. [WebSocket](/backend/websocket).
 
 ## Схеми відповідей (`ResponseSchema`)
 
