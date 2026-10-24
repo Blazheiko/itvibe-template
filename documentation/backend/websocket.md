@@ -22,7 +22,7 @@ const token = protocols[0] ?? ''
 const appType = normalizeAppTypeProtocol(protocols[1] ?? '')
 ```
 
-Важливо: upgrade **не відхиляється**, якщо `verifyUpgradeToken` повернув `null`. Сокет створюється без `userId`/`sessionId`, а вже в `onOpen` сервер надсилає `service:error` (`unauthorized`, `reason: session_expired`) і закриває з'єднання з кодом `4001`. Якщо дані є, клієнт отримує `service:connection_established` з `socket_id` (UUID з'єднання) і `activity_timeout: 30`.
+Якщо `verifyUpgradeToken` не знайшов живої сесії для токена правильного формату, upgrade відхиляється **до** `res.upgrade` відповіддю `401 Session expired`: з'єднання не відкривається. Браузер бачить це як невдалий handshake (close `1006`), і клієнт оновлює токен через HTTP (див. нижче). Якщо дані є, клієнт отримує `service:connection_established` з `socket_id` (UUID з'єднання) і `activity_timeout: 30`.
 
 Під час кожного вхідного повідомлення `onRefreshToken` продовжує TTL `auth:ws:<token>` до 120 с, а в `onClose` і `closeAllWs` (graceful shutdown, код `4201`) токен видаляється через `onRevokeToken`. Отже токен одноразовий щодо з'єднання: для нового підключення потрібен новий виклик `update-ws-token`.
 
@@ -113,7 +113,7 @@ const WsMessageSchema = type({
 | маршрут не знайдено                      | `not_found` («Route not found»)                    |
 | перевищено ліміт                         | `rate_limited` (`reason: rate_limit_exceeded`)     |
 | виняток у handler                        | `internal_error`                                   |
-| сесія зникла                             | `service:error` `unauthorized` + закриття `4001`   |
+| сесія зникла (вже відкрите з'єднання)    | `service:error` `unauthorized` + закриття `4001`   |
 | Redis недоступний                        | `service_unavailable`, з'єднання не закривається   |
 
 Перед диспетчером `onMessage` перевіряє сесію через `wsSessionHandler` ([session-handler.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/session-handler.ts)) на **кожне** повідомлення, тож вихід із сесії по HTTP рве WS при наступному повідомленні.
@@ -180,7 +180,10 @@ Presence публікується лише якщо в каналі `admin` є �
 
 Перепідключення (вбудований `autoReconnect` vueuse закоментовано, логіка своя в `handleWebSocketClose`):
 
+Рішення приймає чиста функція [`resolveWebSocketCloseAction`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/websocket-close.ts) (покрита тестами):
+
 - код `4001` → `unauthorized()`: новий `mainApi.updateWsToken()` і `websocketOpen(wsUrl, wsToken)`; якщо HTTP теж каже «не автентифіковано» — подія `unauthorized` в event bus і закриття; інші помилки — повтор через 5 с;
+- `1006`, коли з'єднання так і не відкрилося (сервер відхилив upgrade з `401` або недоступний), → так само `unauthorized()`: перший раз одразу, наступні поспіль — через 5 с, щоб недоступний WS-ендпоінт при робочому HTTP не давав швидкого циклу оновлень токена;
 - коди `4000–4099` (крім `4001`) → без перепідключення;
 - інші коди (зокрема `4201` при зупинці сервера) → `open()` через 5 с. Оскільки токен на сервері вже відкликано, такий повтор, найімовірніше, отримає `4001` і піде гілкою оновлення токена.
 
@@ -196,10 +199,6 @@ Presence публікується лише якщо в каналі `admin` є �
 
 - **Rate limit upgrade, два рівні**, обидва за IP і незалежні від HTTP L1: рівень 1 у пам'яті процесу (`WS_UPGRADE_RATE_LIMIT_*`, 120/хв) відсікає флуд до будь-якого I/O; рівень 2 у Redis (`WS_UPGRADE_SHARED_RATE_LIMIT_*`, 60/хв) — спільний бюджет на всі інстанси. Обидва перевіряються до формату токена і до пошуку сесії, тож невалідні токени теж витрачають бюджет. Якщо Redis для лімітів недоступний, рівень 2 пропускається, і діє лише рівень 1. Звичайні HTTP-запити на `/<pathPrefix>/websocket` рахуються в HTTP L1. Деталі — [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів).
 - **`ping`/`pong`** (heartbeat) обробляється в `onMessage` до диспетчера і під rate limit повідомлень не потрапляє.
-
-::: warning Upgrade без живої сесії
-Upgrade з токеном правильного формату, для якого `onUpgrade` повернув `null`, все одно виконується, а з'єднання закривається в `onOpen` кодом `4001`. Ліміт upgrade обмежує частоту таких спроб, але саме відхилення до `res.upgrade` не реалізоване. Див. [code-issues, п. 18](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
-:::
 
 Токени сесії в логах маскуються: `maskTokenForLogs` ([`mask-sensitive.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/helpers/mask-sensitive.ts)) лишає лише перші 4 символи (`abcd…`). Так логуються WS-токен у `verifyUpgradeToken`, `userToken` у `wsSessionHandler` і `destroyAllSessions`, `cookieUserToken` у `token-handler.ts`.
 

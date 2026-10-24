@@ -1,6 +1,6 @@
 # Кешування та ETag
 
-Бекенд має два шари кешування: in-memory кеш статики з ETag/`Cache-Control` для браузера та кілька процесних кешів у пам'яті. Для JSON API HTTP-кешування не налаштоване. Як увімкнути роздачу статики (`SERVE_STATIC`, `CDN_URL`), описано в [Розгортанні](/backend/deployment). Як запит проходить через сервер, описано в [Життєвому циклі запиту](/backend/request-lifecycle).
+Бекенд має два шари кешування: in-memory кеш статики з ETag/`Cache-Control` для браузера та кілька процесних кешів у пам'яті. JSON API за замовчуванням не кешується: відповіді мають `Cache-Control: no-store`. Як увімкнути роздачу статики (`SERVE_STATIC`, `CDN_URL`), описано в [Розгортанні](/backend/deployment). Як запит проходить через сервер, описано в [Життєвому циклі запиту](/backend/request-lifecycle).
 
 ## Статика: кеш у пам'яті
 
@@ -59,7 +59,7 @@ MIME-тип береться з [`MIME_TYPES`](https://github.com/Blazheiko/itvi
 
 ## API-відповіді
 
-`sendResponse` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) виставляє `content-type: application/json`, security-заголовки, заголовки й cookies з `responseData` і CORS. **Ні `Cache-Control`, ні `ETag` на JSON-відповіді не ставляться**, зокрема немає `no-store`. Поведінку кешування визначає браузер або проміжний проксі. Контролер може сам додати заголовок через `responseData.headers`.
+`sendResponse` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) виставляє `content-type: application/json`, security-заголовки, заголовки й cookies з `responseData` і CORS. Кожна API-відповідь — і з `sendResponse`, і помилки з `sendErrorResponse` (422, 429, 500 тощо) — отримує `Cache-Control: no-store` (`setApiCacheHeader` у [`http-response-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts)): відповіді містять сесійні й персональні дані, тож браузер і проміжні проксі не повинні їх зберігати. Якщо контролер сам задав `Cache-Control` у `responseData.headers` (без огляду на регістр), його значення лишається, і `no-store` не додається. `ETag` на JSON-відповіді не ставиться. Статика має власні правила (вище).
 
 CORS: якщо `ENABLED_CORS=true`, `setCorsHeader` пише `Vary: Origin` і `Access-Control-Max-Age` = `maxAge` з [`config/cors.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/cors.ts) (зараз `90` секунд, змінюється лише в коді). Отже, браузер кешує результат preflight на 90 с.
 
