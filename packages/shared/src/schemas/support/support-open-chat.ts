@@ -1,7 +1,7 @@
-import { type } from '@arktype/type';
+import { type } from '@arktype/type'
 
 export const SupportOpenChatInputSchema = type({
     '+': 'reject',
-});
+})
 
-export type SupportOpenChatInput = typeof SupportOpenChatInputSchema.infer;
+export type SupportOpenChatInput = typeof SupportOpenChatInputSchema.infer

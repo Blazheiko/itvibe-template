@@ -1,5 +1,5 @@
-import { defineRelations } from 'drizzle-orm';
-import * as schema from './schema.js';
+import { defineRelations } from 'drizzle-orm'
+import * as schema from './schema.js'
 
 // Relational Queries v2 (drizzle-orm 1.0). Same relations as the former
 // per-table `relations()` declarations in schema.ts.
@@ -78,4 +78,4 @@ export const relations = defineRelations(schema, (r) => ({
     supportChatHistory: {
         user: r.one.users({ from: r.supportChatHistory.userId, to: r.users.id }),
     },
-}));
+}))

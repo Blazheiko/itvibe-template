@@ -52,7 +52,10 @@ describe('settleApiResponse', () => {
 
     it('ignores responses without a pending request', () => {
         const { item, pending } = pendingFor('api/a')
-        settleApiResponse(pending, { event: 'api/b', status: 'error' } as unknown as WebsocketMessage)
+        settleApiResponse(pending, {
+            event: 'api/b',
+            status: 'error',
+        } as unknown as WebsocketMessage)
         expect(item.reject).not.toHaveBeenCalled()
         expect(Object.keys(pending)).toEqual(['api/a'])
     })

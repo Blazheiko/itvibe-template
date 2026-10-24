@@ -8,41 +8,47 @@ type LocaleSchema = typeof en
 type LocaleMessageTree = Record<string, unknown>
 
 function isLocaleMessageTree(value: unknown): value is LocaleMessageTree {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function mergeLocaleMessages(fallback: LocaleMessageTree, locale: LocaleMessageTree): LocaleMessageTree {
-  const merged: LocaleMessageTree = { ...fallback }
+function mergeLocaleMessages(
+    fallback: LocaleMessageTree,
+    locale: LocaleMessageTree,
+): LocaleMessageTree {
+    const merged: LocaleMessageTree = { ...fallback }
 
-  Object.entries(locale).forEach(([key, value]) => {
-    const fallbackValue = merged[key]
-    if (isLocaleMessageTree(fallbackValue) && isLocaleMessageTree(value)) {
-      merged[key] = mergeLocaleMessages(fallbackValue, value)
-      return
-    }
-    merged[key] = value
-  })
+    Object.entries(locale).forEach(([key, value]) => {
+        const fallbackValue = merged[key]
+        if (isLocaleMessageTree(fallbackValue) && isLocaleMessageTree(value)) {
+            merged[key] = mergeLocaleMessages(fallbackValue, value)
+            return
+        }
+        merged[key] = value
+    })
 
-  return merged
+    return merged
 }
 
 const messages: Partial<Record<SupportedLocale, LocaleSchema>> = {
-  en,
+    en,
 }
 
 export const i18n = createI18n({
-  legacy: false,
-  locale: 'en',
-  fallbackLocale: 'en',
-  messages,
+    legacy: false,
+    locale: 'en',
+    fallbackLocale: 'en',
+    messages,
 })
 
 export async function loadLocale(locale: SupportedLocale): Promise<void> {
-  if (locale === 'en') return
+    if (locale === 'en') return
 
-  const messages = await import(`@/locales/${locale}.ts`)
-  i18n.global.setLocaleMessage(
-    locale,
-    mergeLocaleMessages(en as LocaleMessageTree, messages.default as LocaleMessageTree) as LocaleSchema,
-  )
+    const messages = await import(`@/locales/${locale}.ts`)
+    i18n.global.setLocaleMessage(
+        locale,
+        mergeLocaleMessages(
+            en as LocaleMessageTree,
+            messages.default as LocaleMessageTree,
+        ) as LocaleSchema,
+    )
 }

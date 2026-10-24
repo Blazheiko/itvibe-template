@@ -1,7 +1,7 @@
-import { type } from "@arktype/type";
+import { type } from '@arktype/type'
 
 export const EmptyFormInputSchema = type({
-  "+": "reject",
-});
+    '+': 'reject',
+})
 
-export type EmptyFormInput = typeof EmptyFormInputSchema.infer;
+export type EmptyFormInput = typeof EmptyFormInputSchema.infer

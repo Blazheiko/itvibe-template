@@ -71,35 +71,35 @@
 
 1. **Методи з тілом.** У `server.ts` винести множину методів, що мають тіло (`BODY_METHODS = new Set(["post", "put", "patch"])`), і рахувати `hasBody` через неї.
 2. **Заборона `validator` на `GET` / `DELETE`:**
-   - `defineRoute` (`src/app/routing/define-route.ts`): перевантаження або умовний тип, щоб `method: "get" | "delete" | "del"` разом із `validator` давав помилку typecheck;
-   - runtime-перевірка в `routeHandler` / `createRoute` (`router.ts`): якщо `method ∈ {get, delete, del}` і є `validator`, то `throw new Error(...)` на старті з `url` і `method`. Вона страхує маршрути, які оминають `defineRoute`. WS-маршрути не зачіпаються.
+    - `defineRoute` (`src/app/routing/define-route.ts`): перевантаження або умовний тип, щоб `method: "get" | "delete" | "del"` разом із `validator` давав помилку typecheck;
+    - runtime-перевірка в `routeHandler` / `createRoute` (`router.ts`): якщо `method ∈ {get, delete, del}` і є `validator`, то `throw new Error(...)` на старті з `url` і `method`. Вона страхує маршрути, які оминають `defineRoute`. WS-маршрути не зачіпаються.
 3. **`validator` без `Content-Type`:**
-   - `UnsupportedMediaTypeError`: `receivedContentType: string | null`, повідомлення для `null`;
-   - `readAndParseBody`: якщо `meta.hasBody`, є `route.validator` і немає `contentType`, то за наявності `transfer-encoding` або `content-length > 0` кидається `UnsupportedMediaTypeError(null, allowed)`, інакше викликається `validateRoutePayload(route.validator, {})`.
+    - `UnsupportedMediaTypeError`: `receivedContentType: string | null`, повідомлення для `null`;
+    - `readAndParseBody`: якщо `meta.hasBody`, є `route.validator` і немає `contentType`, то за наявності `transfer-encoding` або `content-length > 0` кидається `UnsupportedMediaTypeError(null, allowed)`, інакше викликається `validateRoutePayload(route.validator, {})`.
 4. **Тести.**
-   - **Через зареєстрований HTTP-handler**, за зразком `src/vendor/start/login-validation-throttle.spec.ts`: фейковий `uWebSockets.js` `App`, справжні `collectRequestMetadata` і `onData`, handler з `server.patch` / `server.post`. Тести в `http-validation.spec.ts` самі передають `hasBody: true` і мокають `getData`, тож пройшли б і без виправлення.
-     - `patch` з валідним JSON → handler отримує провалідований payload;
-     - `patch` з невалідним JSON → HTTP 422, handler не викликано;
-     - `post` з `validator` без `Content-Type` і без тіла: обов'язкові поля → 422, handler не викликано; схема без обов'язкових полів → handler отримує `{}`; поле з default → handler отримує default;
-     - `post` з `validator` без `Content-Type`, `content-length > 0` → 415, `details.receivedContentType === null`;
-     - `post` з `validator` без `Content-Type`, `transfer-encoding: chunked` і нуль байтів → 415 (зафіксована політика);
-     - `post` без `validator` і без `Content-Type` → handler отримує `payload = null`, як раніше.
-   - **`routesHandler`:**
-     - `get` з `validator` → помилка; `delete` з `validator` → помилка; `del` з `validator` → помилка;
-     - regression: WS-маршрут (`method: "ws"`) з `validator` проходить без помилки.
-   - **Типи:** `// @ts-expect-error` на `defineRoute({ method: "delete", validator })` і `defineRoute({ method: "get", validator })`.
+    - **Через зареєстрований HTTP-handler**, за зразком `src/vendor/start/login-validation-throttle.spec.ts`: фейковий `uWebSockets.js` `App`, справжні `collectRequestMetadata` і `onData`, handler з `server.patch` / `server.post`. Тести в `http-validation.spec.ts` самі передають `hasBody: true` і мокають `getData`, тож пройшли б і без виправлення.
+        - `patch` з валідним JSON → handler отримує провалідований payload;
+        - `patch` з невалідним JSON → HTTP 422, handler не викликано;
+        - `post` з `validator` без `Content-Type` і без тіла: обов'язкові поля → 422, handler не викликано; схема без обов'язкових полів → handler отримує `{}`; поле з default → handler отримує default;
+        - `post` з `validator` без `Content-Type`, `content-length > 0` → 415, `details.receivedContentType === null`;
+        - `post` з `validator` без `Content-Type`, `transfer-encoding: chunked` і нуль байтів → 415 (зафіксована політика);
+        - `post` без `validator` і без `Content-Type` → handler отримує `payload = null`, як раніше.
+    - **`routesHandler`:**
+        - `get` з `validator` → помилка; `delete` з `validator` → помилка; `del` з `validator` → помилка;
+        - regression: WS-маршрут (`method: "ws"`) з `validator` проходить без помилки.
+    - **Типи:** `// @ts-expect-error` на `defineRoute({ method: "delete", validator })` і `defineRoute({ method: "get", validator })`.
 5. **Документація** (в тому ж PR, за `AGENTS.md`):
-   - `documentation/backend/request-lifecycle.md`: крок 3 («`hasBody` лише для `post` і `put`»), розділ про тіло (порядок перевірок, новий випадок без `Content-Type` як контракт API, політика framing), абзац «поза рамками» про `PATCH`/`DELETE`, межа щодо `octet`;
-   - `documentation/backend/routing-middlewares.md`: таблиця методів (які мають тіло, де дозволено `validator`, чому без тіла для `DELETE`);
-   - `documentation/backend/adding-a-feature.md` і `validation.md`: для часткових оновлень — `patch`, дані для `delete` — через `:param`/`query`;
-   - позначити п. 12 виправленим у `code-issues-found-during-docs.md`.
+    - `documentation/backend/request-lifecycle.md`: крок 3 («`hasBody` лише для `post` і `put`»), розділ про тіло (порядок перевірок, новий випадок без `Content-Type` як контракт API, політика framing), абзац «поза рамками» про `PATCH`/`DELETE`, межа щодо `octet`;
+    - `documentation/backend/routing-middlewares.md`: таблиця методів (які мають тіло, де дозволено `validator`, чому без тіла для `DELETE`);
+    - `documentation/backend/adding-a-feature.md` і `validation.md`: для часткових оновлень — `patch`, дані для `delete` — через `:param`/`query`;
+    - позначити п. 12 виправленим у `code-issues-found-during-docs.md`.
 6. **Перевірка:** `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm docs:build && pnpm docs:verify`.
    Ручна перевірка на запущеному backend (`curl`). Для запитів з тілом автоматичний заголовок `curl` (`application/x-www-form-urlencoded` для `-d`) прибирається через `-H 'Content-Type:'`, інакше перевіряється інший сценарій:
-   - `curl -X POST /api/auth/login` (без тіла й заголовка) → 422, а не 500;
-   - `curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' /api/auth/login` → 415, `receivedContentType: null`;
-   - `curl -X POST -H 'Content-Type:' -H 'Transfer-Encoding: chunked' --data-binary '' /api/auth/login` → 415;
-   - тимчасовий `patch`-маршрут з `validator` (не комітиться): валідне тіло → 200, невалідне → 422;
-   - тимчасовий `delete` з `validator` → сервер не стартує з зрозумілою помилкою.
+    - `curl -X POST /api/auth/login` (без тіла й заголовка) → 422, а не 500;
+    - `curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' /api/auth/login` → 415, `receivedContentType: null`;
+    - `curl -X POST -H 'Content-Type:' -H 'Transfer-Encoding: chunked' --data-binary '' /api/auth/login` → 415;
+    - тимчасовий `patch`-маршрут з `validator` (не комітиться): валідне тіло → 200, невалідне → 422;
+    - тимчасовий `delete` з `validator` → сервер не стартує з зрозумілою помилкою.
 
 ## Поза обсягом
 

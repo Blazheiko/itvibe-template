@@ -11,10 +11,10 @@
 
 `sendResponse` (`src/vendor/start/server.ts`) обирає тіло так:
 
-| Умова              | Тіло                       | `Content-Type`     |
-| ------------------ | -------------------------- | ------------------ |
-| редирект 3xx       | порожнє                    | не ставиться       |
-| `payload !== null` | `makeJson(payload)`        | `application/json` |
+| Умова              | Тіло                               | `Content-Type`     |
+| ------------------ | ---------------------------------- | ------------------ |
+| редирект 3xx       | порожнє                            | не ставиться       |
+| `payload !== null` | `makeJson(payload)`                | `application/json` |
 | `payload === null` | `String(status)`: `"200"`, `"403"` | `application/json` |
 
 `"200"` формально валідний JSON (число), але такого формату відповіді немає в жодному контракті. Для 4xx/5xx тіло не має канонічної форми помилки `{ status: "error", code, message }`, яку дає `sendErrorResponse`.
@@ -37,14 +37,14 @@ Handler без `return` (`async () => { … }`) повертає `undefined`. П
 
 Правило в `sendResponse`, «порожній payload» = `null` або `undefined`:
 
-| Ситуація                                         | Відповідь                                                                         |
-| ------------------------------------------------ | --------------------------------------------------------------------------------- |
-| 3xx (включно з 304)                              | без змін: без тіла                                                                |
-| статус 204 або 205, заданий явно                 | той самий статус, без тіла, навіть якщо payload є                                 |
-| статус 200 (будь-який, зокрема явно заданий) і порожній payload | **204 No Content**, без тіла                                                |
-| інший 2xx (201, 202, …) і порожній payload | **той самий статус**, без тіла                                           |
-| 4xx/5xx і порожній payload                       | канонічне тіло помилки `{ status: "error", code, message }`, `application/json`   |
-| інакше                                           | без змін: `makeJson(payload)`, `application/json`                                 |
+| Ситуація                                                        | Відповідь                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 3xx (включно з 304)                                             | без змін: без тіла                                                              |
+| статус 204 або 205, заданий явно                                | той самий статус, без тіла, навіть якщо payload є                               |
+| статус 200 (будь-який, зокрема явно заданий) і порожній payload | **204 No Content**, без тіла                                                    |
+| інший 2xx (201, 202, …) і порожній payload                      | **той самий статус**, без тіла                                                  |
+| 4xx/5xx і порожній payload                                      | канонічне тіло помилки `{ status: "error", code, message }`, `application/json` |
+| інакше                                                          | без змін: `makeJson(payload)`, `application/json`                               |
 
 «Порожній» — лише `null` і `undefined`. `false`, `0` і `""` — дані: вони серіалізуються в JSON, як зараз.
 
@@ -54,20 +54,20 @@ Handler без `return` (`async () => { … }`) повертає `undefined`. П
 
 **`code` і `message` для 4xx/5xx.** `code` береться зі спільного контракту `ErrorCode` (`packages/shared/src/errors/error-codes.ts`), бо фронтенд приймає лише відомі коди (`packages/frontend/src/utils/response-normalizer.ts`, `readPayloadCode`). Явна таблиця статус → код:
 
-| Статус | `code`                   |
-| ------ | ------------------------ |
-| 400    | `bad_request`            |
-| 401    | `unauthorized`           |
-| 403    | `forbidden`              |
-| 404    | `not_found`              |
-| 409    | `conflict`               |
-| 413    | `payload_too_large`      |
-| 415    | `unsupported_media_type` |
-| 422    | `validation_failed`      |
-| 429    | `rate_limited`           |
-| 503    | `service_unavailable`    |
-| інший 4xx | `bad_request`         |
-| інший 5xx | `internal_error`      |
+| Статус    | `code`                   |
+| --------- | ------------------------ |
+| 400       | `bad_request`            |
+| 401       | `unauthorized`           |
+| 403       | `forbidden`              |
+| 404       | `not_found`              |
+| 409       | `conflict`               |
+| 413       | `payload_too_large`      |
+| 415       | `unsupported_media_type` |
+| 422       | `validation_failed`      |
+| 429       | `rate_limited`           |
+| 503       | `service_unavailable`    |
+| інший 4xx | `bad_request`            |
+| інший 5xx | `internal_error`         |
 
 `csrf_invalid` за статусом не вгадується (CSRF-відмова — теж 403), тож для 403 лишається `forbidden`. `message` — reason phrase з `STATUS_CODES` (`node:http`), як у `getHttpStatusLine` (`src/vendor/utils/network/http-response-handlers.ts`); для статусу без reason phrase — `"Error"`. Таблицю тримає helper `buildStatusErrorBody`; `sendErrorResponse` не змінюється.
 
@@ -77,40 +77,41 @@ Handler без `return` (`async () => { … }`) повертає `undefined`. П
 
 1. **Аудит.** Пройти всі handler'и з `src/app/routes/http-routes.ts` і перевірити, що жоден не повертає `null`/`undefined` на успішному шляху (інакше його відповідь зміниться з 200 на 204). Результат записати в `progress.md`. Якщо такі є — вирішити до реалізації: явний payload у handler або прийняти 204.
 2. **`sendResponse`** (`server.ts`):
-   - `isEmptyPayload = payload === null || payload === undefined`;
-   - `noBody = isRedirect || status === 204 || status === 205 || (status 2xx && isEmptyPayload)`; статус стає 204 лише для `200` з порожнім payload;
-   - `content-type` пишеться лише коли тіло є; при `noBody` заголовок `content-type` з `responseData.headers` пропускається;
-   - 4xx/5xx з порожнім payload → `makeJson(buildStatusErrorBody(status))`.
+    - `isEmptyPayload = payload === null || payload === undefined`;
+    - `noBody = isRedirect || status === 204 || status === 205 || (status 2xx && isEmptyPayload)`; статус стає 204 лише для `200` з порожнім payload;
+    - `content-type` пишеться лише коли тіло є; при `noBody` заголовок `content-type` з `responseData.headers` пропускається;
+    - 4xx/5xx з порожнім payload → `makeJson(buildStatusErrorBody(status))`.
 3. **Helper** `buildStatusErrorBody(status)` поруч із `getHttpStatusLine` у `http-response-handlers.ts`, з unit-тестом: кожен рядок таблиці, інший 4xx (`418`) → `bad_request`, інший 5xx (`502`) → `internal_error`, статус без reason phrase (`499`) → `message: "Error"`; кожен `code` — член `ErrorCodeValues`.
 4. **Тести через зареєстрований HTTP-handler**, за зразком `src/vendor/start/http-body-methods.spec.ts` (фейковий `uWebSockets.js` `App`, справжні `sendResponse` і `writeHeader`), новий файл `src/vendor/start/http-empty-payload.spec.ts`:
-   - **нова поведінка:**
-     - handler повертає `null` → `204 No Content`, тіло порожнє, `content-type` не записано;
-     - handler повертає `undefined` → те саме;
-     - `status = 201` і `null` → 201 без тіла і без `content-type`; так само `202`;
-     - `status = 204` і об'єкт → 204 без тіла; так само `205`;
-     - `status = 403` і `null` → 403, `{ status: "error", code: "forbidden", message: "Forbidden" }`;
-     - `status = 500` і `null` → 500, `code: "internal_error"`; `status = 418` і `null` → `code: "bad_request"`;
-     - `null` і `responseData.headers` з `Content-Type: text/plain` → 204 без `content-type`;
-     - те саме з назвою в іншому регістрі (`content-type`, `CONTENT-TYPE`) → 204 без `content-type`;
-     - `status = 302` і `responseData.headers` з `Content-Type: text/html` → 302 без тіла і без `content-type`;
-     - `status = 304`, об'єкт і `Content-Type: application/json` у `responseData.headers` → 304 без тіла і без `content-type`;
-     - cookie і `null` → 204 і `set-cookie` записано;
-   - **регресія** (можуть проходити й до змін):
-     - об'єкт → 200 з JSON; `false`, `0`, `""` → 200 з `false`, `0`, `""` у JSON;
-     - 302 → без тіла; `status = 304` і об'єкт → без тіла.
+    - **нова поведінка:**
+        - handler повертає `null` → `204 No Content`, тіло порожнє, `content-type` не записано;
+        - handler повертає `undefined` → те саме;
+        - `status = 201` і `null` → 201 без тіла і без `content-type`; так само `202`;
+        - `status = 204` і об'єкт → 204 без тіла; так само `205`;
+        - `status = 403` і `null` → 403, `{ status: "error", code: "forbidden", message: "Forbidden" }`;
+        - `status = 500` і `null` → 500, `code: "internal_error"`; `status = 418` і `null` → `code: "bad_request"`;
+        - `null` і `responseData.headers` з `Content-Type: text/plain` → 204 без `content-type`;
+        - те саме з назвою в іншому регістрі (`content-type`, `CONTENT-TYPE`) → 204 без `content-type`;
+        - `status = 302` і `responseData.headers` з `Content-Type: text/html` → 302 без тіла і без `content-type`;
+        - `status = 304`, об'єкт і `Content-Type: application/json` у `responseData.headers` → 304 без тіла і без `content-type`;
+        - cookie і `null` → 204 і `set-cookie` записано;
+    - **регресія** (можуть проходити й до змін):
+        - об'єкт → 200 з JSON; `false`, `0`, `""` → 200 з `false`, `0`, `""` у JSON;
+        - 302 → без тіла; `status = 304` і об'єкт → без тіла.
 
-   Негативний контроль: з `server.ts` із `main` мають падати всі тести блоку «нова поведінка»; регресійні — ні.
+    Негативний контроль: з `server.ts` із `main` мають падати всі тести блоку «нова поведінка»; регресійні — ні.
+
 5. **Документація** (в тому ж PR, за `AGENTS.md`):
-   - `documentation/backend/request-lifecycle.md`, крок 8 «Відповідь»: замінити «`String(status)`, якщо payload `null`» на таблицю з рішення;
-   - `documentation/backend/adding-a-feature.md` (розділ про handler): що повертати, якщо тіла немає, і що тоді буде 204;
-   - позначити п. 13 виправленим у `code-issues-found-during-docs.md`.
+    - `documentation/backend/request-lifecycle.md`, крок 8 «Відповідь»: замінити «`String(status)`, якщо payload `null`» на таблицю з рішення;
+    - `documentation/backend/adding-a-feature.md` (розділ про handler): що повертати, якщо тіла немає, і що тоді буде 204;
+    - позначити п. 13 виправленим у `code-issues-found-during-docs.md`.
 6. **Перевірка:** `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm docs:build && pnpm docs:verify`.
    Ручна перевірка на запущеному backend (`curl -i`) з тимчасовими маршрутами, які не комітяться:
-   - handler повертає `null` → `HTTP/1.1 204 No Content`, без `Content-Type`, без тіла;
-   - `status = 202`, `null` → `HTTP/1.1 202 Accepted` без тіла;
-   - handler без `return`, статус за замовчуванням → `HTTP/1.1 204 No Content`, без `Content-Type`, без тіла;
-   - `status = 403`, `null` → 403 з канонічним тілом;
-   - наявний маршрут (`GET /api/...` з даними) → 200 з JSON, як раніше.
+    - handler повертає `null` → `HTTP/1.1 204 No Content`, без `Content-Type`, без тіла;
+    - `status = 202`, `null` → `HTTP/1.1 202 Accepted` без тіла;
+    - handler без `return`, статус за замовчуванням → `HTTP/1.1 204 No Content`, без `Content-Type`, без тіла;
+    - `status = 403`, `null` → 403 з канонічним тілом;
+    - наявний маршрут (`GET /api/...` з даними) → 200 з JSON, як раніше.
 
 ## Знайдено під час реалізації
 

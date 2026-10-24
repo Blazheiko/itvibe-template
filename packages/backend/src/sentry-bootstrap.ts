@@ -1,5 +1,5 @@
-import "dotenv/config";
+import 'dotenv/config'
 
-import { sentryService } from "#app/services/observability/sentry-service.js";
+import { sentryService } from '#app/services/observability/sentry-service.js'
 
-sentryService.init();
+sentryService.init()

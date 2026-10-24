@@ -24,7 +24,9 @@ const readString = (value: unknown): string | undefined => {
 
 const readPayloadCode = (value: unknown): AppErrorCode | undefined => {
     if (typeof value !== 'string') return undefined
-    return Object.values(ErrorCode).includes(value as AppErrorCode) ? (value as AppErrorCode) : undefined
+    return Object.values(ErrorCode).includes(value as AppErrorCode)
+        ? (value as AppErrorCode)
+        : undefined
 }
 
 const readNumericCode = (value: unknown): number | undefined => {
@@ -65,10 +67,7 @@ export const hasErrorCode = (value: unknown, code: AppErrorCode): boolean => {
     return getErrorCode(value) === code
 }
 
-export const getTransportCode = (
-    value: unknown,
-    fallbackCode?: number,
-): number | undefined => {
+export const getTransportCode = (value: unknown, fallbackCode?: number): number | undefined => {
     const errorRecord = getErrorRecord(value)
     const errorCode = readNumericCode(errorRecord?.code)
     if (errorCode !== undefined) {
@@ -102,11 +101,13 @@ export const getResponseMessages = (value: unknown): ErrorMessages | undefined =
     const errorDetails = errorRecord?.details
     const topLevelDetails = isRecord(value) ? value.details : undefined
 
-    const fromDetails = [errorDetails, topLevelDetails].find((details) =>
-        isRecord(details) && 'messages' in details,
+    const fromDetails = [errorDetails, topLevelDetails].find(
+        (details) => isRecord(details) && 'messages' in details,
     ) as Record<string, unknown> | undefined
 
-    const topLevelMessages = isRecord(value) ? (value.messages as ErrorMessages | undefined) : undefined
+    const topLevelMessages = isRecord(value)
+        ? (value.messages as ErrorMessages | undefined)
+        : undefined
     const errorMessages = errorRecord?.messages as ErrorMessages | undefined
 
     return (fromDetails?.messages as ErrorMessages | undefined) ?? errorMessages ?? topLevelMessages
@@ -162,5 +163,8 @@ export const normalizeResponseError = (
 // Convenience helper only for auth-redirect style flows. It intentionally bridges
 // payload-level `ErrorCode.Unauthorized` and transport-level HTTP 401.
 export const isUnauthorizedError = (value: unknown, transportCode?: number): boolean => {
-    return hasErrorCode(value, ErrorCode.Unauthorized) || (transportCode ?? getTransportCode(value)) === 401
+    return (
+        hasErrorCode(value, ErrorCode.Unauthorized) ||
+        (transportCode ?? getTransportCode(value)) === 401
+    )
 }

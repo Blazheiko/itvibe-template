@@ -136,8 +136,8 @@ Fallback відновлює лише локальне обмеження і не
 - **Однаково для всіх результатів:** відсутній акаунт, неправильний пароль, акаунт без пароля — спроба вже спожита до пошуку, тож бюджет витрачається однаково.
 - **Акаунт без пароля:** відповідь `Please use social login for this account` розкриває існування OAuth-акаунта. **Рішення: уніфікувати** до `unauthorized("Invalid email or password")`, як для відсутнього акаунта й неправильного пароля. UX: фронтенд показує в тексті загальної помилки підказку «або увійдіть через соцмережу». Тест: відповідь і HTTP-статус для акаунта без пароля збігаються з відповіддю для відсутнього акаунта.
 - **Ключі:**
-  - за IP — захист від перебору багатьох акаунтів з одного джерела;
-  - за ідентифікатором — захист одного акаунта від розподіленого перебору. Ідентифікатор нормалізується точно як при пошуку: email через `normalizeEmail`, телефон через локальний `normalizePhone` з `auth-service.ts` (з тими самими налаштуваннями, що в `login`), а не напряму через `normalizePhoneNumber`. Нормалізацію винести в одну функцію `resolveLoginKey`, яку використовують і пошук, і throttle. Якщо ідентифікатор не нормалізується (невалідний телефон, вимкнений phone-auth) — рахується лише IP-лічильник.
+    - за IP — захист від перебору багатьох акаунтів з одного джерела;
+    - за ідентифікатором — захист одного акаунта від розподіленого перебору. Ідентифікатор нормалізується точно як при пошуку: email через `normalizeEmail`, телефон через локальний `normalizePhone` з `auth-service.ts` (з тими самими налаштуваннями, що в `login`), а не напряму через `normalizePhoneNumber`. Нормалізацію винести в одну функцію `resolveLoginKey`, яку використовують і пошук, і throttle. Якщо ідентифікатор не нормалізується (невалідний телефон, вимкнений phone-auth) — рахується лише IP-лічильник.
 - **Співвідношення порогів:** поріг за ідентифікатором **вищий** за поріг за IP, щоб один атакувальник не міг легко заблокувати чужий акаунт. Оскільки рахуються всі спроби, включно з успішними, пороги вищі, ніж були б для лише невдач. Підтверджені пороги: 20 спроб / 15 хв на IP, 40 спроб / 15 хв на ідентифікатор.
 - **Тривалість блокування:** не постійне; до кінця fixed window (15 хв від першої спроби вікна). Прогресивних затримок у цій задачі немає.
 - **Після успішного входу:** лічильник за ідентифікатором скидається (`DEL`), лічильник за IP — ні (інакше атакувальник з валідним власним акаунтом обнуляв би свій IP-бюджет). `DEL` після успіху не створює гонки на користь атакувальника: щоб його викликати, потрібен правильний пароль.
@@ -165,71 +165,71 @@ HTTP L1, per-route і WS-повідомлення лишаються на `rateL
 
 ```ts
 export interface ThrottlePolicy {
-  /** Частина Redis-ключа: auth:throttle:<scope>:<key> (для fixed-window). */
-  scope: string;
-  /** Що підставляється як key — для документації і рев'ю. */
-  keyBy: "ip" | "email" | "phone" | "identifier" | "user";
-  algorithm: "fixed-window" | "sliding-log";
-  /** 0 вимикає політику — лише якщо disableable: true. */
-  limit: number;
-  /** Єдина одиниця вікна для всіх політик. */
-  windowMs: number;
-  /** Чи можна вимкнути політику через limit = 0 (напр. для одного інстансу). */
-  disableable?: boolean;
-  /** Поведінка, коли Redis не відповів. */
-  /** reject — відхилити запит; skip — пропустити спільну перевірку і покластися на вже виконаний локальний рівень (без другого локального consume). */
-  onRedisError: "reject" | "skip";
-  /** Скидати лічильник після успішної операції (login, change-password). */
-  resetOnSuccess?: boolean;
+    /** Частина Redis-ключа: auth:throttle:<scope>:<key> (для fixed-window). */
+    scope: string
+    /** Що підставляється як key — для документації і рев'ю. */
+    keyBy: 'ip' | 'email' | 'phone' | 'identifier' | 'user'
+    algorithm: 'fixed-window' | 'sliding-log'
+    /** 0 вимикає політику — лише якщо disableable: true. */
+    limit: number
+    /** Єдина одиниця вікна для всіх політик. */
+    windowMs: number
+    /** Чи можна вимкнути політику через limit = 0 (напр. для одного інстансу). */
+    disableable?: boolean
+    /** Поведінка, коли Redis не відповів. */
+    /** reject — відхилити запит; skip — пропустити спільну перевірку і покластися на вже виконаний локальний рівень (без другого локального consume). */
+    onRedisError: 'reject' | 'skip'
+    /** Скидати лічильник після успішної операції (login, change-password). */
+    resetOnSuccess?: boolean
 }
 
 export const throttlePolicies = {
-  loginIp: {
-    scope: "login_ip",
-    keyBy: "ip",
-    algorithm: "fixed-window",
-    limit: readInt("AUTH_LOGIN_MAX_ATTEMPTS_PER_IP", 20),
-    windowMs: readInt("AUTH_LOGIN_WINDOW_SECONDS", 900) * 1000,
-    onRedisError: "reject",
-  },
-  loginIdentifier: {
-    scope: "login_identifier",
-    keyBy: "identifier",
-    algorithm: "fixed-window",
-    limit: readInt("AUTH_LOGIN_MAX_ATTEMPTS_PER_IDENTIFIER", 40),
-    windowMs: readInt("AUTH_LOGIN_WINDOW_SECONDS", 900) * 1000,
-    onRedisError: "reject",
-    resetOnSuccess: true,
-  },
-  registerEmailIp: {
-    scope: "register_email_ip",
-    keyBy: "ip",
-    algorithm: "fixed-window",
-    limit: authConfig.emailRegisterMaxAttemptsPerIpPerHour,
-    windowMs: 3_600_000,
-    onRedisError: "reject",
-  },
-  smsSendPhone: {
-    scope: PHONE_SMS_SEND_THROTTLE_SCOPE,
-    keyBy: "phone",
-    algorithm: "fixed-window",
-    limit: authConfig.smsMaxSendsPerPhonePerHour,
-    windowMs: 3_600_000,
-    onRedisError: "reject",
-  },
-  wsUpgradeShared: {
-    scope: "upgrade",
-    keyBy: "ip",
-    algorithm: "sliding-log",
-    limit: readInt("WS_UPGRADE_SHARED_RATE_LIMIT_MAX", 60, { min: 0 }),
-    windowMs: readInt("WS_UPGRADE_SHARED_RATE_LIMIT_WINDOW_MS", 60_000),
-    onRedisError: "skip",
-    disableable: true,
-  },
-  // … решта наявних scope і нові з розділу 5
-} as const satisfies Record<string, ThrottlePolicy>;
+    loginIp: {
+        scope: 'login_ip',
+        keyBy: 'ip',
+        algorithm: 'fixed-window',
+        limit: readInt('AUTH_LOGIN_MAX_ATTEMPTS_PER_IP', 20),
+        windowMs: readInt('AUTH_LOGIN_WINDOW_SECONDS', 900) * 1000,
+        onRedisError: 'reject',
+    },
+    loginIdentifier: {
+        scope: 'login_identifier',
+        keyBy: 'identifier',
+        algorithm: 'fixed-window',
+        limit: readInt('AUTH_LOGIN_MAX_ATTEMPTS_PER_IDENTIFIER', 40),
+        windowMs: readInt('AUTH_LOGIN_WINDOW_SECONDS', 900) * 1000,
+        onRedisError: 'reject',
+        resetOnSuccess: true,
+    },
+    registerEmailIp: {
+        scope: 'register_email_ip',
+        keyBy: 'ip',
+        algorithm: 'fixed-window',
+        limit: authConfig.emailRegisterMaxAttemptsPerIpPerHour,
+        windowMs: 3_600_000,
+        onRedisError: 'reject',
+    },
+    smsSendPhone: {
+        scope: PHONE_SMS_SEND_THROTTLE_SCOPE,
+        keyBy: 'phone',
+        algorithm: 'fixed-window',
+        limit: authConfig.smsMaxSendsPerPhonePerHour,
+        windowMs: 3_600_000,
+        onRedisError: 'reject',
+    },
+    wsUpgradeShared: {
+        scope: 'upgrade',
+        keyBy: 'ip',
+        algorithm: 'sliding-log',
+        limit: readInt('WS_UPGRADE_SHARED_RATE_LIMIT_MAX', 60, { min: 0 }),
+        windowMs: readInt('WS_UPGRADE_SHARED_RATE_LIMIT_WINDOW_MS', 60_000),
+        onRedisError: 'skip',
+        disableable: true,
+    },
+    // … решта наявних scope і нові з розділу 5
+} as const satisfies Record<string, ThrottlePolicy>
 
-export type ThrottlePolicyName = keyof typeof throttlePolicies;
+export type ThrottlePolicyName = keyof typeof throttlePolicies
 ```
 
 Правила:
@@ -253,30 +253,30 @@ export type ThrottlePolicyName = keyof typeof throttlePolicies;
 
 1. **Вступ — два рівні і правило вибору:**
 
-   > Ліміт захищає процес від частих тяжких операцій → `rateLimit` у маршруті або групі (in-memory, кожен інстанс окремо). Ліміт стосується чутливої дії чи бізнес-правила і має бути спільним для всіх інстансів → політика в `config/throttle-policies.ts` і `consumeAuthThrottle` у сервісі (Redis).
+    > Ліміт захищає процес від частих тяжких операцій → `rateLimit` у маршруті або групі (in-memory, кожен інстанс окремо). Ліміт стосується чутливої дії чи бізнес-правила і має бути спільним для всіх інстансів → політика в `config/throttle-policies.ts` і `consumeAuthThrottle` у сервісі (Redis).
 
 2. **Таблиця локальних лімітів (in-memory, per-instance):**
 
-   | Ліміт                        | Де задано                              | Ключ         | Алгоритм     | Вікно / максимум | Змінна оточення            |
-   | ---------------------------- | -------------------------------------- | ------------ | ------------ | ---------------- | -------------------------- |
-   | L1 — усі API-запити          | `config/rate-limit.ts`                 | IP           | fixed-window | 60 с / 600       | `HTTP_GLOBAL_RATE_LIMIT_*` |
-   | Група `auth`                 | `http-routes.ts`, `rateLimit` групи    | IP + маршрут | sliding-log  | 60 с / 10        | — (у коді)                 |
-   | `POST /auth/forgot-password` | `http-routes.ts`, `rateLimit` маршруту | IP + маршрут | sliding-log  | 60 с / 3         | —                          |
-   | WS upgrade, рівень 1         | `config/rate-limit.ts`                 | IP           | sliding-log  | 60 с / 120       | `WS_UPGRADE_RATE_LIMIT_*`  |
-   | WS-повідомлення              | `ws-routes.ts`, `rateLimit`            | IP + маршрут | sliding-log  | 60 с / 60–120    | —                          |
+    | Ліміт                        | Де задано                              | Ключ         | Алгоритм     | Вікно / максимум | Змінна оточення            |
+    | ---------------------------- | -------------------------------------- | ------------ | ------------ | ---------------- | -------------------------- |
+    | L1 — усі API-запити          | `config/rate-limit.ts`                 | IP           | fixed-window | 60 с / 600       | `HTTP_GLOBAL_RATE_LIMIT_*` |
+    | Група `auth`                 | `http-routes.ts`, `rateLimit` групи    | IP + маршрут | sliding-log  | 60 с / 10        | — (у коді)                 |
+    | `POST /auth/forgot-password` | `http-routes.ts`, `rateLimit` маршруту | IP + маршрут | sliding-log  | 60 с / 3         | —                          |
+    | WS upgrade, рівень 1         | `config/rate-limit.ts`                 | IP           | sliding-log  | 60 с / 120       | `WS_UPGRADE_RATE_LIMIT_*`  |
+    | WS-повідомлення              | `ws-routes.ts`, `rateLimit`            | IP + маршрут | sliding-log  | 60 с / 60–120    | —                          |
 
-   Під таблицею: бюджет при N інстансах дорівнює N × максимум; чому це свідомий вибір (синхронна перевірка до `res.onData()`, задача — захист процесу).
+    Під таблицею: бюджет при N інстансах дорівнює N × максимум; чому це свідомий вибір (синхронна перевірка до `res.onData()`, задача — захист процесу).
 
 3. **Таблиця спільних лімітів (Redis) — генерується з реєстру по одному рядку на політику:**
 
-   | Політика          | Операція             | Ключ            | Алгоритм     | Вікно / максимум | Змінна оточення                          | При відмові Redis | Скидання     |
-   | ----------------- | -------------------- | --------------- | ------------ | ---------------- | ---------------------------------------- | ----------------- | ------------ |
-   | `loginIp`         | вхід                 | IP              | fixed-window | 15 хв / 20       | `AUTH_LOGIN_MAX_ATTEMPTS_PER_IP`         | відхилити         | —            |
-   | `loginIdentifier` | вхід                 | email / телефон | fixed-window | 15 хв / 40       | `AUTH_LOGIN_MAX_ATTEMPTS_PER_IDENTIFIER` | відхилити         | після успіху |
-   | `wsUpgradeShared` | WS upgrade, рівень 2 | IP              | sliding-log  | 60 с / 60        | `WS_UPGRADE_SHARED_RATE_LIMIT_*`         | локальний ліміт   | —            |
-   | …                 |                      |                 |              |                  |                                          |                   |              |
+    | Політика          | Операція             | Ключ            | Алгоритм     | Вікно / максимум | Змінна оточення                          | При відмові Redis | Скидання     |
+    | ----------------- | -------------------- | --------------- | ------------ | ---------------- | ---------------------------------------- | ----------------- | ------------ |
+    | `loginIp`         | вхід                 | IP              | fixed-window | 15 хв / 20       | `AUTH_LOGIN_MAX_ATTEMPTS_PER_IP`         | відхилити         | —            |
+    | `loginIdentifier` | вхід                 | email / телефон | fixed-window | 15 хв / 40       | `AUTH_LOGIN_MAX_ATTEMPTS_PER_IDENTIFIER` | відхилити         | після успіху |
+    | `wsUpgradeShared` | WS upgrade, рівень 2 | IP              | sliding-log  | 60 с / 60        | `WS_UPGRADE_SHARED_RATE_LIMIT_*`         | локальний ліміт   | —            |
+    | …                 |                      |                 |              |                  |                                          |                   |              |
 
-   Стовпці таблиці відповідають полям `ThrottlePolicy`, тож звірка документації з кодом — порядкова. Посилання на `throttle-policies.ts` на GitHub — у заголовку таблиці.
+    Стовпці таблиці відповідають полям `ThrottlePolicy`, тож звірка документації з кодом — порядкова. Посилання на `throttle-policies.ts` на GitHub — у заголовку таблиці.
 
 4. **Login-політика** — окремий підрозділ: що рахується, ключі й нормалізація, вікно, скидання після успіху, lockout-ризик.
 5. **Поведінка при відмові Redis** — обидва сценарії з розділу 3, включно з тим, що fallback не гарантує WS-з'єднання.
@@ -306,9 +306,9 @@ export type ThrottlePolicyName = keyof typeof throttlePolicies;
 **Unit (без мережі, як вимагає `AGENTS.md`):**
 
 - `handleUpgrade`, з моками бекендів:
-  - рівень 1 відмовляє → Redis не викликається;
-  - рівень 2: дозвіл / 429 / помилка → fallback;
-  - abort під час `await` рівня 2 — для дозволу, для 429 і для fallback: після abort жодного виклику `res.*` (`writeStatus`, `end`, `upgrade`, `cork`).
+    - рівень 1 відмовляє → Redis не викликається;
+    - рівень 2: дозвіл / 429 / помилка → fallback;
+    - abort під час `await` рівня 2 — для дозволу, для 429 і для fallback: після abort жодного виклику `res.*` (`writeStatus`, `end`, `upgrade`, `cork`).
 - `login`: спроба споживається до пошуку користувача (мок викликається раніше за репозиторій); при вичерпаному бюджеті репозиторій і `validatePassword` не викликаються; однаковий інкремент для відсутнього акаунта, неправильного пароля й акаунта без пароля; скидання лічильника ідентифікатора після успіху, IP-лічильника — ні; `resolveLoginKey` дає той самий ключ, що й пошук (email у різному регістрі, телефон у різних форматах); невалідний ідентифікатор → лише IP-лічильник.
 - `forgot-password`: throttle викликається до пошуку email; однакова відповідь для наявної й відсутньої адреси.
 - `change-password`: бюджет за `userId`, скидання після успіху.

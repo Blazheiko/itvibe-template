@@ -21,14 +21,18 @@ interface LoadContext {
     isAborted: () => boolean
 }
 
-const createAbortError = (): DOMException => new DOMException('The operation was aborted.', 'AbortError')
+const createAbortError = (): DOMException =>
+    new DOMException('The operation was aborted.', 'AbortError')
 
 export const isAbortError = (error: unknown): boolean =>
     error instanceof DOMException
         ? error.name === 'AbortError'
         : error instanceof Error && error.name === 'AbortError'
 
-export const getErrorMessage = (error: unknown, fallbackMessage = 'Failed to load resource'): string => {
+export const getErrorMessage = (
+    error: unknown,
+    fallbackMessage = 'Failed to load resource',
+): string => {
     if (typeof error === 'string' && error.trim().length > 0) {
         return error
     }

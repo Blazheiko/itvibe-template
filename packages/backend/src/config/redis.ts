@@ -1,19 +1,19 @@
-import { env } from "node:process";
+import { env } from 'node:process'
 
-const INTEGER = /^\d+$/;
-const errors: string[] = [];
+const INTEGER = /^\d+$/
+const errors: string[] = []
 
 const readPositiveInteger = (name: string, fallback: number): number => {
-    const raw = env[name];
-    if (raw === undefined) return fallback;
-    const value = raw.trim();
-    const parsed = Number(value);
+    const raw = env[name]
+    if (raw === undefined) return fallback
+    const value = raw.trim()
+    const parsed = Number(value)
     if (!INTEGER.test(value) || !Number.isSafeInteger(parsed) || parsed < 1) {
-        errors.push(`${name} must be an integer >= 1, got "${raw}"`);
-        return fallback;
+        errors.push(`${name} must be an integer >= 1, got "${raw}"`)
+        return fallback
     }
-    return parsed;
-};
+    return parsed
+}
 
 export default Object.freeze({
     port: Number(env['REDIS_PORT'] || 6379),
@@ -25,4 +25,4 @@ export default Object.freeze({
     /** Whole SCAN/DEL loop of destroyAllSessions (logoutAll). */
     logoutAllDeadlineMs: readPositiveInteger('REDIS_LOGOUT_ALL_DEADLINE_MS', 2000),
     configError: errors.length > 0 ? errors.join('; ') : null,
-});
+})

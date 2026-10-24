@@ -119,9 +119,9 @@ F01 (CI) **рекомендовано** влити рано, але це не б
 
 1. `.github/workflows/ci.yml` на `pull_request` і `push` у `main`; ті самі кроки підготовки, що в `redis-tests.yml`: `pnpm/action-setup`, `setup-node` з `.nvmrc` і `cache: pnpm`, `pnpm install --frozen-lockfile`.
 2. Передумови чистого checkout (явно в workflow, у такому порядку):
-   - `pnpm --filter shared build` — від `shared/dist` залежать typecheck і тести backend/frontend;
-   - job `quality`: `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test`;
-   - job `e2e`: `pnpm --filter shared build` → `pnpm --filter frontend build` (Playwright у CI запускає `preview`, якому потрібен `dist`) → `pnpm --filter frontend exec playwright install --with-deps` (усі браузери з `projects` у `playwright.config.ts`: chromium, firefox, webkit — WebKit також обслуговує Mobile Safari) → `pnpm --filter frontend test:e2e`; кеш `~/.cache/ms-playwright`; звіт як artifact при падінні.
+    - `pnpm --filter shared build` — від `shared/dist` залежать typecheck і тести backend/frontend;
+    - job `quality`: `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test`;
+    - job `e2e`: `pnpm --filter shared build` → `pnpm --filter frontend build` (Playwright у CI запускає `preview`, якому потрібен `dist`) → `pnpm --filter frontend exec playwright install --with-deps` (усі браузери з `projects` у `playwright.config.ts`: chromium, firefox, webkit — WebKit також обслуговує Mobile Safari) → `pnpm --filter frontend test:e2e`; кеш `~/.cache/ms-playwright`; звіт як artifact при падінні.
 3. `packages/frontend/playwright.config.ts`: `npm run preview` / `npm run dev` → `pnpm preview` / `pnpm dev` (п. 38).
 4. `packages/backend/vitest.config.ts`: `testTimeout: 15_000` і `maxWorkers` з env для CI (п. 37).
 5. `@vitest/coverage-v8` у backend і frontend, скрипт `test:coverage`, звіт як artifact. Поріг не вводимо (окреме рішення після baseline).
@@ -256,9 +256,9 @@ F01 (CI) **рекомендовано** влити рано, але це не б
 1. **п. 39:** `public, max-age=31536000, immutable` — лише для `/assets/*`; HTML, `manifest.json`, `service-worker.js`, іконки, аудіо — `no-cache` (з ETag).
 2. **п. 40:** розбір `If-None-Match` за RFC 9110: список через кому, `*`, слабке порівняння `W/"…"`.
 3. **п. 41 (однозначний результат):**
-   - файли до `STATIC_MAX_MEMORY_FILE_SIZE` (default 1 MiB) кешуються в RAM, більші — **стрімляться з диска** з ETag за `size+mtime`;
-   - сумарний обсяг RAM-кешу обмежено `STATIC_MAX_MEMORY_TOTAL` (default 64 MiB); файли понад ліміт теж ідуть стрімінгом;
-   - якщо поруч є `.br`/`.gz` (генеруються при збірці фронтенду), вони віддаються за `Accept-Encoding` з `Vary: Accept-Encoding`.
+    - файли до `STATIC_MAX_MEMORY_FILE_SIZE` (default 1 MiB) кешуються в RAM, більші — **стрімляться з диска** з ETag за `size+mtime`;
+    - сумарний обсяг RAM-кешу обмежено `STATIC_MAX_MEMORY_TOTAL` (default 64 MiB); файли понад ліміт теж ідуть стрімінгом;
+    - якщо поруч є `.br`/`.gz` (генеруються при збірці фронтенду), вони віддаються за `Accept-Encoding` з `Vary: Accept-Encoding`.
 
 **Приймання:** тести на `Cache-Control` для `/assets/x.js`, `/manifest.json`, `/service-worker.js`; `If-None-Match` зі списком, `*`, `W/` → 304; файл 5 MiB віддається стрімінгом (не потрапляє в Map кешу), відповідь побайтно ідентична; при `Accept-Encoding: br` віддається `.br` з `Content-Encoding: br`; використання RAM після старту ≤ ліміту (лог розміру кешу). `caching.md`.
 

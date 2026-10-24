@@ -19,7 +19,7 @@ interface ApiResolveItem {
     timeout: number
 }
 
-export type WebsocketPayload = Record<string, unknown>;
+export type WebsocketPayload = Record<string, unknown>
 export type WebsocketErrorMessages = Record<string, unknown> | string[] | string
 
 interface WebsocketErrorPayload {
@@ -206,8 +206,8 @@ class WebsocketBase {
     private validateMessage(message: WebsocketMessage): boolean {
         return Boolean(
             message &&
-                typeof message.event === 'string' &&
-                (!message.payload || typeof message.payload === 'object'),
+            typeof message.event === 'string' &&
+            (!message.payload || typeof message.payload === 'object'),
         )
     }
 
@@ -530,7 +530,10 @@ class WebsocketBase {
 
     private handleServiceError(data: WebsocketMessage): void {
         if (getTransportCode(data) === 4001) {
-            console.warn('Token expired or invalid:', getResponseMessage(data, 'Token expired or invalid'))
+            console.warn(
+                'Token expired or invalid:',
+                getResponseMessage(data, 'Token expired or invalid'),
+            )
             this.handleConnectionClosed()
         }
     }

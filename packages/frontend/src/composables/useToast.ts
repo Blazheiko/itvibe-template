@@ -20,7 +20,9 @@ export function useToast() {
             action: options?.action,
         })
         if (duration > 0) {
-            setTimeout(() => { store.remove(id) }, duration)
+            setTimeout(() => {
+                store.remove(id)
+            }, duration)
         }
         return id
     }
@@ -30,6 +32,8 @@ export function useToast() {
         success: (title: string, opts?: ShowOptions) => show('success', title, opts),
         warning: (title: string, opts?: ShowOptions) => show('warning', title, opts),
         error: (title: string, opts?: ShowOptions) => show('error', title, opts),
-        dismiss: (id: string) => { store.remove(id) },
+        dismiss: (id: string) => {
+            store.remove(id)
+        },
     }
 }

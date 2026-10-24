@@ -1,156 +1,139 @@
-import { createHash, randomBytes } from "node:crypto";
-import { hashPassword } from "metautil";
-import { nanoid } from "nanoid";
-import appConfig from "#config/app.js";
-import logger from "#logger";
+import { createHash, randomBytes } from 'node:crypto'
+import { hashPassword } from 'metautil'
+import { nanoid } from 'nanoid'
+import appConfig from '#config/app.js'
+import logger from '#logger'
+import { PENDING_SMS_CODE_HASH_PLACEHOLDER } from './sms-auth-challenge-constants.js'
 import {
-  PENDING_SMS_CODE_HASH_PLACEHOLDER,
-} from "./sms-auth-challenge-constants.js";
+    smsAuthChallengeRepository,
+    passwordResetRepository,
+    userRepository,
+} from '#app/repositories/index.js'
+import { emailService } from '#app/services/notifications/email-service.js'
+import { consumeAuthThrottle } from '#app/services/auth/auth-throttle-service.js'
+import { throttlePolicies } from '#config/throttle-policies.js'
+import { authConfig } from '#config/auth.js'
 import {
-  smsAuthChallengeRepository,
-  passwordResetRepository,
-  userRepository,
-} from "#app/repositories/index.js";
-import { emailService } from "#app/services/notifications/email-service.js";
-import { consumeAuthThrottle } from "#app/services/auth/auth-throttle-service.js";
-import { throttlePolicies } from "#config/throttle-policies.js";
-import { authConfig } from "#config/auth.js";
+    smsVerificationProvider,
+    type SmsVerificationFlow,
+} from '#app/services/auth/sms-verification-provider.js'
 import {
-  smsVerificationProvider,
-  type SmsVerificationFlow,
-} from "#app/services/auth/sms-verification-provider.js";
+    buildResendCooldownError,
+    extractChallengeSessionId,
+    extractChallengeUserId,
+} from '#app/services/auth/sms-auth-challenge-metadata.js'
 import {
-  buildResendCooldownError,
-  extractChallengeSessionId,
-  extractChallengeUserId,
-} from "#app/services/auth/sms-auth-challenge-metadata.js";
+    hashOtpVerificationCode,
+    verifyOtpVerificationCode,
+} from '#app/services/auth/otp-verification-hash.js'
+import { Result } from 'better-result'
 import {
-  hashOtpVerificationCode,
-  verifyOtpVerificationCode,
-} from "#app/services/auth/otp-verification-hash.js";
-import { Result } from "better-result";
-import {
-  badRequest,
-  internal,
-  internalMessage,
-  notFound,
-  type AppResult,
-  appErrorMessage,
-} from "#app/services/shared/errors.js";
-import { tryInternal } from "#app/services/shared/result-helpers.js";
-import { destroyAllSessions } from "#vendor/utils/session/redis-session-storage.js";
-import {
-  maskEmailForLogs,
-  maskPhoneForLogs,
-} from "#vendor/utils/helpers/mask-sensitive.js";
-import { normalizePhoneNumber } from "shared/utils";
+    badRequest,
+    internal,
+    internalMessage,
+    notFound,
+    type AppResult,
+    appErrorMessage,
+} from '#app/services/shared/errors.js'
+import { tryInternal } from '#app/services/shared/result-helpers.js'
+import { destroyAllSessions } from '#vendor/utils/session/redis-session-storage.js'
+import { maskEmailForLogs, maskPhoneForLogs } from '#vendor/utils/helpers/mask-sensitive.js'
+import { normalizePhoneNumber } from 'shared/utils'
 
-const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 export const GENERIC_RESET_MESSAGE =
-  "If an account with that email exists, a reset link will be sent shortly.";
+    'If an account with that email exists, a reset link will be sent shortly.'
 export const GENERIC_PHONE_RESET_MESSAGE =
-  "If the phone number can be used for password reset, verification instructions will be sent shortly.";
-const RESET_PHONE_FLOW: SmsVerificationFlow = "reset_phone";
-const LINK_PHONE_FLOW: SmsVerificationFlow = "link_phone";
+    'If the phone number can be used for password reset, verification instructions will be sent shortly.'
+const RESET_PHONE_FLOW: SmsVerificationFlow = 'reset_phone'
+const LINK_PHONE_FLOW: SmsVerificationFlow = 'link_phone'
 // Email clients do not support app CSS variables reliably, so this palette stays inline on purpose.
 const EMAIL_BRAND = {
-  accent: "#A8627A",
-  accentHover: "#96516A",
-  canvas: "#FAF0F3",
-  surface: "#FFFFFF",
-  textPrimary: "#2C3440",
-  textSecondary: "#5E6977",
-  border: "#D8DDE6",
-  accentSoft: "#F6E8EE",
-  accentLine: "#E7C8D3",
-} as const;
+    accent: '#A8627A',
+    accentHover: '#96516A',
+    canvas: '#FAF0F3',
+    surface: '#FFFFFF',
+    textPrimary: '#2C3440',
+    textSecondary: '#5E6977',
+    border: '#D8DDE6',
+    accentSoft: '#F6E8EE',
+    accentLine: '#E7C8D3',
+} as const
 
 function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+    return createHash('sha256').update(token).digest('hex')
 }
 
 function createResetToken(): string {
-  return randomBytes(32).toString("base64url");
+    return randomBytes(32).toString('base64url')
 }
 
 function buildResetUrl(token: string): string {
-  return `${appConfig.frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    return `${appConfig.frontendUrl}/reset-password?token=${encodeURIComponent(token)}`
 }
 
 function createBlindVerificationCodeHash(): string {
-  return hashOtpVerificationCode(randomBytes(32).toString("hex"));
+    return hashOtpVerificationCode(randomBytes(32).toString('hex'))
 }
 
-function normalizePhone(
-  input: string,
-  defaultCountry?: string,
-): AppResult<string> {
-  try {
-    return Result.ok(normalizePhoneNumber(input, defaultCountry));
-  } catch (error) {
-    if (error instanceof Error) {
-      return Result.err(badRequest(error.message));
-    }
+function normalizePhone(input: string, defaultCountry?: string): AppResult<string> {
+    try {
+        return Result.ok(normalizePhoneNumber(input, defaultCountry))
+    } catch (error) {
+        if (error instanceof Error) {
+            return Result.err(badRequest(error.message))
+        }
 
-    return Result.err(
-      badRequest("Phone number must be valid and in a supported format"),
-    );
-  }
+        return Result.err(badRequest('Phone number must be valid and in a supported format'))
+    }
 }
 
 function isChallengeExpired(expiresAt: Date): boolean {
-  return expiresAt.getTime() <= Date.now();
+    return expiresAt.getTime() <= Date.now()
 }
 
 async function invalidatePendingPhoneChallenges(phone: string): Promise<void> {
-  await Promise.all([
-    smsAuthChallengeRepository.invalidatePendingForPhoneFlow(
-      phone,
-      RESET_PHONE_FLOW,
-    ),
-    smsAuthChallengeRepository.invalidatePendingForPhoneFlow(
-      phone,
-      LINK_PHONE_FLOW,
-    ),
-  ]);
+    await Promise.all([
+        smsAuthChallengeRepository.invalidatePendingForPhoneFlow(phone, RESET_PHONE_FLOW),
+        smsAuthChallengeRepository.invalidatePendingForPhoneFlow(phone, LINK_PHONE_FLOW),
+    ])
 }
 
 function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
 }
 
 function buildResetEmailContent(
-  name: string,
-  resetUrl: string,
+    name: string,
+    resetUrl: string,
 ): {
-  subject: string;
-  text: string;
-  html: string;
+    subject: string
+    text: string
+    html: string
 } {
-  const subject = "Reset your password";
-  const trimmedName = name.trim();
-  const safeName = trimmedName === "" ? "" : `, ${trimmedName}`;
-  const escapedGreeting =
-    trimmedName === "" ? "" : `, ${escapeHtml(trimmedName)}`;
-  const escapedResetUrl = escapeHtml(resetUrl);
+    const subject = 'Reset your password'
+    const trimmedName = name.trim()
+    const safeName = trimmedName === '' ? '' : `, ${trimmedName}`
+    const escapedGreeting = trimmedName === '' ? '' : `, ${escapeHtml(trimmedName)}`
+    const escapedResetUrl = escapeHtml(resetUrl)
 
-  const text = [
-    `Hello${safeName}.`,
-    "",
-    "We received a request to reset your password.",
-    "Open this link to choose a new password:",
-    resetUrl,
-    "",
-    "This link will expire in 1 hour.",
-    "If you did not request a password reset, you can safely ignore this email.",
-  ].join("\n");
+    const text = [
+        `Hello${safeName}.`,
+        '',
+        'We received a request to reset your password.',
+        'Open this link to choose a new password:',
+        resetUrl,
+        '',
+        'This link will expire in 1 hour.',
+        'If you did not request a password reset, you can safely ignore this email.',
+    ].join('\n')
 
-  const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
   <body style="margin:0;padding:0;background:${EMAIL_BRAND.canvas};font-family:Inter,Arial,sans-serif;color:${EMAIL_BRAND.textPrimary};">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
@@ -228,655 +211,609 @@ function buildResetEmailContent(
       </tr>
     </table>
   </body>
-</html>`;
+</html>`
 
-  return { subject, text, html };
+    return { subject, text, html }
 }
 
 export const passwordResetService = {
-  async requestPasswordReset(
-    email: string,
-    requestMeta: { ipAddress: string },
-  ): Promise<AppResult<{ message: string }>> {
-    const normalizedEmail = email.trim().toLowerCase();
+    async requestPasswordReset(
+        email: string,
+        requestMeta: { ipAddress: string },
+    ): Promise<AppResult<{ message: string }>> {
+        const normalizedEmail = email.trim().toLowerCase()
 
-    // Before the lookup, and the same generic answer either way: the response
-    // never tells whether the address exists or whether the budget is spent.
-    const throttles = await tryInternal(async () => {
-      const byIp = await consumeAuthThrottle(
-        throttlePolicies.forgotPasswordIp,
-        requestMeta.ipAddress,
-      );
-      if (!byIp.allowed || normalizedEmail === "") return byIp;
-      return consumeAuthThrottle(throttlePolicies.forgotPasswordEmail, normalizedEmail);
-    }, "Failed to enforce forgot password throttle");
-    if (Result.isError(throttles) || !throttles.value.allowed) {
-      if (Result.isError(throttles)) {
-        logger.warn({ err: throttles.error }, "Forgot password throttle unavailable");
-      }
-      return Result.ok({ message: GENERIC_RESET_MESSAGE });
-    }
-    let user:
-      | Awaited<ReturnType<typeof userRepository.findByEmail>>
-      | undefined;
-    if (normalizedEmail !== "") {
-      const userResult = await tryInternal(
-        () => userRepository.findByEmail(normalizedEmail),
-        "Failed to load user by email",
-      );
-      if (Result.isError(userResult)) {
-        logger.warn(
-          {
-            err: userResult.error,
-            emailMasked: maskEmailForLogs(normalizedEmail),
-          },
-          "Failed to load user by email for password reset",
-        );
-        return Result.ok({ message: GENERIC_RESET_MESSAGE });
-      }
-      user = userResult.value;
-    }
+        // Before the lookup, and the same generic answer either way: the response
+        // never tells whether the address exists or whether the budget is spent.
+        const throttles = await tryInternal(async () => {
+            const byIp = await consumeAuthThrottle(
+                throttlePolicies.forgotPasswordIp,
+                requestMeta.ipAddress,
+            )
+            if (!byIp.allowed || normalizedEmail === '') return byIp
+            return consumeAuthThrottle(throttlePolicies.forgotPasswordEmail, normalizedEmail)
+        }, 'Failed to enforce forgot password throttle')
+        if (Result.isError(throttles) || !throttles.value.allowed) {
+            if (Result.isError(throttles)) {
+                logger.warn({ err: throttles.error }, 'Forgot password throttle unavailable')
+            }
+            return Result.ok({ message: GENERIC_RESET_MESSAGE })
+        }
+        let user: Awaited<ReturnType<typeof userRepository.findByEmail>> | undefined
+        if (normalizedEmail !== '') {
+            const userResult = await tryInternal(
+                () => userRepository.findByEmail(normalizedEmail),
+                'Failed to load user by email',
+            )
+            if (Result.isError(userResult)) {
+                logger.warn(
+                    {
+                        err: userResult.error,
+                        emailMasked: maskEmailForLogs(normalizedEmail),
+                    },
+                    'Failed to load user by email for password reset',
+                )
+                return Result.ok({ message: GENERIC_RESET_MESSAGE })
+            }
+            user = userResult.value
+        }
 
-    if (user !== undefined) {
-      void passwordResetService.sendPasswordResetEmailInBackground(
-        user.id,
-        "manual request",
-      );
-    }
+        if (user !== undefined) {
+            void passwordResetService.sendPasswordResetEmailInBackground(user.id, 'manual request')
+        }
 
-    return Result.ok({ message: GENERIC_RESET_MESSAGE });
-  },
+        return Result.ok({ message: GENERIC_RESET_MESSAGE })
+    },
 
-  async sendPasswordResetEmail(
-    userId: bigint,
-  ): Promise<AppResult<{ message: string }>> {
-    const userResult = await tryInternal(
-      () => userRepository.findById(userId),
-      "Failed to load user",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
+    async sendPasswordResetEmail(userId: bigint): Promise<AppResult<{ message: string }>> {
+        const userResult = await tryInternal(
+            () => userRepository.findById(userId),
+            'Failed to load user',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
+        }
 
-    const user = userResult.value;
-    if (user === undefined) {
-      return Result.err(notFound("User", "User not found"));
-    }
+        const user = userResult.value
+        if (user === undefined) {
+            return Result.err(notFound('User', 'User not found'))
+        }
 
-    const invalidateResult = await tryInternal(
-      () => passwordResetRepository.invalidatePendingByUserId(userId),
-      "Failed to invalidate password reset tokens",
-    );
-    if (Result.isError(invalidateResult)) {
-      return Result.err(invalidateResult.error);
-    }
+        const invalidateResult = await tryInternal(
+            () => passwordResetRepository.invalidatePendingByUserId(userId),
+            'Failed to invalidate password reset tokens',
+        )
+        if (Result.isError(invalidateResult)) {
+            return Result.err(invalidateResult.error)
+        }
 
-    const rawToken = createResetToken();
-    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
-    const createResult = await tryInternal(
-      () =>
-        passwordResetRepository.create({
-          userId,
-          tokenHash: hashToken(rawToken),
-          expiresAt,
-        }),
-      "Failed to create password reset token",
-    );
-    if (Result.isError(createResult)) {
-      return Result.err(createResult.error);
-    }
+        const rawToken = createResetToken()
+        const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS)
+        const createResult = await tryInternal(
+            () =>
+                passwordResetRepository.create({
+                    userId,
+                    tokenHash: hashToken(rawToken),
+                    expiresAt,
+                }),
+            'Failed to create password reset token',
+        )
+        if (Result.isError(createResult)) {
+            return Result.err(createResult.error)
+        }
 
-    if (user.email === null) {
-      return Result.ok({ message: GENERIC_RESET_MESSAGE });
-    }
+        if (user.email === null) {
+            return Result.ok({ message: GENERIC_RESET_MESSAGE })
+        }
 
-    const resetUrl = buildResetUrl(rawToken);
-    const emailContent = buildResetEmailContent(user.name, resetUrl);
-    const sendResult = await emailService.send({
-      to: user.email,
-      subject: emailContent.subject,
-      text: emailContent.text,
-      html: emailContent.html,
-    });
+        const resetUrl = buildResetUrl(rawToken)
+        const emailContent = buildResetEmailContent(user.name, resetUrl)
+        const sendResult = await emailService.send({
+            to: user.email,
+            subject: emailContent.subject,
+            text: emailContent.text,
+            html: emailContent.html,
+        })
 
-    if (Result.isError(sendResult)) {
-      return Result.err(
-        internal(sendResult.error, "Failed to send password reset email"),
-      );
-    }
+        if (Result.isError(sendResult)) {
+            return Result.err(internal(sendResult.error, 'Failed to send password reset email'))
+        }
 
-    return Result.ok({ message: "Password reset email sent" });
-  },
+        return Result.ok({ message: 'Password reset email sent' })
+    },
 
-  async startPhonePasswordReset(
-    phone: string,
-    defaultCountry: string | undefined,
-    requestMeta: { ipAddress: string; sessionId: string | null },
-  ): Promise<
-    AppResult<{
-      message: string;
-      challengeId?: string;
-      expiresAt?: string;
-      resendAvailableAt?: string;
-    }>
-  > {
-    if (!authConfig.phoneAuthEnabled) {
-      return Result.err(badRequest("Phone authentication is disabled"));
-    }
+    async startPhonePasswordReset(
+        phone: string,
+        defaultCountry: string | undefined,
+        requestMeta: { ipAddress: string; sessionId: string | null },
+    ): Promise<
+        AppResult<{
+            message: string
+            challengeId?: string
+            expiresAt?: string
+            resendAvailableAt?: string
+        }>
+    > {
+        if (!authConfig.phoneAuthEnabled) {
+            return Result.err(badRequest('Phone authentication is disabled'))
+        }
 
-    const normalizedPhoneResult = normalizePhone(phone, defaultCountry);
-    if (Result.isError(normalizedPhoneResult)) {
-      return Result.err(normalizedPhoneResult.error);
-    }
+        const normalizedPhoneResult = normalizePhone(phone, defaultCountry)
+        if (Result.isError(normalizedPhoneResult)) {
+            return Result.err(normalizedPhoneResult.error)
+        }
 
-    const normalizedPhone = normalizedPhoneResult.value;
+        const normalizedPhone = normalizedPhoneResult.value
 
-    const ipThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle(throttlePolicies.resetPhoneIp, requestMeta.ipAddress),
-      "Failed to enforce phone reset IP throttle",
-    );
-    if (Result.isError(ipThrottle)) {
-      return Result.err(ipThrottle.error);
-    }
-    if (!ipThrottle.value.allowed) {
-      return Result.err(
-        badRequest("Too many verification attempts. Please try again later."),
-      );
-    }
+        const ipThrottle = await tryInternal(
+            () => consumeAuthThrottle(throttlePolicies.resetPhoneIp, requestMeta.ipAddress),
+            'Failed to enforce phone reset IP throttle',
+        )
+        if (Result.isError(ipThrottle)) {
+            return Result.err(ipThrottle.error)
+        }
+        if (!ipThrottle.value.allowed) {
+            return Result.err(badRequest('Too many verification attempts. Please try again later.'))
+        }
 
-    const phoneThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle(throttlePolicies.smsSendPhone, normalizedPhone),
-      "Failed to enforce phone reset identifier throttle",
-    );
-    if (Result.isError(phoneThrottle)) {
-      return Result.err(phoneThrottle.error);
-    }
-    if (!phoneThrottle.value.allowed) {
-      return Result.err(
-        badRequest("Too many verification attempts. Please try again later."),
-      );
-    }
+        const phoneThrottle = await tryInternal(
+            () => consumeAuthThrottle(throttlePolicies.smsSendPhone, normalizedPhone),
+            'Failed to enforce phone reset identifier throttle',
+        )
+        if (Result.isError(phoneThrottle)) {
+            return Result.err(phoneThrottle.error)
+        }
+        if (!phoneThrottle.value.allowed) {
+            return Result.err(badRequest('Too many verification attempts. Please try again later.'))
+        }
 
-    const userResult = await tryInternal(
-      () => userRepository.findByPhone(normalizedPhone),
-      "Failed to load user by phone",
-    );
-    if (Result.isError(userResult)) {
-      logger.warn(
-        {
-          err: userResult.error,
-          phoneMasked: maskPhoneForLogs(normalizedPhone),
-        },
-        "Failed to load user by phone for password reset",
-      );
-      return Result.ok({ message: GENERIC_PHONE_RESET_MESSAGE });
-    }
+        const userResult = await tryInternal(
+            () => userRepository.findByPhone(normalizedPhone),
+            'Failed to load user by phone',
+        )
+        if (Result.isError(userResult)) {
+            logger.warn(
+                {
+                    err: userResult.error,
+                    phoneMasked: maskPhoneForLogs(normalizedPhone),
+                },
+                'Failed to load user by phone for password reset',
+            )
+            return Result.ok({ message: GENERIC_PHONE_RESET_MESSAGE })
+        }
 
-    const user = userResult.value;
-    const shouldSendSms = user !== undefined && user.email === null;
+        const user = userResult.value
+        const shouldSendSms = user !== undefined && user.email === null
 
-    const pendingChallengeResult = await tryInternal(
-      () =>
-        smsAuthChallengeRepository.findLatestPendingForPhoneFlow(
-          normalizedPhone,
-          RESET_PHONE_FLOW,
-        ),
-      "Failed to load pending phone reset challenge",
-    );
-    if (Result.isError(pendingChallengeResult)) {
-      return Result.err(pendingChallengeResult.error);
-    }
-    if (
-      pendingChallengeResult.value !== undefined &&
-      pendingChallengeResult.value.resendAvailableAt.getTime() > Date.now()
-    ) {
-      return Result.err(
-        buildResendCooldownError(
-          pendingChallengeResult.value.resendAvailableAt,
-        ),
-      );
-    }
+        const pendingChallengeResult = await tryInternal(
+            () =>
+                smsAuthChallengeRepository.findLatestPendingForPhoneFlow(
+                    normalizedPhone,
+                    RESET_PHONE_FLOW,
+                ),
+            'Failed to load pending phone reset challenge',
+        )
+        if (Result.isError(pendingChallengeResult)) {
+            return Result.err(pendingChallengeResult.error)
+        }
+        if (
+            pendingChallengeResult.value !== undefined &&
+            pendingChallengeResult.value.resendAvailableAt.getTime() > Date.now()
+        ) {
+            return Result.err(
+                buildResendCooldownError(pendingChallengeResult.value.resendAvailableAt),
+            )
+        }
 
-    if (
-      pendingChallengeResult.value !== undefined &&
-      pendingChallengeResult.value.expiresAt.getTime() > Date.now()
-    ) {
-      const pendingChallengeSessionId = extractChallengeSessionId(
-        pendingChallengeResult.value.metadata,
-      );
+        if (
+            pendingChallengeResult.value !== undefined &&
+            pendingChallengeResult.value.expiresAt.getTime() > Date.now()
+        ) {
+            const pendingChallengeSessionId = extractChallengeSessionId(
+                pendingChallengeResult.value.metadata,
+            )
 
-      if (
-        pendingChallengeSessionId !== null &&
-        requestMeta.sessionId !== null &&
-        pendingChallengeSessionId === requestMeta.sessionId
-      ) {
+            if (
+                pendingChallengeSessionId !== null &&
+                requestMeta.sessionId !== null &&
+                pendingChallengeSessionId === requestMeta.sessionId
+            ) {
+                return Result.ok({
+                    message: GENERIC_PHONE_RESET_MESSAGE,
+                    challengeId: pendingChallengeResult.value.id,
+                    expiresAt: pendingChallengeResult.value.expiresAt.toISOString(),
+                    resendAvailableAt: pendingChallengeResult.value.resendAvailableAt.toISOString(),
+                })
+            }
+
+            return Result.ok({
+                message: GENERIC_PHONE_RESET_MESSAGE,
+            })
+        }
+
+        await smsAuthChallengeRepository.invalidatePendingForPhoneFlow(
+            normalizedPhone,
+            RESET_PHONE_FLOW,
+        )
+
+        const now = Date.now()
+        const expiresAt = new Date(now + authConfig.smsChallengeTtlSeconds * 1000)
+        const resendAvailableAt = new Date(now + authConfig.smsResendCooldownSeconds * 1000)
+
+        const createdResult = await tryInternal(
+            () =>
+                smsAuthChallengeRepository.create({
+                    flow: RESET_PHONE_FLOW,
+                    phone: normalizedPhone,
+                    codeHash: shouldSendSms
+                        ? PENDING_SMS_CODE_HASH_PLACEHOLDER
+                        : createBlindVerificationCodeHash(),
+                    providerRequestId: null,
+                    expiresAt,
+                    resendAvailableAt,
+                    metadata: {
+                        ...(shouldSendSms ? { userId: String(user.id) } : { blind: true }),
+                        ipAddress: requestMeta.ipAddress,
+                        provider: authConfig.smsProvider,
+                        ...(requestMeta.sessionId !== null
+                            ? { sessionId: requestMeta.sessionId }
+                            : {}),
+                    },
+                }),
+            'Failed to persist phone reset challenge',
+        )
+        if (Result.isError(createdResult)) {
+            return Result.err(createdResult.error)
+        }
+
+        if (shouldSendSms) {
+            const issueCodeResult = await tryInternal(
+                () =>
+                    smsVerificationProvider.issueVerificationCode({
+                        phone: normalizedPhone,
+                        flow: RESET_PHONE_FLOW,
+                    }),
+                'Failed to issue SMS verification code',
+            )
+            if (Result.isError(issueCodeResult)) {
+                await smsAuthChallengeRepository.markInvalidated(createdResult.value.id)
+                return Result.err(issueCodeResult.error)
+            }
+
+            const issuedResult = await tryInternal(
+                () =>
+                    smsAuthChallengeRepository.markIssued(createdResult.value.id, {
+                        codeHash: hashOtpVerificationCode(issueCodeResult.value.code),
+                        providerRequestId: issueCodeResult.value.providerRequestId,
+                        metadata: {
+                            userId: String(user.id),
+                            ipAddress: requestMeta.ipAddress,
+                            provider: authConfig.smsProvider,
+                            ...(requestMeta.sessionId !== null
+                                ? { sessionId: requestMeta.sessionId }
+                                : {}),
+                        },
+                    }),
+                'Failed to persist issued phone reset challenge',
+            )
+            if (Result.isError(issuedResult)) {
+                await smsAuthChallengeRepository.markInvalidated(createdResult.value.id)
+                return Result.err(issuedResult.error)
+            }
+            if (issuedResult.value === undefined) {
+                await smsAuthChallengeRepository.markInvalidated(createdResult.value.id)
+                return Result.err(badRequest('Phone reset challenge is no longer valid'))
+            }
+
+            return Result.ok({
+                message: GENERIC_PHONE_RESET_MESSAGE,
+                challengeId: issuedResult.value.id,
+                expiresAt: issuedResult.value.expiresAt.toISOString(),
+                resendAvailableAt: issuedResult.value.resendAvailableAt.toISOString(),
+            })
+        }
+
         return Result.ok({
-          message: GENERIC_PHONE_RESET_MESSAGE,
-          challengeId: pendingChallengeResult.value.id,
-          expiresAt: pendingChallengeResult.value.expiresAt.toISOString(),
-          resendAvailableAt:
-            pendingChallengeResult.value.resendAvailableAt.toISOString(),
-        });
-      }
+            message: GENERIC_PHONE_RESET_MESSAGE,
+            challengeId: createdResult.value.id,
+            expiresAt: createdResult.value.expiresAt.toISOString(),
+            resendAvailableAt: createdResult.value.resendAvailableAt.toISOString(),
+        })
+    },
 
-      return Result.ok({
-        message: GENERIC_PHONE_RESET_MESSAGE,
-      });
-    }
+    async resetPassword(
+        token: string,
+        password: string,
+        passwordConfirm: string,
+        requestMeta: { ipAddress: string },
+    ): Promise<AppResult<{ status: 'success' }>> {
+        const throttle = await tryInternal(
+            () => consumeAuthThrottle(throttlePolicies.resetPasswordIp, requestMeta.ipAddress),
+            'Failed to enforce reset password throttle',
+        )
+        if (Result.isError(throttle)) {
+            return Result.err(throttle.error)
+        }
+        if (!throttle.value.allowed) {
+            return Result.err(
+                badRequest('Too many password reset attempts. Please try again later.'),
+            )
+        }
 
-    await smsAuthChallengeRepository.invalidatePendingForPhoneFlow(
-      normalizedPhone,
-      RESET_PHONE_FLOW,
-    );
+        const normalizedToken = token.trim()
+        if (normalizedToken === '') {
+            return Result.err(badRequest('Password reset token is required', 'token_required'))
+        }
 
-    const now = Date.now();
-    const expiresAt = new Date(now + authConfig.smsChallengeTtlSeconds * 1000);
-    const resendAvailableAt = new Date(
-      now + authConfig.smsResendCooldownSeconds * 1000,
-    );
+        if (password !== passwordConfirm) {
+            return Result.err(badRequest('Passwords do not match', 'passwords_mismatch'))
+        }
 
-    const createdResult = await tryInternal(
-      () =>
-        smsAuthChallengeRepository.create({
-          flow: RESET_PHONE_FLOW,
-          phone: normalizedPhone,
-          codeHash: shouldSendSms
-            ? PENDING_SMS_CODE_HASH_PLACEHOLDER
-            : createBlindVerificationCodeHash(),
-          providerRequestId: null,
-          expiresAt,
-          resendAvailableAt,
-          metadata: {
-            ...(shouldSendSms ? { userId: String(user.id) } : { blind: true }),
-            ipAddress: requestMeta.ipAddress,
-            provider: authConfig.smsProvider,
-            ...(requestMeta.sessionId !== null
-              ? { sessionId: requestMeta.sessionId }
-              : {}),
-          },
-        }),
-      "Failed to persist phone reset challenge",
-    );
-    if (Result.isError(createdResult)) {
-      return Result.err(createdResult.error);
-    }
+        const resetTokenResult = await tryInternal(
+            () => passwordResetRepository.findByTokenHash(hashToken(normalizedToken)),
+            'Failed to load password reset token',
+        )
+        if (Result.isError(resetTokenResult)) {
+            return Result.err(resetTokenResult.error)
+        }
 
-    if (shouldSendSms) {
-      const issueCodeResult = await tryInternal(
-        () =>
-          smsVerificationProvider.issueVerificationCode({
-            phone: normalizedPhone,
-            flow: RESET_PHONE_FLOW,
-          }),
-        "Failed to issue SMS verification code",
-      );
-      if (Result.isError(issueCodeResult)) {
-        await smsAuthChallengeRepository.markInvalidated(
-          createdResult.value.id,
-        );
-        return Result.err(issueCodeResult.error);
-      }
+        const resetToken = resetTokenResult.value
+        if (resetToken === undefined) {
+            return Result.err(badRequest('Password reset link is invalid', 'invalid_token'))
+        }
 
-      const issuedResult = await tryInternal(
-        () =>
-          smsAuthChallengeRepository.markIssued(createdResult.value.id, {
-            codeHash: hashOtpVerificationCode(issueCodeResult.value.code),
-            providerRequestId: issueCodeResult.value.providerRequestId,
-            metadata: {
-              userId: String(user.id),
-              ipAddress: requestMeta.ipAddress,
-              provider: authConfig.smsProvider,
-              ...(requestMeta.sessionId !== null
-                ? { sessionId: requestMeta.sessionId }
-                : {}),
-            },
-          }),
-        "Failed to persist issued phone reset challenge",
-      );
-      if (Result.isError(issuedResult)) {
-        await smsAuthChallengeRepository.markInvalidated(
-          createdResult.value.id,
-        );
-        return Result.err(issuedResult.error);
-      }
-      if (issuedResult.value === undefined) {
-        await smsAuthChallengeRepository.markInvalidated(
-          createdResult.value.id,
-        );
-        return Result.err(
-          badRequest("Phone reset challenge is no longer valid"),
-        );
-      }
+        if (resetToken.usedAt !== null) {
+            return Result.err(badRequest('Password reset link has already been used', 'used_token'))
+        }
 
-      return Result.ok({
-        message: GENERIC_PHONE_RESET_MESSAGE,
-        challengeId: issuedResult.value.id,
-        expiresAt: issuedResult.value.expiresAt.toISOString(),
-        resendAvailableAt: issuedResult.value.resendAvailableAt.toISOString(),
-      });
-    }
+        if (resetToken.expiresAt.getTime() < Date.now()) {
+            const markExpiredResult = await tryInternal(
+                () => passwordResetRepository.markUsed(resetToken.id),
+                'Failed to mark password reset token used',
+            )
+            if (Result.isError(markExpiredResult)) {
+                return Result.err(markExpiredResult.error)
+            }
 
-    return Result.ok({
-      message: GENERIC_PHONE_RESET_MESSAGE,
-      challengeId: createdResult.value.id,
-      expiresAt: createdResult.value.expiresAt.toISOString(),
-      resendAvailableAt: createdResult.value.resendAvailableAt.toISOString(),
-    });
-  },
+            return Result.err(badRequest('Password reset link has expired', 'expired_token'))
+        }
 
-  async resetPassword(
-    token: string,
-    password: string,
-    passwordConfirm: string,
-    requestMeta: { ipAddress: string },
-  ): Promise<AppResult<{ status: "success" }>> {
-    const throttle = await tryInternal(
-      () => consumeAuthThrottle(throttlePolicies.resetPasswordIp, requestMeta.ipAddress),
-      "Failed to enforce reset password throttle",
-    );
-    if (Result.isError(throttle)) {
-      return Result.err(throttle.error);
-    }
-    if (!throttle.value.allowed) {
-      return Result.err(
-        badRequest("Too many password reset attempts. Please try again later."),
-      );
-    }
+        const userResult = await tryInternal(
+            () => userRepository.findById(resetToken.userId),
+            'Failed to load user',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
+        }
 
-    const normalizedToken = token.trim();
-    if (normalizedToken === "") {
-      return Result.err(
-        badRequest("Password reset token is required", "token_required"),
-      );
-    }
+        const user = userResult.value
+        if (user === undefined) {
+            return Result.err(notFound('User', 'User not found'))
+        }
+        const newPasswordHashResult = await tryInternal(
+            () => hashPassword(password),
+            'Failed to hash password',
+        )
+        if (Result.isError(newPasswordHashResult)) {
+            return Result.err(newPasswordHashResult.error)
+        }
 
-    if (password !== passwordConfirm) {
-      return Result.err(
-        badRequest("Passwords do not match", "passwords_mismatch"),
-      );
-    }
+        const newPasswordHash = newPasswordHashResult.value
+        const previousSessionToken = user.sessionToken
 
-    const resetTokenResult = await tryInternal(
-      () => passwordResetRepository.findByTokenHash(hashToken(normalizedToken)),
-      "Failed to load password reset token",
-    );
-    if (Result.isError(resetTokenResult)) {
-      return Result.err(resetTokenResult.error);
-    }
+        if (user.phone !== null && user.phone !== '') {
+            const invalidatePhoneChallengesResult = await tryInternal(
+                () => invalidatePendingPhoneChallenges(user.phone!),
+                'Failed to invalidate pending phone challenges after email password reset',
+            )
+            if (Result.isError(invalidatePhoneChallengesResult)) {
+                return Result.err(invalidatePhoneChallengesResult.error)
+            }
+        }
 
-    const resetToken = resetTokenResult.value;
-    if (resetToken === undefined) {
-      return Result.err(
-        badRequest("Password reset link is invalid", "invalid_token"),
-      );
-    }
+        const updatedUserResult = await tryInternal(
+            () =>
+                userRepository.update(user.id, {
+                    password: newPasswordHash,
+                    sessionToken: nanoid(),
+                }),
+            'Failed to update password',
+        )
+        if (Result.isError(updatedUserResult)) {
+            return Result.err(updatedUserResult.error)
+        }
 
-    if (resetToken.usedAt !== null) {
-      return Result.err(
-        badRequest("Password reset link has already been used", "used_token"),
-      );
-    }
+        const updatedUser = updatedUserResult.value
+        if (updatedUser === undefined) {
+            return Result.err(internalMessage('Failed to update password'))
+        }
 
-    if (resetToken.expiresAt.getTime() < Date.now()) {
-      const markExpiredResult = await tryInternal(
-        () => passwordResetRepository.markUsed(resetToken.id),
-        "Failed to mark password reset token used",
-      );
-      if (Result.isError(markExpiredResult)) {
-        return Result.err(markExpiredResult.error);
-      }
+        const destroySessionsResult = await tryInternal(
+            () => destroyAllSessions(previousSessionToken),
+            'Failed to destroy sessions',
+        )
+        if (Result.isError(destroySessionsResult)) {
+            return Result.err(destroySessionsResult.error)
+        }
 
-      return Result.err(
-        badRequest("Password reset link has expired", "expired_token"),
-      );
-    }
+        const usedTokenResult = await tryInternal(
+            () => passwordResetRepository.markUsed(resetToken.id),
+            'Failed to mark password reset token used',
+        )
+        if (Result.isError(usedTokenResult)) {
+            return Result.err(usedTokenResult.error)
+        }
 
-    const userResult = await tryInternal(
-      () => userRepository.findById(resetToken.userId),
-      "Failed to load user",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
+        const usedToken = usedTokenResult.value
+        if (usedToken === undefined) {
+            logger.warn(
+                { resetTokenId: String(resetToken.id), userId: String(user.id) },
+                'Password reset succeeded but reset token was not marked used',
+            )
+        }
 
-    const user = userResult.value;
-    if (user === undefined) {
-      return Result.err(notFound("User", "User not found"));
-    }
-    const newPasswordHashResult = await tryInternal(
-      () => hashPassword(password),
-      "Failed to hash password",
-    );
-    if (Result.isError(newPasswordHashResult)) {
-      return Result.err(newPasswordHashResult.error);
-    }
+        return Result.ok({ status: 'success' })
+    },
 
-    const newPasswordHash = newPasswordHashResult.value;
-    const previousSessionToken = user.sessionToken;
+    async completePhonePasswordReset(
+        challengeId: string,
+        code: string,
+        password: string,
+        passwordConfirm: string,
+        requestMeta: { ipAddress: string },
+    ): Promise<AppResult<{ status: 'success' }>> {
+        if (!authConfig.phoneAuthEnabled) {
+            return Result.err(badRequest('Phone authentication is disabled'))
+        }
 
-    if (user.phone !== null && user.phone !== "") {
-      const invalidatePhoneChallengesResult = await tryInternal(
-        () => invalidatePendingPhoneChallenges(user.phone!),
-        "Failed to invalidate pending phone challenges after email password reset",
-      );
-      if (Result.isError(invalidatePhoneChallengesResult)) {
-        return Result.err(invalidatePhoneChallengesResult.error);
-      }
-    }
+        if (password !== passwordConfirm) {
+            return Result.err(badRequest('Passwords do not match', 'passwords_mismatch'))
+        }
 
-    const updatedUserResult = await tryInternal(
-      () =>
-        userRepository.update(user.id, {
-          password: newPasswordHash,
-          sessionToken: nanoid(),
-        }),
-      "Failed to update password",
-    );
-    if (Result.isError(updatedUserResult)) {
-      return Result.err(updatedUserResult.error);
-    }
+        const ipThrottle = await tryInternal(
+            () => consumeAuthThrottle(throttlePolicies.confirmResetPhoneIp, requestMeta.ipAddress),
+            'Failed to enforce phone reset confirmation IP throttle',
+        )
+        if (Result.isError(ipThrottle)) {
+            return Result.err(ipThrottle.error)
+        }
+        if (!ipThrottle.value.allowed) {
+            return Result.err(badRequest('Too many verification attempts. Please try again later.'))
+        }
 
-    const updatedUser = updatedUserResult.value;
-    if (updatedUser === undefined) {
-      return Result.err(internalMessage("Failed to update password"));
-    }
+        // Intentional: phone reset completion is not bound to the current browser session.
+        // Users may request the SMS on one device and complete the reset from another.
+        const challengeResult = await tryInternal(
+            () => smsAuthChallengeRepository.findById(challengeId),
+            'Failed to load SMS auth challenge',
+        )
+        if (Result.isError(challengeResult)) {
+            return Result.err(challengeResult.error)
+        }
 
-    const destroySessionsResult = await tryInternal(
-      () => destroyAllSessions(previousSessionToken),
-      "Failed to destroy sessions",
-    );
-    if (Result.isError(destroySessionsResult)) {
-      return Result.err(destroySessionsResult.error);
-    }
+        const challenge = challengeResult.value
+        if (challenge === undefined || challenge.flow !== RESET_PHONE_FLOW) {
+            return Result.err(badRequest('Phone reset challenge is invalid'))
+        }
 
-    const usedTokenResult = await tryInternal(
-      () => passwordResetRepository.markUsed(resetToken.id),
-      "Failed to mark password reset token used",
-    );
-    if (Result.isError(usedTokenResult)) {
-      return Result.err(usedTokenResult.error);
-    }
+        if (
+            challenge.invalidatedAt !== null ||
+            challenge.confirmedAt !== null ||
+            isChallengeExpired(challenge.expiresAt)
+        ) {
+            return Result.err(badRequest('Phone reset challenge is no longer valid'))
+        }
 
-    const usedToken = usedTokenResult.value;
-    if (usedToken === undefined) {
-      logger.warn(
-        { resetTokenId: String(resetToken.id), userId: String(user.id) },
-        "Password reset succeeded but reset token was not marked used",
-      );
-    }
+        if (!verifyOtpVerificationCode(code, challenge.codeHash)) {
+            const updatedChallenge = await smsAuthChallengeRepository.incrementAttemptCount(
+                challenge.id,
+            )
+            if (
+                (updatedChallenge?.attemptCount ?? challenge.attemptCount + 1) >=
+                authConfig.smsMaxInvalidAttempts
+            ) {
+                await smsAuthChallengeRepository.markInvalidated(challenge.id)
+            }
 
-    return Result.ok({ status: "success" });
-  },
+            return Result.err(badRequest('Invalid verification code'))
+        }
 
-  async completePhonePasswordReset(
-    challengeId: string,
-    code: string,
-    password: string,
-    passwordConfirm: string,
-    requestMeta: { ipAddress: string },
-  ): Promise<AppResult<{ status: "success" }>> {
-    if (!authConfig.phoneAuthEnabled) {
-      return Result.err(badRequest("Phone authentication is disabled"));
-    }
+        const challengeUserId = extractChallengeUserId(challenge.metadata)
+        if (challengeUserId === null) {
+            return Result.err(badRequest('Invalid verification code'))
+        }
 
-    if (password !== passwordConfirm) {
-      return Result.err(
-        badRequest("Passwords do not match", "passwords_mismatch"),
-      );
-    }
+        const userResult = await tryInternal(
+            () => userRepository.findById(challengeUserId),
+            'Failed to load user for phone reset',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
+        }
 
-    const ipThrottle = await tryInternal(
-      () =>
-        consumeAuthThrottle(throttlePolicies.confirmResetPhoneIp, requestMeta.ipAddress),
-      "Failed to enforce phone reset confirmation IP throttle",
-    );
-    if (Result.isError(ipThrottle)) {
-      return Result.err(ipThrottle.error);
-    }
-    if (!ipThrottle.value.allowed) {
-      return Result.err(
-        badRequest("Too many verification attempts. Please try again later."),
-      );
-    }
+        const user = userResult.value
+        if (user === undefined || user.email !== null || user.phone !== challenge.phone) {
+            return Result.err(badRequest('Phone reset challenge is invalid'))
+        }
 
-    // Intentional: phone reset completion is not bound to the current browser session.
-    // Users may request the SMS on one device and complete the reset from another.
-    const challengeResult = await tryInternal(
-      () => smsAuthChallengeRepository.findById(challengeId),
-      "Failed to load SMS auth challenge",
-    );
-    if (Result.isError(challengeResult)) {
-      return Result.err(challengeResult.error);
-    }
+        const confirmedResult = await tryInternal(
+            () => smsAuthChallengeRepository.markConfirmed(challenge.id),
+            'Failed to mark phone reset challenge confirmed',
+        )
+        if (Result.isError(confirmedResult)) {
+            return Result.err(confirmedResult.error)
+        }
+        if (confirmedResult.value === undefined) {
+            return Result.err(badRequest('Phone reset challenge is no longer valid'))
+        }
 
-    const challenge = challengeResult.value;
-    if (challenge === undefined || challenge.flow !== RESET_PHONE_FLOW) {
-      return Result.err(badRequest("Phone reset challenge is invalid"));
-    }
+        const newPasswordHashResult = await tryInternal(
+            () => hashPassword(password),
+            'Failed to hash password',
+        )
+        if (Result.isError(newPasswordHashResult)) {
+            return Result.err(newPasswordHashResult.error)
+        }
 
-    if (
-      challenge.invalidatedAt !== null ||
-      challenge.confirmedAt !== null ||
-      isChallengeExpired(challenge.expiresAt)
-    ) {
-      return Result.err(badRequest("Phone reset challenge is no longer valid"));
-    }
+        const previousSessionToken = user.sessionToken
 
-    if (!verifyOtpVerificationCode(code, challenge.codeHash)) {
-      const updatedChallenge =
-        await smsAuthChallengeRepository.incrementAttemptCount(challenge.id);
-      if (
-        (updatedChallenge?.attemptCount ?? challenge.attemptCount + 1) >=
-        authConfig.smsMaxInvalidAttempts
-      ) {
-        await smsAuthChallengeRepository.markInvalidated(challenge.id);
-      }
+        const invalidatePhoneChallengesResult = await tryInternal(
+            () => invalidatePendingPhoneChallenges(challenge.phone),
+            'Failed to invalidate pending phone challenges after phone password reset',
+        )
+        if (Result.isError(invalidatePhoneChallengesResult)) {
+            return Result.err(invalidatePhoneChallengesResult.error)
+        }
 
-      return Result.err(badRequest("Invalid verification code"));
-    }
+        const updatedUserResult = await tryInternal(
+            () =>
+                userRepository.update(user.id, {
+                    password: newPasswordHashResult.value,
+                    sessionToken: nanoid(),
+                }),
+            'Failed to update password',
+        )
+        if (Result.isError(updatedUserResult)) {
+            return Result.err(updatedUserResult.error)
+        }
 
-    const challengeUserId = extractChallengeUserId(challenge.metadata);
-    if (challengeUserId === null) {
-      return Result.err(badRequest("Invalid verification code"));
-    }
+        const updatedUser = updatedUserResult.value
+        if (updatedUser === undefined) {
+            return Result.err(internalMessage('Failed to update password'))
+        }
 
-    const userResult = await tryInternal(
-      () => userRepository.findById(challengeUserId),
-      "Failed to load user for phone reset",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
+        const destroySessionsResult = await tryInternal(
+            () => destroyAllSessions(previousSessionToken),
+            'Failed to destroy sessions',
+        )
+        if (Result.isError(destroySessionsResult)) {
+            return Result.err(destroySessionsResult.error)
+        }
 
-    const user = userResult.value;
-    if (
-      user === undefined ||
-      user.email !== null ||
-      user.phone !== challenge.phone
-    ) {
-      return Result.err(badRequest("Phone reset challenge is invalid"));
-    }
+        return Result.ok({ status: 'success' })
+    },
 
-    const confirmedResult = await tryInternal(
-      () => smsAuthChallengeRepository.markConfirmed(challenge.id),
-      "Failed to mark phone reset challenge confirmed",
-    );
-    if (Result.isError(confirmedResult)) {
-      return Result.err(confirmedResult.error);
-    }
-    if (confirmedResult.value === undefined) {
-      return Result.err(badRequest("Phone reset challenge is no longer valid"));
-    }
-
-    const newPasswordHashResult = await tryInternal(
-      () => hashPassword(password),
-      "Failed to hash password",
-    );
-    if (Result.isError(newPasswordHashResult)) {
-      return Result.err(newPasswordHashResult.error);
-    }
-
-    const previousSessionToken = user.sessionToken;
-
-    const invalidatePhoneChallengesResult = await tryInternal(
-      () => invalidatePendingPhoneChallenges(challenge.phone),
-      "Failed to invalidate pending phone challenges after phone password reset",
-    );
-    if (Result.isError(invalidatePhoneChallengesResult)) {
-      return Result.err(invalidatePhoneChallengesResult.error);
-    }
-
-    const updatedUserResult = await tryInternal(
-      () =>
-        userRepository.update(user.id, {
-          password: newPasswordHashResult.value,
-          sessionToken: nanoid(),
-        }),
-      "Failed to update password",
-    );
-    if (Result.isError(updatedUserResult)) {
-      return Result.err(updatedUserResult.error);
-    }
-
-    const updatedUser = updatedUserResult.value;
-    if (updatedUser === undefined) {
-      return Result.err(internalMessage("Failed to update password"));
-    }
-
-    const destroySessionsResult = await tryInternal(
-      () => destroyAllSessions(previousSessionToken),
-      "Failed to destroy sessions",
-    );
-    if (Result.isError(destroySessionsResult)) {
-      return Result.err(destroySessionsResult.error);
-    }
-
-    return Result.ok({ status: "success" });
-  },
-
-  async sendPasswordResetEmailInBackground(
-    userId: bigint,
-    reason: "manual request",
-  ): Promise<void> {
-    try {
-      const result = await this.sendPasswordResetEmail(userId);
-      if (Result.isError(result)) {
-        logger.warn(
-          {
-            userId: String(userId),
-            reason: appErrorMessage(result.error),
-            trigger: reason,
-          },
-          "Failed to send password reset email in background",
-        );
-      }
-    } catch (err) {
-      logger.error(
-        { err, userId: String(userId), trigger: reason },
-        "Unexpected error while sending password reset email in background",
-      );
-    }
-  },
-};
+    async sendPasswordResetEmailInBackground(
+        userId: bigint,
+        reason: 'manual request',
+    ): Promise<void> {
+        try {
+            const result = await this.sendPasswordResetEmail(userId)
+            if (Result.isError(result)) {
+                logger.warn(
+                    {
+                        userId: String(userId),
+                        reason: appErrorMessage(result.error),
+                        trigger: reason,
+                    },
+                    'Failed to send password reset email in background',
+                )
+            }
+        } catch (err) {
+            logger.error(
+                { err, userId: String(userId), trigger: reason },
+                'Unexpected error while sending password reset email in background',
+            )
+        }
+    },
+}

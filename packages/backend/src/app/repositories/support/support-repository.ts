@@ -1,9 +1,9 @@
-import { db } from '#database/db.js';
-import { supportChatHistory } from '#database/schema.js';
-import { eq, desc } from 'drizzle-orm';
-import type { InferSelectModel } from 'drizzle-orm';
+import { db } from '#database/db.js'
+import { supportChatHistory } from '#database/schema.js'
+import { eq, desc } from 'drizzle-orm'
+import type { InferSelectModel } from 'drizzle-orm'
 
-export type SupportChatRow = InferSelectModel<typeof supportChatHistory>;
+export type SupportChatRow = InferSelectModel<typeof supportChatHistory>
 
 export const supportRepository = {
     async addChatMessage(
@@ -18,15 +18,14 @@ export const supportRepository = {
                 userId,
                 role,
                 content,
-                screenshots: screenshots !== undefined && screenshots.length > 0
-                    ? screenshots
-                    : null,
+                screenshots:
+                    screenshots !== undefined && screenshots.length > 0 ? screenshots : null,
             })
-            .returning();
+            .returning()
         if (created === undefined) {
-            throw new Error('Failed to create support chat message');
+            throw new Error('Failed to create support chat message')
         }
-        return created;
+        return created
     },
 
     async findChatHistory(userId: bigint, limit?: number): Promise<SupportChatRow[]> {
@@ -34,20 +33,18 @@ export const supportRepository = {
             .select()
             .from(supportChatHistory)
             .where(eq(supportChatHistory.userId, userId))
-            .orderBy(desc(supportChatHistory.createdAt));
+            .orderBy(desc(supportChatHistory.createdAt))
 
-        const rows = limit !== undefined
-            ? await query.limit(limit)
-            : await query;
+        const rows = limit !== undefined ? await query.limit(limit) : await query
 
-        return rows.reverse();
+        return rows.reverse()
     },
 
     async deleteAllChatHistory(userId: bigint): Promise<number> {
         const deleted = await db
             .delete(supportChatHistory)
             .where(eq(supportChatHistory.userId, userId))
-            .returning();
-        return deleted.length;
+            .returning()
+        return deleted.length
     },
-};
+}

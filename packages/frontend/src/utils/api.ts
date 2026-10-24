@@ -66,14 +66,20 @@ export const authApi = {
         return baseApi.http<LoginResponse>('POST', '/api/auth/login', body)
     },
 
-    registerEmail: async (body: RegisterEmailInput): Promise<ApiResponse<RegisterEmailResponse>> => {
+    registerEmail: async (
+        body: RegisterEmailInput,
+    ): Promise<ApiResponse<RegisterEmailResponse>> => {
         return baseApi.http<RegisterEmailResponse>('POST', '/api/auth/register/email', body)
     },
 
     registerPhoneStart: async (
         body: RegisterPhoneStartInput,
     ): Promise<ApiResponse<RegisterPhoneStartResponse>> => {
-        return baseApi.http<RegisterPhoneStartResponse>('POST', '/api/auth/register/phone/start', body)
+        return baseApi.http<RegisterPhoneStartResponse>(
+            'POST',
+            '/api/auth/register/phone/start',
+            body,
+        )
     },
 
     registerPhoneConfirm: async (
@@ -129,7 +135,11 @@ export const authApi = {
     completePhonePasswordReset: async (
         body: ResetPhoneCompleteInput,
     ): Promise<ApiResponse<ResetPhoneCompleteResponse>> => {
-        return baseApi.http<ResetPhoneCompleteResponse>('POST', '/api/auth/reset-phone/complete', body)
+        return baseApi.http<ResetPhoneCompleteResponse>(
+            'POST',
+            '/api/auth/reset-phone/complete',
+            body,
+        )
     },
 
     resetPassword: async (
@@ -276,7 +286,9 @@ export const pushSubscriptionApi = {
     testPush: async (
         title?: PushSubscriptionTestQueryInput['title'],
         body?: PushSubscriptionTestQueryInput['body'],
-    ): Promise<ApiResponse<{ status: string; message: string; sent?: number; failed?: number }>> => {
+    ): Promise<
+        ApiResponse<{ status: string; message: string; sent?: number; failed?: number }>
+    > => {
         const params = new URLSearchParams()
         if (title) params.set('title', title)
         if (body) params.set('body', body)
@@ -324,7 +336,9 @@ export interface KnowledgeBaseArticle {
 export type KnowledgeBaseInitStatus = SupportKnowledgeBaseInitJob
 
 export const supportApi = {
-    getChatHistory: async (options: { signal?: AbortSignal } = {}): Promise<SupportChatMessage[]> => {
+    getChatHistory: async (
+        options: { signal?: AbortSignal } = {},
+    ): Promise<SupportChatMessage[]> => {
         const response = await baseApi.http<{ status: string; data?: SupportChatMessage[] }>(
             'GET',
             '/api/support/chat/history',
@@ -485,7 +499,8 @@ export const adminUsersApi = {
         if (params?.userId !== undefined && params.userId.trim() !== '') {
             query.set('userId', params.userId.trim())
         }
-        if (params?.dateFrom !== undefined && params.dateFrom !== '') query.set('dateFrom', params.dateFrom)
+        if (params?.dateFrom !== undefined && params.dateFrom !== '')
+            query.set('dateFrom', params.dateFrom)
         if (params?.dateTo !== undefined && params.dateTo !== '') query.set('dateTo', params.dateTo)
 
         const qs = query.toString()
@@ -514,7 +529,8 @@ export const adminOnlineHistoryApi = {
         if (params?.userId !== undefined && params.userId.trim() !== '') {
             query.set('userId', params.userId.trim())
         }
-        if (params?.dateFrom !== undefined && params.dateFrom !== '') query.set('dateFrom', params.dateFrom)
+        if (params?.dateFrom !== undefined && params.dateFrom !== '')
+            query.set('dateFrom', params.dateFrom)
         if (params?.dateTo !== undefined && params.dateTo !== '') query.set('dateTo', params.dateTo)
 
         const qs = query.toString()

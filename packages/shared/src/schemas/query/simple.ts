@@ -1,31 +1,29 @@
-import { type } from "@arktype/type";
+import { type } from '@arktype/type'
 
 export const AdminUserSearchQuerySchema = type({
-  email: "string > 0",
-});
+    email: 'string > 0',
+})
 
-export type AdminUserSearchQuery = typeof AdminUserSearchQuerySchema.infer;
-export type AdminUserSearchQueryInput = AdminUserSearchQuery;
+export type AdminUserSearchQuery = typeof AdminUserSearchQuerySchema.infer
+export type AdminUserSearchQueryInput = AdminUserSearchQuery
 
 export const PushSubscriptionTestQuerySchema = type({
-  "title?": "string",
-  "body?": "string",
-});
+    'title?': 'string',
+    'body?': 'string',
+})
 
-export type PushSubscriptionTestQuery =
-  typeof PushSubscriptionTestQuerySchema.infer;
-export type PushSubscriptionTestQueryInput = PushSubscriptionTestQuery;
+export type PushSubscriptionTestQuery = typeof PushSubscriptionTestQuerySchema.infer
+export type PushSubscriptionTestQueryInput = PushSubscriptionTestQuery
 
-export const OAuthRedirectQuerySchema = type({
-});
+export const OAuthRedirectQuerySchema = type({})
 
-export type OAuthRedirectQuery = typeof OAuthRedirectQuerySchema.infer;
-export type OAuthRedirectQueryInput = OAuthRedirectQuery;
+export type OAuthRedirectQuery = typeof OAuthRedirectQuerySchema.infer
+export type OAuthRedirectQueryInput = OAuthRedirectQuery
 
 export const OAuthCallbackQuerySchema = type({
-  "code?": "string",
-  "state?": "string",
-});
+    'code?': 'string',
+    'state?': 'string',
+})
 
-export type OAuthCallbackQuery = typeof OAuthCallbackQuerySchema.infer;
-export type OAuthCallbackQueryInput = OAuthCallbackQuery;
+export type OAuthCallbackQuery = typeof OAuthCallbackQuerySchema.infer
+export type OAuthCallbackQueryInput = OAuthCallbackQuery

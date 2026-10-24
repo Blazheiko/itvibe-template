@@ -1,26 +1,26 @@
-import { defineConfig } from "drizzle-kit";
+import { defineConfig } from 'drizzle-kit'
 
-import { resolveDatabaseConfig } from "./src/config/database.ts";
+import { resolveDatabaseConfig } from './src/config/database.ts'
 
 // Relative .ts import: drizzle-kit loads this file itself, without the #config alias.
-const dbConfig = resolveDatabaseConfig();
+const dbConfig = resolveDatabaseConfig()
 
 export default defineConfig({
-  schema: "./src/database/schema.ts",
-  out: "./src/drizzle/migrations",
-  dialect: "postgresql",
-  dbCredentials: {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    user: dbConfig.user,
-    ...(dbConfig.password ? { password: dbConfig.password } : {}),
-    database: dbConfig.database,
-    ssl: false,
-  },
-  migrations: {
-    table: "__drizzle_migrations",
-    schema: "drizzle",
-  },
-  verbose: true,
-  strict: true,
-});
+    schema: './src/database/schema.ts',
+    out: './src/drizzle/migrations',
+    dialect: 'postgresql',
+    dbCredentials: {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.user,
+        ...(dbConfig.password ? { password: dbConfig.password } : {}),
+        database: dbConfig.database,
+        ssl: false,
+    },
+    migrations: {
+        table: '__drizzle_migrations',
+        schema: 'drizzle',
+    },
+    verbose: true,
+    strict: true,
+})

@@ -1,2 +1,1 @@
-export const PENDING_SMS_CODE_HASH_PLACEHOLDER = '__pending_sms_verification_code__';
-
+export const PENDING_SMS_CODE_HASH_PLACEHOLDER = '__pending_sms_verification_code__'

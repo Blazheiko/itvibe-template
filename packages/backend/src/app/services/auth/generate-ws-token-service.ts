@@ -1,29 +1,26 @@
-import { generateKey } from 'metautil';
-import redis, { withRedis } from '#database/redis.js';
-import type { SessionInfo } from '#vendor/types/types.js';
-import configApp from '#config/app.js';
-import { isCanonicalEntityId } from '#vendor/utils/helpers/entity-id.js';
+import { generateKey } from 'metautil'
+import redis, { withRedis } from '#database/redis.js'
+import type { SessionInfo } from '#vendor/types/types.js'
+import configApp from '#config/app.js'
+import { isCanonicalEntityId } from '#vendor/utils/helpers/entity-id.js'
 
-export async function generateWsToken(
-    sessionInfo: SessionInfo,
-    userId: string,
-): Promise<string> {
+export async function generateWsToken(sessionInfo: SessionInfo, userId: string): Promise<string> {
     if (!isCanonicalEntityId(userId)) {
-        return '';
+        return ''
     }
 
-    const userToken = sessionInfo.data.userToken;
+    const userToken = sessionInfo.data.userToken
     if (userToken === undefined) {
-        return '';
+        return ''
     }
 
-    const wsToken = generateKey(configApp.characters, 16);
+    const wsToken = generateKey(configApp.characters, 16)
     const tokenData = JSON.stringify({
         sessionId: sessionInfo.id,
         userId,
         userToken,
-    });
-    await withRedis(() => redis.setex(`auth:ws:${wsToken}`, 60, tokenData));
+    })
+    await withRedis(() => redis.setex(`auth:ws:${wsToken}`, 60, tokenData))
 
-    return wsToken;
+    return wsToken
 }

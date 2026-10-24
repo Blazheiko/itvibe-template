@@ -77,7 +77,9 @@ function isServiceWorkerErrorPayload(value: unknown): value is ServiceWorkerErro
     return true
 }
 
-function createServiceWorkerError(err: ServiceWorkerErrorPayload['err']): ServiceWorkerErrorContext {
+function createServiceWorkerError(
+    err: ServiceWorkerErrorPayload['err'],
+): ServiceWorkerErrorContext {
     if (err instanceof Error) {
         return {
             error: err,
@@ -334,7 +336,9 @@ async function maybeShowUpdateNotification(
     }
 
     if (APP_BUILD_TIMESTAMP === null) {
-        console.warn(`[SW] Skipping update notification from ${source} — invalid app build timestamp`)
+        console.warn(
+            `[SW] Skipping update notification from ${source} — invalid app build timestamp`,
+        )
         return
     }
 

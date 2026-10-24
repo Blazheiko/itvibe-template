@@ -1,4 +1,4 @@
-import type { HttpContext, WsContext } from "#vendor/types/types.js";
+import type { HttpContext, WsContext } from '#vendor/types/types.js'
 
 /**
  * Извлекает типизированный payload из контекста.
@@ -6,17 +6,16 @@ import type { HttpContext, WsContext } from "#vendor/types/types.js";
  * Предполагает что валидация уже выполнена в server.ts
  */
 export function getTypedPayload<TPayload>(
-  context: HttpContext<TPayload> | WsContext<TPayload>,
+    context: HttpContext<TPayload> | WsContext<TPayload>,
 ): TPayload {
-  const payload =
-    "httpData" in context ? context.httpData.payload : context.wsData.payload;
+    const payload = 'httpData' in context ? context.httpData.payload : context.wsData.payload
 
-  if (payload === null) {
-    throw new Error("Payload is missing");
-  }
+    if (payload === null) {
+        throw new Error('Payload is missing')
+    }
 
-  // Runtime validation happens before this helper is called.
-  return payload as TPayload;
+    // Runtime validation happens before this helper is called.
+    return payload as TPayload
 }
 
 /**
@@ -40,29 +39,29 @@ export function getTypedPayload<TPayload>(
  * поэтому хелпер там не нужен.
  */
 export function getTypedQuery<TQuery>(context: HttpContext): TQuery {
-  const query = context.httpData.query;
-  if (query === null) {
-    throw new Error(
-      "getTypedQuery called on a route without queryValidator — declare a schema first",
-    );
-  }
-  return query;
+    const query = context.httpData.query
+    if (query === null) {
+        throw new Error(
+            'getTypedQuery called on a route without queryValidator — declare a schema first',
+        )
+    }
+    return query
 }
 
 /**
  * Type guard для проверки что контекст является HttpContext
  */
 export function isHttpContext<TPayload>(
-  context: HttpContext<TPayload> | WsContext<TPayload>,
+    context: HttpContext<TPayload> | WsContext<TPayload>,
 ): context is HttpContext<TPayload> {
-  return "httpData" in context;
+    return 'httpData' in context
 }
 
 /**
  * Type guard для проверки что контекст является WsContext
  */
 export function isWsContext<TPayload>(
-  context: HttpContext<TPayload> | WsContext<TPayload>,
+    context: HttpContext<TPayload> | WsContext<TPayload>,
 ): context is WsContext<TPayload> {
-  return "wsData" in context;
+    return 'wsData' in context
 }

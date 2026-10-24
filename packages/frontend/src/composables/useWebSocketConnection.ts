@@ -3,7 +3,12 @@ import { useWebSocket } from '@vueuse/core'
 import { createHeartbeatOptions } from '@/utils/websocket-heartbeat'
 import { ref, computed } from 'vue'
 import type { WebsocketMessage, WebsocketPayload } from '@/utils/websocket-base'
-import { getResponseMessage, getTransportCode, hasResponseError, isUnauthorizedError } from '@/utils/response-normalizer'
+import {
+    getResponseMessage,
+    getTransportCode,
+    hasResponseError,
+    isUnauthorizedError,
+} from '@/utils/response-normalizer'
 import { useBroadcastHandler } from '@/composables/useBroadcastHandler'
 import { reportValidationFailure } from '@/utils/sentry-payload-summary'
 import { useEventBus } from '@/utils/event-bus'
@@ -51,8 +56,8 @@ const TIMEOUT_API = 10000
 const validateMessage = (message: WebsocketMessage): boolean => {
     return Boolean(
         message &&
-            typeof message.event === 'string' &&
-            (!message.payload || typeof message.payload === 'object'),
+        typeof message.event === 'string' &&
+        (!message.payload || typeof message.payload === 'object'),
     )
 }
 
@@ -93,7 +98,10 @@ const processBroadcast = (message: WebsocketMessage): void => {
 // Service error handling
 const handleServiceError = (data: WebsocketMessage): void => {
     if (getTransportCode(data) === 4001) {
-        console.warn('Token expired or invalid:', getResponseMessage(data, 'Token expired or invalid'))
+        console.warn(
+            'Token expired or invalid:',
+            getResponseMessage(data, 'Token expired or invalid'),
+        )
         // Don't call unauthorized() here - let handleWebSocketClose handle it
         // to avoid duplicate reconnection attempts when server closes connection with code 4001
     }
@@ -229,50 +237,50 @@ const handleMessage = async (messageData: string | Blob | ArrayBuffer) => {
 // WEBSOCKET INSTANCE - Created once on module load
 // ============================================================================
 
-const { status, send, close, open, ws } = useWebSocket(
-    wsUrl,
-    {
-        immediate: false,
-        protocols: wsProtocols,
-        // autoReconnect: {
-        //     retries: -1,
-        //     delay: 5000,
-        //     onFailed() {
-        //         console.error('WebSocket reconnection failed after maximum attempts')
-        //     },
-        // },
-        heartbeat: createHeartbeatOptions(),
-        onConnected() {
-            console.log('WebSocket connected')
-            isInitialized.value = true
-            if (ws.value) {
-                ws.value.binaryType = 'arraybuffer'
-            }
-            // Check for SW updates on each WS connection (covers reconnects after sleep/offline)
-            if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistration().then((reg) => {
+const { status, send, close, open, ws } = useWebSocket(wsUrl, {
+    immediate: false,
+    protocols: wsProtocols,
+    // autoReconnect: {
+    //     retries: -1,
+    //     delay: 5000,
+    //     onFailed() {
+    //         console.error('WebSocket reconnection failed after maximum attempts')
+    //     },
+    // },
+    heartbeat: createHeartbeatOptions(),
+    onConnected() {
+        console.log('WebSocket connected')
+        isInitialized.value = true
+        if (ws.value) {
+            ws.value.binaryType = 'arraybuffer'
+        }
+        // Check for SW updates on each WS connection (covers reconnects after sleep/offline)
+        if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+            navigator.serviceWorker
+                .getRegistration()
+                .then((reg) => {
                     if (reg) {
                         reg.update().catch(() => {})
                     }
-                }).catch(() => {})
-            }
-        },
-        onDisconnected(_, event) {
-            console.log('WebSocket disconnected', event)
-            isInitialized.value = false
-            // Handle close event with proper code checking
-            if (event) {
-                handleWebSocketClose(event)
-            }
-        },
-        onError(_, event) {
-            console.error('WebSocket error:', event)
-        },
-        onMessage(_, event) {
-            void handleMessage(event.data as string | Blob | ArrayBuffer)
-        },
+                })
+                .catch(() => {})
+        }
     },
-)
+    onDisconnected(_, event) {
+        console.log('WebSocket disconnected', event)
+        isInitialized.value = false
+        // Handle close event with proper code checking
+        if (event) {
+            handleWebSocketClose(event)
+        }
+    },
+    onError(_, event) {
+        console.error('WebSocket error:', event)
+    },
+    onMessage(_, event) {
+        void handleMessage(event.data as string | Blob | ArrayBuffer)
+    },
+})
 
 // ============================================================================
 // PUBLIC API - Methods for working with WebSocket

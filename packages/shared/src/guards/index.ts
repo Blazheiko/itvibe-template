@@ -1,1 +1,1 @@
-export * from "./ws-channels.js";
+export * from './ws-channels.js'

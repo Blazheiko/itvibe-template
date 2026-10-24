@@ -1,24 +1,24 @@
-import { userOnlineRepository } from '#app/repositories/index.js';
-import type { UserOnlineInsert } from '#app/repositories/index.js';
+import { userOnlineRepository } from '#app/repositories/index.js'
+import type { UserOnlineInsert } from '#app/repositories/index.js'
 
 interface TrackConnectedInput {
-    userId: bigint;
-    sessionId: string;
-    socketUuid: string;
-    role: UserOnlineInsert['role'];
-    typeApp: UserOnlineInsert['typeApp'];
-    ipAddress: string;
-    userAgent: string;
-    connectedAt: Date;
-    isFirstConnection: boolean;
+    userId: bigint
+    sessionId: string
+    socketUuid: string
+    role: UserOnlineInsert['role']
+    typeApp: UserOnlineInsert['typeApp']
+    ipAddress: string
+    userAgent: string
+    connectedAt: Date
+    isFirstConnection: boolean
 }
 
 interface TrackDisconnectedInput {
-    socketUuid: string;
-    disconnectedAt: Date;
-    closeCode: number;
-    connectionDurationMs: number;
-    isLastConnection: boolean;
+    socketUuid: string
+    disconnectedAt: Date
+    closeCode: number
+    connectionDurationMs: number
+    isLastConnection: boolean
 }
 
 export const userOnlineService = {
@@ -33,7 +33,7 @@ export const userOnlineService = {
             userAgent: input.userAgent,
             connectedAt: input.connectedAt,
             isFirstConnection: input.isFirstConnection,
-        });
+        })
     },
 
     async trackDisconnected(input: TrackDisconnectedInput): Promise<void> {
@@ -42,6 +42,6 @@ export const userOnlineService = {
             closeCode: input.closeCode,
             connectionDurationMs: input.connectionDurationMs,
             isLastConnection: input.isLastConnection,
-        });
+        })
     },
-};
+}

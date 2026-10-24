@@ -57,10 +57,10 @@
 - [ ] Визначити, звідки запускаються міграції: окремий one-shot контейнер або стадія `migrate`, чи entrypoint основного образу.
 - [ ] Варіант A (рекомендований): винести міграції в окрему стадію або образ, а фінальний образ збирати з `--prod`.
 - [ ] Варіант B (мінімальний): ставити фінальний образ з `--prod`. Але перенести лише `drizzle-kit` у `dependencies` **недостатньо**: `CMD` у `Dockerfile:110` виконує `pnpm db:create && pnpm db:migrate && pnpm start`, а `db:create` (`packages/backend/package.json:20`) запускається через `tsx`, який теж devDependency. Після `--prod` контейнер не стартує. Повний варіант B:
-  - `drizzle-kit` → `dependencies` (йому потрібен лише `drizzle.config.js`, це JS, без `tsx`);
-  - `db:create` у контейнері запускати зі скомпільованого файла: `src/db/create-database.ts` уже потрапляє в `dist/db/create-database.js` через `tsc --build`. Додати скрипт `"db:create:prod": "node dist/db/create-database.js"` і використати його в `CMD`;
-  - перевірити, що `create-database.ts` не імпортує нічого лише з devDependencies;
-  - `tsx` лишається devDependency лише для `dev`, `db:seed` і `mail:test`.
+    - `drizzle-kit` → `dependencies` (йому потрібен лише `drizzle.config.js`, це JS, без `tsx`);
+    - `db:create` у контейнері запускати зі скомпільованого файла: `src/db/create-database.ts` уже потрапляє в `dist/db/create-database.js` через `tsc --build`. Додати скрипт `"db:create:prod": "node dist/db/create-database.js"` і використати його в `CMD`;
+    - перевірити, що `create-database.ts` не імпортує нічого лише з devDependencies;
+    - `tsx` лишається devDependency лише для `dev`, `db:seed` і `mail:test`.
 - [ ] Після змін: `docker build`, `docker run` і перевірка, що в образі немає `vitest`, `eslint` та `vite` (`ls node_modules/.pnpm | grep …`).
 - [ ] Для вразливостей, які лишаються у розділі 10, розрізняти дві речі: пакет **присутній** в образі чи вразливий код **досяжний** (викликається в runtime з даними ззовні).
 
@@ -74,15 +74,15 @@
 
 1. Один етап — один коміт або PR з повідомленням `chore(deps): …` чи `feat(deps): …`.
 2. Після кожного етапу (з урахуванням етапу 0.2):
-   ```sh
-   pnpm install                       # оновлює pnpm-lock.yaml після зміни package.json
-   git add pnpm-lock.yaml             # lockfile комітимо в тому ж коміті, що й package.json
-   pnpm install --frozen-lockfile     # контроль: lockfile узгоджений (так само, як у Dockerfile)
-   pnpm build && pnpm typecheck && pnpm lint && pnpm test   # тепер покриває frontend і .vue
-   pnpm --filter frontend test:e2e                           # для етапів B, B2, C, G
-   pnpm audit
-   pnpm why <пакет>                                         # підтвердити, що стара версія зникла з графа
-   ```
+    ```sh
+    pnpm install                       # оновлює pnpm-lock.yaml після зміни package.json
+    git add pnpm-lock.yaml             # lockfile комітимо в тому ж коміті, що й package.json
+    pnpm install --frozen-lockfile     # контроль: lockfile узгоджений (так само, як у Dockerfile)
+    pnpm build && pnpm typecheck && pnpm lint && pnpm test   # тепер покриває frontend і .vue
+    pnpm --filter frontend test:e2e                           # для етапів B, B2, C, G
+    pnpm audit
+    pnpm why <пакет>                                         # підтвердити, що стара версія зникла з графа
+    ```
 3. Версії backend фіксуємо точно, без `^`, як уже заведено в `packages/backend/package.json`. Для frontend і api-playground лишаємо `^`, але з точною мінімальною версією з таблиці.
 4. Очікування щодо audit перевіряємо через `pnpm why`, а не з таблиць: граф залежностей — джерело правди.
 5. Якщо етап не проходить і причину не вдається знайти за розумний час, відкочуємо його (`git revert`), а проблему записуємо в розділ 10.
@@ -127,9 +127,9 @@
 
 1. frontend: оновити `vite`, `@vitejs/plugin-vue` і `vue-tsc`. Перевірити `vite.config.ts` і `vite.sw.config.ts` (збірка service worker).
 2. **`build.target`.** Vite 7 змінює стандартний target на `baseline-widely-available`. Це впливає на синтаксис і поліфіли у зібраному JS, тобто на **браузерну сумісність production-збірки**. Зараз `build.target` у конфігах не задано. Потрібно:
-   - узгодити список браузерів, які підтримуємо (зокрема мобільні Safari для PWA);
-   - або явно задати `build.target`, або свідомо прийняти новий стандарт;
-   - порівняти зібрані бандли до і після (`dist/assets`), перевірити застосунок у найстарішому браузері зі списку.
+    - узгодити список браузерів, які підтримуємо (зокрема мобільні Safari для PWA);
+    - або явно задати `build.target`, або свідомо прийняти новий стандарт;
+    - порівняти зібрані бандли до і після (`dist/assets`), перевірити застосунок у найстарішому браузері зі списку.
 3. Оновити `vitest` до 5 у backend і frontend. Звірити список змін: `workspace` → `projects`, опції `poolOptions`, стандартні виключення. У `packages/backend/vitest.config.ts` явне виключення `dist/**` залишаємо.
 4. Оновити `jsdom`, `@types/jsdom` і `npm-run-all2`.
 5. Перевірити `pnpm --filter frontend build`, зокрема `build-sw`, та e2e.
@@ -140,12 +140,12 @@
 
 - `vite` 7.3.7 → 8.3.4 у frontend і api-playground. Плагіни (`@vitejs/plugin-vue@6`, `vite-plugin-vue-devtools@8`, `vitest@5`) його підтримують.
 - **Vite 8 замінює esbuild і Rollup на Rolldown та Oxc** (див. https://vite.dev/guide/migration). Перевірка ширша за PWA:
-  - опції `build.rollupOptions` і `optimizeDeps.esbuildOptions` (перейменування й несумісні опції);
-  - мініфікація та transform-налаштування (`esbuild.*` → `oxc.*`);
-  - розбиття на chunks і імена файлів (кешування на CDN, service worker precache);
-  - CommonJS-залежності та `define`/`import.meta.env`;
-  - розмір і вміст бандлів до та після;
-  - PWA: реєстрація service worker, оновлення, офлайн-режим.
+    - опції `build.rollupOptions` і `optimizeDeps.esbuildOptions` (перейменування й несумісні опції);
+    - мініфікація та transform-налаштування (`esbuild.*` → `oxc.*`);
+    - розбиття на chunks і імена файлів (кешування на CDN, service worker precache);
+    - CommonJS-залежності та `define`/`import.meta.env`;
+    - розмір і вміст бандлів до та після;
+    - PWA: реєстрація service worker, оновлення, офлайн-режим.
 - Робити тільки після того, як етап B стабільно працює.
 
 **Ризик:** середній або високий.
@@ -281,22 +281,22 @@
 ### Кроки
 
 1. **H0 — рішення.** Ухвалити одне з двох:
-   - _(рекомендовано)_ чекати на стабільний `1.0.0` і починати етап одразу після релізу;
-   - або свідомо перейти на `1.0.0-rc.N` із точною фіксацією версії та записом у `AGENTS.md` (Toolchain Notes), що це RC.
+    - _(рекомендовано)_ чекати на стабільний `1.0.0` і починати етап одразу після релізу;
+    - або свідомо перейти на `1.0.0-rc.N` із точною фіксацією версії та записом у `AGENTS.md` (Toolchain Notes), що це RC.
 2. **H1 — підготовка на 0.45.x** (можна робити вже зараз):
-   - тест «міграції з нуля»: порожня БД → `pnpm db:create && pnpm db:migrate` → `pnpm db:seed`;
-   - тест «повторний запуск»: `pnpm db:migrate` удруге нічого не застосовує;
-   - зберегти дамп **лише схеми** (`pg_dump --schema-only --schema=public`) як еталон для порівняння структури. Дані не потрібні.
+    - тест «міграції з нуля»: порожня БД → `pnpm db:create && pnpm db:migrate` → `pnpm db:seed`;
+    - тест «повторний запуск»: `pnpm db:migrate` удруге нічого не застосовує;
+    - зберегти дамп **лише схеми** (`pg_dump --schema-only --schema=public`) як еталон для порівняння структури. Дані не потрібні.
 3. **H2 — оновлення пакетів:** `drizzle-orm@1.0.x` (точна версія) і `drizzle-kit@1.0.x` разом. `pnpm why mysql2` — якщо `mysql2` більше не тягнеться, прибрати override.
 4. **H3 — код:** `defineRelations`, виклик `drizzle()` у `db.ts`, потім typecheck і виправлення типів.
 5. **H4 — міграції.** Обираємо простіший шлях, бо даних немає:
-   - _(рекомендовано)_ **перегенерувати з нуля:** видалити `src/drizzle/migrations`, виконати `drizzle-kit generate` на 1.0 і отримати одну початкову міграцію в новому форматі. Потім ще раз `drizzle-kit generate` має сказати, що змін немає;
-   - або `drizzle-kit up` (конвертація наявної міграції). Має сенс, лише якщо важливо зберегти назву й історію файлів.
-     Закомітити новий вміст папки.
+    - _(рекомендовано)_ **перегенерувати з нуля:** видалити `src/drizzle/migrations`, виконати `drizzle-kit generate` на 1.0 і отримати одну початкову міграцію в новому форматі. Потім ще раз `drizzle-kit generate` має сказати, що змін немає;
+    - або `drizzle-kit up` (конвертація наявної міграції). Має сенс, лише якщо важливо зберегти назву й історію файлів.
+      Закомітити новий вміст папки.
 6. **H5 — перевірка на БД:**
-   - видалити й створити БД заново, потім `pnpm db:migrate`: схема ідентична еталону з H1 (`diff` двох `pg_dump --schema-only`);
-   - повторний `pnpm db:migrate` нічого не застосовує;
-   - `pnpm db:seed`, unit-тести backend, ручний прохід реєстрації, логіну та CRUD.
+    - видалити й створити БД заново, потім `pnpm db:migrate`: схема ідентична еталону з H1 (`diff` двох `pg_dump --schema-only`);
+    - повторний `pnpm db:migrate` нічого не застосовує;
+    - `pnpm db:seed`, unit-тести backend, ручний прохід реєстрації, логіну та CRUD.
 7. **H6 — Docker:** `docker build`, старт контейнера (CMD виконує `db:migrate`), `pnpm why esbuild` — немає версій `<0.25`.
 8. **H7 — середовища:** на staging і production видалити й створити БД заново, потім задеплоїти образ. CMD сам виконає `db:create` і `db:migrate`. Якщо потрібні тестові дані, запустити `db:seed`.
 
@@ -353,9 +353,9 @@
 Критерії стосуються етапів 0, A–G і B2. Для етапу H є власний критерій у розділі 9a (H5 і відкат).
 
 - `pnpm build`, `pnpm typecheck`, `pnpm lint` і `pnpm test` зелені, **і після етапу 0.2 вони покривають**:
-  - перевірку типів frontend (`vue-tsc`);
-  - unit-тести frontend (`vitest run`);
-  - лінт `.vue` у frontend і api-playground.
+    - перевірку типів frontend (`vue-tsc`);
+    - unit-тести frontend (`vitest run`);
+    - лінт `.vue` у frontend і api-playground.
 - `pnpm --filter frontend test:e2e` зелений.
 - `docker build` проходить, контейнер стартує на Node `^24.15.0`, у фінальному образі немає devDependencies (або це свідомо задокументовано).
 - `pnpm audit`: немає critical і high, крім пунктів із розділу 10, де для кожного заповнено «В образі?» і «Досяжний у runtime?».

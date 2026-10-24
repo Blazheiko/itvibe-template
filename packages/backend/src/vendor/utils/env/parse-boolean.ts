@@ -5,10 +5,7 @@
  * Falsy values: anything else.
  * Returns `defaultValue` when the env var is undefined.
  */
-export function parseBoolean(
-  value: string | undefined,
-  defaultValue = false,
-): boolean {
-  if (value === undefined) return defaultValue;
-  return value === "true" || value === "1" || value === "yes" || value === "on";
+export function parseBoolean(value: string | undefined, defaultValue = false): boolean {
+    if (value === undefined) return defaultValue
+    return value === 'true' || value === '1' || value === 'yes' || value === 'on'
 }

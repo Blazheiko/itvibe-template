@@ -1,19 +1,19 @@
-import { getTextAdapterForModel } from '#app/services/ai/ai-provider.js';
-import { promptService } from '#app/services/ai/prompt-service.js';
-import type { TextUsageCompleteHandler } from '#app/services/ai/types.js';
-import type { SupportChatRow } from '#app/repositories/support/support-repository.js';
-import { resolveLanguageName } from 'shared/enums';
-import logger from '#logger';
-import supportConfig from '#config/support.js';
+import { getTextAdapterForModel } from '#app/services/ai/ai-provider.js'
+import { promptService } from '#app/services/ai/prompt-service.js'
+import type { TextUsageCompleteHandler } from '#app/services/ai/types.js'
+import type { SupportChatRow } from '#app/repositories/support/support-repository.js'
+import { resolveLanguageName } from 'shared/enums'
+import logger from '#logger'
+import supportConfig from '#config/support.js'
 
 function buildNativeLanguageInstruction(langNative: string): string {
-    const nativeLanguageName = resolveLanguageName(langNative);
+    const nativeLanguageName = resolveLanguageName(langNative)
     return [
         `The user's native language code is "${langNative}".`,
         `The user's native language is ${nativeLanguageName}.`,
         `Always answer in ${nativeLanguageName} unless the user explicitly asks you to switch to another language.`,
         `Do not choose the response language from the knowledge base context or article language.`,
-    ].join(' ');
+    ].join(' ')
 }
 
 export const supportLlmService = {
@@ -21,12 +21,17 @@ export const supportLlmService = {
         langNative: string,
         onComplete?: TextUsageCompleteHandler,
     ): AsyncGenerator<string, void, undefined> {
-        const systemPromptBase = promptService.getContent('SUPPORT_FIRST_CHAT') || supportConfig.defaultFirstChatPrompt;
-        const temperature = promptService.getTemperature('SUPPORT_FIRST_CHAT') ?? supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.temperature;
-        const maxTokens = promptService.getMaxTokens('SUPPORT_FIRST_CHAT') ?? supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.maxTokens;
-        const modelOverride = promptService.getModel('SUPPORT_FIRST_CHAT');
-        const adapter = getTextAdapterForModel(modelOverride);
-        const systemPrompt = `${systemPromptBase}\n\n${buildNativeLanguageInstruction(langNative)}`;
+        const systemPromptBase =
+            promptService.getContent('SUPPORT_FIRST_CHAT') || supportConfig.defaultFirstChatPrompt
+        const temperature =
+            promptService.getTemperature('SUPPORT_FIRST_CHAT') ??
+            supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.temperature
+        const maxTokens =
+            promptService.getMaxTokens('SUPPORT_FIRST_CHAT') ??
+            supportConfig.defaultGeneration.SUPPORT_FIRST_CHAT.maxTokens
+        const modelOverride = promptService.getModel('SUPPORT_FIRST_CHAT')
+        const adapter = getTextAdapterForModel(modelOverride)
+        const systemPrompt = `${systemPromptBase}\n\n${buildNativeLanguageInstruction(langNative)}`
 
         yield* adapter.streamText(
             {
@@ -37,7 +42,7 @@ export const supportLlmService = {
                 modelOverride: modelOverride ?? undefined,
             },
             onComplete,
-        );
+        )
     },
 
     async *chatStream(
@@ -47,29 +52,38 @@ export const supportLlmService = {
         langNative: string,
         onComplete?: TextUsageCompleteHandler,
     ): AsyncGenerator<string, void, undefined> {
-        const systemPromptTemplate = promptService.getContent('SUPPORT_SYSTEM') || supportConfig.defaultSystemPrompt;
-        const temperature = promptService.getTemperature('SUPPORT_SYSTEM') ?? supportConfig.defaultGeneration.SUPPORT_SYSTEM.temperature;
-        const maxTokens = promptService.getMaxTokens('SUPPORT_SYSTEM') ?? supportConfig.defaultGeneration.SUPPORT_SYSTEM.maxTokens;
-        const modelOverride = promptService.getModel('SUPPORT_SYSTEM');
-        const adapter = getTextAdapterForModel(modelOverride);
+        const systemPromptTemplate =
+            promptService.getContent('SUPPORT_SYSTEM') || supportConfig.defaultSystemPrompt
+        const temperature =
+            promptService.getTemperature('SUPPORT_SYSTEM') ??
+            supportConfig.defaultGeneration.SUPPORT_SYSTEM.temperature
+        const maxTokens =
+            promptService.getMaxTokens('SUPPORT_SYSTEM') ??
+            supportConfig.defaultGeneration.SUPPORT_SYSTEM.maxTokens
+        const modelOverride = promptService.getModel('SUPPORT_SYSTEM')
+        const adapter = getTextAdapterForModel(modelOverride)
 
-        let injected = systemPromptTemplate.replace('{context}', knowledgeContext);
+        let injected = systemPromptTemplate.replace('{context}', knowledgeContext)
         if (injected === systemPromptTemplate) {
             logger.warn(
-                { templateSource: systemPromptTemplate === supportConfig.defaultSystemPrompt ? 'default' : 'db' },
+                {
+                    templateSource:
+                        systemPromptTemplate === supportConfig.defaultSystemPrompt
+                            ? 'default'
+                            : 'db',
+                },
                 'Support: {context} placeholder not found in system prompt — appending knowledge base context as fallback',
-            );
-            injected = `${systemPromptTemplate}\n\nKNOWLEDGE BASE CONTEXT:\n${knowledgeContext}`;
+            )
+            injected = `${systemPromptTemplate}\n\nKNOWLEDGE BASE CONTEXT:\n${knowledgeContext}`
         }
-        const systemPrompt = [injected, buildNativeLanguageInstruction(langNative)].join('\n\n');
+        const systemPrompt = [injected, buildNativeLanguageInstruction(langNative)].join('\n\n')
 
-        const historyLines = chatHistory
-            .map((m) => `${m.role}: ${m.content}`)
-            .join('\n');
+        const historyLines = chatHistory.map((m) => `${m.role}: ${m.content}`).join('\n')
 
-        const userPrompt = historyLines.length > 0
-            ? `Chat history:\n${historyLines}\n\nuser: ${userMessage}`
-            : `user: ${userMessage}`;
+        const userPrompt =
+            historyLines.length > 0
+                ? `Chat history:\n${historyLines}\n\nuser: ${userMessage}`
+                : `user: ${userMessage}`
 
         yield* adapter.streamText(
             {
@@ -80,6 +94,6 @@ export const supportLlmService = {
                 modelOverride: modelOverride ?? undefined,
             },
             onComplete,
-        );
+        )
     },
-};
+}

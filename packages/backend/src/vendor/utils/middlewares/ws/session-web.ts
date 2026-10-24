@@ -1,9 +1,9 @@
-import type { HttpContext, Middleware } from "#vendor/types/types.js";
+import type { HttpContext, Middleware } from '#vendor/types/types.js'
 // import logger from '../../logger.js';
-import { sessionHandler } from "#vendor/utils/session/session-handler.js";
-import { resolveSessionCookie } from "#vendor/utils/session/resolve-session-cookie.js";
-import { deleteLegacySessionCookie } from "#vendor/utils/session/delete-legacy-session-cookie.js";
-import { getSessionCsrfToken } from "#vendor/utils/session/csrf-token.js";
+import { sessionHandler } from '#vendor/utils/session/session-handler.js'
+import { resolveSessionCookie } from '#vendor/utils/session/resolve-session-cookie.js'
+import { deleteLegacySessionCookie } from '#vendor/utils/session/delete-legacy-session-cookie.js'
+import { getSessionCsrfToken } from '#vendor/utils/session/csrf-token.js'
 
 /**
  * The CSRF token is not embedded in the cacheable HTML shell, so a guard that
@@ -17,37 +17,37 @@ import { getSessionCsrfToken } from "#vendor/utils/session/csrf-token.js";
  * the token explicitly where the contract promises it.
  */
 const attachCsrfToken = (context: HttpContext): void => {
-  const token = getSessionCsrfToken(context.session.sessionInfo);
-  if (token === undefined) return;
+    const token = getSessionCsrfToken(context.session.sessionInfo)
+    if (token === undefined) return
 
-  const payload = context.responseData.payload;
-  if (
-    payload === null ||
-    typeof payload !== "object" ||
-    Array.isArray(payload) ||
-    Buffer.isBuffer(payload)
-  ) {
-    return;
-  }
+    const payload = context.responseData.payload
+    if (
+        payload === null ||
+        typeof payload !== 'object' ||
+        Array.isArray(payload) ||
+        Buffer.isBuffer(payload)
+    ) {
+        return
+    }
 
-  // A payload that already carries a token (a rotation) wins.
-  payload["csrfToken"] ??= token;
-};
+    // A payload that already carries a token (a rotation) wins.
+    payload['csrfToken'] ??= token
+}
 
 const sessionWeb: Middleware = async (
-  context: HttpContext,
-  next: () => Promise<void>,
+    context: HttpContext,
+    next: () => Promise<void>,
 ): Promise<void> => {
-  const { httpData, responseData } = context;
-  const { token, source } = resolveSessionCookie(httpData.cookies);
-  if (source === "legacy") {
-    deleteLegacySessionCookie(responseData);
-  }
-  await sessionHandler(context, token, undefined);
+    const { httpData, responseData } = context
+    const { token, source } = resolveSessionCookie(httpData.cookies)
+    if (source === 'legacy') {
+        deleteLegacySessionCookie(responseData)
+    }
+    await sessionHandler(context, token, undefined)
 
-  await next();
+    await next()
 
-  attachCsrfToken(context);
-};
+    attachCsrfToken(context)
+}
 
-export default sessionWeb;
+export default sessionWeb
