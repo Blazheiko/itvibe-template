@@ -299,19 +299,19 @@
 ### F16 Frontend & Playground (п. 59, 61, 62, 63, 64)
 
 - [x] **F16.S** Шаблон S.
-- [ ] **F16.1** Fallback `VITE_BASE_URL` → відносний шлях (п. 59).
+- [x] **F16.1** Fallback `VITE_BASE_URL` → відносний шлях (п. 59).
       **AC:** dev без змінної — запити через proxy (DevTools, evidence).
-- [ ] **F16.2** Типізація всіх `VITE_*` в `env.d.ts`; чистка `main.ts` (п. 61).
+- [x] **F16.2** Типізація всіх `VITE_*` в `env.d.ts`; чистка `main.ts` (п. 61).
       **AC:** звертання до неіснуючої `VITE_*` — помилка typecheck.
-- [ ] **F16.3** Playground: шлях doc-маршрутів з `baseUrl`/`API_PATH_PREFIX`, proxy з тієї ж змінної (п. 62).
+- [x] **F16.3** Playground: шлях doc-маршрутів з `baseUrl`/`API_PATH_PREFIX`, proxy з тієї ж змінної (п. 62).
       **AC:** з `API_PATH_PREFIX=v1` список маршрутів завантажується.
-- [ ] **F16.4** `https`→`wss`, `http`→`ws` (п. 63).
+- [x] **F16.4** `https`→`wss`, `http`→`ws` (п. 63).
       **AC:** unit на обидва перетворення.
-- [ ] **F16.5** `sendMessage` без з'єднання → помилка «not connected», без «message queued» (Р4, п. 64).
+- [x] **F16.5** `sendMessage` без з'єднання → помилка «not connected», без «message queued» (Р4, п. 64).
       **AC:** unit.
-- [ ] **F16.6** Follow-up feat-009: `/health` у playground.
+- [x] **F16.6** Follow-up feat-009: `/health` у playground.
       **AC:** маршрут видно і викликається.
-- [ ] **F16.D** Шаблон D: `documentation/frontend`, `documentation/playground` (`VITE_*`, префікс, `/health`). **F16.E** (з e2e), **F16.X**.
+- [x] **F16.D** Шаблон D: `documentation/frontend`, `documentation/playground` (`VITE_*`, префікс, `/health`). **F16.E** (з e2e), **F16.X**.
 
 ## Хвиля 8 — схема і суворі правила
 

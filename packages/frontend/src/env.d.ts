@@ -19,10 +19,21 @@ declare module 'vue-router' {
 }
 
 declare global {
+    // Every VITE_* the app reads (code-issues item 61); values are build-time strings.
     interface ImportMetaEnv {
+        /** API origin; empty — same origin (Vite proxy in dev). */
         readonly VITE_BASE_URL?: string
         /** Backend API_PATH_PREFIX; WS events are `<prefix>/<route>`. Default `api`. */
         readonly VITE_API_PATH_PREFIX?: string
+        /** `'true'` enables sign-in and registration by phone. */
+        readonly VITE_AUTH_PHONE_ENABLED?: string
+        readonly VITE_SENTRY_ENABLED?: string
+        readonly VITE_SENTRY_DSN?: string
+        readonly VITE_SENTRY_ENVIRONMENT?: string
+        readonly VITE_SENTRY_RELEASE?: string
+        readonly VITE_SENTRY_TRACES_SAMPLE_RATE?: string
+        readonly VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE?: string
+        readonly VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE?: string
     }
 
     interface ImportMeta {

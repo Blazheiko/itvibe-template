@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { toWsUrl } from '@/utils/api-path'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import type { ApiRoute } from '@/stores/api-doc'
 import { validateJSON } from '@/utils/api-helpers'
@@ -39,7 +40,7 @@ const testResult = ref<any>(null)
 onMounted(() => {
   const settings = apiSettingsStore.settings
   if (settings.baseUrl) {
-    wsUrl.value = settings.baseUrl.replace(/^https?:\/\//, 'ws://').replace(/^http:\/\//, 'ws://')
+    wsUrl.value = toWsUrl(settings.baseUrl)
   }
 })
 

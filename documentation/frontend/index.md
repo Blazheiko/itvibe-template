@@ -28,7 +28,7 @@
 
 ## Змінні оточення
 
-Тип `ImportMetaEnv` в [`src/env.d.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/env.d.ts) описує `VITE_BASE_URL` і `VITE_API_PATH_PREFIX`. У коді використовуються також інші змінні:
+Тип `ImportMetaEnv` в [`src/env.d.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/env.d.ts) описує всі `VITE_*`, які читає застосунок (типи — рядки збірки). Від звертання до неоголошеної змінної це не захищає: `vite/client` оголошує в `ImportMetaEnv` індексну сигнатуру. Змінні:
 
 | Змінна                                                                                                                  | Де використовується                                                                                                                                                                                                                      |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -37,9 +37,7 @@
 | `VITE_AUTH_PHONE_ENABLED`                                                                                               | `'true'` вмикає вхід і реєстрацію за телефоном у [`AuthModals.vue`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/components/AuthModals.vue)                                                              |
 | `VITE_SENTRY_ENABLED`, `VITE_SENTRY_DSN`, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE`, `VITE_SENTRY_*_SAMPLE_RATE` | конфігурація Sentry, див. [/backend/observability](/backend/observability)                                                                                                                                                               |
 
-::: warning Fallback `VITE_BASE_URL`
-Якщо `VITE_BASE_URL` не задано, `base-api.ts` бере `https://itvibe-template.example`. У dev-режимі запити тоді йдуть на цей домен, а не через Vite-проксі. Щоб працювало відносно поточного origin, змінну треба задати явно. Решта `VITE_*` (крім `VITE_BASE_URL`) не описані в `ImportMetaEnv`.
-:::
+Без `VITE_BASE_URL` (і з порожнім значенням, як у `.env.example`) `base-api.ts` робить запити відносно поточного origin: у dev — через Vite-проксі, у production — до бекенду, що віддає SPA. Задавайте змінну, лише коли API живе на іншому origin (його має дозволяти CORS бекенду).
 
 ## Структура `src/`
 

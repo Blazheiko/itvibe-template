@@ -55,9 +55,10 @@ const normalizeUrl = (url: string): string => {
     }
     return url
 }
-const BASE_URL = normalizeUrl(import.meta.env.VITE_BASE_URL || 'https://itvibe-template.example')
+// Empty by default: requests stay same-origin (the Vite proxy in dev, the backend
+// that serves the SPA in production) instead of an example domain (code-issues item 59).
+const BASE_URL = normalizeUrl(import.meta.env.VITE_BASE_URL ?? '')
 
-// Старый WebSocketClient больше не используется - используем useWebSocketConnection
 const { websocketApi } = useWebSocketConnection()
 const eventBus = useEventBus()
 const UNSAFE_METHODS = new Set(['post', 'put', 'patch', 'delete'])

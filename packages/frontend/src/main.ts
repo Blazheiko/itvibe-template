@@ -246,22 +246,6 @@ class ServiceWorkerManager {
     }
 }
 
-// Push Notifications
-// async function requestNotificationPermission(): Promise<NotificationPermission> {
-//     if (!('Notification' in window)) {
-//         console.warn('[Push] Notifications not supported')
-//         return 'denied'
-//     }
-
-//     if (Notification.permission !== 'granted') {
-//         const permission = await Notification.requestPermission()
-//         console.log('[Push] Permission result:', permission)
-//         return permission
-//     }
-
-//     return Notification.permission
-// }
-
 // Инициализация Service Worker
 async function initializeServiceWorker() {
     console.log('initializeServiceWorker')
@@ -288,7 +272,7 @@ async function initializeServiceWorker() {
         if (registration) {
             console.log('[SW] Service worker initialized successfully')
 
-            // Проверяем обновления каждую минуту
+            // One update check at startup; later checks happen on each WS (re)connect.
             await swManager.checkForUpdates()
         }
     } catch (error) {

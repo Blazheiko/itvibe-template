@@ -26,12 +26,12 @@
 
 У [`vite.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/vite.config.ts) dev-сервер слухає порт **5174** і проксіює запити:
 
-| Префікс | Ціль                    | Примітка                    |
-| ------- | ----------------------- | --------------------------- |
-| `/api`  | `http://127.0.0.1:3000` | `changeOrigin: true`        |
-| `/ws`   | `ws://127.0.0.1:3000`   | `ws: true`, WebSocket proxy |
+| Префікс                                             | Ціль                    | Примітка                    |
+| --------------------------------------------------- | ----------------------- | --------------------------- |
+| `/<VITE_API_PATH_PREFIX>` (за замовчуванням `/api`) | `http://127.0.0.1:3000` | `changeOrigin: true`        |
+| `/ws`                                               | `ws://127.0.0.1:3000`   | `ws: true`, WebSocket proxy |
 
-Базовий URL для HTTP-викликів за замовчуванням порожній. Тому запити йдуть відносно origin dev-сервера і проходять через proxy. Його можна перевизначити змінною `VITE_API_BASE_URL` або в налаштуваннях UI ([`stores/api-settings.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/stores/api-settings.ts)).
+Префікс API береться з `VITE_API_PATH_PREFIX` (має збігатися з бекендовим `API_PATH_PREFIX`, за замовчуванням `api`). Базовий URL для HTTP-викликів за замовчуванням порожній. Тому запити йдуть відносно origin dev-сервера і проходять через proxy. Його можна перевизначити змінною `VITE_API_BASE_URL` або в налаштуваннях UI ([`stores/api-settings.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/stores/api-settings.ts)).
 
 ```mermaid
 flowchart LR
@@ -44,7 +44,7 @@ flowchart LR
 
 ## Завантаження опису маршрутів
 
-Функція `fetchRoutes()` у [`stores/api-doc.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/stores/api-doc.ts) робить `fetch('/api/doc/routes')`. Шлях жорстко заданий у коді, тому він не враховує `baseUrl` і `API_PATH_PREFIX`. Відповідь має форму `{ httpRoutes, wsRoutes, pathPrefix }`. Store об'єднує групи з однаковим префіксом, присвоює маршрутам числові `id` і будує для навігації плоскі списки з `fullUrl` (префікс + шляхи груп + `url`). Отриманий `pathPrefix` зберігається в налаштуваннях.
+Функція `fetchRoutes()` у [`stores/api-doc.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/stores/api-doc.ts) робить `fetch(apiUrl(baseUrl, 'doc/routes'))` ([`utils/api-path.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/utils/api-path.ts)): `<baseUrl>/<VITE_API_PATH_PREFIX>/doc/routes`, з порожнім `baseUrl` — через proxy. Відповідь має форму `{ httpRoutes, wsRoutes, pathPrefix }`. Store об'єднує групи з однаковим префіксом, присвоює маршрутам числові `id` і будує для навігації плоскі списки з `fullUrl` (префікс + шляхи груп + `url`). Отриманий `pathPrefix` зберігається в налаштуваннях.
 
 Серіалізацію на backend виконує [`serialize-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/serialize-routes.ts). Вона копіює поля маршруту, замінює `handler` на `null` і прибирає `validator`, `queryValidator` та `ResponseSchema`. Замість них додаються:
 
@@ -122,13 +122,12 @@ flowchart LR
 | WebSocket не підключається                                                 | URL і токен у формі підключення; токен береться з відповіді, що містить `wsUrl` і `wsToken`; закриття з кодом `4001` — токен недійсний                                                                             |
 | помилки CORS у консолі                                                     | запити йдуть повз proxy (заданий `baseUrl` на інший origin); тоді origin playground має бути в CORS-whitelist backend ([Автентифікація та безпека](/backend/auth-security))                                        |
 
-Кнопка **Test Connection** у налаштуваннях робить `GET <baseUrl>/health`. Такого маршруту в backend немає (є `/api/ping`), тож результат перевірки не означає, що API доступне; надійніше відкрити `/api/doc/routes` чи `/api/ping`.
+Кнопка **Test Connection** у налаштуваннях робить `GET <baseUrl>/<prefix>/ping` — liveness-маршрут бекенду (раніше вона била в неіснуючий `/health`). WS-адреса за замовчуванням виводиться з `baseUrl`: `http://` → `ws://`, `https://` → `wss://`. Повідомлення не ставляться в чергу: без відкритого з'єднання `sendMessage` нічого не надсилає, пише помилку в консоль і повертає `false`.
 
 ## Обмеження
 
-- Немає скрипта `test` і тестів у `src/`.
+- Тести — Vitest (`pnpm --filter api-playground test`): побудова URL під префіксом, `http`/`https` → `ws`/`wss`, `sendMessage` без з'єднання.
 - Скрипт `build` існує (`vite build`), але production-розгортання playground у репозиторії не налаштоване. Застосунок розрахований на dev-сервер із proxy.
-- Шлях `/api/doc/routes` жорстко заданий у коді. Якщо змінити `API_PATH_PREFIX` ([`config/app.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts)), маршрути не завантажаться, а proxy так само налаштований лише на `/api`.
 - У `packages/api-playground/docs/` лишились дві внутрішні нотатки — `ROADMAP.md` і `UI-UX-ANALYSIS.md`. Це ідеї та аналіз, а не опис фактичної поведінки.
 
 ::: danger Безпека

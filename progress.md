@@ -3,31 +3,37 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-032 - Shared Cleanup (F15 of `docs/plan/open-issues-roadmap.md`, items 56, 57, 58)
-**Branch:** `feat/shared-cleanup`
-**Tasks:** `docs/plan/open-issues-tasks.md`, F15
+**Active Feature:** feat-033 - Frontend & Playground (F16 of `docs/plan/open-issues-roadmap.md`, items 59, 61, 62, 63, 64)
+**Branch:** `feat/frontend-playground`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F16
 
 ## Status
 
 ### Done
 
-- [x] F15.S: PR #84 (feat-031 done, feat-032 `in_progress`)
-- [x] F15.1 (item 56): the empty `test/languages.test.js` replaced by real tests; new `phone.test.js`, `contracts.test.js` — `pnpm --filter shared test` now runs 13 tests (was `pass 1` from an empty file)
-- [x] F15.2 (item 57): `guards` re-exported from the package root (`export * from './guards/index.js'`); the `shared/guards` subpath stays
-- [x] F15.3 (item 58): `EntityIdSchema = type(/^[1-9]\d*$/).brand('EntityId')`; no call sites used it, so nothing else changed; type test in `packages/backend/src/app/shared-brands.spec.ts`
-- [x] F15.D: `documentation/shared/index.md` (exports, branded id, test table); code-issues 56, 57, 58 fixed
+- [x] F16.S: PR #86 (feat-032 done, feat-033 `in_progress`)
+- [x] F16.1 (item 59): `base-api.ts` falls back to `''` (same origin) instead of the example domain; `.env.example` has an empty `VITE_BASE_URL`
+- [x] F16.2 (item 61): `env.d.ts` types every `VITE_*` the app reads; dead push code and the wrong "every minute" comment removed from `main.ts`
+- [x] F16.3 (item 62): `utils/api-path.ts` — `apiUrl(baseUrl, path)` under `VITE_API_PATH_PREFIX` (default `api`); the dev proxy uses the same variable
+- [x] F16.4 (item 63): `toWsUrl`: `https` → `wss`, `http` → `ws`
+- [x] F16.5 (item 64, R4): `sendMessage` without a connection logs `WebSocket is not connected: message not sent` and returns `false`; no queue
+- [x] F16.6: Test Connection calls `/<prefix>/ping` instead of the missing `/health`
+- [x] Playground tests: `test` script, Vitest, `tsconfig.vitest.json`, `vitest.config.ts` with a package-local `fsModuleCachePath` (the workspace-root cache raced with frontend under `pnpm test`: `ENOTEMPTY ... .vitest-cache`)
+- [x] F16.D: `documentation/frontend/index.md`, `documentation/playground/index.md`; code-issues 59, 61–64 fixed
 
 ## Evidence of Completion
 
-- `pnpm --filter shared test` — 13 passed; the root-guards test failed first (RED)
-- brand negative control: without `.brand()` the backend typecheck fails with `TS2578: Unused '@ts-expect-error' directive` in `shared-brands.spec.ts`
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 843, frontend 58, shared pass 13, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
+- `pnpm --filter api-playground test` — 11 passed
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` passed 3 runs in a row (backend 843, frontend 58, api-playground 11, shared, documentation); `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
+- bundles: no `itvibe-template.example` in the frontend build, no hard-coded `/api/doc/routes` or `/health` in the playground build
+- not met: a typecheck error on an undeclared `VITE_*` — `vite/client` declares an index signature on `ImportMetaEnv`
+- not done: manual playground check against a live backend (port 3000 is taken by another local process)
 
 ## Files Modified
 
-- new: `packages/shared/test/{phone,contracts}.test.js`, `packages/backend/src/app/shared-brands.spec.ts`
-- updated: `packages/shared/test/languages.test.js`, `packages/shared/src/{index,brands/ids}.ts`, `documentation/shared/index.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
+- new: `packages/api-playground/src/utils/api-path.ts`, `src/utils/__tests__/api-path.spec.ts`, `src/composables/__tests__/useWebSocketConnection.spec.ts`, `tsconfig.vitest.json`, `vitest.config.ts`
+- updated: playground `stores/api-doc.ts`, `utils/base-api.ts`, `components/api/TestFormWs.vue`, `composables/useWebSocketConnection.ts`, `vite.config.ts`, `env.d.ts`, `.env.example`, `package.json`, `tsconfig.json`; frontend `utils/base-api.ts`, `env.d.ts`, `main.ts`, `.env.example`; docs
 
 ## Notes for Next Session
 
-- Next: F16 Frontend & Playground (feat-033).
+- F17 (feat-034): drop `users.is_admin` (R5)

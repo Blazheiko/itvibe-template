@@ -1,3 +1,4 @@
+import { apiUrl } from '@/utils/api-path'
 import { useEventBus } from '@/utils/event-bus'
 import { useApiSettingsStore } from '@/stores/api-settings'
 import { normalizePath } from '@/utils/api-helpers'
@@ -38,7 +39,8 @@ const getApiSettings = () => useApiSettingsStore().settings
 // Функция для проверки доступности сервера
 const checkServerHealth = async (baseUrl: string): Promise<boolean> => {
     try {
-        const response = await fetch(`${baseUrl}/health`, {
+        // The backend liveness route; there is no /health (feat-009 follow-up).
+        const response = await fetch(apiUrl(baseUrl, 'ping'), {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             signal: AbortSignal.timeout(5000), // 5 секунд таймаут
