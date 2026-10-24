@@ -281,17 +281,17 @@
             "owner": "Blazheiko",
             "branch": "feat/ai-usage-accounting",
             "dependencies": ["feat-027"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #77 (merge 551a7f8): migration llm_usage_nullable (NULL = unknown usage, user_id NULL for indexing, SUPPORT_EMBEDDING), translation/prompt test/embeddings recorded, adapters record NULL instead of dropping, callsWithoutUsage; drizzle-kit check, migration on a DB with rows, test:pg 21, backend 771, frontend 58, e2e 12, typecheck, lint, build, docs; evidence in progress.md on feat/ai-usage-accounting"
         },
         {
             "id": "feat-029",
             "name": "AI Quality",
             "description": "Support AI language from profile/request, embedding dimension check, batched reindexAll, distance threshold, prompt cache TTL (code-issues items 43, 52, 54). Roadmap F12: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/ai-quality",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {

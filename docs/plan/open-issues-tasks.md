@@ -234,11 +234,11 @@
       **AC:** unit: виклик `embedBatch` пише рядок usage.
 - [x] **F11.6** → F11.2. Провайдер без usage (Mistral) → рядок з `NULL` і `warn`.
       **AC:** unit: запис з `null`, один `warn`.
-- [x] **F11.D** Шаблон D: `ai.md`, `database.md`. **F11.E**, **F11.X**.
+- [x] **F11.D** Шаблон D: `ai.md`, `database.md`. **F11.E** ✅, **F11.X** ✅.
 
 ### F12 AI Quality (п. 43, 52, 54)
 
-- [ ] **F12.S** Шаблон S (M).
+- [x] **F12.S** Шаблон S (M).
 - [ ] **F12.1** Мова Support AI: профіль → `Accept-Language`/параметр → default з конфігу; прибрати `'ru'` (п. 52).
       **AC:** unit на кожен рівень fallback; `grep "'ru'"` у `support-service.ts` порожній.
 - [ ] **F12.2** Перевірка на старті: `OPENAI_EMBEDDING_DIMENSIONS` = 1536 (розмірність колонки) (п. 54).
