@@ -2,93 +2,46 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-22
-**Active Feature:** feat-008 - HTTP Body Fixes (items 12, 13, 14 of `docs/plan/code-issues-found-during-docs.md`)
-**Branch:** `feat/http-body-fixes`
+**Last Updated:** 2026-10-24
+**Active Feature:** feat-009 - Internal Docs Cleanup (item 15 of `docs/plan/code-issues-found-during-docs.md`, scope extended)
+**Branch:** `feat/internal-docs-cleanup`
 
-Item 12 is done per `docs/plan/http-body-methods-plan.md`. Items 12, 13 and 14 are done per `docs/plan/http-body-methods-plan.md`, `http-null-payload-plan.md`, `http-body-limits-plan.md`. Next: PR `feat/http-body-fixes` → `main`.
+All steps of `docs/plan/internal-docs-cleanup-plan.md` are done. Next: PR `feat/internal-docs-cleanup` → `main`, then a done PR.
 
 ## Status
 
 ### Done
 
-- [x] PR #45: feat-008 → `in_progress`
-- [x] Item 12: methods with a body and routes with a `validator`
-  - `patch` reads and validates the body (`BODY_METHODS` in `src/vendor/utils/routing/body-methods.ts`)
-  - body `validator` on `get`/`delete`/`del` is a type error in `defineRoute` and a startup error in `routesHandler`; WS routes are not affected
-  - route with a `validator`, no `Content-Type`: no body framing → validated as `{}` (422 or success, defaults applied); `Transfer-Encoding` or `Content-Length` ≠ `0` → 415 before reading, `receivedContentType: null` (was 500 from `getTypedPayload`)
-  - `UnsupportedMediaTypeError` accepts `receivedContentType: string | null`
-  - docs: `backend/request-lifecycle.md` (step 3, body order, new section «Запит без Content-Type», 415 details, octet limit), `backend/routing-middlewares.md` (new «Методи і тіло запиту»), `backend/validation.md`, `backend/adding-a-feature.md`; item 12 marked fixed
-
-- [x] Item 13: response with an empty payload (`sendResponse`)
-  - `null`/`undefined` in 200 → 204; other 2xx keep the status without a body; 204/205/3xx never have a body
-  - no `Content-Type` without a body, including one from `responseData.headers` (case-insensitive); controller `Content-Length` is skipped too (review of `74b784c`)
-  - 204 and 304 end via `res.endWithoutBody()`: no `Content-Length` (RFC 9110 §8.6)
-  - 4xx/5xx with an empty payload → `{ status: "error", code, message }`, `code` from shared `ErrorCode` (`buildStatusErrorBody` in `http-response-handlers.ts`)
-  - docs: `backend/request-lifecycle.md` (step 8, new «Відповідь без даних»), `backend/adding-a-feature.md`; item 13 marked fixed
-
-- [x] Item 14: body-limit gaps
-  - `parseSize` accepts only a positive safe integer of bytes (digits, surrounding whitespace allowed); `Infinity`, `1.5`, `1e6`, `0x10` → default (behaviour change)
-  - tests: `config/app.spec.ts` (real config, env restored), `http-request-handlers.spec.ts` (`detectBodyKind`, `resolveMaxBodySize` with mocked config), `http-body-limits.spec.ts` (registered handler, small limits), `http-body-limits.transport.spec.ts` (real uWS, raw socket)
-  - `serializeRoutes` adds `bodyLimits: [{ kind, maxBytes }]` to post/put/patch routes; playground shows it (`ApiRoute.vue`, `formatBytes`), "No additional details" condition updated
-  - defaults 2 / 50 / 50 / 2 MiB kept and documented; `.env.example` was already done in feat-006
-  - docs: `backend/request-lifecycle.md`, `backend/configuration.md` (why the defaults, proxy, memory estimate), `playground/index.md`, note in `src/docs/HTTP_BODY_LIMITS_PLAN.md`; item 14 marked fixed
+- [x] PR #48: feat-009 → `in_progress`, description extended
+- [x] Step 3: reference map for every removed / moved file (`git grep`); live links fixed in `documentation/backend/{caching-etag,validation,request-lifecycle,auth-security,architecture}.md`, `.github/workflows/docs.yml` paths
+- [x] Step 4: security audit traced — `docs/security/security-analysis-status.md` (fix file:line, commit/PR, test per finding)
+- [x] Step 5 backend: removed `SESSION_SECURITY.md`, `etag-improvements.md`, `SECURITY_ANALYSIS.md`, `directory-structure.md`, dead `src/scripts/export-types.js`; `VALIDATOR_ABSTRACTION_PLAN.md` → `docs/adr/0001-validator-abstraction.md`; `HTTP_BODY_LIMITS_PLAN.md` → `docs/plan/http-body-limits-original-plan.md` (status note extended); `src/docs/` is gone; `scripts/README.md` rewritten; backend `README.md`: request diagram (rate limit path, L1, query validation, 422, body rules, 204), body limits / `parseSize`, GET/DELETE without validator, `test:redis`, `db:create:prod`
+- [x] Step 6: root `README.md` (`db:create && db:migrate`, `docs:*`, `prod:local`), `AGENTS.md` (Drizzle dirs, no `.git` sentence)
+- [x] Step 7 api-playground: layout and troubleshooting merged into `documentation/playground/index.md`; removed 8 docs and 3 empty files; short `README.md`; `ROADMAP.md`, `UI-UX-ANALYSIS.md` marked as internal notes
+- [x] Step 8 frontend: `README.md` without News; `composables/README.md` rewritten for the current `useWebSocketConnection` API; `SINGLETON_EXPLANATION.md` merged and removed
+- [x] Step 9: status lines in 13 plans; summary table and items 15, 69 marked fixed in `code-issues-found-during-docs.md`
 
 ## Files Modified
 
-- item 14: `src/config/app.ts` (+ new `app.spec.ts`), `src/vendor/utils/routing/serialize-routes.ts` (+spec), new `src/vendor/utils/network/http-request-handlers.spec.ts`, `src/vendor/start/http-body-limits{,.transport}.spec.ts`, `packages/api-playground/src/{stores/api-doc.ts,utils/api-helpers.ts,components/api/ApiRoute.vue}`, `documentation/backend/{request-lifecycle,configuration}.md`, `documentation/playground/index.md`, `src/docs/HTTP_BODY_LIMITS_PLAN.md`
-- item 13: `src/vendor/start/server.ts` (`sendResponse`), `src/vendor/utils/network/http-response-handlers.ts` (+spec), new `src/vendor/start/http-empty-payload.spec.ts`, `docs/plan/http-null-payload-plan.md`, `documentation/backend/{request-lifecycle,adding-a-feature}.md`
-- new: `packages/backend/src/vendor/utils/routing/body-methods.ts`, `src/vendor/start/http-body-methods.spec.ts`, `docs/plan/http-body-methods-plan.md`
-- `packages/backend/src/vendor/start/server.ts`, `src/vendor/start/router.ts`, `src/app/routing/define-route.ts`, `src/vendor/utils/network/errors/unsupported-media-type-error.ts`
-- tests: `src/vendor/start/router.spec.ts`, `src/app/routing/define-route.spec.ts`
-- `documentation/backend/{request-lifecycle,routing-middlewares,validation,adding-a-feature}.md`, `docs/plan/code-issues-found-during-docs.md`
+- new: `docs/security/security-analysis-status.md`, `docs/adr/0001-validator-abstraction.md`, `docs/plan/internal-docs-cleanup-plan.md`
+- moved: `packages/backend/src/docs/HTTP_BODY_LIMITS_PLAN.md` → `docs/plan/http-body-limits-original-plan.md`
+- removed: `packages/backend/src/docs/{SESSION_SECURITY,etag-improvements,VALIDATOR_ABSTRACTION_PLAN}.md`, `src/vendor/start/SECURITY_ANALYSIS.md`, `src/vendor/directory-structure.md`, `src/scripts/export-types.js`; `packages/api-playground/{QUICK-WINS.md,test-navigation.html,test-ws-server.js,ws-test-server.js}`, `packages/api-playground/docs/{API-DOCUMENTATION,API-TESTING-IMPROVEMENTS,CORS-SOLUTION,NAVIGATION-STRUCTURE,TESTING-NAVIGATION,TROUBLESHOOTING,WEBSOCKET-USAGE}.md`; `packages/frontend/src/composables/SINGLETON_EXPLANATION.md`
+- updated: `README.md`, `AGENTS.md`, `packages/backend/README.md`, `packages/backend/src/scripts/README.md`, `packages/api-playground/README.md`, `packages/api-playground/docs/{ROADMAP,UI-UX-ANALYSIS}.md`, `packages/frontend/README.md`, `packages/frontend/src/composables/README.md`, `documentation/backend/{architecture,auth-security,caching-etag,request-lifecycle,validation}.md`, `documentation/playground/index.md`, `.github/workflows/docs.yml`, 13 plans in `docs/plan/`
 
-## Evidence of Completion (item 12)
+## Evidence of Completion
 
-- `pnpm typecheck`, `pnpm lint` clean
-- `pnpm test`: backend 580 (+16), frontend 45, shared 3, documentation 26
-- `pnpm docs:build && pnpm docs:verify`: all checks passed; anchors `#методи-і-тіло-запиту`, `#запит-без-content-type` exist
-- `http-body-methods.spec.ts` goes through the handler registered with the fake uWS app (real `collectRequestMetadata`, `onData`). Negative control: with `server.ts` from `main` 7 of 8 tests fail (the one that passes checks unchanged behaviour)
-- `@ts-expect-error` on `defineRoute` with `validator` for `get`, `delete`, `del`
-- Manual (backend on :3000, temporary routes not committed):
-  - `curl -X POST /api/auth/login` → 422 with field messages
-  - `curl -X POST -H 'Content-Type:' -d '{"email":"a@b.c"}' /api/auth/login` → 415, `receivedContentType: null`
-  - `curl -X POST -H 'Content-Type:' -H 'Transfer-Encoding: chunked' --data-binary ''` → 415
-  - temporary `patch` route with `LoginInputSchema`: valid body → 200 with the payload, invalid → 422
-  - temporary `delete` route with a `validator` → startup fails: `Route DELETE /auth/zz-delete declares a body validator…`, exit 1
-- Review follow-up: `Content-Length: 00` / ` 000 ` count as zero bytes (`/^0+$/`), malformed values still count as a body; +3 tests (negative control: `00` and ` 000 ` fail on the old helper). `defineRoute` `method` narrowed to `HttpRouteMethod` (no `ws`/`options`), `@ts-expect-error` tests. Backend 584 tests
-- Not formatted by Prettier on purpose: `server.ts` and `define-route.ts` were already unformatted on `main` (item 16)
-
-## Evidence of Completion (item 13)
-
-- `pnpm typecheck`, `pnpm lint` clean; backend 620 tests (+36: 22 in `http-empty-payload.spec.ts`, 14 in `http-response-handlers.spec.ts`)
-- `pnpm docs:build && pnpm docs:verify`: all checks passed; anchor `#відповідь-без-даних` exists
-- `http-empty-payload.spec.ts` goes through the registered handler and the real `sendResponse`. Negative control: with `server.ts` and `http-response-handlers.ts` from `HEAD` all 15 new-behaviour tests fail, the 5 regression tests pass
-- Audit: `null` removed from `HandlerReturn` temporarily → `tsc` clean outside specs, so no live route changes its response
-- Manual (backend on :3917, because :3000 is held by another local app; temporary routes not committed), `curl -i`:
-  - handler returns `null` → `204 No Content`, no `Content-Type`, no `Content-Length`, no body
-  - handler without `return` → same
-  - `status = 202`, `null` → `202 Accepted`, `Content-Length: 0`, no `Content-Type`
-  - `status = 403`, `null` → 403, `{"status":"error","code":"forbidden","message":"Forbidden"}`
-  - `GET /api/ping` → 200 `{"status":"ok"}` as before
-  - `curl -v` 204 then `/api/ping` on one connection → connection re-used
-
-## Evidence of Completion (item 14)
-
-- `pnpm typecheck`, `pnpm lint` clean; `pnpm test`: backend 671 (+51), frontend 45; `pnpm --filter api-playground build` OK
+- `pnpm typecheck`, `pnpm lint` clean; `pnpm test`: backend 671, frontend 45, shared 3, documentation 26 (code unchanged except the dead `export-types.js`)
 - `pnpm docs:build && pnpm docs:verify`: all checks passed
-- Negative controls on `http-body-limits.spec.ts`: `resolveMaxBodySize` → always `maxBodySize` makes 12 of 13 fail; `totalSize >= limit` in `readData` makes the 4 "exactly the limit" tests fail. `config/app.spec.ts` on the old `parseSize`: `1.5`, `1e6`, `Infinity`, `9007199254740993`, `0x10` fail
-- Real uWS (`http-body-limits.transport.spec.ts`): only headers with oversized `Content-Length` → full 413 (status, headers, JSON body); chunked over the limit on a non-final chunk, no terminating chunk → full 413. No change to `readData` was needed
-- Manual (backend on :3917; :3000 is another local app):
-  - 3 MB JSON object to `POST /api/auth/login` → 413, `limit: 2097152`
-  - `Content-Length: 99999999` with a 2-byte body → 413 in ~1 ms (early rejection)
-  - 3 MB via `Transfer-Encoding: chunked` → 413
-  - normal small body → reaches validation (422 from the login schema), as before
-  - `GET /api/doc/routes` (`APP_ENV=manual-test`, `DOC_PAGE=true`): `post auth/login` → `[{json, 2097152}]`, `post avatar/upload` and knowledge-base screenshot → `[{multipart, 52428800}]`, `get`/`delete` → no field
-- Not done: visual check of the playground card in a browser (build and JSON checked only)
+- Link check (one-off Node script, not committed; same exceptions as "Дозволені залишки"): GitHub `blob|tree/<ref>/<path>` links checked against the branch tree (`main`) or `git cat-file -e` (commit permalinks), relative `](./…)` links resolved from the file's folder. Result: 852 links in 78 `.md` files, **0 violations**, 5 allowed with a reason (4 placeholders in `internal-docs-cleanup-plan.md`, 1 old path in the historical `ws-upgrade-rate-limit-plan.md`)
+- `git grep` for every removed / moved name: remaining hits only in the allowed list — historical plans with a status line, `internal-docs-cleanup-plan.md`, `code-issues-found-during-docs.md`, the fixture in `documentation/scripts/verify/lib.test.mjs`, commit permalinks (`docs/adr/0001…`, `docs/security/…`, `caching-etag.md`), `feature_list.json` description. Added to the list: `progress.md` / `session-handoff.md` (working files that name what was removed)
+- Security audit (step 4): 15 of 15 have a fix in the code; 13 are already in root snapshot `8f3479f` (no earlier history), M-5 CSP — `0647eb3` / PR #22, L-4 — `fd15150` / PR #29. **Closed with a test:** C-2, H-2, M-1, M-3, M-5, L-4. **Closed, no test:** C-1, H-1, H-3, H-4, M-2, M-4, L-1, L-2, L-3. Negative controls: M-1 (1 of 5 fails without `!Array.isArray`), L-4 (4 fail without the guard), M-4 (regex → `true` keeps 13/13 green, so the regex is untested)
+- Manual: `pnpm --filter api-playground dev` → `http://localhost:5174` 200; `pnpm --filter backend mail:test` without arguments prints the usage line from `scripts/README.md`; every script named in the rewritten READMEs exists in `package.json`. Not run: `db:create && db:migrate` against a database (command form only)
 
 ## Notes for Next Session
 
-- Open PR `feat/http-body-fixes` → `main`, then a done PR for feat-008.
-- Optional: look at the playground card in a browser (`pnpm --filter api-playground dev` against a backend with `APP_ENV=manual-test`).
-- Out of scope: `validator` contract for `octet` routes; moving partial-update `put` routes to `patch`; `getTypedPayload` throwing a plain `Error`.
+- Open PR `feat/internal-docs-cleanup` → `main`, then a done PR for feat-009.
+- Follow-ups found, out of scope:
+  - tests for the 9 security findings without a test (list and priorities in `docs/security/security-analysis-status.md`) — candidate feature;
+  - `packages/backend/src/scripts/copy-static.js` is not wired into any script or the Dockerfile — likely dead, delete in a code cleanup (item 27);
+  - api-playground "Test Connection" calls `<baseUrl>/health`, which the backend does not have (documented in `documentation/playground/index.md`);
+  - frontend `websocketApi` checks `apiResolve[key]` (`timestamp_event`) but stores under `event`, so the duplicate-request guard never fires (`useWebSocketConnection.ts`).
