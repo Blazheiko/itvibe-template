@@ -136,7 +136,7 @@
       **AC:** unit: параметри виклику S3 містять ACL `public-read`.
 - [x] **F06.5** `corsS3.xml`: placeholder-домени, лише `GET`/`HEAD`; `corsS3.prod.example.xml` (п. 32).
       **AC:** у файлах немає `*` і `PUT`/`POST`.
-- [x] **F06.D** Шаблон D: `storage.md`. **F06.E**, **F06.X**.
+- [x] **F06.D** Шаблон D: `storage.md`. **F06.E** ✅, **F06.X** ✅.
 
 ## Хвиля 4 — дані і шари (після F19)
 
@@ -189,7 +189,7 @@
 
 ### F07 WebSocket Cleanup (п. 17, 19)
 
-- [ ] **F07.S** Шаблон S.
+- [x] **F07.S** Шаблон S.
 - [ ] **F07.1** `VITE_API_PATH_PREFIX` (default `api`) у `env.d.ts`, `.env.example` фронтенду; формування події в `useWebSocketConnection.ts` (п. 17).
       **AC:** unit: префікси `api` і `v1` дають `api/x` і `v1/x`.
 - [ ] **F07.2** Follow-up feat-009: `websocketApiResolve[key]` vs ключ `event` — виправити або зафіксувати тестом поточну правильну поведінку.
