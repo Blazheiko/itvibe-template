@@ -172,11 +172,11 @@
       **AC:** розділ «Дозволені винятки» в `architecture.md`.
 - [x] **F08.6** `clearEmbedding` у `db.transaction`, колонки через об'єкти схеми (п. 25).
       **AC:** pg-тест: помилка другого запиту відкочує перший.
-- [x] **F08.D** Шаблон D: `architecture.md`, `repositories-transformers.md`. **F08.E**, **F08.X**.
+- [x] **F08.D** Шаблон D: `architecture.md`, `repositories-transformers.md`. **F08.E** ✅, **F08.X** ✅.
 
 ### F09 Validation Cleanup (п. 26, 27)
 
-- [ ] **F09.S** Шаблон S.
+- [x] **F09.S** Шаблон S.
 - [ ] **F09.1** ArkType-адаптер: `ArkErrors` → `messages: [{ path, message }]`, `summary` у `message`; shared-схема відповіді 422 (п. 26).
       **AC:** тест: два невалідні поля → два елементи з правильними `path`.
 - [ ] **F09.2** Видалити `validate/schemas/schemas.ts` і закоментовані імпорти в `src/index.ts`, `vendor/start/server.ts`; `testSentryError` (п. 27).

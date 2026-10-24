@@ -251,8 +251,8 @@
             "owner": "Blazheiko",
             "branch": "feat/layering-cleanup",
             "dependencies": ["feat-036"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #63 (merge 0dd6975): adminUserService, userRoleService for ws-coordinator and admin_guard, full repositories barrel, no logger in repositories, clearEmbedding in one UPDATE; layering.spec.ts with negative control; test:pg 18, backend 703, frontend 45, typecheck, lint, build, docs:build + docs:verify; manual check on a disposable DB; evidence in progress.md on feat/layering-cleanup"
         },
         {
             "id": "feat-026",
