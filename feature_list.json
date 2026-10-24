@@ -208,10 +208,10 @@
             "id": "feat-021",
             "name": "Push Access & Methods",
             "description": "test-push -> POST, declarative auth_guard on push-subscriptions and role guard on admin WS route, subscription transfer only with matching p256dh/auth (decision R2) (code-issues items 47, 48, 67). Roadmap F04: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/push-access",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
@@ -361,8 +361,8 @@
             "owner": "Blazheiko",
             "branch": "feat/pg-test-harness",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #57: *.pg.test.ts + test:pg with a throwaway database (pgvector, migrations, dropped in teardown), smoke test, pg-tests.yml green (3 passed, not skipped); local negative control still drops the database; pnpm test 671 without pg tests; typecheck, lint, format:check, docs:build + docs:verify; evidence in progress.md on feat/pg-test-harness"
         }
     ]
 }
