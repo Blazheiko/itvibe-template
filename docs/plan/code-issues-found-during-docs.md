@@ -27,6 +27,7 @@
 | feat-024 | 17, 19         |
 | feat-027 | 23, 50, 51     |
 | feat-028 | 53             |
+| feat-029 | 43, 52, 54     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -78,7 +79,7 @@
 | 40  | `If-None-Match` порівнюється як точний рядок                                                                      | Низька       | Кешування                    |
 | 41  | Статика повністю в RAM без стиснення і ліміту                                                                     | Низька       | Продуктивність               |
 | 42  | ~~API JSON без `Cache-Control: no-store`~~ ✅                                                                     | Середня      | Кешування / безпека          |
-| 43  | Кеш промптів у пам'яті процесу без TTL                                                                            | Низька       | Кешування / AI               |
+| 43  | ~~Кеш промптів у пам'яті процесу без TTL~~ ✅                                                                     | Низька       | Кешування / AI               |
 | 44  | ~~`deleteFromS3` без `buildKey`, логіка префікса в трьох місцях~~ ✅                                              | Низька       | Сховище                      |
 | 45  | ~~Аватари без `public-read`, але читаються напряму через CDN~~ ✅                                                 | Низька       | Сховище                      |
 | 46  | ~~MIME-тип довіряється заголовку клієнта~~ ✅                                                                     | Середня      | Сховище / безпека            |
@@ -87,9 +88,9 @@
 | 49  | ~~Push надсилається лише з `test-push`, послідовно без батчів~~ ✅                                                | Низька       | Push                         |
 | 50  | ~~Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral~~ ✅                                                              | Низька       | AI / конфігурація            |
 | 51  | ~~Виклики AI-провайдерів без timeout/`AbortSignal`~~ ✅                                                           | Середня      | AI / надійність              |
-| 52  | Support AI: `langNative = 'ru'` зашито в коді                                                                     | Середня      | AI / i18n                    |
+| 52  | ~~Support AI: `langNative = 'ru'` зашито в коді~~ ✅                                                              | Середня      | AI / i18n                    |
 | 53  | ~~Неповний облік використання AI (переклад, тест промпту, embeddings, Mistral без usage)~~ ✅                     | Низька       | AI                           |
-| 54  | Embeddings: `vector(1536)` зашито, `reindexAll` без батчів, пошук без порогу                                      | Низька       | AI / БД                      |
+| 54  | ~~Embeddings: `vector(1536)` зашито, `reindexAll` без батчів, пошук без порогу~~ ✅                               | Низька       | AI / БД                      |
 | 55  | `llm_text_usage.final_prompt` безстроково зберігає повні тексти (PII)                                             | Середня      | AI / приватність             |
 | 56  | Тест shared не містить жодного тесту (`pass 1` — порожній файл)                                                   | Середня      | Тести / shared               |
 | 57  | `guards` у shared порожні й закоментовані в `index.ts`                                                            | Низька       | shared                       |
@@ -458,6 +459,8 @@
 
 ### 43. Кеш промптів у пам'яті процесу без TTL
 
+> **Виправлено** у feat-029 (гілка `feat/ai-quality`) за планом [`ai-quality-plan.md`](./ai-quality-plan.md): `PROMPT_CACHE_TTL_MS` (60 с): прострочений кеш віддає поточне значення й перечитує промпти у фоні (одне перечитування одночасно, помилка лишає старі значення); `update()` на своєму інстансі видно одразу. Pub/sub між інстансами — поза фічею, затримка ≤ TTL описана в документації.
+
 - **Що:** `src/app/services/ai/prompt-service.ts` тримає `Map` промптів у процесі без TTL та інвалідації між інстансами.
 - **Наслідок:** оновлення промпту на одному інстансі не видно на інших до рестарту.
 - **Пропозиція:** TTL або інвалідація через Redis pub/sub.
@@ -524,6 +527,8 @@
 
 ### 52. Support AI: `langNative = 'ru'` зашито в коді
 
+> **Виправлено** у feat-029 (гілка `feat/ai-quality`) за планом [`ai-quality-plan.md`](./ai-quality-plan.md): фронтенд передає i18n-локаль у полі `language` обох WS-подій; `resolveSupportLanguage` зводить її до `APP_LOCALE_CODES`, інакше `SUPPORT_DEFAULT_LANGUAGE` (`en`, перевіряється на старті). Мови в профілі користувача немає — окрема фіча.
+
 - **Що:** `src/app/services/support/support-service.ts` у `chat()` і `openChat()` задає `const langNative = 'ru'`, ігноруючи мову користувача.
 - **Пропозиція:** брати мову з профілю/запиту.
 
@@ -534,6 +539,8 @@
 - **Що:** переклад (`support-query-translation-service.ts`) і тест промпту (`prompt-controller.ts`) не передають `onComplete`, тому `SUPPORT_QUERY_TRANSLATION` і `PROMPT_TEST` не записуються. Embeddings не обліковуються. `mistralai-text-adapter.ts` мовчки пропускає запис, якщо провайдер не повернув usage.
 
 ### 54. Embeddings
+
+> **Виправлено** у feat-029 (гілка `feat/ai-quality`) за планом [`ai-quality-plan.md`](./ai-quality-plan.md): `OPENAI_EMBEDDING_DIMENSIONS` ≠ `EMBEDDING_COLUMN_DIMENSIONS` (1536) зупиняє старт; `reindexAll` пачками `SUPPORT_EMBEDDING_BATCH_SIZE` (50); `searchByEmbedding` відкидає статті далі `SUPPORT_SEARCH_MAX_DISTANCE` (0.8, не відкалібровано — у `ai.md` описано, як підібрати).
 
 - **Що:** `src/database/schema.ts` має `vector(1536)`, хоча `OPENAI_EMBEDDING_DIMENSIONS` налаштовується: зміна змінної без міграції зламає запис. `support-embedding-service.ts` → `reindexAll` шле всі статті одним `embedBatch`. `searchByEmbedding` (`support-knowledge-repository.ts`) не має порогу відстані, тож у контекст завжди йде до 5 статей.
 

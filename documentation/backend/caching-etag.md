@@ -65,7 +65,7 @@ CORS: якщо `ENABLED_CORS=true`, `setCorsHeader` пише `Vary: Origin` і `
 
 ## Інші кеші в пам'яті
 
-- **AI-промпти:** [`prompt-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/prompt-service.ts) тримає `Map<PromptType, PromptRow>`. Його заповнює `promptService.load()` на старті ([`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts)), а `update()` перечитує змінений рядок із БД. TTL немає. Кеш живе в кожному процесі окремо: зміна на одному інстансі не потрапить на інші до їх рестарту.
+- **AI-промпти:** [`prompt-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/prompt-service.ts) тримає `Map<PromptType, PromptRow>`. Його заповнює `promptService.load()` на старті ([`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts)), а `update()` перечитує змінений рядок із БД і одразу кладе в кеш. TTL — `PROMPT_CACHE_TTL_MS` (60 с): прострочений кеш відповідає поточним значенням і перечитує всі промпти у фоні (одне перечитування одночасно; при помилці лишаються старі значення). Кеш живе в кожному процесі окремо, тож зміна на одному інстансі потрапляє на інші із затримкою до TTL; pub/sub-інвалідації немає.
 - Сесії, throttle і токени в Redis — це стан, а не кеш. Див. [Auth та безпеку](/backend/auth-security).
 
 ## Фронтенд: Service Worker

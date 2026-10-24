@@ -15,6 +15,8 @@ import {
     jsonb,
     customType,
 } from 'drizzle-orm/pg-core'
+
+import { EMBEDDING_COLUMN_DIMENSIONS } from './embedding-dimensions.js'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
@@ -45,7 +47,7 @@ export const userAppTypeEnum = pgEnum('user_app_type', ['web', 'pwa'])
 
 const vector1536 = customType<{ data: string | null; driverData: string | null }>({
     dataType() {
-        return 'vector(1536)'
+        return `vector(${String(EMBEDDING_COLUMN_DIMENSIONS)})`
     },
 })
 

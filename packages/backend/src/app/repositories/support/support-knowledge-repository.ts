@@ -144,7 +144,12 @@ export const supportKnowledgeRepository = {
             .where(eq(supportKnowledgeBase.id, id))
     },
 
-    async searchByEmbedding(queryVector: number[], limit: number): Promise<KbSearchResult[]> {
+    // maxDistance: cosine distance (<=>) above which an article is not relevant.
+    async searchByEmbedding(
+        queryVector: number[],
+        limit: number,
+        maxDistance?: number,
+    ): Promise<KbSearchResult[]> {
         const kb = supportKnowledgeBase
         const result = await db.execute(
             sql`
@@ -154,6 +159,7 @@ export const supportKnowledgeRepository = {
                 FROM ${kb}
                 WHERE ${kb.isActive} = true
                   AND ${kb.embedding} IS NOT NULL
+                  ${maxDistance !== undefined ? sql`AND ${kb.embedding} <=> ${toVectorLiteral(queryVector)}::vector <= ${maxDistance}` : sql``}
                 ORDER BY distance ASC
                 LIMIT ${limit}
             `,

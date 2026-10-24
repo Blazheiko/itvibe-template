@@ -10,7 +10,7 @@ const props = defineProps<{
     embedded?: boolean
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useSupportStore()
 const eventBus = useEventBus()
 const { websocketApi } = useWebSocketConnection()
@@ -69,7 +69,7 @@ async function openChat(): Promise<boolean> {
     store.setError(null)
 
     try {
-        await websocketApi('support/support_open_chat', {})
+        await websocketApi('support/support_open_chat', { language: locale.value })
         sessionReady.value = true
         return true
     } catch (error) {
@@ -106,6 +106,7 @@ async function sendMessage(textOverride?: string): Promise<void> {
     try {
         await websocketApi('support/support_chat', {
             message: text,
+            language: locale.value,
         })
     } catch (error) {
         isSending.value = false
