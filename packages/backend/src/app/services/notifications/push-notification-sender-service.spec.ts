@@ -1,0 +1,163 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const sendNotification = vi.fn()
+vi.mock('web-push', () => ({
+    default: { setVapidDetails: vi.fn(), sendNotification },
+}))
+vi.mock('#config/push.js', () => ({
+    default: { vapidPublicKey: 'pub', vapidPrivateKey: 'priv', vapidSubject: 'mailto:x@y.z' },
+}))
+vi.mock('#logger', () => ({
+    default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}))
+vi.mock('#app/websocket/ws-connection-registry.js', () => ({
+    wsConnectionRegistry: { isUserOnline: vi.fn(() => false) },
+}))
+
+const pushSubscriptionRepository = {
+    findByUserId: vi.fn(),
+    touchLastUsed: vi.fn(),
+    deactivate: vi.fn(),
+}
+const pushNotificationLogRepository = { insertMany: vi.fn() }
+vi.mock('#app/repositories/index.js', () => ({
+    pushSubscriptionRepository,
+    pushNotificationLogRepository,
+}))
+
+const { pushNotificationSenderService, PUSH_SEND_CONCURRENCY } =
+    await import('./push-notification-sender-service.js')
+
+const subscription = (id: number, extra: Record<string, unknown> = {}) => ({
+    id: BigInt(id),
+    userId: 7n,
+    endpoint: `https://push.example.test/${String(id)}`,
+    p256dhKey: `p${String(id)}`,
+    authKey: `a${String(id)}`,
+    isActive: true,
+    notificationTypes: null,
+    ...extra,
+})
+
+const payload = { title: 'T', body: 'B', data: { type: 'test' } }
+
+beforeEach(() => {
+    pushNotificationLogRepository.insertMany.mockResolvedValue(undefined)
+    pushSubscriptionRepository.touchLastUsed.mockResolvedValue(undefined)
+    pushSubscriptionRepository.deactivate.mockResolvedValue(undefined)
+})
+
+afterEach(() => {
+    vi.clearAllMocks()
+})
+
+describe('pushNotificationSenderService.sendToUser (code-issues item 49)', () => {
+    it(`sends in parallel with at most ${String(5)} requests in flight`, async () => {
+        pushSubscriptionRepository.findByUserId.mockResolvedValue(
+            Array.from({ length: 12 }, (_, index) => subscription(index + 1)),
+        )
+        let inFlight = 0
+        let maxInFlight = 0
+        sendNotification.mockImplementation(async () => {
+            inFlight++
+            maxInFlight = Math.max(maxInFlight, inFlight)
+            await new Promise((resolve) => setTimeout(resolve, 5))
+            inFlight--
+            return { statusCode: 201 }
+        })
+
+        const result = await pushNotificationSenderService.sendToUser(7n, payload)
+
+        expect(PUSH_SEND_CONCURRENCY).toBe(5)
+        expect(result).toEqual({ sent: 12, failed: 0 })
+        expect(sendNotification).toHaveBeenCalledTimes(12)
+        expect(maxInFlight).toBe(5)
+    })
+
+    it('writes all logs with one insertMany and touches lastUsed once', async () => {
+        pushSubscriptionRepository.findByUserId.mockResolvedValue([
+            subscription(1),
+            subscription(2),
+            subscription(3),
+            subscription(4, { isActive: false }),
+        ])
+        sendNotification.mockImplementation(async (target: { endpoint: string }) => {
+            if (target.endpoint.endsWith('/2')) {
+                throw Object.assign(new Error('gone'), { statusCode: 410 })
+            }
+            return { statusCode: 201 }
+        })
+
+        const result = await pushNotificationSenderService.sendToUser(7n, payload)
+
+        expect(result).toEqual({ sent: 2, failed: 1 })
+        expect(pushNotificationLogRepository.insertMany).toHaveBeenCalledOnce()
+        const rows = pushNotificationLogRepository.insertMany.mock.calls[0]?.[0] as {
+            subscriptionId: bigint
+            status: string
+            responseData: unknown
+            errorMessage?: string
+            sentAt: Date
+        }[]
+        expect(
+            rows
+                .map((row) => [row.subscriptionId, row.status])
+                .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+        ).toEqual([
+            [1n, 'SENT'],
+            [2n, 'FAILED'],
+            [3n, 'SENT'],
+        ])
+        const failedRow = rows.find((row) => row.status === 'FAILED')
+        expect(failedRow).toMatchObject({ errorMessage: 'gone', responseData: { statusCode: 410 } })
+        expect(rows.every((row) => row.sentAt instanceof Date)).toBe(true)
+        expect(pushSubscriptionRepository.deactivate).toHaveBeenCalledWith(2n, 7n)
+        expect(pushSubscriptionRepository.touchLastUsed).toHaveBeenCalledOnce()
+        const touched = pushSubscriptionRepository.touchLastUsed.mock.calls[0] as [bigint[], bigint]
+        expect([...touched[0]].sort()).toEqual([1n, 3n])
+        expect(touched[1]).toBe(7n)
+    })
+
+    it('keeps the result when writing the logs fails', async () => {
+        pushSubscriptionRepository.findByUserId.mockResolvedValue([subscription(1)])
+        sendNotification.mockResolvedValue({ statusCode: 201 })
+        pushNotificationLogRepository.insertMany.mockRejectedValue(new Error('db down'))
+
+        await expect(pushNotificationSenderService.sendToUser(7n, payload)).resolves.toEqual({
+            sent: 1,
+            failed: 0,
+        })
+    })
+
+    it('filters by notificationType as before', async () => {
+        pushSubscriptionRepository.findByUserId.mockResolvedValue([
+            subscription(1, { notificationTypes: ['system'] }),
+            subscription(2, { notificationTypes: ['mention'] }),
+            subscription(3, { notificationTypes: [] }),
+        ])
+        sendNotification.mockResolvedValue({ statusCode: 201 })
+
+        const result = await pushNotificationSenderService.sendToUser(7n, payload, {
+            notificationType: 'system',
+        })
+
+        expect(result).toEqual({ sent: 2, failed: 0 })
+        const endpoints = sendNotification.mock.calls.map(
+            (call) => (call[0] as { endpoint: string }).endpoint,
+        )
+        expect(endpoints.sort()).toEqual([
+            'https://push.example.test/1',
+            'https://push.example.test/3',
+        ])
+    })
+
+    it('does not write logs when nothing was sent', async () => {
+        pushSubscriptionRepository.findByUserId.mockResolvedValue([])
+
+        await expect(pushNotificationSenderService.sendToUser(7n, payload)).resolves.toEqual({
+            sent: 0,
+            failed: 0,
+        })
+        expect(pushNotificationLogRepository.insertMany).not.toHaveBeenCalled()
+    })
+})
