@@ -61,7 +61,6 @@ export const users = pgTable(
         password: varchar('password', { length: 255 }),
         phone: varchar('phone', { length: 20 }).unique(),
         avatar: varchar('avatar', { length: 500 }),
-        isAdmin: boolean('is_admin').notNull().default(false),
         role: userRoleEnum('role').notNull().default('user'),
         sessionToken: varchar('session_token', { length: 24 })
             .notNull()
