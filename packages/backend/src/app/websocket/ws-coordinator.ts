@@ -1,9 +1,9 @@
 import type { MyWebSocket, UserConnection } from '#vendor/types/types.js'
-import { userRepository } from '#app/repositories/index.js'
 import { wsConnectionRegistry } from '#app/websocket/ws-connection-registry.js'
 import { adminWsChannelService } from '#app/services/admin/admin-ws-channel-service.js'
 import { userOnlineService } from '#app/services/communication/user-online-service.js'
 import { wsPresenceService } from '#app/services/communication/ws-presence-service.js'
+import { userRoleService } from '#app/services/user/user-role-service.js'
 import logger from '#vendor/utils/logger.js'
 
 /**
@@ -18,9 +18,9 @@ const handleConnected = async (ws: MyWebSocket, userData: UserConnection): Promi
     if (userId === undefined || sessionId === undefined) return
     const connectedAt = new Date()
 
-    const user = await userRepository.findById(BigInt(userId))
-    if (user !== undefined) {
-        userData.role = user.role
+    const role = await userRoleService.findRole(BigInt(userId))
+    if (role !== undefined) {
+        userData.role = role
     }
 
     const isFirstConnection = wsConnectionRegistry.registerConnection(userId, userData.uuid, ws, {

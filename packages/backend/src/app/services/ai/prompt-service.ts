@@ -1,5 +1,7 @@
-import { promptRepository } from '#app/repositories/ai/prompt-repository.js'
-import type { PromptRow, PromptType, PromptUpdate } from '#app/repositories/ai/prompt-repository.js'
+import { promptRepository } from '#app/repositories/index.js'
+import type { PromptRow, PromptType, PromptUpdate } from '#app/repositories/index.js'
+
+export type { PromptType, PromptUpdate }
 import logger from '#logger'
 
 const cache = new Map<PromptType, PromptRow>()

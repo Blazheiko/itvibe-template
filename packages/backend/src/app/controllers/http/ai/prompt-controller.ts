@@ -1,8 +1,11 @@
 import type { HttpContext } from '#vendor/types/types.js'
 import { mapControllerError } from '#app/controllers/shared/controller-error.js'
 import { getTypedPayload } from '#vendor/utils/validation/get-typed-payload.js'
-import { promptService } from '#app/services/ai/prompt-service.js'
-import type { PromptType, PromptUpdate } from '#app/repositories/ai/prompt-repository.js'
+import {
+    promptService,
+    type PromptType,
+    type PromptUpdate,
+} from '#app/services/ai/prompt-service.js'
 import { textAdapter } from '#app/services/ai/ai-provider.js'
 import aiConfig from '#config/ai.js'
 import logger from '#logger'

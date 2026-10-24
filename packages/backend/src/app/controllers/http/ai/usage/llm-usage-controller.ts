@@ -1,6 +1,5 @@
 import type { HttpContext } from '#vendor/types/types.js'
-import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
-import type { TextFilter } from '#app/repositories/ai/usage/llm-usage-repository.js'
+import { llmUsageService, type TextFilter } from '#app/services/ai/usage/llm-usage-service.js'
 import type { LlmTextUsageQuery } from 'shared/schemas'
 import type { GetTextUsageResponse, GetUsageStatsResponse } from 'shared'
 

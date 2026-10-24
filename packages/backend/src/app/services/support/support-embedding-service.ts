@@ -1,6 +1,6 @@
 import { openaiEmbeddingAdapter } from '#app/services/ai/adapters/openai-embedding-adapter.js'
-import { supportKnowledgeRepository } from '#app/repositories/support/support-knowledge-repository.js'
-import type { KbSearchResult } from '#app/repositories/support/support-knowledge-repository.js'
+import { supportKnowledgeRepository } from '#app/repositories/index.js'
+import type { KbSearchResult } from '#app/repositories/index.js'
 import logger from '#logger'
 
 export const supportEmbeddingService = {

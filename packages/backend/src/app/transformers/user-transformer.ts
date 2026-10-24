@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import type { UserRow } from '#app/repositories/user/user-repository.js'
+import type { UserRow } from '#app/repositories/index.js'
 
 export type SerializedUser = Omit<
     UserRow,

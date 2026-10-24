@@ -1,5 +1,6 @@
 import { userOnlineRepository } from '#app/repositories/index.js'
 import type { UserOnlineInsert } from '#app/repositories/index.js'
+import logger from '#vendor/utils/logger.js'
 
 interface TrackConnectedInput {
     userId: bigint
@@ -37,11 +38,17 @@ export const userOnlineService = {
     },
 
     async trackDisconnected(input: TrackDisconnectedInput): Promise<void> {
-        await userOnlineRepository.completeBySocketUuid(input.socketUuid, {
+        const found = await userOnlineRepository.completeBySocketUuid(input.socketUuid, {
             disconnectedAt: input.disconnectedAt,
             closeCode: input.closeCode,
             connectionDurationMs: input.connectionDurationMs,
             isLastConnection: input.isLastConnection,
         })
+        if (!found) {
+            logger.warn(
+                { socketUuid: input.socketUuid },
+                'user_online: no record found on disconnect',
+            )
+        }
     },
 }

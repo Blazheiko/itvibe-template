@@ -2,7 +2,7 @@ import { access, readdir, readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { openaiEmbeddingAdapter } from '#app/services/ai/adapters/openai-embedding-adapter.js'
-import { supportKnowledgeRepository } from '#app/repositories/support/support-knowledge-repository.js'
+import { supportKnowledgeRepository } from '#app/repositories/index.js'
 import { supportEmbeddingService } from '#app/services/support/support-embedding-service.js'
 import logger from '#logger'
 
