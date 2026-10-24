@@ -45,36 +45,32 @@ location / {
 ```mermaid
 flowchart LR
   A[builder: ubuntu 24.04 + Node 24 + pnpm 9.15.0] -->|dist, public, migrations| B[production: ubuntu 24.04 + prod deps]
-  B --> C[CMD: db:create:prod → db:migrate → start]
+  M[one-shot: db:create:prod, db:migrate] -.->|перед rollout| C
+  B --> C[USER app, CMD node dist/index.js, HEALTHCHECK /api/ping]
 ```
 
 **Етап `builder`**
 
 1. Образ `ubuntu:24.04`. Node.js 24 ставиться з NodeSource, pnpm `9.15.0` вмикається через corepack.
 2. Спочатку копіюються лише `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` і `package.json` трьох пакетів, далі виконується `pnpm install --frozen-lockfile`. Так шар із залежностями кешується.
-3. `COPY . .` копіює весь проєкт.
+3. `COPY . .` копіює проєкт без того, що виключає [`.dockerignore`](https://github.com/Blazheiko/itvibe-template/blob/main/.dockerignore): `.git`, `node_modules`, `dist`, `coverage`, звіти тестів, кеш VitePress і всі `.env`/`.env.*`, крім `.env.example`. Тому локальні секрети не потрапляють ні в build context, ні в шари builder-етапу, а локальний `packages/frontend/.env` не вшивається у фронтенд-бандл — Vite бачить лише `VITE_SENTRY_*` з build-аргументів.
 4. Build-аргументи `VITE_SENTRY_*` (DSN, ENABLED, ENVIRONMENT, RELEASE, sample rates) стають `ENV`, бо Vite вшиває їх у бандл під час збірки.
 5. Збираються `shared`, `frontend` і `backend`, після цього `frontend/dist` копіюється в `backend/public`.
 
 **Етап `production`**
 
-1. Знову `ubuntu:24.04` + Node 24 + pnpm.
+1. Знову `ubuntu:24.04` + Node 24 + pnpm. `COREPACK_HOME=/opt/corepack` (доступний на читання всім), щоб користувач `app` запускав уже підготовлений pnpm без мережі. Створюється системний користувач `app` (uid < 1000) з домашнім каталогом `/home/app` — його потребує pnpm при one-shot запусках.
 2. `pnpm install --frozen-lockfile --prod --filter backend...` ставить лише production-залежності бекенду та його workspace-залежностей. `drizzle-kit` міститься в `dependencies` бекенду, тому потрапляє в образ.
 3. `ENV NODE_ENV=production`.
 4. З `builder` копіюються `packages/backend/dist`, `packages/shared/dist`, `packages/backend/public`, `packages/backend/public-test`, `drizzle.config.ts` разом з `src/config/database.ts`, `src/drizzle/migrations` і `docs/support-knowledge-base` (його читає [`knowledge-base-init-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-init-service.ts)).
-5. `EXPOSE 3000`, `WORKDIR /app/packages/backend`.
-6. `CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]`: при кожному старті контейнер створює БД (якщо її немає), застосовує міграції і запускає сервер.
+5. `EXPOSE 3000`, `WORKDIR /app/packages/backend`, `USER app`. Файли застосунку належать root і лише читаються: у рантаймі застосунок нічого не пише на диск.
+6. `HEALTHCHECK` (interval 30 с, timeout 3 с, start-period 20 с, retries 3): `curl -fsS http://127.0.0.1:${PORT:-3000}/api/ping | grep -q '"status":"ok"'`. Перевіряється тіло, а не лише код: із `SERVE_STATIC=true` будь-який невідомий шлях повертає `index.html` зі статусом 200 (SPA fallback), тож перевірка лише статусу проходила б і при неправильному шляху.
+7. `CMD ["node", "dist/index.js"]` — PID 1 є Node, тож `SIGTERM` від `docker stop` доходить до `stopGracefully`. Міграції на старті **не** запускаються.
 
 Чого в образі немає:
 
 - `.env` у production-етап не копіюється. Конфігурація передається через `-e`/`--env-file`. `dotenv/config` у [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) просто не знайде файл.
-- `USER` не задано, тож процес працює від `root`.
-- `HEALTHCHECK` немає.
 - Вихідних кодів `src/` (окрім міграцій), devDependencies і `tsx` теж немає.
-
-::: warning
-У репозиторії немає `.dockerignore`. Тому `COPY . .` у етапі `builder` переносить у build context локальні `.env`, `node_modules`, `dist`. У фінальний образ це не потрапляє, але може зберегтися в шарах builder-кешу і сповільнює збірку.
-:::
 
 ### Команди
 
@@ -83,22 +79,50 @@ docker build -t itvibe-template .
 # з Sentry для фронтенду:
 docker build -t itvibe-template --build-arg VITE_SENTRY_DSN=<dsn> --build-arg VITE_SENTRY_ENABLED=true .
 
-docker run --rm -p 3000:3000 --env-file ./production.env itvibe-template
+# один раз перед rollout нової версії (той самий образ, без -p):
+docker run --rm --env-file ./production.env itvibe-template pnpm db:create:prod
+docker run --rm --env-file ./production.env itvibe-template pnpm db:migrate
+
+docker run -d -p 3000:3000 --env-file ./production.env itvibe-template
 ```
+
+::: warning Зміна запуску (feat-019)
+До feat-019 контейнер сам виконував `db:create:prod` і `db:migrate` на кожному старті. Тепер це окремі one-shot запуски: якщо їх пропустити, нова версія стартує на старій схемі. У Kubernetes це init-контейнер або `Job` перед rollout, у Compose — окремий сервіс з `restart: "no"`, від якого залежить застосунок (`depends_on: condition: service_completed_successfully`).
+:::
+
+**Healthcheck з іншим `PORT` або `API_PATH_PREFIX`.** Вбудована перевірка знає лише `PORT` і префікс `api`. Для іншого префікса перевизначте її при запуску, інакше контейнер стане `unhealthy`:
+
+```sh
+docker run -d -e API_PATH_PREFIX=v1 \
+  --health-cmd "curl -fsS http://127.0.0.1:3000/v1/ping | grep -q '\"status\":\"ok\"' || exit 1" \
+  --env-file ./production.env itvibe-template
+```
+
+`/api/ping` — це liveness (процес відповідає), а не readiness: доступність PostgreSQL і Redis він не перевіряє.
 
 `production.env` — ваш файл зі змінними за сторінкою [Конфігурація](/backend/configuration) (секрети в ньому лише ваші, у репозиторії їх немає). Хост і порт задаються через `HOST` (default `0.0.0.0`) і `PORT` (default `3000`).
 
-### Перевірка (2026-10-19)
+### Перевірка (2026-10-24, feat-019)
 
-- `docker build -t itvibe-docs-check .` з кореня репозиторію завершився успішно приблизно за 3,5 хв (холодний кеш, macOS, Docker Desktop). Розмір образу 817 MB.
-- `docker run` з `APP_ENV=production`, `APP_KEY=<32 символи>` і без PostgreSQL вивів `v24.22.0`, після чого `db:create:prod` впав з `Failed to create database: Error: connect ECONNREFUSED 127.0.0.1:5432`, а контейнер завершився з кодом 1. Без доступної БД сервер не стартує, бо так влаштований `CMD`.
+macOS, Docker Desktop, `docker build --no-cache`:
+
+|               | До       | Після    |
+| ------------- | -------- | -------- |
+| Build context | 83,45 MB | 124,7 kB |
+| Час збірки    | 337 с    | 172 с    |
+| Розмір образу | 813 MB   | 813 MB   |
+
+- Секрети: canary-маркер у кореневому `.env` і `packages/shared/.env` не знайдено ні в builder-етапі (`grep -r` по всій ФС), ні в жодному шарі фінального образу (`docker save` + `grep`), ні в `docker history`; файлів `.env` в образах немає. Позитивний контроль тих самих команд знаходить `.env.example` у builder-етапі і `stopGracefully` у шарах.
+- Одноразові `pnpm db:create:prod` і `pnpm db:migrate` від користувача `app` на чистому PostgreSQL з pgvector — успішно; на старті застосунку міграцій у лозі немає.
+- `id -u` у контейнері — `999` (`app`); PID 1 — Node; `healthy` за замовчуванням; з `API_PATH_PREFIX=v1` контейнер працює, але стає `unhealthy`, а з перевизначеним `--health-cmd` — `healthy`.
+- `docker stop -t 10` — у лозі `stop SIGTERM` і `server stop type: SIGTERM`, зупинка за 1 с, код виходу 0.
 
 ## Runtime
 
 - **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Образ задає `NODE_ENV=production` і `APP_ENV=production`: `secure` у cookie і конфіг CSP (`config/csp.ts`, зокрема `wss:` у `getWsUrl()`) читають саме `APP_ENV`. Для staging-оточення перевизначте `APP_ENV` при запуску.
 - **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip).
 - **Unix socket**: якщо задано `APP_UNIX_PATH`, сервер викликає `listen_unix` замість TCP, і `HOST`/`PORT` тоді ігноруються.
-- **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. Через `sh -c` у `CMD` сигнал `docker stop` отримує shell, а не Node. Чи дійде він до процесу, не перевірено.
+- **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. У контейнері PID 1 — Node (`CMD` у exec-формі), тож `docker stop` закінчується через `stopGracefully` з кодом 0.
 - **Sentry**: бекенд читає `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` тощо під час виконання ([`config/sentry.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/sentry.ts)). Фронтенду потрібні `VITE_SENTRY_*` як `--build-arg` під час збірки.
 
 ### Rate limit на edge
@@ -158,7 +182,7 @@ done
 
 - `pnpm db:create:prod` (`node dist/db/create-database.js`) створює БД і виконує `CREATE EXTENSION IF NOT EXISTS vector`, тому PostgreSQL має містити pgvector. Що це за вимога і як її виконати на керованому PostgreSQL, див. [База даних → pgvector](/backend/database#pgvector).
 - `pnpm db:migrate` (`drizzle-kit migrate`) працює в образі, бо там є `drizzle-kit`, `drizzle.config.ts`, `src/config/database.ts` і `src/drizzle/migrations`. Застосунок, `db:create:prod` і `db:migrate` беруть `PGSQL_*` з однаковими defaults; у продакшні все одно задавайте їх явно.
-- Міграції запускаються при кожному старті контейнера. Якщо реплік кілька, вони запустять міграції паралельно.
+- Міграції — окремий one-shot запуск образу перед rollout (див. [Команди](#команди)); репліки застосунку їх не запускають, тож гонки між репліками немає.
 
 ## Redis і S3
 
@@ -177,6 +201,8 @@ Workflow для збірки, тестів або деплою самого за
 
 - [ ] PostgreSQL з pgvector доступний, усі `PGSQL_*` задані явно.
 - [ ] Redis доступний.
+- [ ] `pnpm db:create:prod` і `pnpm db:migrate` виконано one-shot запуском образу перед rollout.
+- [ ] Healthcheck відповідає вашим `PORT` / `API_PATH_PREFIX`.
 - [ ] `APP_ENV=production`, `APP_KEY` і решта пунктів із [чекліста безпеки](/backend/auth-security#чекліст-для-production).
 - [ ] TLS на проксі, `TRUST_PROXY` і `TRUSTED_PROXY_CIDRS` налаштовано.
 - [ ] Визначено, хто віддає фронтенд: `SERVE_STATIC=true` або окремий хостинг/CDN.

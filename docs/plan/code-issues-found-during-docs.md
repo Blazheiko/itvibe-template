@@ -21,6 +21,7 @@
 | feat-022 | 20, 21, 49     |
 | feat-025 | 22, 24, 25     |
 | feat-026 | 26, 27         |
+| feat-019 | 28, 29, 30     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -57,9 +58,9 @@
 | 25  | ~~`clearEmbedding` — два запити без транзакції, сирий SQL з назвами~~ ✅                                          | Низька       | БД                           |
 | 26  | ~~ArkType-адаптер віддає лише `summary`, без помилок по полях~~ ✅                                                | Низька       | Валідація                    |
 | 27  | ~~Мертвий і застарілий код валідації та контролерів~~ ✅                                                          | Низька       | Структура                    |
-| 28  | Немає `.dockerignore`                                                                                             | Середня      | Docker / безпека             |
-| 29  | Контейнер працює від root, без `HEALTHCHECK`                                                                      | Середня      | Docker / безпека             |
-| 30  | `CMD` через `sh -c`: міграції на кожному старті, сигнали                                                          | Середня      | Docker / експлуатація        |
+| 28  | ~~Немає `.dockerignore`~~ ✅                                                                                      | Середня      | Docker / безпека             |
+| 29  | ~~Контейнер працює від root, без `HEALTHCHECK`~~ ✅                                                               | Середня      | Docker / безпека             |
+| 30  | ~~`CMD` через `sh -c`: міграції на кожному старті, сигнали~~ ✅                                                   | Середня      | Docker / експлуатація        |
 | 31  | ~~Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`~~ ✅                                                        | Низька       | Docker / конфігурація        |
 | 32  | `corsS3.xml`: `AllowedOrigin *` разом з `PUT`                                                                     | Середня      | Безпека / S3                 |
 | 33  | `handleError` логує без `requestId`, контекст без `userId`                                                        | Низька       | Observability                |
@@ -337,16 +338,22 @@
 
 ### 28. Немає `.dockerignore`
 
+> **Виправлено** у feat-019 (гілка `feat/docker-hardening`) за планом [`docker-hardening-plan.md`](./docker-hardening-plan.md): `.dockerignore` (`.git`, `node_modules`, `dist`, `coverage`, звіти, кеш VitePress, усі `.env`/`.env.*` крім `.env.example`); build context 83,45 MB → 124,7 kB, збірка 337 → 172 с. Canary-маркер не знайдено в builder-етапі, шарах `docker save` і `docker history`. Заодно: раніше локальний `packages/frontend/.env` міг вшитися в бандл через Vite.
+
 - **Що:** у корені немає `.dockerignore`, а `Dockerfile` робить `COPY . .`.
 - **Наслідок:** у build context і builder-шар потрапляють локальні `.env`, `node_modules`, `dist`. Збірка повільніша, і є ризик витоку секретів у шари образу.
 - **Пропозиція:** додати `.dockerignore` (`**/node_modules`, `**/dist`, `**/.env*` крім `.env.example`, `.git`, `documentation/.vitepress/{cache,dist}`).
 
 ### 29. Контейнер працює від root, без `HEALTHCHECK`
 
+> **Виправлено** у feat-019 (гілка `feat/docker-hardening`) за планом [`docker-hardening-plan.md`](./docker-hardening-plan.md): системний користувач `app` (uid 999) з `/home/app`, `COREPACK_HOME=/opt/corepack`; `HEALTHCHECK` через `/api/ping` з перевіркою тіла `"status":"ok"` — тільки код відповіді не годиться, бо SPA fallback віддає 200 на будь-який шлях. З `API_PATH_PREFIX=v1` без `--health-cmd` контейнер стає `unhealthy`.
+
 - **Що:** у `Dockerfile` немає `USER` і `HEALTHCHECK`.
 - **Пропозиція:** `USER node`; `HEALTHCHECK` через `GET /api/ping`.
 
 ### 30. `CMD` через `sh -c`
+
+> **Виправлено** у feat-019 (гілка `feat/docker-hardening`) за планом [`docker-hardening-plan.md`](./docker-hardening-plan.md): `CMD ["node", "dist/index.js"]`, PID 1 — Node: `docker stop` завершується через `stopGracefully` з кодом 0. Міграції — окремі one-shot `pnpm db:create:prod` / `pnpm db:migrate` того самого образу перед rollout (описано в `deployment.md` як зміна запуску).
 
 - **Що:** `CMD ["sh", "-c", "node --version && pnpm db:create:prod && pnpm db:migrate && pnpm start"]`.
 - **Наслідок:** міграції виконуються на кожному старті контейнера, і при кількох репліках виникає гонка. PID 1 тут — shell, тому SIGTERM може не дійти до Node, і graceful shutdown з `src/index.ts` не спрацює.

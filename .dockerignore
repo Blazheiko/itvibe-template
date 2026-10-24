@@ -1,0 +1,16 @@
+# Build context for Dockerfile (code-issues item 28): no secrets, no local
+# dependencies or build output — the image installs and builds everything itself.
+.git
+**/node_modules
+**/dist
+**/coverage
+**/playwright-report
+**/test-results
+**/.env
+**/.env.*
+!**/.env.example
+documentation/.vitepress/cache
+documentation/.vitepress/dist
+graphify-out
+**/*.tsbuildinfo
+**/.DS_Store

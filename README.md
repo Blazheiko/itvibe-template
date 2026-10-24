@@ -350,15 +350,19 @@ When you fork this template into a real product, work through:
 ## Building for production
 
 The multi-stage `Dockerfile` builds `shared`, then `frontend`, then `backend`,
-copies the compiled frontend into the backend's `public/` directory, and runs
-migrations on startup:
+and copies the compiled frontend into the backend's `public/` directory. The
+container runs as the unprivileged user `app`, has a `HEALTHCHECK` on
+`/api/ping`, and starts only the server (`node dist/index.js`). Migrations are a
+separate one-shot run of the same image before each rollout:
 
 ```bash
 docker build -t itvibe-template .
-docker run -p 3000:3000 --env-file packages/backend/.env itvibe-template
+docker run --rm --env-file production.env itvibe-template pnpm db:create:prod
+docker run --rm --env-file production.env itvibe-template pnpm db:migrate
+docker run -d -p 3000:3000 --env-file production.env itvibe-template
 ```
 
-The container entrypoint runs `pnpm db:create:prod && pnpm db:migrate && pnpm start`. `db:create:prod` runs the compiled `dist/db/create-database.js`, because the image has only production dependencies (no `tsx`).
+`db:create:prod` runs the compiled `dist/db/create-database.js`, because the image has only production dependencies (no `tsx`). `.dockerignore` keeps local `.env` files out of the build. Details: [Deployment](https://blazheiko.github.io/itvibe-template/backend/deployment).
 
 ### Production / security checklist
 
