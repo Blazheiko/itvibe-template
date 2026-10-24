@@ -271,17 +271,17 @@
             "owner": "Blazheiko",
             "branch": "feat/ai-reliability",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #75 (merge a00fdcf): AI_TEXT_DRIVER validated, AI_REQUEST_TIMEOUT_MS + caller signal in all adapters, HttpContext/WsContext signals (Support AI and prompt test cancel), promptTestService with upstream_error 502 / upstream_timeout 504; backend 763, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual against a fake provider; evidence in progress.md on feat/ai-reliability"
         },
         {
             "id": "feat-028",
             "name": "AI Usage Accounting",
             "description": "usage for translation, prompt test and embeddings; nullable token columns (NULL = provider did not report usage) with migration and contracts (code-issues items 53). Roadmap F11: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/ai-usage-accounting",
             "dependencies": ["feat-027"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {

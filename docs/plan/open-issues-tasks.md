@@ -217,11 +217,11 @@
       **AC:** тести: abort HTTP-запиту (`onAborted`) → сигнал адаптера `aborted`; закриття WS-з'єднання під час AI-виклику → сигнал `aborted`, відповідь у закрите з'єднання не надсилається.
 - [x] **F10.5** → F10.3. `prompt-controller` → метод AI-сервісу через `textAdapter`; помилки провайдера → `AppError` `502 upstream_error`, таймаут → `504` (п. 23).
       **AC:** у контролері немає `fetch` і `throw new Error`; тести 502/504 без тексту провайдера у відповіді.
-- [x] **F10.D** Шаблон D: `ai.md`, `configuration.md`, `.env.example`. **F10.E**, **F10.X**.
+- [x] **F10.D** Шаблон D: `ai.md`, `configuration.md`, `.env.example`. **F10.E** ✅, **F10.X** ✅.
 
 ### F11 AI Usage Accounting (п. 53) → F10
 
-- [ ] **F11.S** Шаблон S (M).
+- [x] **F11.S** Шаблон S (M).
 - [ ] **F11.1** Міграція: `prompt_tokens`, `completion_tokens`, `total_tokens` — `DROP NOT NULL`, `DROP DEFAULT`; схема.
       **AC:** `drizzle-kit check` чистий; міграція застосовується на БД з наявними рядками, значення не змінились.
 - [ ] **F11.2** → F11.1. Типи `number | null`: репозиторій, транформер, shared-схема `/admin/usage/text`, адмінка показує «—».
