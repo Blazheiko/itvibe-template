@@ -3,6 +3,7 @@ import { promptService } from '#app/services/ai/prompt-service.js'
 import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
 import logger from '#logger'
 import supportConfig from '#config/support.js'
+import { nonEmpty } from '#vendor/utils/env/non-empty.js'
 
 const { defaultTranslationPrompt, defaultGeneration } = supportConfig
 
@@ -19,7 +20,8 @@ export const supportQueryTranslationService = {
             promptService.getMaxTokens('SUPPORT_QUERY_TRANSLATION') ??
             defaultGeneration.SUPPORT_QUERY_TRANSLATION.maxTokens
         const systemPrompt =
-            promptService.getContent('SUPPORT_QUERY_TRANSLATION') || defaultTranslationPrompt
+            nonEmpty(promptService.getContent('SUPPORT_QUERY_TRANSLATION')) ??
+            defaultTranslationPrompt
 
         const adapter = getTextAdapterForModel(model)
         if (!adapter.isConfigured()) {

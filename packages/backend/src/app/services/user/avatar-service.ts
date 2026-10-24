@@ -96,7 +96,7 @@ export const avatarService = {
         }
 
         const oldAvatarKey = user.avatar
-        if (oldAvatarKey !== null && oldAvatarKey !== undefined) {
+        if (oldAvatarKey !== null) {
             const deleteOldAvatarResult = await tryInternal(
                 () => deleteFromS3(oldAvatarKey),
                 'Failed to delete old avatar',
@@ -141,7 +141,7 @@ export const avatarService = {
         }
 
         const avatarKey = user.avatar
-        if (avatarKey !== null && avatarKey !== undefined) {
+        if (avatarKey !== null) {
             const deleteAvatarResult = await tryInternal(
                 () => deleteFromS3(avatarKey),
                 'Failed to delete avatar',

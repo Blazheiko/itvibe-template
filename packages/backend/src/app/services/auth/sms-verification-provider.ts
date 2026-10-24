@@ -23,23 +23,21 @@ interface FakeSmsDelivery extends IssueSmsVerificationInput, IssueSmsVerificatio
 class FakeSmsVerificationProvider implements SmsVerificationProvider {
     private deliveries: FakeSmsDelivery[] = []
 
-    async issueVerificationCode(
-        input: IssueSmsVerificationInput,
-    ): Promise<IssueSmsVerificationResult> {
+    issueVerificationCode(input: IssueSmsVerificationInput): Promise<IssueSmsVerificationResult> {
         const code = authConfig.fakeSmsCode
         const delivery = {
             ...input,
             code,
-            providerRequestId: `fake-${this.deliveries.length + 1}`,
+            providerRequestId: `fake-${String(this.deliveries.length + 1)}`,
             sentAt: new Date(),
         }
 
         this.deliveries.push(delivery)
 
-        return {
+        return Promise.resolve({
             code: delivery.code,
             providerRequestId: delivery.providerRequestId,
-        }
+        })
     }
 
     latestForPhone(phone: string): FakeSmsDelivery | undefined {
@@ -54,8 +52,8 @@ class FakeSmsVerificationProvider implements SmsVerificationProvider {
 export const fakeSmsVerificationProvider = new FakeSmsVerificationProvider()
 
 class UnsupportedSmsVerificationProvider implements SmsVerificationProvider {
-    async issueVerificationCode(): Promise<IssueSmsVerificationResult> {
-        throw new Error('Unsupported SMS verification provider configuration')
+    issueVerificationCode(): Promise<IssueSmsVerificationResult> {
+        return Promise.reject(new Error('Unsupported SMS verification provider configuration'))
     }
 }
 export const smsVerificationProvider: SmsVerificationProvider =

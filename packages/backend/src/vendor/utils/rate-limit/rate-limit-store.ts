@@ -106,7 +106,7 @@ export function createRateLimitStore(options: RateLimitStoreOptions = {}): RateL
         time: number,
     ): Bucket => {
         const existing = buckets.get(key)
-        if (existing !== undefined && existing.kind === algorithm) {
+        if (existing?.kind === algorithm) {
             existing.windowMs = windowMs
             return existing
         }
@@ -196,13 +196,13 @@ export function createRateLimitStore(options: RateLimitStoreOptions = {}): RateL
     return {
         consume,
         gc,
-        get size() {
+        get size(): number {
             return buckets.size
         },
-        get lastInsertScan() {
+        get lastInsertScan(): number {
             return lastInsertScan
         },
-        get evictions() {
+        get evictions(): number {
             return evictions
         },
     }

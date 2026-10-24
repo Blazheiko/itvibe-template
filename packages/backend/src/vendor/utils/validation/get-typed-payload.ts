@@ -38,7 +38,7 @@ export function getTypedPayload<TPayload>(
  * В контроллерах handler уже знает форму query через generic `HttpHandler`,
  * поэтому хелпер там не нужен.
  */
-export function getTypedQuery<TQuery>(context: HttpContext): TQuery {
+export function getTypedQuery<TQuery>(context: HttpContext<unknown, TQuery | null>): TQuery {
     const query = context.httpData.query
     if (query === null) {
         throw new Error(

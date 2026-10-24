@@ -56,7 +56,7 @@ const verifyUpgradeToken = async (token: string): Promise<UpgradeTokenResult> =>
 
         const sessionInfo = JSON.parse(sessionData) as SessionInfo
         const data: SessionData = sessionInfo.data
-        if ('userId' in data && String(data.userId) === userId) {
+        if ('userId' in data && data.userId === userId) {
             return { kind: 'ok', sessionId, userId, userToken }
         }
 

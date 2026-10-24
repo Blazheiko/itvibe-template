@@ -30,20 +30,21 @@ export const xaiTextAdapter: ITextAdapter = {
         const modelName = opts.modelOverride ?? cfg.chatModel
         const finalPrompt = buildFinalTextPrompt(opts)
 
+        const toolCallHandler = opts.toolCallHandler
         const hasTools =
-            opts.toolCallHandler !== undefined && Object.keys(opts.toolCallHandler.tools).length > 0
+            toolCallHandler !== undefined && Object.keys(toolCallHandler.tools).length > 0
 
         // Build tools with execute() delegates when toolCallHandler is provided
         const wrappedTools: ToolSet | undefined = hasTools
             ? Object.fromEntries(
-                  Object.entries(opts.toolCallHandler!.tools).map(
+                  Object.entries(toolCallHandler.tools).map(
                       ([name, def]): [string, ToolSet[string]] => [
                           name,
                           tool({
                               description: def.description,
                               inputSchema: jsonSchema(def.parametersSchema),
                               execute: async (args: unknown): Promise<string> =>
-                                  opts.toolCallHandler!.onCall(name, args),
+                                  toolCallHandler.onCall(name, args),
                           }),
                       ],
                   ),
@@ -65,8 +66,8 @@ export const xaiTextAdapter: ITextAdapter = {
         }
         const result = streamText(streamParams)
 
-        if (hasTools) {
-            logger.info({ tools: Object.keys(wrappedTools!) }, 'XAI adapter: streaming with tools')
+        if (wrappedTools !== undefined) {
+            logger.info({ tools: Object.keys(wrappedTools) }, 'XAI adapter: streaming with tools')
         }
 
         let fullText = ''

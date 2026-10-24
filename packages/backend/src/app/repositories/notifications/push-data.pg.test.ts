@@ -236,9 +236,9 @@ describe.skipIf(!hasPg)('push data access on PostgreSQL', async () => {
                 await getPushSubscriptionStatistics(ids.s1, ids.userA)
                 const sqlTexts = spy.mock.calls.map((call) => {
                     const first: unknown = call[0]
-                    return typeof first === 'string'
-                        ? first
-                        : String((first as { text?: unknown }).text ?? '')
+                    if (typeof first === 'string') return first
+                    const text = (first as { text?: unknown }).text
+                    return typeof text === 'string' ? text : ''
                 })
                 expect(sqlTexts).toHaveLength(2)
                 expect(sqlTexts.some((text) => /count\(/i.test(text))).toBe(true)

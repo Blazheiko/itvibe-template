@@ -49,7 +49,7 @@ const STATUS_ERROR_CODES: Readonly<Record<number, ErrorCode>> = {
     504: 'upstream_timeout',
 }
 
-export type StatusErrorBody = {
+export interface StatusErrorBody {
     status: 'error'
     code: ErrorCode
     message: string

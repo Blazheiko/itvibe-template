@@ -77,7 +77,8 @@ function normalizeAddress(input: AddressInput): TransportAddress | null {
 function normalizeAddressList(input: AddressListInput | undefined): TransportAddress[] {
     if (input === undefined) return []
 
-    const source = Array.isArray(input) ? input : [input]
+    // Array.isArray narrows a readonly array to any[].
+    const source = (Array.isArray(input) ? input : [input]) as readonly AddressInput[]
     return source
         .map((item) => normalizeAddress(item))
         .filter((item): item is TransportAddress => item !== null)
@@ -141,7 +142,9 @@ function getTransporter(): MailTransporter {
 function normalizeResultAddresses(
     addresses: string | { address: string } | readonly (string | { address: string })[],
 ): string[] {
-    const source = Array.isArray(addresses) ? addresses : [addresses]
+    const source = (Array.isArray(addresses) ? addresses : [addresses]) as readonly (
+        string | { address: string }
+    )[]
     return source.map((item) => (typeof item === 'string' ? item : item.address))
 }
 

@@ -8,9 +8,7 @@ const cfg = aiConfig.openaiEmbedding
 let client: OpenAI | undefined
 
 function getClient(): OpenAI {
-    if (client === undefined) {
-        client = new OpenAI({ apiKey: cfg.apiKey })
-    }
+    client ??= new OpenAI({ apiKey: cfg.apiKey })
     return client
 }
 

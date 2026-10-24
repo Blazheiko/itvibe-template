@@ -6,11 +6,11 @@ function resolveOtpHashSecret(): string {
     const configuredSecret = authConfig.otpHmacKey?.trim()
     const appSecret = appConfig.key?.trim()
 
-    if (configuredSecret && configuredSecret !== '') {
+    if (configuredSecret !== undefined && configuredSecret !== '') {
         return configuredSecret
     }
 
-    if (appSecret && appSecret !== '') {
+    if (appSecret !== undefined && appSecret !== '') {
         return appSecret
     }
 

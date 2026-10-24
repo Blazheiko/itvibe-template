@@ -417,11 +417,6 @@ export const knowledgeBaseService = {
         if (Result.isError(result)) {
             return Result.err(result.error)
         }
-        const indexed = result.value
-        if (indexed === undefined) {
-            return Result.err(internalMessage('Failed to reindex knowledge base articles'))
-        }
-
-        return Result.ok({ indexed })
+        return Result.ok({ indexed: result.value })
     },
 }

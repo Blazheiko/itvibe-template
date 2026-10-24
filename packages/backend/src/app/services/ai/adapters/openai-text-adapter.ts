@@ -126,7 +126,7 @@ async function* streamChatCompletion(
     let usage: ReportedUsage | null = null
 
     try {
-        while (true) {
+        for (;;) {
             const { done, value } = await reader.read()
             if (done) break
 
@@ -270,7 +270,7 @@ export const openaiTextAdapter: ITextAdapter = {
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
-                    content: String(result),
+                    content: result,
                 })
             }
 

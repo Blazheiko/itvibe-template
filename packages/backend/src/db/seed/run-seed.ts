@@ -3,14 +3,17 @@ import type { PromptType, SeedPrompt } from './prompts.js'
 
 export type SeedRole = 'user' | 'admin'
 
-export type SeedUser = {
+export interface SeedUser {
     name: string
     email: string
     passwordHash: string
     role: SeedRole
 }
 
-export type ExistingUser = { id: bigint; role: SeedRole }
+export interface ExistingUser {
+    id: bigint
+    role: SeedRole
+}
 
 // Writes run inside one transaction; the Drizzle implementation lives in drizzle-seed-store.ts.
 export interface SeedStore {
@@ -24,19 +27,19 @@ export type SkipReason =
 
 export type SeedOutcome = { status: 'inserted' } | { status: 'skipped'; reason: SkipReason }
 
-export type SeedReport = {
+export interface SeedReport {
     prompts: Record<PromptType, SeedOutcome>
     admin: SeedOutcome
     user: SeedOutcome
 }
 
-export type SeedOptions = {
+export interface SeedOptions {
     demo: boolean
     env: Record<string, string | undefined>
     hashPassword: (password: string) => Promise<string>
 }
 
-type DemoAccount = {
+interface DemoAccount {
     kind: 'admin' | 'user'
     name: string
     emailVar: string

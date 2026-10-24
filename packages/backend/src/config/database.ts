@@ -3,7 +3,7 @@ import { env } from 'node:process'
 // Single source of PostgreSQL settings for the app, db:create and drizzle-kit.
 // Imported by drizzle.config.ts too, so keep it free of path aliases and app imports.
 
-export type DatabaseConfig = {
+export interface DatabaseConfig {
     client: string
     host: string
     port: number

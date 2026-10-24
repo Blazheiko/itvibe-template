@@ -114,7 +114,7 @@ export const buildCspValue = (directives: CspDirectives): string => {
     return parts.join('; ')
 }
 
-export type DocumentPolicyInput = {
+export interface DocumentPolicyInput {
     isProduction: boolean
     apiOrigin: string | null
     wsOrigin: string | null

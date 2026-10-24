@@ -11,6 +11,7 @@ import redisConfig from '#config/redis.js'
 import { throttlePolicyConfigError } from '#config/throttle-policies.js'
 import sessionConfig from '#config/session.js'
 import logger from '#logger'
+import { nonEmpty } from '#vendor/utils/env/non-empty.js'
 
 /** Per-IP limits are only as good as the client IP: warn when it is the proxy's. */
 export function getProxyWarning(): string | null {
@@ -74,7 +75,7 @@ export function validateRuntimeConfig(): void {
     }
 
     if (authConfig.phoneAuthEnabled) {
-        const otpHashSecret = authConfig.otpHmacKey?.trim() || appConfig.key?.trim() || ''
+        const otpHashSecret = nonEmpty(authConfig.otpHmacKey?.trim()) ?? appConfig.key?.trim() ?? ''
 
         if (otpHashSecret === '') {
             throw new Error(

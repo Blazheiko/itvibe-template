@@ -27,8 +27,8 @@ export const readinessService = {
     async check(): Promise<{ ready: boolean }> {
         const ms = healthConfig.readinessTimeoutMs
         const checks: [Dependency, () => Promise<unknown>][] = [
-            ['database', () => healthRepository.pingDatabase()],
-            ['redis', () => redis.ping()],
+            ['database', (): Promise<unknown> => healthRepository.pingDatabase()],
+            ['redis', (): Promise<unknown> => redis.ping()],
         ]
         const results = await Promise.allSettled(checks.map(([, check]) => withTimeout(check, ms)))
         const failed = checks

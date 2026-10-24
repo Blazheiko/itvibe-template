@@ -47,17 +47,23 @@ function parseIPv6ToBigInt(ip: string): bigint {
     const tail = tailRaw === '' || tailRaw === undefined ? [] : tailRaw.split(':')
     const missing = 8 - (head.length + tail.length)
     const groups = working.includes('::')
-        ? [...head, ...Array(Math.max(missing, 0)).fill('0'), ...tail]
+        ? [...head, ...Array<string>(Math.max(missing, 0)).fill('0'), ...tail]
         : head
 
     if (groups.length !== 8) {
         throw new Error(`Invalid IPv6 address: ${ip}`)
     }
 
-    return groups.reduce((acc, group) => (acc << 16n) + BigInt(parseInt(group || '0', 16)), 0n)
+    return groups.reduce(
+        (acc, group) => (acc << 16n) + BigInt(parseInt(group === '' ? '0' : group, 16)),
+        0n,
+    )
 }
 
-type ParsedIp = { family: 4 | 6; value: bigint }
+interface ParsedIp {
+    family: 4 | 6
+    value: bigint
+}
 
 function parseIp(ip: string): ParsedIp | null {
     const normalized = normalizeIp(ip)
@@ -87,7 +93,10 @@ function isIpInCidr(ip: string, cidr: string): boolean {
 
     const parsedIp = parseIp(ip)
     const parsedNetwork = parseIp(network)
-    if (parsedIp === null || parsedNetwork === null || parsedIp.family !== parsedNetwork.family) {
+    if (parsedIp === null || parsedNetwork === null) {
+        return false
+    }
+    if (parsedIp.family !== parsedNetwork.family) {
         return false
     }
 
@@ -121,7 +130,8 @@ function parseForwardedChain(xForwardedFor: string, remoteIp: string): string[] 
 
 function resolveClientIpFromChain(chain: readonly string[]): string | null {
     for (let index = chain.length - 1; index >= 0; index -= 1) {
-        const candidate = chain[index]!
+        const candidate = chain[index]
+        if (candidate === undefined) continue
         if (!isTrustedProxy(candidate)) {
             return candidate
         }

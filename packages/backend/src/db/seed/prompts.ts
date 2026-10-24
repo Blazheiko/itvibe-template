@@ -3,7 +3,7 @@ import type { llmPromptTypeEnum } from '../../database/schema.js'
 
 export type PromptType = (typeof llmPromptTypeEnum.enumValues)[number]
 
-export type SeedPrompt = {
+export interface SeedPrompt {
     type: PromptType
     topic: string
     content: string

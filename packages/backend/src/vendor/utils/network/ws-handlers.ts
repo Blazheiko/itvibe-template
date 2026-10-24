@@ -420,6 +420,8 @@ const handleUpgrade = async (
 ): Promise<void> => {
     logger.info('handleUpgrade')
     let aborted = false as boolean
+    // A function call: TypeScript keeps `aborted` narrowed to false across `await`.
+    const isAborted = (): boolean => aborted
     res.onAborted(() => {
         logger.warn('Client aborted before operation completed')
         aborted = true
@@ -467,7 +469,7 @@ const handleUpgrade = async (
     }
 
     const tokenResult = await getAppHooks().onUpgrade(token)
-    if (aborted) return
+    if (isAborted()) return
 
     if (tokenResult.kind === 'unavailable') {
         res.cork(() => {

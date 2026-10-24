@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-type MockRequest = {
+interface MockRequest {
     getHeader: (name: string) => string
 }
 
-type MockResponse = {
+interface MockResponse {
     getRemoteAddressAsText: () => ArrayBuffer
 }
 

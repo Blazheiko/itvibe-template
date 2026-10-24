@@ -84,7 +84,7 @@ function truncateUtf8(value: string, maxBytes: number): string {
 function sanitizeRecord(record: Record<string, unknown>): void {
     for (const key of Object.keys(record)) {
         if (SENSITIVE_KEY_RE.test(key)) {
-            delete record[key]
+            Reflect.deleteProperty(record, key)
         }
     }
 }
@@ -92,7 +92,7 @@ function sanitizeRecord(record: Record<string, unknown>): void {
 function sanitizeHeaders(headers: Record<string, unknown>): void {
     for (const key of Object.keys(headers)) {
         if (REDACTED_HEADER_KEYS.has(key.toLowerCase()) || SENSITIVE_KEY_RE.test(key)) {
-            delete headers[key]
+            Reflect.deleteProperty(headers, key)
         }
     }
 }
@@ -250,6 +250,7 @@ function flush(timeoutMs = 2000): Promise<boolean> {
 }
 
 function buildInitOptions(): SentryInitOptions {
+    // Object.assign with more than four sources is typed as `any`.
     return Object.assign(
         {},
         sentryConfig.dsn === undefined ? {} : { dsn: sentryConfig.dsn },
@@ -270,7 +271,7 @@ function buildInitOptions(): SentryInitOptions {
                 stackFrameVariables: false,
             },
         },
-    )
+    ) as SentryInitOptions
 }
 
 function init(): void {

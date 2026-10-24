@@ -1,7 +1,7 @@
 import sessionConfig from '#config/session.js'
 import logger from '#vendor/utils/logger.js'
 
-export type ResolvedSessionCookie = {
+export interface ResolvedSessionCookie {
     token: string | undefined
     source: 'active' | 'legacy' | 'none'
 }
