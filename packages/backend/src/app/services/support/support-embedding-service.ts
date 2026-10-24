@@ -1,6 +1,7 @@
 import { openaiEmbeddingAdapter } from '#app/services/ai/adapters/openai-embedding-adapter.js'
 import { supportKnowledgeRepository } from '#app/repositories/index.js'
 import type { KbSearchResult } from '#app/repositories/index.js'
+import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
 import logger from '#logger'
 
 export const supportEmbeddingService = {
@@ -10,7 +11,10 @@ export const supportEmbeddingService = {
             return
         }
         const text = `${title}\n\n${content}`
-        const vector = await openaiEmbeddingAdapter.embed(text)
+        // Indexing is a system call: no user to attribute it to.
+        const vector = await openaiEmbeddingAdapter.embed(text, {
+            onComplete: llmUsageService.textUsageRecorder('SUPPORT_EMBEDDING', null),
+        })
         await supportKnowledgeRepository.setEmbedding(articleId, vector)
     },
 
@@ -24,7 +28,9 @@ export const supportEmbeddingService = {
         if (allRows.length === 0) return 0
 
         const texts = allRows.map((a) => `${a.title}\n\n${a.content}`)
-        const vectors = await openaiEmbeddingAdapter.embedBatch(texts)
+        const vectors = await openaiEmbeddingAdapter.embedBatch(texts, {
+            onComplete: llmUsageService.textUsageRecorder('SUPPORT_EMBEDDING', null),
+        })
 
         for (let i = 0; i < allRows.length; i++) {
             const article = allRows[i]
@@ -36,12 +42,22 @@ export const supportEmbeddingService = {
         return allRows.length
     },
 
-    async search(query: string, limit = 5): Promise<KbSearchResult[]> {
+    async search(
+        query: string,
+        limit = 5,
+        options: { userId?: bigint; signal?: AbortSignal } = {},
+    ): Promise<KbSearchResult[]> {
         if (!openaiEmbeddingAdapter.isConfigured()) {
             logger.warn('OpenAI Embedding not configured, returning empty results')
             return []
         }
-        const queryVector = await openaiEmbeddingAdapter.embed(query)
+        const queryVector = await openaiEmbeddingAdapter.embed(query, {
+            ...(options.signal !== undefined ? { signal: options.signal } : {}),
+            onComplete: llmUsageService.textUsageRecorder(
+                'SUPPORT_EMBEDDING',
+                options.userId ?? null,
+            ),
+        })
         return supportKnowledgeRepository.searchByEmbedding(queryVector, limit)
     },
 }

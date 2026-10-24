@@ -1,7 +1,8 @@
 import { Mistral } from '@mistralai/mistralai'
 import aiConfig from '#config/ai.js'
+import logger from '#logger'
 import { aiRequestSignal } from '#app/services/ai/ai-request-signal.js'
-import { buildFinalTextPrompt } from '#app/services/ai/types.js'
+import { buildFinalTextPrompt, UNKNOWN_USAGE } from '#app/services/ai/types.js'
 import type {
     ITextAdapter,
     TextStreamOptions,
@@ -66,9 +67,17 @@ export const mistralaiTextAdapter: ITextAdapter = {
             }
         }
 
-        if (onComplete !== undefined && hasUsage) {
+        // A call without reported usage is still recorded (with NULL tokens), not dropped.
+        if (!hasUsage) {
+            logger.warn({ model: modelName }, 'Mistral adapter: provider reported no usage')
+        }
+        if (onComplete !== undefined) {
             try {
-                onComplete({ promptTokens, completionTokens, totalTokens }, modelName, finalPrompt)
+                onComplete(
+                    hasUsage ? { promptTokens, completionTokens, totalTokens } : UNKNOWN_USAGE,
+                    modelName,
+                    finalPrompt,
+                )
             } catch {
                 // ignore usage tracking errors
             }

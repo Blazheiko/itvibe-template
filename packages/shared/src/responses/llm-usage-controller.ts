@@ -1,10 +1,25 @@
 import { type } from '@arktype/type'
 
+// One llm_text_usage row. Token counts are null when the provider did not report
+// usage; userId is null for system calls (knowledge-base indexing).
+export const TextUsageRowSchema = type({
+    id: 'string',
+    userId: 'string | null',
+    model: 'string',
+    feature: "'PROMPT_TEST' | 'SUPPORT_CHAT' | 'SUPPORT_QUERY_TRANSLATION' | 'SUPPORT_EMBEDDING'",
+    finalPrompt: 'string',
+    promptTokens: 'number | null',
+    completionTokens: 'number | null',
+    totalTokens: 'number | null',
+    createdAt: 'string',
+})
+export type TextUsageRow = typeof TextUsageRowSchema.infer
+
 export const GetTextUsageResponseSchema = type({
     status: "'success' | 'error'",
     'message?': 'string',
     'data?': {
-        rows: 'unknown[]',
+        rows: TextUsageRowSchema.array(),
         total: 'number',
         page: 'number',
         limit: 'number',
@@ -12,11 +27,22 @@ export const GetTextUsageResponseSchema = type({
 })
 export type GetTextUsageResponse = typeof GetTextUsageResponseSchema.infer
 
+export const TextUsageStatRowSchema = type({
+    model: 'string',
+    feature: 'string',
+    totalCalls: 'number',
+    /** Sum over calls with known usage. */
+    totalTokens: 'number',
+    /** Calls the provider reported no usage for. */
+    callsWithoutUsage: 'number',
+})
+export type TextUsageStatRow = typeof TextUsageStatRowSchema.infer
+
 export const GetUsageStatsResponseSchema = type({
     status: "'success' | 'error'",
     'message?': 'string',
     'data?': {
-        text: 'unknown[]',
+        text: TextUsageStatRowSchema.array(),
     },
 })
 export type GetUsageStatsResponse = typeof GetUsageStatsResponseSchema.infer

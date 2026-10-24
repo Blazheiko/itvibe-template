@@ -37,7 +37,7 @@ export default {
 
         const serialized = rows.map((r) => ({
             id: String(r.id),
-            userId: String(r.userId),
+            userId: r.userId === null ? null : String(r.userId),
             model: r.model,
             feature: r.feature,
             finalPrompt: r.finalPrompt,

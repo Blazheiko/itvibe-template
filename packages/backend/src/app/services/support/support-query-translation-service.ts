@@ -1,12 +1,16 @@
 import { getTextAdapterForModel } from '#app/services/ai/ai-provider.js'
 import { promptService } from '#app/services/ai/prompt-service.js'
+import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
 import logger from '#logger'
 import supportConfig from '#config/support.js'
 
 const { defaultTranslationPrompt, defaultGeneration } = supportConfig
 
 export const supportQueryTranslationService = {
-    async translateToEnglish(text: string): Promise<string> {
+    async translateToEnglish(
+        text: string,
+        options: { userId?: bigint; signal?: AbortSignal } = {},
+    ): Promise<string> {
         const model = promptService.getModel('SUPPORT_QUERY_TRANSLATION')
         const temperature =
             promptService.getTemperature('SUPPORT_QUERY_TRANSLATION') ??
@@ -27,13 +31,21 @@ export const supportQueryTranslationService = {
 
         try {
             let result = ''
-            for await (const chunk of adapter.streamText({
-                systemPrompt,
-                userPrompt: text,
-                temperature,
-                maxOutputTokens: maxTokens,
-                modelOverride: model ?? undefined,
-            })) {
+            for await (const chunk of adapter.streamText(
+                {
+                    systemPrompt,
+                    userPrompt: text,
+                    temperature,
+                    maxOutputTokens: maxTokens,
+                    modelOverride: model ?? undefined,
+                    ...(options.signal !== undefined ? { signal: options.signal } : {}),
+                },
+                llmUsageService.textUsageRecorder(
+                    'SUPPORT_QUERY_TRANSLATION',
+                    options.userId ?? null,
+                    promptService.get('SUPPORT_QUERY_TRANSLATION')?.id ?? null,
+                ),
+            )) {
                 result += chunk
             }
             const englishQuery = result.trim()

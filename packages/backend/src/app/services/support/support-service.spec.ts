@@ -27,6 +27,7 @@ const broadcastServiceMock = {
 
 const llmUsageServiceMock = {
     recordText: vi.fn(),
+    textUsageRecorder: vi.fn(() => vi.fn()),
 }
 
 const promptServiceMock = {

@@ -222,19 +222,19 @@
 ### F11 AI Usage Accounting (п. 53) → F10
 
 - [x] **F11.S** Шаблон S (M).
-- [ ] **F11.1** Міграція: `prompt_tokens`, `completion_tokens`, `total_tokens` — `DROP NOT NULL`, `DROP DEFAULT`; схема.
+- [x] **F11.1** Міграція: `prompt_tokens`, `completion_tokens`, `total_tokens` — `DROP NOT NULL`, `DROP DEFAULT`; схема.
       **AC:** `drizzle-kit check` чистий; міграція застосовується на БД з наявними рядками, значення не змінились.
-- [ ] **F11.2** → F11.1. Типи `number | null`: репозиторій, транформер, shared-схема `/admin/usage/text`, адмінка показує «—».
+- [x] **F11.2** → F11.1. Типи `number | null`: репозиторій, транформер, shared-схема `/admin/usage/text`, адмінка показує «—».
       **AC:** typecheck; unit транформера з `null`.
-- [ ] **F11.3** → F11.2. Агрегати: `sum` ігнорує `NULL`, окремо кількість записів без usage.
+- [x] **F11.3** → F11.2. Агрегати: `sum` ігнорує `NULL`, окремо кількість записів без usage.
       **AC:** тест агрегатів на фікстурі з `NULL` і `0`.
-- [ ] **F11.4** → F11.2. `onComplete` для перекладу (`SUPPORT_QUERY_TRANSLATION`) і тесту промпту (`PROMPT_TEST`).
+- [x] **F11.4** → F11.2. `onComplete` для перекладу (`SUPPORT_QUERY_TRANSLATION`) і тесту промпту (`PROMPT_TEST`).
       **AC:** unit: кожен шлях пише рядок usage.
-- [ ] **F11.5** → F11.2. Облік embeddings (токени з відповіді провайдера).
+- [x] **F11.5** → F11.2. Облік embeddings (токени з відповіді провайдера).
       **AC:** unit: виклик `embedBatch` пише рядок usage.
-- [ ] **F11.6** → F11.2. Провайдер без usage (Mistral) → рядок з `NULL` і `warn`.
+- [x] **F11.6** → F11.2. Провайдер без usage (Mistral) → рядок з `NULL` і `warn`.
       **AC:** unit: запис з `null`, один `warn`.
-- [ ] **F11.D** Шаблон D: `ai.md`, `database.md`. **F11.E**, **F11.X**.
+- [x] **F11.D** Шаблон D: `ai.md`, `database.md`. **F11.E**, **F11.X**.
 
 ### F12 AI Quality (п. 43, 52, 54)
 

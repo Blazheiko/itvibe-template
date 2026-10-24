@@ -33,16 +33,24 @@
 
 ## Облік використання
 
-[`llm-usage-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/usage/llm-usage-service.ts) пише в таблицю `llm_text_usage` через `recordText()`. Запис іде у fire-and-forget режимі: помилка вставки потрапляє лише в `logger.warn`. У кожному рядку зберігаються `user_id`, `llm_system_prompt_id`, `model`, `feature` (enum `PROMPT_TEST` / `SUPPORT_CHAT` / `SUPPORT_QUERY_TRANSLATION`), **`final_prompt` повністю** та три лічильники токенів.
+[`llm-usage-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/usage/llm-usage-service.ts) пише в таблицю `llm_text_usage` через `recordText()`; для викликів адаптерів є `textUsageRecorder(feature, userId, promptId)`, що повертає готовий `onComplete`. Запис іде у fire-and-forget режимі: помилка вставки потрапляє лише в `logger.warn`. У кожному рядку зберігаються `user_id`, `llm_system_prompt_id`, `model`, `feature`, **`final_prompt` повністю** та три лічильники токенів.
 
-Адмінські `GET /admin/usage/text` (пагінація з фільтрами `userId`, `dateFrom`, `dateTo`, `feature`) та `GET /admin/usage/stats` (кількість викликів і сума токенів у розрізі `model` × `feature`) обслуговує [`llm-usage-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/ai/usage/llm-usage-controller.ts). Запити до БД виконує [`llm-usage-repository.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/ai/usage/llm-usage-repository.ts).
+Що записується:
+
+| `feature`                   | Звідки                                                                                                                                                   | `user_id`                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `SUPPORT_CHAT`              | відповідь і привітання Support AI (`support-service.ts`)                                                                                                 | користувач чату                              |
+| `SUPPORT_QUERY_TRANSLATION` | переклад запиту перед пошуком (`support-query-translation-service.ts`)                                                                                   | користувач чату                              |
+| `SUPPORT_EMBEDDING`         | embeddings (`support-embedding-service.ts`): пошук у чаті, індексація статті, `reindexAll`; `final_prompt` — вхідний текст, `completion_tokens` — `NULL` | користувач для пошуку, `NULL` для індексації |
+| `PROMPT_TEST`               | тест промпту з адмінки (`prompt-test-service.ts`)                                                                                                        | адмін                                        |
+
+Лічильники токенів nullable: **`NULL` означає, що провайдер не повідомив usage**, `0` — справжній нуль. Адаптер, який не отримав usage (буває в Mistral і в стрімі OpenAI без `include_usage`), усе одно викликає `onComplete` з `NULL` і пише `warn` — виклик не зникає з обліку. Рядки, записані до feat-028, мають старі дефолтні `0` замість невідомого значення.
+
+Адмінські `GET /admin/usage/text` (пагінація з фільтрами `userId`, `dateFrom`, `dateTo`, `feature`) та `GET /admin/usage/stats` обслуговує [`llm-usage-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/ai/usage/llm-usage-controller.ts); типи рядків — `TextUsageRow` і `TextUsageStatRow` у `shared` (`userId` і токени — `… | null`). Статистика групується за `model` × `feature`: `totalCalls`, `totalTokens` (сума лише за викликами з відомим usage) і `callsWithoutUsage`. Запити до БД виконує [`llm-usage-repository.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/ai/usage/llm-usage-repository.ts).
 
 ::: warning Прогалини обліку
-
-- **Вартість не рахується.** Колонки ціни немає, є лише токени.
-- Usage записують тільки виклики `SUPPORT_CHAT` з [`support-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/support-service.ts). Переклад запиту і тест промпту не передають `onComplete`, тому значення enum `SUPPORT_QUERY_TRANSLATION` і `PROMPT_TEST` на практиці не з'являються. Embedding-запити не обліковуються зовсім.
-- У Mistral-адаптері запис пропускається, якщо провайдер не повернув usage.
-  :::
+**Вартість не рахується.** Колонки ціни немає, є лише токени.
+:::
 
 ## Support AI і база знань
 

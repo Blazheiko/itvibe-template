@@ -6,20 +6,25 @@ import type {
     TextFilter,
 } from '#app/repositories/index.js'
 import logger from '#logger'
+import type { TextUsageCompleteHandler } from '#app/services/ai/types.js'
 
 export type { TextFilter }
 
+export interface TextUsageRecord {
+    /** NULL for system calls without a user (knowledge-base indexing). */
+    userId: bigint | null
+    llmSystemPromptId: bigint | null
+    model: string
+    feature: TextFeature
+    finalPrompt: string
+    /** NULL when the provider did not report usage. */
+    promptTokens: number | null
+    completionTokens: number | null
+    totalTokens: number | null
+}
+
 export const llmUsageService = {
-    recordText(params: {
-        userId: bigint
-        llmSystemPromptId: bigint | null
-        model: string
-        feature: TextFeature
-        finalPrompt: string
-        promptTokens: number
-        completionTokens: number
-        totalTokens: number
-    }): void {
+    recordText(params: TextUsageRecord): void {
         void llmUsageRepository
             .insertText({
                 userId: params.userId,
@@ -35,6 +40,24 @@ export const llmUsageService = {
             .catch((err: unknown) => {
                 logger.warn({ err }, 'llmUsageService: failed to record text usage')
             })
+    },
+
+    /** `onComplete` handler for a text adapter call that records one usage row. */
+    textUsageRecorder(
+        feature: TextFeature,
+        userId: bigint | null,
+        llmSystemPromptId: bigint | null = null,
+    ): TextUsageCompleteHandler {
+        return (usage, model, finalPrompt) => {
+            llmUsageService.recordText({
+                userId,
+                llmSystemPromptId,
+                model,
+                feature,
+                finalPrompt,
+                ...usage,
+            })
+        }
     },
 
     async getTextUsage(opts: {

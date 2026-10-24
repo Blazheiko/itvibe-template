@@ -6,7 +6,9 @@ import type { HttpContext } from '#vendor/types/types.js'
 const run = vi.fn()
 vi.mock('#app/services/ai/prompt-test-service.js', () => ({ promptTestService: { run } }))
 vi.mock('#app/services/ai/prompt-service.js', () => ({
-    promptService: { get: vi.fn(() => ({ type: 'SUPPORT_SYSTEM', content: 'system prompt' })) },
+    promptService: {
+        get: vi.fn(() => ({ id: 3n, type: 'SUPPORT_SYSTEM', content: 'system prompt' })),
+    },
 }))
 
 const { default: PromptController } = await import('./prompt-controller.js')
@@ -15,6 +17,7 @@ const { upstreamError, upstreamTimeout } = await import('#app/services/shared/er
 const context = (signal: AbortSignal) =>
     ({
         httpData: { params: { type: 'SUPPORT_SYSTEM' }, payload: { message: 'hi' } },
+        auth: { getUserId: () => '1' },
         responseData: { status: 200, payload: null, headers: [], cookies: new Map() },
         signal,
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -31,14 +34,17 @@ describe('PromptController.testPrompt', () => {
 
         const response = await PromptController.testPrompt(context(controller.signal))
 
-        expect(run).toHaveBeenCalledWith('system prompt', 'hi', controller.signal)
+        expect(run).toHaveBeenCalledWith('system prompt', 'hi', controller.signal, {
+            userId: 1n,
+            llmSystemPromptId: 3n,
+        })
         expect(response).toEqual({ status: 'success', result: 'answer' })
     })
 
     it.each([
         ['upstream timeout', upstreamTimeout(new Error('x')), 504, 'upstream_timeout'],
         ['upstream error', upstreamError(new Error('x')), 502, 'upstream_error'],
-    ])('maps %s to HTTP %d', async (_name, error, status, code) => {
+    ])('maps %s to HTTP %i', async (_name, error, status, code) => {
         run.mockResolvedValue(Result.err(error))
         const ctx = context(new AbortController().signal)
 

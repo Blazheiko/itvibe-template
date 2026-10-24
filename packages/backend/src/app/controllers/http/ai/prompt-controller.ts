@@ -61,7 +61,11 @@ export default {
         const { message } = getTypedPayload(context)
 
         // context.signal: a client that went away cancels the provider call.
-        const result = await promptTestService.run(prompt.content, message, context.signal)
+        const adminId = context.auth.getUserId()
+        const result = await promptTestService.run(prompt.content, message, context.signal, {
+            userId: adminId === null ? null : BigInt(adminId),
+            llmSystemPromptId: prompt.id,
+        })
         if (Result.isError(result)) {
             return mapControllerError(context, result.error)
         }

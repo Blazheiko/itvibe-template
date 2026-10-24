@@ -85,13 +85,17 @@ export const xaiTextAdapter: ITextAdapter = {
         if (onComplete !== undefined) {
             try {
                 const usage = await result.usage
-                const promptTokens = usage.inputTokens ?? 0
-                const completionTokens = usage.outputTokens ?? 0
+                // Unknown counts stay NULL instead of becoming 0.
+                const promptTokens = usage.inputTokens ?? null
+                const completionTokens = usage.outputTokens ?? null
                 onComplete(
                     {
                         promptTokens,
                         completionTokens,
-                        totalTokens: promptTokens + completionTokens,
+                        totalTokens:
+                            promptTokens !== null && completionTokens !== null
+                                ? promptTokens + completionTokens
+                                : null,
                     },
                     modelName,
                     finalPrompt,

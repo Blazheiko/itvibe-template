@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const adapter = { isConfigured: vi.fn(() => true), model: 'gpt-test', streamText: vi.fn() }
 vi.mock('#app/services/ai/ai-provider.js', () => ({ textAdapter: adapter }))
+const recorder = vi.fn()
+const textUsageRecorder = vi.fn(() => recorder)
+vi.mock('#app/services/ai/usage/llm-usage-service.js', () => ({
+    llmUsageService: { textUsageRecorder },
+}))
 vi.mock('#logger', () => ({
     default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }))
@@ -65,5 +70,14 @@ describe('promptTestService.run (code-issues item 23)', () => {
         if (Result.isError(result)) {
             expect(appErrorMessage(result.error)).not.toContain('secret')
         }
+    })
+
+    it('records the call as PROMPT_TEST for the admin and the prompt (item 53)', async () => {
+        adapter.streamText.mockImplementation(streamOf('ok'))
+
+        await promptTestService.run('s', 'u', undefined, { userId: 1n, llmSystemPromptId: 3n })
+
+        expect(textUsageRecorder).toHaveBeenCalledWith('PROMPT_TEST', 1n, 3n)
+        expect(adapter.streamText.mock.calls[0]?.[1]).toBe(recorder)
     })
 })

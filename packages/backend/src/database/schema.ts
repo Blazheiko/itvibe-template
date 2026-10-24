@@ -39,6 +39,7 @@ export const llmTextFeatureEnum = pgEnum('llm_text_feature', [
     'PROMPT_TEST',
     'SUPPORT_CHAT',
     'SUPPORT_QUERY_TRANSLATION',
+    'SUPPORT_EMBEDDING',
 ])
 export const userAppTypeEnum = pgEnum('user_app_type', ['web', 'pwa'])
 
@@ -297,9 +298,10 @@ export const llmTextUsage = pgTable(
     'llm_text_usage',
     {
         id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-        userId: bigint('user_id', { mode: 'bigint' })
-            .notNull()
-            .references(() => users.id, { onDelete: 'cascade' }),
+        // NULL for system calls without a user (knowledge-base indexing).
+        userId: bigint('user_id', { mode: 'bigint' }).references(() => users.id, {
+            onDelete: 'cascade',
+        }),
         llmSystemPromptId: bigint('llm_system_prompt_id', { mode: 'bigint' }).references(
             () => llmSystemPrompts.id,
             { onDelete: 'set null' },
@@ -307,9 +309,10 @@ export const llmTextUsage = pgTable(
         model: varchar('model', { length: 100 }).notNull(),
         feature: llmTextFeatureEnum('feature').notNull(),
         finalPrompt: text('final_prompt').notNull().default(''),
-        promptTokens: integer('prompt_tokens').notNull().default(0),
-        completionTokens: integer('completion_tokens').notNull().default(0),
-        totalTokens: integer('total_tokens').notNull().default(0),
+        // NULL = the provider did not report usage; 0 is a real zero.
+        promptTokens: integer('prompt_tokens'),
+        completionTokens: integer('completion_tokens'),
+        totalTokens: integer('total_tokens'),
         createdAt: timestamp('created_at').notNull().defaultNow(),
     },
     (table) => [

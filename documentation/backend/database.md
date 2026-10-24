@@ -122,7 +122,12 @@ SELECT extversion FROM pg_extension WHERE extname = 'vector';
 
 ## Міграції
 
-Міграції лежать у [`src/drizzle/migrations`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/drizzle/migrations) у форматі Drizzle 1.0 «тека на міграцію»: кожна тека `<timestamp>_<name>` містить `migration.sql` і `snapshot.json`. Зараз є одна — `20261017193054_init`.
+Міграції лежать у [`src/drizzle/migrations`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/drizzle/migrations) у форматі Drizzle 1.0 «тека на міграцію»: кожна тека `<timestamp>_<name>` містить `migration.sql` і `snapshot.json`:
+
+| Міграція                                                                                                                                                                              | Що робить                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20261017193054_init`                                                                                                                                                                 | початкова схема                                                                                                                                                                                                                                                                                                                          |
+| [`20261024152453_llm_usage_nullable`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/drizzle/migrations/20261024152453_llm_usage_nullable/migration.sql) | `llm_text_usage`: `prompt_tokens`, `completion_tokens`, `total_tokens` і `user_id` стають nullable (`NULL` = провайдер не повідомив usage / системний виклик без користувача), дефолти `0` прибрано; `llm_text_feature` отримує `SUPPORT_EMBEDDING`. Наявні рядки не змінюються. `ALTER TYPE … ADD VALUE` не відкочується простим `DROP` |
 
 ## Скрипти
 

@@ -26,6 +26,7 @@
 | feat-023 | 32, 44, 45, 46 |
 | feat-024 | 17, 19         |
 | feat-027 | 23, 50, 51     |
+| feat-028 | 53             |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -87,7 +88,7 @@
 | 50  | ~~Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral~~ ✅                                                              | Низька       | AI / конфігурація            |
 | 51  | ~~Виклики AI-провайдерів без timeout/`AbortSignal`~~ ✅                                                           | Середня      | AI / надійність              |
 | 52  | Support AI: `langNative = 'ru'` зашито в коді                                                                     | Середня      | AI / i18n                    |
-| 53  | Неповний облік використання AI (переклад, тест промпту, embeddings, Mistral без usage)                            | Низька       | AI                           |
+| 53  | ~~Неповний облік використання AI (переклад, тест промпту, embeddings, Mistral без usage)~~ ✅                     | Низька       | AI                           |
 | 54  | Embeddings: `vector(1536)` зашито, `reindexAll` без батчів, пошук без порогу                                      | Низька       | AI / БД                      |
 | 55  | `llm_text_usage.final_prompt` безстроково зберігає повні тексти (PII)                                             | Середня      | AI / приватність             |
 | 56  | Тест shared не містить жодного тесту (`pass 1` — порожній файл)                                                   | Середня      | Тести / shared               |
@@ -527,6 +528,8 @@
 - **Пропозиція:** брати мову з профілю/запиту.
 
 ### 53. Неповний облік використання AI
+
+> **Виправлено** у feat-028 (гілка `feat/ai-usage-accounting`) за планом [`ai-usage-accounting-plan.md`](./ai-usage-accounting-plan.md): записуються переклад (`SUPPORT_QUERY_TRANSLATION`), тест промпту (`PROMPT_TEST`) і embeddings (нова feature `SUPPORT_EMBEDDING`); міграція робить токени й `user_id` nullable — `NULL` = провайдер не повідомив usage (адаптери більше не пропускають такі виклики, а пишуть `NULL` і `warn`), `user_id` `NULL` — індексація без користувача; статистика рахує `callsWithoutUsage` окремо.
 
 - **Що:** переклад (`support-query-translation-service.ts`) і тест промпту (`prompt-controller.ts`) не передають `onComplete`, тому `SUPPORT_QUERY_TRANSLATION` і `PROMPT_TEST` не записуються. Embeddings не обліковуються. `mistralai-text-adapter.ts` мовчки пропускає запис, якщо провайдер не повернув usage.
 

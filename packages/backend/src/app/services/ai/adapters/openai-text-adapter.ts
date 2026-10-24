@@ -5,8 +5,9 @@ import type {
     ITextAdapter,
     TextStreamOptions,
     TextUsageCompleteHandler,
-    TokenUsage,
+    ReportedUsage,
 } from '#app/services/ai/types.js'
+import { UNKNOWN_USAGE } from '#app/services/ai/types.js'
 import logger from '#logger'
 
 interface MinimalFetchResponse {
@@ -35,12 +36,12 @@ interface ChatToolCall {
 interface StreamResult {
     text: string
     toolCalls: ChatToolCall[]
-    usage: TokenUsage | null
+    usage: ReportedUsage | null
 }
 
 const cfg = aiConfig.providers.openai
 
-function parseUsage(value: unknown): TokenUsage | null {
+function parseUsage(value: unknown): ReportedUsage | null {
     if (typeof value !== 'object' || value === null) return null
     const record = value as Record<string, unknown>
     const promptTokens = typeof record['prompt_tokens'] === 'number' ? record['prompt_tokens'] : 0
@@ -53,7 +54,10 @@ function parseUsage(value: unknown): TokenUsage | null {
     return { promptTokens, completionTokens, totalTokens }
 }
 
-function mergeUsage(first: TokenUsage | null, second: TokenUsage | null): TokenUsage | null {
+function mergeUsage(
+    first: ReportedUsage | null,
+    second: ReportedUsage | null,
+): ReportedUsage | null {
     if (first === null) return second
     if (second === null) return first
     return {
@@ -119,7 +123,7 @@ async function* streamChatCompletion(
     const toolCallsByIndex = new Map<number, ChatToolCall>()
     let fullText = ''
     let buffer = ''
-    let usage: TokenUsage | null = null
+    let usage: ReportedUsage | null = null
 
     try {
         while (true) {
@@ -284,9 +288,12 @@ export const openaiTextAdapter: ITextAdapter = {
             usage = mergeUsage(usage, second.usage)
         }
 
-        if (onComplete !== undefined && usage !== null) {
+        if (usage === null) {
+            logger.warn({ model: modelName }, 'OpenAI adapter: provider reported no usage')
+        }
+        if (onComplete !== undefined) {
             try {
-                onComplete(usage, modelName, finalPrompt)
+                onComplete(usage ?? UNKNOWN_USAGE, modelName, finalPrompt)
             } catch (err) {
                 logger.warn({ err }, 'OpenAI adapter: usage callback failed')
             }
