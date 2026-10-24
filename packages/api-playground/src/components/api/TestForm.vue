@@ -32,6 +32,9 @@ const bodyError = ref('')
 const isLoading = ref(false)
 const copyCurlState = ref<'idle' | 'copied' | 'error'>('idle')
  
+// Holds a single response or a load-test summary with nested statistics; the template
+// reads both shapes.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const testResult = ref<any>(null)
 
 const progressState = ref({
@@ -89,7 +92,7 @@ const buildCurlCommand = () => {
   const bodyValidation = isBodyMethod.value ? validateBody() : { isValid: true, data: undefined }
   const finalUrl = buildUrl()
   const requestHeaders =
-    headersValidation.data || ({ 'Content-Type': 'application/json' } as Record<string, string>)
+    headersValidation.data || ({ 'Content-Type': 'application/json' })
 
   const headerFlags = Object.entries(requestHeaders)
     .map(([key, value]) => `-H '${key}: ${String(value).replace(/'/g, "'\\''")}'`)
@@ -141,7 +144,9 @@ const executeRequest = async (
         success: false,
         status: apiResponse.status || apiResponse.error.code,
         statusText: apiResponse.statusText || apiResponse.error.message,
-        headers: apiResponse.headers || {},
+        headers: apiResponse.headers ?? {},
+        // `||`: an empty or falsy body falls back to the error message.
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         data: apiResponse.data || apiResponse.error.message,
         responseTime,
         error: true,
@@ -152,7 +157,7 @@ const executeRequest = async (
       success: true,
       status: apiResponse.status || 200,
       statusText: apiResponse.statusText || 'OK',
-      headers: apiResponse.headers || {},
+      headers: apiResponse.headers ?? {},
       data: apiResponse.data,
       responseTime,
     }
@@ -202,7 +207,7 @@ const executeThread = async (
 
 const findScrollContainer = () => {
   return (
-    document.querySelector<HTMLElement>('.test-workspace-scroll') ||
+    document.querySelector<HTMLElement>('.test-workspace-scroll') ??
     document.querySelector<HTMLElement>('main')
   )
 }
@@ -211,7 +216,7 @@ const scrollToResponse = async () => {
   await nextTick()
 
   window.setTimeout(() => {
-    const targetElement = document.getElementById('response-body') || document.getElementById('response-section')
+    const targetElement = document.getElementById('response-body') ?? document.getElementById('response-section')
 
     if (!targetElement) {
       return
@@ -256,7 +261,7 @@ const sendRequest = async () => {
 
   const finalUrl = buildUrl()
   const requestHeaders =
-    headersValidation.data || ({ 'Content-Type': 'application/json' } as Record<string, string>)
+    headersValidation.data || ({ 'Content-Type': 'application/json' })
   const requestBody = bodyValidation.data
 
   try {
@@ -282,7 +287,7 @@ const sendRequest = async () => {
       const maxResponseTime = Math.max(...responseTimes)
 
       if (requestCount.value === 1) {
-        const singleResult = results[0]
+        const singleResult = results[0] as (typeof results)[number] | undefined
         if (singleResult) {
           testResult.value = {
             success: singleResult.success,
@@ -298,10 +303,10 @@ const sendRequest = async () => {
           }
 
           const responseData = singleResult.data as Record<string, unknown> | null
-          if (singleResult.success && responseData && typeof responseData['wsUrl'] === 'string') {
+          if (singleResult.success && responseData && typeof responseData.wsUrl === 'string') {
             setPendingWs(
-              responseData['wsUrl'],
-              typeof responseData['wsToken'] === 'string' ? responseData['wsToken'] : '',
+              responseData.wsUrl,
+              typeof responseData.wsToken === 'string' ? responseData.wsToken : '',
             )
           }
         }
@@ -335,7 +340,7 @@ const sendRequest = async () => {
 
       const threadResults = await Promise.all(threadPromises)
       const totalTime = Date.now() - overallStartTime
-      const allResults: Array<{
+      const allResults: {
         success: boolean
         status: number
         statusText: string
@@ -345,7 +350,7 @@ const sendRequest = async () => {
         requestNumber: number
         threadId: number
         error?: boolean
-      }> = []
+      }[] = []
       const allResponseTimes: number[] = []
 
       threadResults.forEach((thread) => {

@@ -48,7 +48,7 @@ const lastMessage = ref<WebsocketMessage | null>(null)
 const wsProtocols: string[] = ['']
 
 // API resolve for handling responses (created once)
-const apiResolve = ref<Record<string, ApiResolveItem>>({})
+const apiResolve = ref<Partial<Record<string, ApiResolveItem>>>({})
 const TIMEOUT_API = 10000
 
 // ============================================================================
@@ -56,17 +56,15 @@ const TIMEOUT_API = 10000
 // ============================================================================
 
 // Message validation function
-const validateMessage = (message: WebsocketMessage): boolean => {
-    return Boolean(
-        message &&
-        typeof message.event === 'string' &&
-        (!message.payload || typeof message.payload === 'object'),
-    )
+const validateMessage = (message: unknown): message is WebsocketMessage => {
+    if (typeof message !== 'object' || message === null) return false
+    const { event, payload } = message as { event?: unknown; payload?: unknown }
+    return typeof event === 'string' && (!payload || typeof payload === 'object')
 }
 
 // Service events handling
 const service = (data: WebsocketMessage): void => {
-    const serviceHandlers: Record<string, (payload: WebsocketPayload) => void | boolean> = {
+    const serviceHandlers: Partial<Record<string, (payload: WebsocketPayload) => void>> = {
         pong: () => {
             console.log('Pong received')
         },
@@ -79,15 +77,9 @@ const service = (data: WebsocketMessage): void => {
         },
     }
 
-    if (data && data.event) {
-        const arr = data.event.split(':')
-        if (arr.length < 2) return
-        const handlerName = arr[1]
-        if (handlerName) {
-            const handler = serviceHandlers[handlerName]
-            if (handler) handler(data.payload)
-        }
-    }
+    const handlerName = data.event.split(':')[1] as string | undefined
+    if (handlerName === undefined) return
+    serviceHandlers[handlerName]?.(data.payload)
 }
 
 // Broadcast events handling
@@ -155,20 +147,20 @@ const messageHandler = (data: WebsocketMessage): void => {
     if (!cb) return
 
     window.clearTimeout(cb.timeout)
-    delete apiResolve.value[data.event]
+    Reflect.deleteProperty(apiResolve.value, data.event)
 
     lastMessage.value = data
 
     const statusCode =
         typeof data.status === 'string' ? Number.parseInt(data.status, 10) : data.status
 
-    if (Number.isFinite(statusCode) && statusCode >= 200 && statusCode < 300 && cb.resolve) {
+    if (Number.isFinite(statusCode) && statusCode >= 200 && statusCode < 300) {
         cb.resolve(data)
-    } else if (cb.reject) {
+    } else {
         cb.reject({
-            status: data?.status,
-            message: data?.payload?.message as string | undefined,
-            messages: data?.payload?.messages as string[] | undefined,
+            status: data.status,
+            message: data.payload.message as string | undefined,
+            messages: data.payload.messages as string[] | undefined,
         })
     }
 }
@@ -188,7 +180,7 @@ const handleMessage = async (messageData: string | Blob | ArrayBuffer) => {
         }
 
         console.log('onmessage: ', messageData)
-        const data: WebsocketMessage = JSON.parse(messageData)
+        const data: unknown = JSON.parse(messageData)
         if (!validateMessage(data)) {
             console.error('Invalid message format:', data)
             return
@@ -236,9 +228,7 @@ const { status, send, close, open, ws } = useWebSocket(wsUrl, {
     onDisconnected(_, event) {
         console.log('WebSocket disconnected', event)
         isInitialized.value = false
-        if (event) {
-            handleWebSocketClose(event)
-        }
+        handleWebSocketClose(event)
     },
     onError(_, event) {
         console.error('WebSocket error:', event)
@@ -295,7 +285,7 @@ const websocketApi = async (
             resolve,
             reject,
             timeout: window.setTimeout(() => {
-                delete apiResolve.value[event]
+                Reflect.deleteProperty(apiResolve.value, event)
                 reject(new Error('Request timeout'))
             }, TIMEOUT_API),
         }
@@ -315,6 +305,7 @@ const websocketClose = () => {
 const resetApiResolve = () => {
     console.log('resetApiResolve')
     Object.values(apiResolve.value).forEach((item) => {
+        if (item === undefined) return
         window.clearTimeout(item.timeout)
         item.reject(new Error('WebSocket connection reset'))
     })

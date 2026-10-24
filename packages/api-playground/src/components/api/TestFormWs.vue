@@ -35,7 +35,22 @@ const body = ref('{\n  "message": "Hello WebSocket!"\n}')
 const bodyError = ref('')
 const isLoading = ref(false)
  
-const testResult = ref<any>(null)
+interface WsTestResult {
+  success?: boolean
+  error?: boolean
+  status?: unknown
+  statusText?: string
+  responseTime?: number
+  method?: string
+  url?: string
+  message?: string
+  wsUrl?: string
+  details?: string
+  requestBody?: unknown
+  data?: unknown
+}
+
+const testResult = ref<WsTestResult | null>(null)
 
 onMounted(() => {
   const settings = apiSettingsStore.settings
@@ -52,7 +67,7 @@ const validateBody = () => {
 
 const findScrollContainer = () => {
   return (
-    document.querySelector<HTMLElement>('.test-workspace-scroll') ||
+    document.querySelector<HTMLElement>('.test-workspace-scroll') ??
     document.querySelector<HTMLElement>('main')
   )
 }
@@ -61,7 +76,7 @@ const scrollToResponse = async () => {
   await nextTick()
 
   window.setTimeout(() => {
-    const targetElement = document.getElementById('ws-response-body') || document.getElementById('ws-response-section')
+    const targetElement = document.getElementById('ws-response-body') ?? document.getElementById('ws-response-section')
     if (!targetElement) {
       return
     }

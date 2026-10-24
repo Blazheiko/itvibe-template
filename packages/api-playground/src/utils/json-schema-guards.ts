@@ -87,7 +87,7 @@ function asJsonSchemaObject(value: unknown): JsonSchemaObject | null {
 
 function literalLabel(schema: JsonSchemaObject): string | null {
     if (schema.const !== undefined) return String(schema.const)
-    if (schema.enum !== undefined && schema.enum.length === 1) return String(schema.enum[0])
+    if (schema.enum?.length === 1) return String(schema.enum[0])
     return null
 }
 

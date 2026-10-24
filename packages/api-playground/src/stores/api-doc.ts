@@ -311,9 +311,9 @@ export const useApiStore = defineStore('api', () => {
             if (groupsHttp.value.length > 0) {
                 const firstGroup = groupsHttp.value[0]
                 console.log('  Sample HTTP group:', {
-                    prefix: firstGroup?.prefix,
-                    description: firstGroup?.description,
-                    routesCount: firstGroup?.group.filter(isApiRoute).length || 0,
+                    prefix: firstGroup.prefix,
+                    description: firstGroup.description,
+                    routesCount: firstGroup.group.filter(isApiRoute).length,
                 })
             }
             const apiSettingsStore = useApiSettingsStore()
@@ -374,7 +374,7 @@ export const useApiStore = defineStore('api', () => {
     }
 
     function setSelectedRoute(routeId: number) {
-        if (routeId === undefined || routeId === null || isNaN(routeId) || routeId <= 0) {
+        if (isNaN(routeId) || routeId <= 0) {
             console.error('Invalid routeId provided to setSelectedRoute:', routeId)
             return
         }
@@ -402,7 +402,7 @@ export const useApiStore = defineStore('api', () => {
     function findRouteById(routeId: number): ApiRoute | null {
         const currentFlatRoutes =
             currentRouteType.value === 'http' ? flatHttpRoute.value : flatWsRoute.value
-        return currentFlatRoutes.find((route) => route.id === routeId) || null
+        return currentFlatRoutes.find((route) => route.id === routeId) ?? null
     }
 
     function findRouteByFullUrl(fullUrl: string, method: string): ApiRoute | null {
@@ -411,7 +411,7 @@ export const useApiStore = defineStore('api', () => {
         return (
             currentFlatRoutes.find(
                 (route) => route.fullUrl === fullUrl && route.method === method,
-            ) || null
+            ) ?? null
         )
     }
 

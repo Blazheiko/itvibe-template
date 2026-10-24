@@ -24,7 +24,7 @@ interface ApiMethods {
     ws: <T = HttpResponse>(route: string, body?: Record<string, unknown>) => Promise<T | null>
 }
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | string
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | (string & {})
 
 interface RequestInit {
     method: HttpMethod

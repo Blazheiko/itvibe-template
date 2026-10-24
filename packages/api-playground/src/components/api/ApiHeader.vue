@@ -21,7 +21,7 @@ const handleSearch = (event: Event) => {
 }
 
 const activeRouteLabel = computed(() => {
-  const route = testingStore.testingRoute || apiStore.selectedRoute
+  const route = testingStore.testingRoute ?? apiStore.selectedRoute
   if (!route) {
     return 'Browse endpoints and open a dedicated test workspace when needed.'
   }

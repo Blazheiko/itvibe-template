@@ -78,7 +78,7 @@ export function formatRateLimit(rateLimit?: RateLimit) {
         const hours = Math.floor(windowMs / (60 * 60 * 1000))
         const minutes = Math.floor((windowMs % (60 * 60 * 1000)) / (60 * 1000))
         timeFormat =
-            hours > 0 ? `${hours}h ${minutes > 0 ? minutes + 'm' : ''}`.trim() : `${minutes}m`
+            hours > 0 ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim() : `${minutes}m`
     } else if (windowMs >= 60 * 1000) {
         const minutes = Math.floor(windowMs / (60 * 1000))
         const seconds = Math.floor((windowMs % (60 * 1000)) / 1000)

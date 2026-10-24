@@ -32,7 +32,7 @@ const navigateToRoute = (routeId: number) => {
   if (route) {
     apiStore.setSelectedRoute(routeId)
     apiStore.setActiveRoute(routeId)
-    router.push(`/route/${routeId}`)
+    void router.push(`/route/${routeId}`)
   }
 }
 

@@ -33,6 +33,7 @@
 | feat-032 | 56, 57, 58     |
 | feat-033 | 59, 61, 62–64  |
 | feat-034 | 66             |
+| feat-035 | 68             |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -109,7 +110,7 @@
 | 65  | ~~`POST /main/save-user`: анонімне створення користувача з паролем у відкритому тексті~~ ✅ виправлено (feat-012) | **Критична** | Безпека                      |
 | 66  | ~~`users.isAdmin` — мертве поле поруч із `role`~~ ✅                                                              | Низька       | БД / ролі                    |
 | 67  | ~~Push-група без `auth_guard`, перевірка в контролері~~ ✅                                                        | Низька       | Безпека / ролі               |
-| 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
+| 68  | ~~ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground~~ ✅                               | Низька       | Toolchain                    |
 | 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
 | 71  | `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`                                                         | Низька       | Стиль                        |
@@ -652,6 +653,8 @@
 - **Пропозиція:** декларативні guard'и на маршрутах, щоб матриця доступу читалася з `http-routes.ts`.
 
 ### 68. ESLint `strictTypeChecked` фактично вимкнено
+
+> **Виправлено** у feat-035 (гілка `feat/eslint-strict`, PR #91, #92 і PR 3): бекенд — повний профіль кореня (у тестах вимкнено шість правил з поясненнями); frontend і api-playground — `strictTypeChecked` + `stylisticTypeChecked` для `.ts` і `.vue` у власних конфігах. Виявилося, що блоки для frontend і playground у кореневому конфігу ніколи не діяли: ESLint 10 бере найближчий `eslint.config.*`.
 
 - **Що:** `eslint.config.ts` для backend, frontend і api-playground вимикає більшість правил `strictTypeChecked`, тож суворий профіль діє лише на shared і кореневі файли. ~~У корені немає `.prettierrc` — backend і shared форматуються дефолтами Prettier (доповнює п. 16).~~ Prettier-частину виправлено у feat-010.
 

@@ -47,11 +47,11 @@ Path aliases бекенду в [`packages/backend/tsconfig.json`](https://github
 - бекенд перевіряється повним профілем. Для тестів бекенду (`*.spec.ts`, `*.test.ts`, `src/test-support`) вимкнено лише `explicit-function-return-type`, `no-explicit-any`, `no-empty-function`, `require-await`, `no-non-null-assertion` і `no-dynamic-delete` — моки та фікстури; причина кожного — коментар у конфігу. Поодинокі винятки в коді позначені `eslint-disable` з поясненням;
 - `packages/frontend` і `packages/api-playground` мають власні `eslint.config.ts`. ESLint 10 бере для кожного файлу найближчий конфіг, тож їхні файли (і `.ts`, і `.vue`) кореневий конфіг не перевіряє — навіть під час кореневого `eslint .`;
 - frontend: `vueTsConfigs.strictTypeChecked` + `stylisticTypeChecked` для `.ts` і `.vue`; `configureVueProject({ rootDir })` прив'язує пошук `.vue` до пакета, щоб кореневий запуск бачив ті самі файли. Послаблено з поясненням у конфігу: `restrict-template-expressions` дозволяє числа, `prefer-nullish-coalescing` не чіпає рядки (`||` свідомо вважає `''` відсутнім значенням); у тестах вимкнено `no-empty-function` і `no-non-null-assertion`. Проєктні правила кореня (`explicit-function-return-type`, `strict-boolean-expressions` тощо) на frontend не поширюються;
-- api-playground поки перевіряється м'якше: більшість суворих правил вимкнено;
+- api-playground — так само, як frontend; `prefer-nullish-coalescing` додатково не чіпає числа й булеві (`status || 200`, `includes() || …` — свідомий `||`). `testResult` у `TestForm.vue` лишається `any` з поясненням: він тримає дві різні форми результату;
 - кореневий `pnpm lint` запускає `eslint .` і потім `pnpm -r --if-present lint:check` у пакетах.
 
-::: warning
-Playground перевіряється значно м'якше, ніж можна подумати з `strictTypeChecked`. Повний профіль кореня діє для `packages/shared`, бекенду та кореневих файлів; frontend має `strictTypeChecked` без проєктних правил кореня.
+::: info
+Повний профіль кореня (зі своїми проєктними правилами) діє для `packages/shared`, бекенду та кореневих файлів. Frontend і api-playground мають `strictTypeChecked` + `stylisticTypeChecked` без проєктних правил кореня.
 :::
 
 ## Prettier

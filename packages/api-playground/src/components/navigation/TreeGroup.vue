@@ -23,7 +23,7 @@ const testingStore = useApiTestingStore()
 const groupPath = computed(() => props.group.fullPrefix || props.group.prefix)
 const isExpanded = computed(() => props.expandedGroups.has(groupPath.value))
 
-const toggleGroup = () => emit('toggle-group', groupPath.value)
+const toggleGroup = () => { emit('toggle-group', groupPath.value); }
 
 const getUrl = (urlInitial: string) => {
   let url = urlInitial.replace(props.group.prefix, '') || '/'

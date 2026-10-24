@@ -16,10 +16,13 @@
 
 - [x] F18.1 merged: PR #91
 - [x] F18.2 frontend (PR 2): `packages/frontend/eslint.config.ts` moves from `vueTsConfigs.recommended` + a 30-rule off-list to `strictTypeChecked` + `stylisticTypeChecked` for `.ts` and `.vue`
+- [x] F18.2 merged: PR #92
+- [x] F18.3 api-playground (PR 3): same move as the frontend; dead playground block and package-specific entries removed from the root config
+- [x] F18.X: code-issues 68 marked fixed
 
 ### Next
 
-- [ ] F18.3 api-playground (PR 3), F18.X
+- (none: F18 complete after PR 3 merges; then the chore PR flips feat-035 to `done`)
 
 ## Evidence of Completion — PR 1 (backend)
 
@@ -41,3 +44,12 @@
 - Behaviour-relevant fixes: floating `router.push`/`replace` marked `void`; async mitt/DOM handlers wrapped (`onInitAppEvent`, `onUnauthorizedEvent`, `onBeforeInstallPrompt`, SW `load`); WS message validation takes `unknown`; pending maps typed `Partial<Record>`; `userStore.user!` replaced by a null check; mitt no-payload events typed `undefined` instead of `void`
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` (backend 843, frontend 58, api-playground 11, shared, documentation) passed; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 - Not run: `test:e2e:csp` (not in CI; its config uses port 3000, taken by another local process)
+
+## Evidence of Completion — PR 3 (api-playground)
+
+- Before fixes: 83 errors (strictTypeChecked + stylistic), 51 after autofix
+- Relaxed with reasons in the config: `restrict-template-expressions` `allowNumber`; `prefer-nullish-coalescing` ignores strings, numbers and booleans (`status || 200`, `includes() || …` rely on `||`); tests: `no-empty-function`, `no-non-null-assertion`. Inline disables with reasons: `any` for `testResult` in `TestForm.vue` (two result shapes), one `||` on a response body, one group-initialisation check
+- Fixes: WS message validation takes `unknown`; pending map `Partial<Record>`; `Reflect.deleteProperty` instead of dynamic `delete`; localStorage settings parsed as `Partial<ApiSettings>`; `loadEnv()` value treated as possibly unset; floating router calls `void`; mitt-like bus uses `undefined` for no-payload events; `TestFormWs` result typed
+- Root `eslint.config.ts`: dead blocks for package files removed (the `.vue` ignores, the frontend `i18n.d.ts` override, package entries in `allowDefaultProject`); `pnpm lint` result unchanged
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` (backend 843, frontend 58, api-playground 11, shared, documentation) passed; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
+- Not done: manual playground run against a live backend (port 3000 busy)

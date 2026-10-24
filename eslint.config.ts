@@ -1,6 +1,8 @@
 import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
 
+// packages/frontend and packages/api-playground have their own eslint.config.ts: ESLint 10
+// lints each file with the nearest config, so blocks for those packages do not belong here.
 export default tseslint.config(
     {
         ignores: [
@@ -64,41 +66,7 @@ export default tseslint.config(
         },
     },
     {
-        files: ['packages/api-playground/**/*.{ts,mts,tsx,vue}'],
-        rules: {
-            '@typescript-eslint/explicit-function-return-type': 'off',
-            '@typescript-eslint/explicit-module-boundary-types': 'off',
-            '@typescript-eslint/no-explicit-any': 'off',
-            '@typescript-eslint/no-unsafe-assignment': 'off',
-            '@typescript-eslint/no-unsafe-call': 'off',
-            '@typescript-eslint/no-unsafe-member-access': 'off',
-            '@typescript-eslint/no-unsafe-return': 'off',
-            '@typescript-eslint/no-unsafe-argument': 'off',
-            '@typescript-eslint/no-unnecessary-condition': 'off',
-            '@typescript-eslint/strict-boolean-expressions': 'off',
-            '@typescript-eslint/no-dynamic-delete': 'off',
-            '@typescript-eslint/no-redundant-type-constituents': 'off',
-            '@typescript-eslint/no-invalid-void-type': 'off',
-            '@typescript-eslint/no-unnecessary-type-conversion': 'off',
-            '@typescript-eslint/prefer-nullish-coalescing': 'off',
-            '@typescript-eslint/prefer-optional-chain': 'off',
-            '@typescript-eslint/restrict-template-expressions': 'off',
-            '@typescript-eslint/restrict-plus-operands': 'off',
-            '@typescript-eslint/switch-exhaustiveness-check': 'off',
-            '@typescript-eslint/no-unsafe-enum-comparison': 'off',
-            '@typescript-eslint/no-non-null-assertion': 'off',
-            '@typescript-eslint/consistent-type-definitions': 'off',
-        },
-    },
-    {
-        files: [
-            'eslint.config.ts',
-            'packages/api-playground/eslint.config.ts',
-            'packages/api-playground/vite.sw.config.ts',
-            'packages/frontend/eslint.config.ts',
-            'packages/frontend/vite.sw.config.ts',
-            'packages/backend/vitest.config.ts',
-        ],
+        files: ['eslint.config.ts', 'packages/backend/vitest.config.ts'],
         languageOptions: {
             parserOptions: {
                 projectService: true,
@@ -106,13 +74,6 @@ export default tseslint.config(
                 tsconfigRootDir: import.meta.dirname,
             },
         },
-    },
-    {
-        ignores: [
-            'packages/api-playground/**/*.vue',
-            'packages/frontend/**/*.vue',
-            'packages/frontend/vite.sw.config.ts',
-        ],
     },
     {
         // Backend tests: mocks and fixtures. Production backend code gets the full rule set.
@@ -140,12 +101,6 @@ export default tseslint.config(
         rules: {
             '@typescript-eslint/consistent-type-imports': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
-        },
-    },
-    {
-        files: ['packages/frontend/src/types/i18n.d.ts'],
-        rules: {
-            '@typescript-eslint/no-empty-object-type': 'off',
         },
     },
     {
