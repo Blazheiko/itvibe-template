@@ -18,6 +18,7 @@
 | feat-010 | 16             |
 | feat-018 | 36, 37, 38     |
 | feat-021 | 47, 48, 67     |
+| feat-022 | 20, 21, 49     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -46,8 +47,8 @@
 | 17  | Фронтенд вшиває префікс `api/` у WS-події                                                                         | Середня      | WebSocket / frontend         |
 | 18  | WS upgrade без валідної сесії не відхиляється                                                                     | Низька       | WebSocket / безпека          |
 | 19  | Мертвий код у WebSocket-шарі                                                                                      | Низька       | WebSocket / структура        |
-| 20  | Сервіси push-нотифікацій звертаються до БД напряму                                                                | Середня      | Шари / БД                    |
-| 21  | N+1 у `findByUserIdWithLogs` і статистика в JS                                                                    | Середня      | Продуктивність               |
+| 20  | ~~Сервіси push-нотифікацій звертаються до БД напряму~~ ✅                                                         | Середня      | Шари / БД                    |
+| 21  | ~~N+1 у `findByUserIdWithLogs` і статистика в JS~~ ✅                                                             | Середня      | Продуктивність               |
 | 22  | Контролери та middleware оминають сервіси                                                                         | Низька       | Шари                         |
 | 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`                                                           | Середня      | Шари / помилки               |
 | 24  | Repositories barrel неповний, змішані стилі імпорту                                                               | Низька       | Структура                    |
@@ -75,7 +76,7 @@
 | 46  | MIME-тип довіряється заголовку клієнта                                                                            | Середня      | Сховище / безпека            |
 | 47  | ~~Підписка push перепризначається іншому користувачу за endpoint~~ ✅                                             | Низька       | Push / безпека               |
 | 48  | ~~`GET /test-push` з побічними ефектами (оминає CSRF)~~ ✅                                                        | Низька       | Push / безпека               |
-| 49  | Push надсилається лише з `test-push`, послідовно без батчів                                                       | Низька       | Push                         |
+| 49  | ~~Push надсилається лише з `test-push`, послідовно без батчів~~ ✅                                                | Низька       | Push                         |
 | 50  | Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral                                                                     | Низька       | AI / конфігурація            |
 | 51  | Виклики AI-провайдерів без timeout/`AbortSignal`                                                                  | Середня      | AI / надійність              |
 | 52  | Support AI: `langNative = 'ru'` зашито в коді                                                                     | Середня      | AI / i18n                    |
@@ -98,6 +99,7 @@
 | 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
 | 71  | `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`                                                         | Низька       | Стиль                        |
+| 72  | Push не надсилається жодною бізнес-подією                                                                         | Низька       | Push                         |
 
 ## Безпека
 
@@ -270,10 +272,14 @@
 
 ### 20. Сервіси push-нотифікацій звертаються до БД напряму
 
+> **Виправлено** у feat-022 (гілка `feat/push-data-access`) за планом [`push-data-access-plan.md`](./push-data-access-plan.md): новий `push-notification-log-repository.ts` (`insertMany`, `countsBySubscription`, `latestBySubscriptionIds`) у barrel; `push-notification-sender-service.ts` і `push-subscription-statistics-service.ts` не імпортують `#database/*`.
+
 - **Що:** `src/app/services/notifications/push-notification-sender-service.ts` імпортує `db` і робить `db.insert(pushNotificationLogs)`; `src/app/services/statistics/push-subscription-statistics-service.ts` робить `db.select` по `pushNotificationLogs`. Обидва оминають репозиторій.
 - **Пропозиція:** винести запити в `push-subscription-repository` (або окремий `push-notification-log-repository`).
 
 ### 21. N+1 у `findByUserIdWithLogs` і статистика в JS
+
+> **Виправлено** у feat-022 (гілка `feat/push-data-access`) за планом [`push-data-access-plan.md`](./push-data-access-plan.md): `findByUserIdWithLogs` — 2 запити (підписки + логи через `row_number() over (partition by subscription_id …) <= 5`), 1 запит для користувача без підписок; статистика — один запит з `count(case …)`, межа 7 днів передається з годинника застосунку. pg-тест порівнює результат з дослівною копією старої реалізації.
 
 - **Що:** `src/app/repositories/notifications/push-subscription-repository.ts` → `findByUserIdWithLogs` робить окремий запит логів на кожну підписку (`subscriptionsData.map(async …)`). Сервіс статистики завантажує всі логи і рахує агрегати в JavaScript.
 - **Пропозиція:** один запит з `inArray`/join; агрегати через `count()`/`group by` у SQL.
@@ -454,6 +460,8 @@
 
 ### 49. Push надсилається лише з `test-push`
 
+> **Виправлено** у feat-022 (гілка `feat/push-data-access`) за планом [`push-data-access-plan.md`](./push-data-access-plan.md): `sendToUser` відправляє паралельно (`PUSH_SEND_CONCURRENCY = 5`), логи пишуться одним `insertMany`, `lastUsedAt` — одним `touchLastUsed`. Підключення до бізнес-подій винесено в п. 72.
+
 - **Що:** `push-notification-sender-service.ts` → `sendToUser` викликається тільки з `test-push`; жодна бізнес-подія push не надсилає, `skipIfOnline`/`notificationType` не використовуються. Підписки обробляються послідовно, з двома `await`-записами в БД на кожну.
 - **Пропозиція:** підключити до реальних подій; паралельна відправка з обмеженням і пакетний запис логів.
 
@@ -606,3 +614,12 @@
 
 - **Що:** кореневі скрипти `format` / `format:check` мають glob `**/*.{ts,tsx,json,md}`. Vue-компоненти frontend і api-playground, `.js`/`.mjs` (зокрема `documentation/scripts`, `packages/shared/test`) і CSS у CI не перевіряються; пакетні скрипти `format` у frontend/playground форматують лише `src/` і тепер беруть кореневий конфіг (4 пробіли), тож для playground перший запуск переформатує `.vue` з 2 на 4 пробіли.
 - **Пропозиція:** розширити glob до `{ts,tsx,js,mjs,vue,json,md,css}` окремим комітом форматування (і додати його в `.git-blame-ignore-revs`).
+
+## Знайдено під час feat-022
+
+### 72. Push не надсилається жодною бізнес-подією
+
+Винесено з п. 49 (feat-022).
+
+- **Що:** `pushNotificationSenderService.sendToUser` викликає лише `POST /push-subscriptions/test-push`. Параметри `skipIfOnline` і `notificationType` реалізовані й покриті тестами, але жоден виклик їх не передає; типи `mention` / `system` у підписці ні на що не впливають.
+- **Пропозиція:** визначити події, що мають надсилати push (наприклад, відповідь підтримки, коли користувач офлайн), і викликати `sendToUser` з `skipIfOnline: true` та відповідним `notificationType`.

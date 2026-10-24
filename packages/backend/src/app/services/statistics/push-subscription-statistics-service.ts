@@ -1,9 +1,9 @@
-import { pushSubscriptionRepository } from '#app/repositories/index.js'
+import {
+    pushNotificationLogRepository,
+    pushSubscriptionRepository,
+} from '#app/repositories/index.js'
 import { pushSubscriptionTransformer } from '#app/transformers/index.js'
 import type { SerializedPushSubscription } from '#app/transformers/push-subscription-transformer.js'
-import { db } from '#database/db.js'
-import { pushNotificationLogs } from '#database/schema.js'
-import { eq } from 'drizzle-orm'
 
 export interface PushSubscriptionStatistics {
     totalNotifications: number
@@ -31,17 +31,17 @@ export async function getPushSubscriptionStatistics(
         return undefined
     }
 
-    const logs = await db
-        .select()
-        .from(pushNotificationLogs)
-        .where(eq(pushNotificationLogs.subscriptionId, subscriptionId))
-
+    // The 7-day boundary comes from the app clock, as before, not from now() in SQL.
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    const totalNotifications = logs.length
-    const sentNotifications = logs.filter((l) => l.status === 'SENT').length
-    const failedNotifications = logs.filter((l) => l.status === 'FAILED').length
-    const pendingNotifications = logs.filter((l) => l.status === 'PENDING').length
-    const last7DaysCount = logs.filter((l) => l.sentAt >= sevenDaysAgo).length
+    const counts = await pushNotificationLogRepository.countsBySubscription(
+        subscriptionId,
+        sevenDaysAgo,
+    )
+    const totalNotifications = counts.total
+    const sentNotifications = counts.sent
+    const failedNotifications = counts.failed
+    const pendingNotifications = counts.pending
+    const last7DaysCount = counts.since
 
     return {
         subscription: pushSubscriptionTransformer.serialize(subscription),

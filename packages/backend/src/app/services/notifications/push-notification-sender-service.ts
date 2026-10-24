@@ -1,9 +1,12 @@
 import webpush from 'web-push'
 import pushConfig from '#config/push.js'
 import logger from '#logger'
-import { pushSubscriptionRepository } from '#app/repositories/index.js'
-import { db } from '#database/db.js'
-import { pushNotificationLogs } from '#database/schema.js'
+import {
+    pushNotificationLogRepository,
+    pushSubscriptionRepository,
+    type PushNotificationLogInsert,
+    type PushSubscriptionRow,
+} from '#app/repositories/index.js'
 import { wsConnectionRegistry } from '#app/websocket/ws-connection-registry.js'
 
 export interface PushNotificationPayload {
@@ -15,7 +18,35 @@ export interface PushNotificationPayload {
     data?: Record<string, unknown>
 }
 
+// Push requests in flight per sendToUser call.
+export const PUSH_SEND_CONCURRENCY = 5
+
 let vapidConfigured = false
+
+async function forEachWithConcurrency<T>(
+    items: readonly T[],
+    limit: number,
+    run: (item: T) => Promise<void>,
+): Promise<void> {
+    let next = 0
+    const worker = async (): Promise<void> => {
+        while (next < items.length) {
+            const item = items[next++] as T
+            await run(item)
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+}
+
+function acceptsType(subscription: PushSubscriptionRow, notificationType?: string): boolean {
+    const types = subscription.notificationTypes
+    return (
+        notificationType === undefined ||
+        !Array.isArray(types) ||
+        types.length === 0 ||
+        (types as string[]).includes(notificationType)
+    )
+}
 
 function ensureVapidConfigured(): boolean {
     if (vapidConfigured) return true
@@ -76,6 +107,8 @@ export const pushNotificationSenderService = {
 
         let sent = 0
         let failed = 0
+        const logs: PushNotificationLogInsert[] = []
+        const usedIds: bigint[] = []
 
         const pushPayload = JSON.stringify({
             notification: {
@@ -96,17 +129,18 @@ export const pushNotificationSenderService = {
             },
         })
 
-        for (const subscription of activeSubscriptions) {
-            // Filter by notificationType if subscription has preferences
-            if (
-                options.notificationType !== undefined &&
-                Array.isArray(subscription.notificationTypes) &&
-                (subscription.notificationTypes as string[]).length > 0 &&
-                !(subscription.notificationTypes as string[]).includes(options.notificationType)
-            ) {
-                continue
-            }
+        const targets = activeSubscriptions.filter((subscription) =>
+            acceptsType(subscription, options.notificationType),
+        )
 
+        await forEachWithConcurrency(targets, PUSH_SEND_CONCURRENCY, async (subscription) => {
+            const base = {
+                userId,
+                subscriptionId: subscription.id,
+                messageTitle: payload.title,
+                messageBody: payload.body,
+                messageData: payload.data ?? null,
+            }
             try {
                 const response = await webpush.sendNotification(
                     {
@@ -118,26 +152,29 @@ export const pushNotificationSenderService = {
                     },
                     pushPayload,
                 )
-
-                // Log success
-                await db.insert(pushNotificationLogs).values({
-                    userId,
-                    subscriptionId: subscription.id,
-                    messageTitle: payload.title,
-                    messageBody: payload.body,
-                    messageData: payload.data ?? null,
+                logs.push({
+                    ...base,
                     status: 'SENT',
                     responseData: { statusCode: response.statusCode },
                     sentAt: new Date(),
                 })
-
-                // Update last used
-                await pushSubscriptionRepository.update(subscription.id, userId, {})
-
+                usedIds.push(subscription.id)
                 sent++
             } catch (error: unknown) {
                 const statusCode = (error as { statusCode?: number }).statusCode
                 const errorMessage = error instanceof Error ? error.message : String(error)
+                logs.push({
+                    ...base,
+                    status: 'FAILED',
+                    errorMessage,
+                    responseData: { statusCode: statusCode ?? null },
+                    sentAt: new Date(),
+                })
+                failed++
+                logger.error(
+                    { err: error, subscriptionId: String(subscription.id) },
+                    'Failed to send push notification',
+                )
 
                 // 410 Gone or 404 — subscription expired, deactivate
                 if (statusCode === 410 || statusCode === 404) {
@@ -147,27 +184,21 @@ export const pushNotificationSenderService = {
                     )
                     await pushSubscriptionRepository.deactivate(subscription.id, userId)
                 }
-
-                // Log failure
-                await db.insert(pushNotificationLogs).values({
-                    userId,
-                    subscriptionId: subscription.id,
-                    messageTitle: payload.title,
-                    messageBody: payload.body,
-                    messageData: payload.data ?? null,
-                    status: 'FAILED',
-                    errorMessage,
-                    responseData: { statusCode: statusCode ?? null },
-                    sentAt: new Date(),
-                })
-
-                logger.error(
-                    { err: error, subscriptionId: String(subscription.id) },
-                    'Failed to send push notification',
-                )
-
-                failed++
             }
+        })
+
+        // Bookkeeping after the sends: a failed write must not turn a delivered
+        // notification into a failure in the result.
+        try {
+            await pushNotificationLogRepository.insertMany(logs)
+            if (usedIds.length > 0) {
+                await pushSubscriptionRepository.touchLastUsed(usedIds, userId)
+            }
+        } catch (error: unknown) {
+            logger.error(
+                { err: error, userId: String(userId), logs: logs.length },
+                'Failed to record push notification results',
+            )
         }
 
         return { sent, failed }

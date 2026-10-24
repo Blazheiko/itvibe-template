@@ -1,7 +1,11 @@
 import { db } from '#database/db.js'
 import { pushNotificationLogs, pushSubscriptions } from '#database/schema.js'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
+
+import { pushNotificationLogRepository } from './push-notification-log-repository.js'
+
+const LOGS_PER_SUBSCRIPTION = 5
 
 export type PushSubscriptionRow = InferSelectModel<typeof pushSubscriptions>
 export type PushSubscriptionInsert = InferInsertModel<typeof pushSubscriptions>
@@ -52,6 +56,7 @@ export interface IPushSubscriptionRepository {
         data: PushSubscriptionUpdate,
     ): Promise<PushSubscriptionRow | undefined>
     deactivate(id: bigint, userId: bigint): Promise<PushSubscriptionRow | undefined>
+    touchLastUsed(ids: bigint[], userId: bigint): Promise<void>
     delete(id: bigint, userId: bigint): Promise<boolean>
     getLogsBySubscriptionId(
         subscriptionId: bigint,
@@ -113,28 +118,24 @@ export const pushSubscriptionRepository: IPushSubscriptionRepository = {
     },
 
     async findByUserIdWithLogs(userId) {
-        const subscriptionsData = await db
-            .select()
-            .from(pushSubscriptions)
-            .where(eq(pushSubscriptions.userId, userId))
-            .orderBy(desc(pushSubscriptions.createdAt))
+        const subscriptionsData = await pushSubscriptionRepository.findByUserId(userId)
+        if (subscriptionsData.length === 0) return []
 
-        return Promise.all(
-            subscriptionsData.map(async (sub) => {
-                const logs = await db
-                    .select({
-                        id: pushNotificationLogs.id,
-                        messageTitle: pushNotificationLogs.messageTitle,
-                        status: pushNotificationLogs.status,
-                        sentAt: pushNotificationLogs.sentAt,
-                    })
-                    .from(pushNotificationLogs)
-                    .where(eq(pushNotificationLogs.subscriptionId, sub.id))
-                    .orderBy(desc(pushNotificationLogs.sentAt))
-                    .limit(5)
-                return { ...sub, notificationLogs: logs }
-            }),
+        const logs = await pushNotificationLogRepository.latestBySubscriptionIds(
+            subscriptionsData.map((sub) => sub.id),
+            LOGS_PER_SUBSCRIPTION,
         )
+        const logsBySubscription = new Map<bigint, PushSubscriptionLogSummary[]>()
+        for (const { subscriptionId, ...log } of logs) {
+            if (subscriptionId === null) continue
+            const list = logsBySubscription.get(subscriptionId) ?? []
+            list.push(log)
+            logsBySubscription.set(subscriptionId, list)
+        }
+        return subscriptionsData.map((sub) => ({
+            ...sub,
+            notificationLogs: logsBySubscription.get(sub.id) ?? [],
+        }))
     },
 
     async update(id, userId, data) {
@@ -151,6 +152,15 @@ export const pushSubscriptionRepository: IPushSubscriptionRepository = {
             .set({ ...data, userId, updatedAt: new Date(), lastUsedAt: new Date() })
             .where(eq(pushSubscriptions.endpoint, endpoint))
         return pushSubscriptionRepository.findByEndpoint(endpoint)
+    },
+
+    async touchLastUsed(ids, userId) {
+        if (ids.length === 0) return
+        const now = new Date()
+        await db
+            .update(pushSubscriptions)
+            .set({ updatedAt: now, lastUsedAt: now })
+            .where(and(inArray(pushSubscriptions.id, ids), eq(pushSubscriptions.userId, userId)))
     },
 
     async deactivate(id, userId) {
