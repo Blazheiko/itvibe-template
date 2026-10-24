@@ -20,6 +20,7 @@ export const supportLlmService = {
     async *openChatStream(
         langNative: string,
         onComplete?: TextUsageCompleteHandler,
+        signal?: AbortSignal,
     ): AsyncGenerator<string, void, undefined> {
         const systemPromptBase =
             promptService.getContent('SUPPORT_FIRST_CHAT') || supportConfig.defaultFirstChatPrompt
@@ -40,6 +41,7 @@ export const supportLlmService = {
                 temperature,
                 maxOutputTokens: maxTokens,
                 modelOverride: modelOverride ?? undefined,
+                ...(signal !== undefined ? { signal } : {}),
             },
             onComplete,
         )
@@ -51,6 +53,7 @@ export const supportLlmService = {
         chatHistory: SupportChatRow[],
         langNative: string,
         onComplete?: TextUsageCompleteHandler,
+        signal?: AbortSignal,
     ): AsyncGenerator<string, void, undefined> {
         const systemPromptTemplate =
             promptService.getContent('SUPPORT_SYSTEM') || supportConfig.defaultSystemPrompt
@@ -92,6 +95,7 @@ export const supportLlmService = {
                 temperature,
                 maxOutputTokens: maxTokens,
                 modelOverride: modelOverride ?? undefined,
+                ...(signal !== undefined ? { signal } : {}),
             },
             onComplete,
         )

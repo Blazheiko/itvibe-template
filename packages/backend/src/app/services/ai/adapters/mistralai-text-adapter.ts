@@ -1,5 +1,6 @@
 import { Mistral } from '@mistralai/mistralai'
 import aiConfig from '#config/ai.js'
+import { aiRequestSignal } from '#app/services/ai/ai-request-signal.js'
 import { buildFinalTextPrompt } from '#app/services/ai/types.js'
 import type {
     ITextAdapter,
@@ -29,15 +30,18 @@ export const mistralaiTextAdapter: ITextAdapter = {
 
         const modelName = opts.modelOverride ?? cfg.textModel
         const finalPrompt = buildFinalTextPrompt(opts)
-        const stream = await client.chat.stream({
-            model: modelName,
-            messages: [
-                { role: 'system', content: opts.systemPrompt },
-                { role: 'user', content: opts.userPrompt },
-            ],
-            temperature: opts.temperature ?? 0.3,
-            maxTokens: opts.maxOutputTokens ?? 2000,
-        })
+        const stream = await client.chat.stream(
+            {
+                model: modelName,
+                messages: [
+                    { role: 'system', content: opts.systemPrompt },
+                    { role: 'user', content: opts.userPrompt },
+                ],
+                temperature: opts.temperature ?? 0.3,
+                maxTokens: opts.maxOutputTokens ?? 2000,
+            },
+            { fetchOptions: { signal: aiRequestSignal(opts.signal) } },
+        )
 
         let fullText = ''
         let promptTokens = 0

@@ -509,9 +509,12 @@ const setHttpHandler = async (
     // re-registering replaces the previous handler. We wire readData via
     // RequestAbortSignal instead of calling res.onAborted() a second time.
     const abortSignal: RequestAbortSignal = { aborted: false }
+    // Standard signal for handlers (e.g. to cancel an AI call when the client leaves).
+    const requestAbort = new AbortController()
     res.onAborted(() => {
         abortSignal.aborted = true
         abortSignal.onAbort?.()
+        requestAbort.abort()
     })
     const responseData = getResponseData()
     let origin: string | undefined
@@ -568,7 +571,7 @@ const setHttpHandler = async (
             files,
             hasFile: (name: string): boolean => files?.has(name) ?? false,
         }
-        const context = contextHandler(httpData, responseData)
+        const context = contextHandler(httpData, responseData, requestAbort.signal)
         requestId = context.requestId
         userId = context.auth.getUserId() ?? undefined
 

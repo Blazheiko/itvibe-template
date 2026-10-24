@@ -44,7 +44,9 @@ const STATUS_ERROR_CODES: Readonly<Record<number, ErrorCode>> = {
     415: 'unsupported_media_type',
     422: 'validation_failed',
     429: 'rate_limited',
+    502: 'upstream_error',
     503: 'service_unavailable',
+    504: 'upstream_timeout',
 }
 
 export type StatusErrorBody = {

@@ -1,4 +1,5 @@
 import aiConfig from '#config/ai.js'
+import { aiRequestSignal } from '#app/services/ai/ai-request-signal.js'
 import { buildFinalTextPrompt } from '#app/services/ai/types.js'
 import type {
     ITextAdapter,
@@ -92,9 +93,11 @@ function buildSamplingParams(
 
 async function* streamChatCompletion(
     payload: Record<string, unknown>,
+    signal: AbortSignal,
 ): AsyncGenerator<string, StreamResult, undefined> {
     const response = (await fetch(cfg.chatApiUrl, {
         method: 'POST',
+        signal,
         headers: {
             Authorization: `Bearer ${cfg.apiKey}`,
             'Content-Type': 'application/json',
@@ -208,6 +211,8 @@ export const openaiTextAdapter: ITextAdapter = {
         opts: TextStreamOptions,
         onComplete?: TextUsageCompleteHandler,
     ): AsyncGenerator<string, string, undefined> {
+        // One deadline for the whole call, tool round-trip included.
+        const signal = aiRequestSignal(opts.signal)
         if (cfg.apiKey === '') {
             throw new Error('OpenAI is not configured')
         }
@@ -239,7 +244,7 @@ export const openaiTextAdapter: ITextAdapter = {
             ...(tools !== undefined && tools.length > 0 ? { tools } : {}),
         }
 
-        const first = yield* streamChatCompletion(basePayload)
+        const first = yield* streamChatCompletion(basePayload, signal)
         let fullText = first.text
         let usage = first.usage
 
@@ -265,13 +270,16 @@ export const openaiTextAdapter: ITextAdapter = {
                 })
             }
 
-            const second = yield* streamChatCompletion({
-                model: modelName,
-                messages,
-                stream: true,
-                stream_options: { include_usage: true },
-                ...buildSamplingParams(modelName, opts.temperature, opts.maxOutputTokens),
-            })
+            const second = yield* streamChatCompletion(
+                {
+                    model: modelName,
+                    messages,
+                    stream: true,
+                    stream_options: { include_usage: true },
+                    ...buildSamplingParams(modelName, opts.temperature, opts.maxOutputTokens),
+                },
+                signal,
+            )
             fullText += second.text
             usage = mergeUsage(usage, second.usage)
         }

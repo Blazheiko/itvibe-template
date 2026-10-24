@@ -2,6 +2,7 @@ import { streamText, tool, jsonSchema, stepCountIs } from 'ai'
 import type { ToolSet } from 'ai'
 import { createXai } from '@ai-sdk/xai'
 import aiConfig from '#config/ai.js'
+import { aiRequestSignal } from '#app/services/ai/ai-request-signal.js'
 import { buildFinalTextPrompt } from '#app/services/ai/types.js'
 import type {
     ITextAdapter,
@@ -59,6 +60,7 @@ export const xaiTextAdapter: ITextAdapter = {
             maxOutputTokens: opts.maxOutputTokens ?? 2000,
             // step 1 = LLM text + tool call, step 2 = tool execution, step 3 = LLM continuation
             stopWhen: hasTools ? stepCountIs(3) : stepCountIs(1),
+            abortSignal: aiRequestSignal(opts.signal),
             ...(wrappedTools !== undefined ? { tools: wrappedTools } : {}),
         }
         const result = streamText(streamParams)

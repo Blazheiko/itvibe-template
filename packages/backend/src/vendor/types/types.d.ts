@@ -54,6 +54,8 @@ export interface HttpContext<TPayload = unknown, TQuery = null> {
     responseData: ResponseData
     session: Session
     auth: Auth
+    /** Aborted when the client disconnects before the response (res.onAborted). */
+    signal: AbortSignal
 }
 export interface WsContext<TPayload = unknown> {
     requestId: string
@@ -64,6 +66,8 @@ export interface WsContext<TPayload = unknown> {
     session: null
     auth: null
     logger: Logger
+    /** Aborted when this WebSocket connection closes. */
+    signal: AbortSignal
 }
 
 export type WsMiddleware = (context: WsContext, next: () => Promise<void>) => Promise<void>

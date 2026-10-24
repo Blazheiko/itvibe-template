@@ -13,7 +13,7 @@ export default {
             return appErrorToWsError(unauthorized())
         }
 
-        void supportService.openChat(BigInt(userData.userId), userData.uuid)
+        void supportService.openChat(BigInt(userData.userId), userData.uuid, context.signal)
 
         return { status: 'ok' }
     },
@@ -26,7 +26,12 @@ export default {
 
         const payload = getTypedPayload(context)
 
-        void supportService.chat(BigInt(userData.userId), payload.message, userData.uuid)
+        void supportService.chat(
+            BigInt(userData.userId),
+            payload.message,
+            userData.uuid,
+            context.signal,
+        )
 
         return { status: 'ok' }
     },

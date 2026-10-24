@@ -138,7 +138,8 @@ describe('buildStatusErrorBody', () => {
         [503, 'service_unavailable', 'Service Unavailable'],
         [418, 'bad_request', "I'm a Teapot"],
         [500, 'internal_error', 'Internal Server Error'],
-        [502, 'internal_error', 'Bad Gateway'],
+        [502, 'upstream_error', 'Bad Gateway'],
+        [504, 'upstream_timeout', 'Gateway Timeout'],
         [499, 'bad_request', 'Error'],
     ])('%i → %s', (status, code, message) => {
         const body = buildStatusErrorBody(status)

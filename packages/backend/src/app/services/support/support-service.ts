@@ -1,6 +1,7 @@
 import { supportRepository } from '#app/repositories/index.js'
 import { supportEmbeddingService } from '#app/services/support/support-embedding-service.js'
 import { supportLlmService } from '#app/services/support/support-llm-service.js'
+import { aiAbortKind } from '#app/services/ai/ai-request-signal.js'
 import { supportQueryTranslationService } from '#app/services/support/support-query-translation-service.js'
 import { broadcastService } from '#app/services/communication/broadcast-service.js'
 import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
@@ -101,7 +102,7 @@ export const supportService = {
         return Result.ok(undefined)
     },
 
-    async openChat(userId: bigint, targetUuid?: string): Promise<void> {
+    async openChat(userId: bigint, targetUuid?: string, signal?: AbortSignal): Promise<void> {
         const userIdStr = String(userId)
         try {
             const langNative = 'ru'
@@ -127,6 +128,7 @@ export const supportService = {
                         totalTokens: usage.totalTokens,
                     })
                 },
+                signal,
             )) {
                 fullReply += token
                 broadcastToConnection(userIdStr, targetUuid, 'support_chat_token', { token })
@@ -141,6 +143,11 @@ export const supportService = {
                 screenshots: [],
             })
         } catch (err) {
+            if (aiAbortKind(err) === 'aborted') {
+                // The connection closed: nobody to answer, and not a failure.
+                logger.info({ userId: userIdStr }, 'Support: openChat cancelled, connection closed')
+                return
+            }
             logger.error({ err, userId: userIdStr }, 'Support: openChat failed')
             broadcastToConnection(userIdStr, targetUuid, 'support_chat_error', {
                 message: 'Failed to open support chat',
@@ -148,7 +155,12 @@ export const supportService = {
         }
     },
 
-    async chat(userId: bigint, message: string, targetUuid?: string): Promise<void> {
+    async chat(
+        userId: bigint,
+        message: string,
+        targetUuid?: string,
+        signal?: AbortSignal,
+    ): Promise<void> {
         const userIdStr = String(userId)
         try {
             const langNative = 'ru'
@@ -181,6 +193,7 @@ export const supportService = {
                         totalTokens: usage.totalTokens,
                     })
                 },
+                signal,
             )) {
                 fullReply += token
                 broadcastToConnection(userIdStr, targetUuid, 'support_chat_token', { token })
@@ -195,6 +208,10 @@ export const supportService = {
                 screenshots: screenshotIds,
             })
         } catch (err) {
+            if (aiAbortKind(err) === 'aborted') {
+                logger.info({ userId: userIdStr }, 'Support: chat cancelled, connection closed')
+                return
+            }
             logger.error({ err, userId: userIdStr }, 'Support: chat failed')
             broadcastToConnection(userIdStr, targetUuid, 'support_chat_error', {
                 message: 'Chat failed',
