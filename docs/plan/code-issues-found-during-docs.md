@@ -35,7 +35,7 @@
 | feat-034 | 66             |
 | feat-035 | 68             |
 
-Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
+Усі 49 пунктів плану закрито. П. 55 — **відкладено** (рішення Р3: тестовий застосунок, промпти поки не очищаються). Пункти 71–73 знайдено під час виконання плану; вони відкриті й поза ним. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
 Шляхи відносно `packages/backend/`, якщо не вказано інше.
 
