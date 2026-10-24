@@ -6,6 +6,12 @@ export const PingResponseSchema = type({
 })
 export type PingResponse = typeof PingResponseSchema.infer
 
+// GET /ready: 200 with "ok", 503 with "unavailable"; never names the failed dependency.
+export const ReadyResponseSchema = type({
+    status: "'ok' | 'unavailable'",
+})
+export type ReadyResponse = typeof ReadyResponseSchema.infer
+
 export const TestRouteResponseSchema = type({
     status: 'string',
 })

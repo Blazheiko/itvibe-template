@@ -19,11 +19,16 @@ vi.mock('#vendor/utils/session/delete-legacy-session-cookie.js', () => ({
 
 const { default: sessionWeb } = await import('./session-web.js')
 
-const createContext = (sessionInfo: SessionInfo | null): HttpContext =>
+const childLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+const loggerChild = vi.fn(() => childLogger)
+
+const createContext = (sessionInfo: SessionInfo | null, userId: string | null = null) =>
     ({
         httpData: { cookies: new Map() },
         responseData: { payload: null, status: 200 },
         session: { sessionInfo },
+        auth: { getUserId: () => userId },
+        logger: { child: loggerChild },
     }) as unknown as HttpContext
 
 const createSession = (csrfToken: string | undefined): SessionInfo => ({
@@ -90,5 +95,28 @@ describe('sessionWeb CSRF delivery', () => {
         })
 
         expect(context.responseData.payload).toEqual({ status: 'error' })
+    })
+})
+
+describe('sessionWeb request logger (code-issues item 33)', () => {
+    it('binds userId to the request logger once the session names a user', async () => {
+        const context = createContext(createSession(VALID_CSRF_TOKEN), '42')
+        loggerChild.mockClear()
+
+        await sessionWeb(context, async () => {})
+
+        expect(loggerChild).toHaveBeenCalledWith({ userId: '42' })
+        expect(context.logger).toBe(childLogger)
+    })
+
+    it('leaves the logger alone for an anonymous request', async () => {
+        const context = createContext(createSession(VALID_CSRF_TOKEN))
+        const original = context.logger
+        loggerChild.mockClear()
+
+        await sessionWeb(context, async () => {})
+
+        expect(loggerChild).not.toHaveBeenCalled()
+        expect(context.logger).toBe(original)
     })
 })

@@ -55,6 +55,13 @@ export default [
         ResponseSchema: ResponseSchemas.PingResponseSchema,
         description: 'Ping',
     }),
+    defineRoute({
+        url: '/ready',
+        method: 'get',
+        handler: MainController.ready.bind(MainController),
+        ResponseSchema: ResponseSchemas.ReadyResponseSchema,
+        description: 'Readiness: 200 when PostgreSQL and Redis answer, 503 otherwise',
+    }),
     {
         group: [
             defineRoute({
