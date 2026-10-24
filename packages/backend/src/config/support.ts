@@ -1,4 +1,46 @@
+import { env } from 'node:process'
+import { isAppLocaleCode } from 'shared/enums'
+
+const errors: string[] = []
+
+// Language of the Support AI answers when the client does not send one
+// (code-issues item 52).
+const readDefaultLanguage = (): string => {
+    const raw = (env['SUPPORT_DEFAULT_LANGUAGE'] ?? '').trim().toLowerCase()
+    if (raw === '') return 'en'
+    if (isAppLocaleCode(raw)) return raw
+    errors.push(`SUPPORT_DEFAULT_LANGUAGE must be one of the app locale codes, got "${raw}"`)
+    return 'en'
+}
+
+const readBatchSize = (): number => {
+    const raw = env['SUPPORT_EMBEDDING_BATCH_SIZE']
+    if (raw === undefined || raw.trim() === '') return 50
+    const value = Number(raw.trim())
+    if (!/^\d+$/.test(raw.trim()) || value < 1 || value > 2048) {
+        errors.push(`SUPPORT_EMBEDDING_BATCH_SIZE must be an integer from 1 to 2048, got "${raw}"`)
+        return 50
+    }
+    return value
+}
+
+// Cosine distance (pgvector <=>, 0..2): articles farther than this are not used
+// as context (code-issues item 54). Not calibrated on real embeddings.
+const readMaxDistance = (): number => {
+    const raw = env['SUPPORT_SEARCH_MAX_DISTANCE']
+    if (raw === undefined || raw.trim() === '') return 0.8
+    const value = Number(raw.trim())
+    if (!Number.isFinite(value) || value <= 0 || value > 2) {
+        errors.push(`SUPPORT_SEARCH_MAX_DISTANCE must be a number in (0, 2], got "${raw}"`)
+        return 0.8
+    }
+    return value
+}
+
 const supportConfig = Object.freeze({
+    defaultLanguage: readDefaultLanguage(),
+    embeddingBatchSize: readBatchSize(),
+    searchMaxDistance: readMaxDistance(),
     defaultSystemPrompt: `You are a technical support agent for the ITVibe Template application.
 Your task is to help users understand the application's features.
 
@@ -34,6 +76,7 @@ Keep it short - 2-3 sentences max.`,
             maxTokens: 500,
         }),
     }),
+    configError: errors.length > 0 ? errors.join('; ') : null,
 })
 
 export default supportConfig

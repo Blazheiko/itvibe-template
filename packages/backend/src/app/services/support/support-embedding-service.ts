@@ -3,6 +3,7 @@ import { supportKnowledgeRepository } from '#app/repositories/index.js'
 import type { KbSearchResult } from '#app/repositories/index.js'
 import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
 import logger from '#logger'
+import supportConfig from '#config/support.js'
 
 export const supportEmbeddingService = {
     async indexArticle(articleId: bigint, title: string, content: string): Promise<void> {
@@ -27,16 +28,21 @@ export const supportEmbeddingService = {
         const allRows = await supportKnowledgeRepository.findActiveAll()
         if (allRows.length === 0) return 0
 
-        const texts = allRows.map((a) => `${a.title}\n\n${a.content}`)
-        const vectors = await openaiEmbeddingAdapter.embedBatch(texts, {
-            onComplete: llmUsageService.textUsageRecorder('SUPPORT_EMBEDDING', null),
-        })
-
-        for (let i = 0; i < allRows.length; i++) {
-            const article = allRows[i]
-            const vector = vectors[i]
-            if (article === undefined || vector === undefined) continue
-            await supportKnowledgeRepository.setEmbedding(article.id, vector)
+        // In batches of SUPPORT_EMBEDDING_BATCH_SIZE (code-issues item 54): one huge
+        // request could exceed the provider's input limits.
+        const batchSize = supportConfig.embeddingBatchSize
+        for (let start = 0; start < allRows.length; start += batchSize) {
+            const batch = allRows.slice(start, start + batchSize)
+            const vectors = await openaiEmbeddingAdapter.embedBatch(
+                batch.map((a) => `${a.title}\n\n${a.content}`),
+                { onComplete: llmUsageService.textUsageRecorder('SUPPORT_EMBEDDING', null) },
+            )
+            for (let i = 0; i < batch.length; i++) {
+                const article = batch[i]
+                const vector = vectors[i]
+                if (article === undefined || vector === undefined) continue
+                await supportKnowledgeRepository.setEmbedding(article.id, vector)
+            }
         }
 
         return allRows.length
@@ -58,6 +64,10 @@ export const supportEmbeddingService = {
                 options.userId ?? null,
             ),
         })
-        return supportKnowledgeRepository.searchByEmbedding(queryVector, limit)
+        return supportKnowledgeRepository.searchByEmbedding(
+            queryVector,
+            limit,
+            supportConfig.searchMaxDistance,
+        )
     },
 }

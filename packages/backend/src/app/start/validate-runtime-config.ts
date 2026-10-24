@@ -1,4 +1,5 @@
 import aiConfig from '#config/ai.js'
+import supportConfig from '#config/support.js'
 import appConfig from '#config/app.js'
 import { authConfig } from '#config/auth.js'
 import cspConfig from '#config/csp.js'
@@ -36,6 +37,10 @@ export function validateRuntimeConfig(): void {
 
     if (aiConfig.configError !== null) {
         throw new Error(`Invalid AI configuration: ${aiConfig.configError}`)
+    }
+
+    if (supportConfig.configError !== null) {
+        throw new Error(`Invalid Support AI configuration: ${supportConfig.configError}`)
     }
 
     if (throttlePolicyConfigError !== null) {

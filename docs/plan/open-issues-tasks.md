@@ -239,17 +239,17 @@
 ### F12 AI Quality (п. 43, 52, 54)
 
 - [x] **F12.S** Шаблон S (M).
-- [ ] **F12.1** Мова Support AI: профіль → `Accept-Language`/параметр → default з конфігу; прибрати `'ru'` (п. 52).
+- [x] **F12.1** Мова Support AI: профіль → `Accept-Language`/параметр → default з конфігу; прибрати `'ru'` (п. 52).
       **AC:** unit на кожен рівень fallback; `grep "'ru'"` у `support-service.ts` порожній.
-- [ ] **F12.2** Перевірка на старті: `OPENAI_EMBEDDING_DIMENSIONS` = 1536 (розмірність колонки) (п. 54).
+- [x] **F12.2** Перевірка на старті: `OPENAI_EMBEDDING_DIMENSIONS` = 1536 (розмірність колонки) (п. 54).
       **AC:** тест: інше значення → помилка старту.
-- [ ] **F12.3** `reindexAll` батчами `SUPPORT_EMBEDDING_BATCH_SIZE` (default 50) (п. 54).
+- [x] **F12.3** `reindexAll` батчами `SUPPORT_EMBEDDING_BATCH_SIZE` (default 50) (п. 54).
       **AC:** unit: 120 статей → 3 виклики `embedBatch`.
-- [ ] **F12.4** Поріг відстані в `searchByEmbedding` (env); default — за ручною перевіркою на `docs/support-knowledge-base` (п. 54).
+- [x] **F12.4** Поріг відстані в `searchByEmbedding` (env); default — за ручною перевіркою на `docs/support-knowledge-base` (п. 54).
       **AC:** unit: результати далі порогу відкинуто; таблиця ручної перевірки в evidence.
-- [ ] **F12.5** TTL кешу промптів `PROMPT_CACHE_TTL_MS` (default 60 000) + інвалідація на тому ж інстансі при оновленні (п. 43).
+- [x] **F12.5** TTL кешу промптів `PROMPT_CACHE_TTL_MS` (default 60 000) + інвалідація на тому ж інстансі при оновленні (п. 43).
       **AC:** unit з fake timers: після TTL читається нове значення; після оновлення — одразу.
-- [ ] **F12.D** Шаблон D: `ai.md`, `configuration.md`; в `ai.md` явно: оновлення промпту на інших інстансах видно із затримкою ≤ `PROMPT_CACHE_TTL_MS`, інвалідація між інстансами (pub/sub) поза фічею. **F12.E**, **F12.X**.
+- [x] **F12.D** Шаблон D: `ai.md`, `configuration.md`; в `ai.md` явно: оновлення промпту на інших інстансах видно із затримкою ≤ `PROMPT_CACHE_TTL_MS`, інвалідація між інстансами (pub/sub) поза фічею. **F12.E**, **F12.X**.
 
 ## Хвиля 6 — експлуатація (паралельно, після F00)
 

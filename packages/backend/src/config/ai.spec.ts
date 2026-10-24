@@ -50,6 +50,36 @@ describe('AI config (code-issues items 50, 51)', () => {
     })
 })
 
+describe('embedding dimensions (code-issues item 54)', () => {
+    it('accepts the column size 1536', async () => {
+        process.env['OPENAI_EMBEDDING_DIMENSIONS'] = '1536'
+        expect((await load()).configError).toBeNull()
+    })
+
+    it.each([['3072'], ['abc']])(
+        'reports OPENAI_EMBEDDING_DIMENSIONS=%s that does not match the column',
+        async (value) => {
+            process.env['OPENAI_EMBEDDING_DIMENSIONS'] = value
+            expect((await load()).configError).toContain('OPENAI_EMBEDDING_DIMENSIONS')
+        },
+    )
+})
+
+describe('prompt cache TTL (code-issues item 43)', () => {
+    it('defaults to 60 s and reads PROMPT_CACHE_TTL_MS', async () => {
+        delete process.env['PROMPT_CACHE_TTL_MS']
+        expect((await load()).promptCacheTtlMs).toBe(60_000)
+        vi.resetModules()
+        process.env['PROMPT_CACHE_TTL_MS'] = '5000'
+        expect((await load()).promptCacheTtlMs).toBe(5000)
+    })
+
+    it('reports an invalid PROMPT_CACHE_TTL_MS', async () => {
+        process.env['PROMPT_CACHE_TTL_MS'] = '-1'
+        expect((await load()).configError).toContain('PROMPT_CACHE_TTL_MS')
+    })
+})
+
 describe('validateRuntimeConfig and AI config', () => {
     it('stops the start on an unknown AI_TEXT_DRIVER', async () => {
         process.env['AI_TEXT_DRIVER'] = 'foo'
@@ -57,5 +87,13 @@ describe('validateRuntimeConfig and AI config', () => {
         expect(() => {
             validateRuntimeConfig()
         }).toThrow(/Invalid AI configuration: AI_TEXT_DRIVER/)
+    })
+
+    it('stops the start on an invalid Support AI setting', async () => {
+        process.env['SUPPORT_DEFAULT_LANGUAGE'] = 'klingon'
+        const { validateRuntimeConfig } = await import('#app/start/validate-runtime-config.js')
+        expect(() => {
+            validateRuntimeConfig()
+        }).toThrow(/Invalid Support AI configuration: SUPPORT_DEFAULT_LANGUAGE/)
     })
 })

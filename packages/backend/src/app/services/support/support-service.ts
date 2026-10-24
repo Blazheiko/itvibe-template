@@ -2,6 +2,8 @@ import { supportRepository } from '#app/repositories/index.js'
 import { supportEmbeddingService } from '#app/services/support/support-embedding-service.js'
 import { supportLlmService } from '#app/services/support/support-llm-service.js'
 import { aiAbortKind } from '#app/services/ai/ai-request-signal.js'
+import supportConfig from '#config/support.js'
+import { isAppLocaleCode } from 'shared/enums'
 import { supportQueryTranslationService } from '#app/services/support/support-query-translation-service.js'
 import { broadcastService } from '#app/services/communication/broadcast-service.js'
 import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
@@ -17,6 +19,16 @@ export interface SupportChatHistoryItem {
     content: string
     screenshots: string[] | null
     createdAt: string
+}
+
+// The UI locale the client sent, mapped to an app locale; otherwise the configured
+// default (code-issues item 52 — it used to be a hard-coded 'ru').
+export function resolveSupportLanguage(language: string | undefined): string {
+    if (language !== undefined) {
+        const base = language.trim().toLowerCase().split(/[-_]/)[0] ?? ''
+        if (isAppLocaleCode(base)) return base
+    }
+    return supportConfig.defaultLanguage
 }
 
 function broadcastToConnection(
@@ -102,10 +114,15 @@ export const supportService = {
         return Result.ok(undefined)
     },
 
-    async openChat(userId: bigint, targetUuid?: string, signal?: AbortSignal): Promise<void> {
+    async openChat(
+        userId: bigint,
+        targetUuid?: string,
+        signal?: AbortSignal,
+        language?: string,
+    ): Promise<void> {
         const userIdStr = String(userId)
         try {
-            const langNative = 'ru'
+            const langNative = resolveSupportLanguage(language)
             const existing = await supportRepository.findChatHistory(userId, 1)
             if (existing.length > 0) {
                 return
@@ -149,10 +166,11 @@ export const supportService = {
         message: string,
         targetUuid?: string,
         signal?: AbortSignal,
+        language?: string,
     ): Promise<void> {
         const userIdStr = String(userId)
         try {
-            const langNative = 'ru'
+            const langNative = resolveSupportLanguage(language)
             await supportRepository.addChatMessage(userId, 'user', message)
 
             const [englishQuery, chatHistory] = await Promise.all([

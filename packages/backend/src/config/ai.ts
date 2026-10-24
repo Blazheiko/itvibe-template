@@ -1,5 +1,7 @@
 import { env } from 'node:process'
 
+import { EMBEDDING_COLUMN_DIMENSIONS } from '../database/embedding-dimensions.js'
+
 export const AI_TEXT_DRIVERS = ['openai', 'xai', 'mistral'] as const
 export type AiTextDriver = (typeof AI_TEXT_DRIVERS)[number]
 
@@ -26,11 +28,40 @@ const readTimeoutMs = (): number => {
     return value
 }
 
+// The embedding column has a fixed size (code-issues item 54).
+const readEmbeddingDimensions = (): number => {
+    const raw = env['OPENAI_EMBEDDING_DIMENSIONS']
+    if (raw === undefined || raw.trim() === '') return EMBEDDING_COLUMN_DIMENSIONS
+    const value = Number(raw.trim())
+    if (value !== EMBEDDING_COLUMN_DIMENSIONS) {
+        errors.push(
+            `OPENAI_EMBEDDING_DIMENSIONS must be ${String(EMBEDDING_COLUMN_DIMENSIONS)} to match ` +
+                `support_knowledge_base.embedding, got "${raw}" (another size needs a column migration and a reindex)`,
+        )
+        return EMBEDDING_COLUMN_DIMENSIONS
+    }
+    return value
+}
+
+// Prompts are cached per process; other instances see an update within this time
+// (code-issues item 43).
+const readPromptCacheTtlMs = (): number => {
+    const raw = env['PROMPT_CACHE_TTL_MS']
+    if (raw === undefined || raw.trim() === '') return 60_000
+    const value = Number(raw.trim())
+    if (!/^\d+$/.test(raw.trim()) || !Number.isSafeInteger(value) || value < 1000) {
+        errors.push(`PROMPT_CACHE_TTL_MS must be an integer >= 1000, got "${raw}"`)
+        return 60_000
+    }
+    return value
+}
+
 const aiConfig = Object.freeze({
     drivers: {
         text: readTextDriver(),
     },
     requestTimeoutMs: readTimeoutMs(),
+    promptCacheTtlMs: readPromptCacheTtlMs(),
     providers: {
         openai: {
             apiKey: env['OPENAI_API_KEY'] ?? '',
@@ -49,7 +80,7 @@ const aiConfig = Object.freeze({
     openaiEmbedding: {
         apiKey: env['OPENAI_API_KEY'] ?? '',
         model: env['OPENAI_EMBEDDING_MODEL'] ?? 'text-embedding-3-small',
-        dimensions: Number(env['OPENAI_EMBEDDING_DIMENSIONS'] ?? 1536),
+        dimensions: readEmbeddingDimensions(),
     },
     configError: errors.length > 0 ? errors.join('; ') : null,
 })

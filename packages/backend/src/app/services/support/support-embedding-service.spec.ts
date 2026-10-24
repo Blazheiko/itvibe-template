@@ -1,0 +1,50 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const embedBatch = vi.fn((texts: string[]) => Promise.resolve(texts.map(() => [0.1])))
+const embed = vi.fn(() => Promise.resolve([0.2]))
+vi.mock('#app/services/ai/adapters/openai-embedding-adapter.js', () => ({
+    openaiEmbeddingAdapter: { isConfigured: () => true, embed, embedBatch },
+}))
+const repository = {
+    findActiveAll: vi.fn(),
+    setEmbedding: vi.fn(() => Promise.resolve()),
+    searchByEmbedding: vi.fn(() => Promise.resolve([])),
+}
+vi.mock('#app/repositories/index.js', () => ({ supportKnowledgeRepository: repository }))
+vi.mock('#app/services/ai/usage/llm-usage-service.js', () => ({
+    llmUsageService: { textUsageRecorder: vi.fn(() => vi.fn()) },
+}))
+vi.mock('#config/support.js', () => ({
+    default: { embeddingBatchSize: 50, searchMaxDistance: 0.6 },
+}))
+vi.mock('#logger', () => ({ default: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }))
+
+const { supportEmbeddingService } = await import('./support-embedding-service.js')
+
+afterEach(() => {
+    vi.clearAllMocks()
+})
+
+describe('supportEmbeddingService (code-issues item 54)', () => {
+    it('reindexes 120 articles in 3 batches of at most 50 and stores every vector', async () => {
+        repository.findActiveAll.mockResolvedValue(
+            Array.from({ length: 120 }, (_, i) => ({
+                id: BigInt(i + 1),
+                title: 't',
+                content: 'c',
+            })),
+        )
+
+        const count = await supportEmbeddingService.reindexAll()
+
+        expect(count).toBe(120)
+        expect(embedBatch.mock.calls.map((call) => call[0].length)).toEqual([50, 50, 20])
+        expect(repository.setEmbedding).toHaveBeenCalledTimes(120)
+        expect(repository.setEmbedding).toHaveBeenLastCalledWith(120n, [0.1])
+    })
+
+    it('searches with the configured maximum distance', async () => {
+        await supportEmbeddingService.search('question', 5)
+        expect(repository.searchByEmbedding).toHaveBeenCalledWith([0.2], 5, 0.6)
+    })
+})

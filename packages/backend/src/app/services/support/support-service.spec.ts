@@ -170,4 +170,29 @@ describe('supportService', () => {
             expect(loggerMock.error).not.toHaveBeenCalled()
         })
     })
+
+    describe('answer language (code-issues item 52)', () => {
+        it.each([
+            ['uk', 'uk'],
+            ['pt-BR', 'pt'],
+            ['  DE ', 'de'],
+            ['klingon', 'en'],
+            [undefined, 'en'],
+        ])('resolves %j to %j', async (language, expected) => {
+            const { resolveSupportLanguage } = await loadSupportService()
+            expect(resolveSupportLanguage(language)).toBe(expected)
+        })
+
+        it('passes the resolved language to the LLM instead of a hard-coded one', async () => {
+            supportRepositoryMock.findChatHistory.mockResolvedValue([])
+            supportLlmServiceMock.openChatStream.mockImplementation(async function* () {
+                yield 'hi'
+            })
+
+            const { supportService } = await loadSupportService()
+            await supportService.openChat(7n, 'conn-1', undefined, 'uk')
+
+            expect(supportLlmServiceMock.openChatStream.mock.calls[0]?.[0]).toBe('uk')
+        })
+    })
 })

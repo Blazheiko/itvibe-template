@@ -72,6 +72,12 @@ describe.skipIf(!hasPg)('supportKnowledgeRepository embeddings on PostgreSQL', a
         expect(ours[0]).toMatchObject({ title: 'near', content: 'near content' })
     })
 
+    it('searchByEmbedding drops articles farther than maxDistance (item 54)', async () => {
+        const result = await supportKnowledgeRepository.searchByEmbedding(unit(0), 5, 0.5)
+        const ours = result.filter((row) => created.includes(row.id))
+        expect(ours.map((row) => row.id)).toEqual([near])
+    })
+
     it('clearEmbedding drops the vector and bumps updatedAt in one statement', async () => {
         const spy = vi.spyOn(pool, 'query')
         try {
