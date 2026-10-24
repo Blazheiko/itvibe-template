@@ -188,10 +188,10 @@
             "id": "feat-019",
             "name": "Docker Hardening",
             "description": ".dockerignore with canary checks of builder stage and image layers, non-root user app, HEALTHCHECK, exec-form CMD node, migrations as one-shot runs (code-issues items 28, 29, 30). Roadmap F02: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/docker-hardening",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
