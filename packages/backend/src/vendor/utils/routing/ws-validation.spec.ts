@@ -60,6 +60,11 @@ describe('ws-api-dispatcher validation', () => {
             error: {
                 code: 'validation_failed',
                 message: 'Validation failure',
+                details: {
+                    kind: 'validation',
+                    messages: ['roomId must be a string (was a number)'],
+                    issues: [{ path: 'roomId', message: 'roomId must be a string (was a number)' }],
+                },
             },
         })
         expect(handler).not.toHaveBeenCalled()

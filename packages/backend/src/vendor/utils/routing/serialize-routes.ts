@@ -84,14 +84,15 @@ export function serializeRoutes(routes: unknown[]): unknown[] {
             ResponseSchema: undefined,
         }
 
-        const nativeValidator = getArkTypeDescription(obj['validator'])
-        if (isArkType(nativeValidator)) {
-            result.inputSchema = serializeArkSchema(nativeValidator)
+        // Validators are engine-neutral; the playground shows the ArkType schema behind them.
+        const bodySchema = getArkTypeDescription(obj['validator'])
+        if (isArkType(bodySchema)) {
+            result.inputSchema = serializeArkSchema(bodySchema)
         }
 
-        const nativeQueryValidator = getArkTypeDescription(obj['queryValidator'])
-        if (isArkType(nativeQueryValidator)) {
-            result.querySchema = serializeArkSchema(nativeQueryValidator)
+        const querySchema = getArkTypeDescription(obj['queryValidator'])
+        if (isArkType(querySchema)) {
+            result.querySchema = serializeArkSchema(querySchema)
         }
 
         if (typeof obj['method'] === 'string' && isBodyMethod(obj['method'] as Method)) {

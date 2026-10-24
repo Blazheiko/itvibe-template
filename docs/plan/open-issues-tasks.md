@@ -177,15 +177,15 @@
 ### F09 Validation Cleanup (п. 26, 27)
 
 - [x] **F09.S** Шаблон S.
-- [ ] **F09.1** ArkType-адаптер: `ArkErrors` → `messages: [{ path, message }]`, `summary` у `message`; shared-схема відповіді 422 (п. 26).
+- [x] **F09.1** ArkType-адаптер: `ArkErrors` → `messages: [{ path, message }]`, `summary` у `message`; shared-схема відповіді 422 (п. 26).
       **AC:** тест: два невалідні поля → два елементи з правильними `path`.
-- [ ] **F09.2** Видалити `validate/schemas/schemas.ts` і закоментовані імпорти в `src/index.ts`, `vendor/start/server.ts`; `testSentryError` (п. 27).
+- [x] **F09.2** Видалити `validate/schemas/schemas.ts` і закоментовані імпорти в `src/index.ts`, `vendor/start/server.ts`; `testSentryError` (п. 27).
       **AC:** `grep` порожній; тести зелені.
-- [ ] **F09.3** Docstring `validation-error.ts`; `nativeValidator` → назва за змістом у `serialize-routes.ts`; README `400` → `422` (п. 27).
+- [x] **F09.3** Docstring `validation-error.ts`; `nativeValidator` → назва за змістом у `serialize-routes.ts`; README `400` → `422` (п. 27).
       **AC:** playground показує опис валідатора як і раніше.
-- [ ] **F09.4** ADR 0001: §3.6, §5.6, §9 — розділ «Не робимо» з причинами або нові пункти в code-issues (п. 27).
+- [x] **F09.4** ADR 0001: §3.6, §5.6, §9 — розділ «Не робимо» з причинами або нові пункти в code-issues (п. 27).
       **AC:** кожен з трьох параграфів має рішення.
-- [ ] **F09.D** Шаблон D: `validation.md`. **F09.E**, **F09.X**.
+- [x] **F09.D** Шаблон D: `validation.md`. **F09.E**, **F09.X**.
 
 ### F07 WebSocket Cleanup (п. 17, 19)
 

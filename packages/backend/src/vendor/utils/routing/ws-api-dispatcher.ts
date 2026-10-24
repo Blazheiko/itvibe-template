@@ -109,6 +109,7 @@ export default async (
                 details: {
                     kind: 'validation',
                     messages: e.messages,
+                    ...(e.issues !== undefined ? { issues: e.issues } : {}),
                 },
             })
         } else {

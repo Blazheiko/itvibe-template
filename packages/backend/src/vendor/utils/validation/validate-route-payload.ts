@@ -7,7 +7,7 @@ export const validateRoutePayload = <TPayload>(
 ): TPayload => {
     const out = validator.validate(payload)
     if (!out.ok) {
-        throw new ValidationError(out.messages)
+        throw new ValidationError(out.messages, undefined, out.issues)
     }
 
     return out.value

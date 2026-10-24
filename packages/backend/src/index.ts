@@ -6,7 +6,6 @@ import logger from '#vendor/utils/logger.js'
 import { initServer, stopServer } from '#vendor/start/server.js'
 import configApp from '#config/app.js'
 // import redis from '#database/redis.js';
-// import schemas from '#app/validate/schemas/schemas.js';
 // import validators from '#vendor/start/validators.js';
 import { createWsRoutesByUrl, routesHandler } from '#vendor/start/router.js'
 import httpRoutes from '#app/routes/http-routes.js'

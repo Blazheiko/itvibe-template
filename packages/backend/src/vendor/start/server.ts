@@ -56,7 +56,6 @@ import {
     staticCacheHandler,
 } from '#vendor/start/static-server.js'
 import configApp from '#config/app.js'
-// import schemas from "#app/validate/schemas/schemas.js";
 import getIP from '#vendor/utils/network/get-ip.js'
 import { serializeRoutes } from '#vendor/utils/routing/serialize-routes.js'
 import { isBodyMethod } from '#vendor/utils/routing/body-methods.js'
@@ -419,6 +418,7 @@ export const handleError = (
             details: {
                 kind: 'validation',
                 messages: error.messages,
+                ...(error.issues !== undefined ? { issues: error.issues } : {}),
             },
         })
     } else if (error instanceof ParameterValidationError) {

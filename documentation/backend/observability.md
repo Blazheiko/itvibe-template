@@ -148,8 +148,4 @@ docker logs <container> | jq 'select(.level >= 50)'
 docker logs <container> | jq 'select(.requestId == "<uuid>")'
 ```
 
-**Перевірити Sentry.** Задайте `SENTRY_DSN` і перезапустіть бекенд. У `MainController` є метод `testSentryError`, який кидає `new Error("Sentry test error")`, але він не підключений до маршруту.
-
-::: warning testSentryError недоступний
-Відома проблема №27 у [code-issues-found-during-docs.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md): `testSentryError` не зареєстрований у маршрутах. Щоб перевірити інтеграцію, тимчасово додайте маршрут у [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) (не для production) або викличте `logger.error({ err: new Error('test') }, 'sentry test')`.
-:::
+**Перевірити Sentry.** Задайте `SENTRY_DSN` і перезапустіть бекенд, потім викличте в коді (наприклад, тимчасово в обробнику локального маршруту) `logger.error({ err: new Error('sentry test') }, 'sentry test')` — запис рівня `error` іде в Sentry. Окремого тестового маршруту немає: мертвий `MainController.testSentryError` видалено (п. 27 у [code-issues-found-during-docs.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)).

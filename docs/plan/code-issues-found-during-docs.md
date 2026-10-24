@@ -20,6 +20,7 @@
 | feat-021 | 47, 48, 67     |
 | feat-022 | 20, 21, 49     |
 | feat-025 | 22, 24, 25     |
+| feat-026 | 26, 27         |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -54,8 +55,8 @@
 | 23  | `prompt-controller` сам викликає OpenAI і кидає `Error`                                                           | Середня      | Шари / помилки               |
 | 24  | ~~Repositories barrel неповний, змішані стилі імпорту~~ ✅                                                        | Низька       | Структура                    |
 | 25  | ~~`clearEmbedding` — два запити без транзакції, сирий SQL з назвами~~ ✅                                          | Низька       | БД                           |
-| 26  | ArkType-адаптер віддає лише `summary`, без помилок по полях                                                       | Низька       | Валідація                    |
-| 27  | Мертвий і застарілий код валідації та контролерів                                                                 | Низька       | Структура                    |
+| 26  | ~~ArkType-адаптер віддає лише `summary`, без помилок по полях~~ ✅                                                | Низька       | Валідація                    |
+| 27  | ~~Мертвий і застарілий код валідації та контролерів~~ ✅                                                          | Низька       | Структура                    |
 | 28  | Немає `.dockerignore`                                                                                             | Середня      | Docker / безпека             |
 | 29  | Контейнер працює від root, без `HEALTHCHECK`                                                                      | Середня      | Docker / безпека             |
 | 30  | `CMD` через `sh -c`: міграції на кожному старті, сигнали                                                          | Середня      | Docker / експлуатація        |
@@ -314,10 +315,14 @@
 
 ### 26. ArkType-адаптер віддає лише `summary`
 
+> **Виправлено** у feat-026 (гілка `feat/validation-cleanup`): адаптер повертає `issues: [{ path, message }]` (по запису на кожну помилку ArkType), а `messages` лишається `string[]`, але тепер по рядку на поле — контракт, який читає фронтенд (`details.messages`), не зламано. `issues` іде в `details` HTTP 422 і WS-помилок; тип `ValidationIssue` у `shared`. Відступ від roadmap: там пропонувалося замінити `messages[]` на об'єкти.
+
 - **Що:** `src/app/validate/adapters/arktype-adapter.ts` повертає один `summary` як повідомлення; масив `messages[]` у помилці 422 не містить помилок по окремих полях.
 - **Пропозиція:** мапити `ArkErrors` у список `{ path, message }`.
 
 ### 27. Мертвий і застарілий код
+
+> **Виправлено** у feat-026 (гілка `feat/validation-cleanup`): видалено `validate/schemas/schemas.ts` і закоментовані імпорти, `MainController.testSentryError` (у `observability.md` — інший спосіб перевірити Sentry); docstring `ValidationError` нейтральний до рушія; `nativeValidator` → `bodySchema` у `serialize-routes.ts`; README з `422` уже виправлено у feat-009; §3.6, §5.6, §9 ADR 0001 — рішення «не робимо» з причинами в самому ADR.
 
 - `src/app/validate/schemas/schemas.ts` — його імпорти закоментовані в `src/index.ts` і `vendor/start/server.ts`.
 - `src/app/validate/errors/validation-error.ts` — docstring «ArkType validation», хоча клас не залежить від рушія.
