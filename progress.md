@@ -3,43 +3,54 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-036 - PG Test Harness (F19 of `docs/plan/open-issues-roadmap.md`, prerequisite for feat-022 and feat-025)
-**Branch:** `feat/pg-test-harness`
-**Tasks:** `docs/plan/open-issues-tasks.md`, F19
+**Active Feature:** feat-021 - Push Access & Methods (F04 of `docs/plan/open-issues-roadmap.md`, items 47, 48, 67)
+**Branch:** `feat/push-access`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F04
 
 ## Status
 
 ### Done
 
-- [x] F19.S: PR #56 (feat-018 done, feat-036 `in_progress`); `./init.sh` green
-- [x] F19.1: `vitest.pg.config.ts` (`include: src/**/*.pg.test.ts`, `fileParallelism: false`, global setup), `test:pg`; `vitest.config.ts` excludes `*.pg.test.ts`; `eslint.config.ts` ignores the new config like `vitest.redis.config.ts`
-- [x] F19.2: `src/test-support/pg-global-setup.ts` — `CREATE DATABASE itvibe_test_<12 hex>` from `PG_TEST_URL`, `CREATE EXTENSION vector`, drizzle `migrate` into `drizzle.__drizzle_migrations` (same as `drizzle.config.ts`), `PGSQL_*` for the workers, `DROP DATABASE … WITH (FORCE)` in teardown; `src/test-support/pg-test-db.ts` (`hasPg`, `MIGRATIONS_FOLDER`)
-- [x] F19.3: `src/database/harness.pg.test.ts` — the app's `db` reaches the throwaway database, `vector` is installed, every migration folder applied, `users` exists
-- [x] F19.4: `.github/workflows/pg-tests.yml` (service `pgvector/pgvector:pg16`, same `paths` as `redis-tests.yml`)
-- [x] F19.D: `documentation/backend/testing.md` (section «Інтеграційні тести з Redis і PostgreSQL», CI table, gaps), `documentation/reference/scripts.md` (`test:redis`, `test:pg`)
+- [x] F04.S: PR #58 (feat-036 done, feat-021 `in_progress`); `./init.sh` green
+- [x] F04.1 (item 48): `test-push` is `POST` with body `PushSubscriptionTestInputSchema` (`title?` ≤ 200, `body?` ≤ 1000, extra keys rejected) in `shared`; `PushSubscriptionTestQuerySchema` removed; frontend `pushSubscriptionApi.testPush(payload)` sends POST. Found during manual check: `GET /test-push` now hits `GET /:subscriptionId`, and a non-numeric id gave 500 (`BigInt('test-push')`) — all six `:subscriptionId` handlers now answer `404 Subscription not found` for non-numeric ids without calling the service
+- [x] F04.2 (item 67): `auth_guard` on every `push-subscriptions` route except `vapid-public-key`
+- [x] F04.3 (item 67): new `ws_admin_guard` (`app/middlewares/ws-admin-guard.ts`, kernel) on the admin WS group; HTTP `auth_guard`/`admin_guard` cannot run on WS (no `auth`, different `responseData`). The service role check stays
+- [x] F04.4 (item 47, decision R2): endpoint of another user moves only with matching `p256dhKey` and `authKey`, else `409 conflict`
+- [x] F04.D: `documentation/backend/{mail-push,routing-middlewares,websocket,adding-a-feature}.md`, `documentation/reference/roles-capabilities.md`; code-issues 47, 48, 67 fixed
 
 ## Evidence of Completion
 
-CI on PR #57:
+Tests (new):
 
-- [PG tests 40091167699](https://github.com/Blazheiko/itvibe-template/actions/runs/40091167699) ✅ — `Test Files 1 passed (1)`, `Tests 3 passed (3)` (run, not skipped)
-- [CI 40091167686](https://github.com/Blazheiko/itvibe-template/actions/runs/40091167686) ✅ `quality`, `e2e`; [Redis tests 40091167743](https://github.com/Blazheiko/itvibe-template/actions/runs/40091167743) ✅
+- `src/app/routes/route-access.spec.ts` on the real route lists: `test-push` only `post`; every push route except `vapid-public-key` has `auth_guard`; anonymous context → `auth_guard` stops the chain with `401` for each of them; both `api/admin/*` WS routes have `ws_admin_guard`. Negative control: removing `auth_guard` from `test-push` fails 2 tests
+- `src/app/middlewares/ws-admin-guard.spec.ts`: role `user` / no user → `403` + `forbidden`, handler not called; admin passes
+- `push-subscription-service.spec.ts`: same keys → moved to the caller; different `p256dh` or `auth` → `Conflict`, no update/create
+- `push-subscription-controller.spec.ts`: ids `test-push`, `12abc`, `-1`, `''` → 404 without a service call; `5` → `5n`
 
-Local (macOS, Node 24.20.0, disposable `pgvector/pgvector:pg16` on `127.0.0.1:55433`):
+Manual golden path (backend from source on port 3999, disposable `pgvector/pgvector:pg16`, `db:create` + `db:migrate` + `db:seed --demo`, Redis prefix `manual-feat021:` removed afterwards):
 
-- `PG_TEST_URL=… pnpm --filter backend test:pg` — 3 passed; afterwards `select count(*) from pg_database where datname like 'itvibe_test_%'` → `0`
-- negative control: an assertion changed to fail → `1 failed | 2 passed`, the database is still dropped (`0`); change reverted
-- without `PG_TEST_URL`: `1 skipped`, `3 skipped`
-- `pnpm --filter backend test` — 671 passed, the pg test is not picked up
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — clean
-- `pnpm docs:build && pnpm docs:verify` — `verify-dist: all checks passed`
+| Request                                           | Result                                                                              |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| anonymous `GET /api/push-subscriptions/test-push` | 401                                                                                 |
+| anonymous `POST …/test-push`                      | 401 `unauthorized` (guard)                                                          |
+| anonymous `GET /api/push-subscriptions`           | 401                                                                                 |
+| anonymous `GET …/vapid-public-key`                | reaches the controller (500 `VAPID keys not configured` — no keys in this env)      |
+| user `GET …/test-push`                            | 404 `Subscription not found`                                                        |
+| user `POST …/test-push` `{"title":"t"}`           | reaches the sender (500 `VAPID keys not configured`)                                |
+| user `POST /api/push-subscriptions` new endpoint  | 200                                                                                 |
+| admin `POST` same endpoint, other keys            | 409 `Push subscription belongs to another user`; DB owner still `user@example.test` |
+| admin `POST` same endpoint, same keys             | 200; DB owner `admin@example.test`                                                  |
+| WS `api/admin/subscribe_online_users` as user     | `status "403"`, `forbidden`                                                         |
+| WS same as admin                                  | `status "200"`, `success`                                                           |
+
+Checks: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 686, frontend 45, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed.
 
 ## Files Modified
 
-- new: `packages/backend/vitest.pg.config.ts`, `packages/backend/src/test-support/pg-global-setup.ts`, `packages/backend/src/test-support/pg-test-db.ts`, `packages/backend/src/database/harness.pg.test.ts`, `.github/workflows/pg-tests.yml`
-- updated: `packages/backend/vitest.config.ts`, `packages/backend/package.json`, `eslint.config.ts`, `documentation/backend/testing.md`, `documentation/reference/scripts.md`, `docs/plan/open-issues-tasks.md`, `progress.md`
+- new: `packages/shared/src/schemas/push-subscription/test-push.ts`, `packages/backend/src/app/middlewares/ws-admin-guard.ts` (+ spec), `packages/backend/src/app/routes/route-access.spec.ts`, `packages/backend/src/app/controllers/http/notifications/push-subscription-controller.spec.ts`
+- updated: `packages/shared/src/schemas/{index,query/simple}.ts`, `packages/backend/src/app/routes/{http,ws}-routes.ts`, `packages/backend/src/app/middlewares/kernel.ts`, `packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts`, `packages/backend/src/app/services/notifications/push-subscription-service.ts` (+ spec), `packages/frontend/src/utils/api.ts`, docs listed above, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
 
 ## Notes for Next Session
 
-- After merge: done PR for feat-036. Next: F02 Docker (feat-019), or F04 (feat-021) → F05 (feat-022) which uses this harness.
-- `PG Tests` is not a required check (it has a `paths` filter, like `redis-tests.yml`).
+- `wsUrl` from `/main/init` is built from config (port 3000), not from the request; a backend on another port returns a URL of another process. Not in scope; worth a code-issues item if it bites again.
+- Next: F05 Push Data Access (feat-022, depends on feat-021 and feat-036).

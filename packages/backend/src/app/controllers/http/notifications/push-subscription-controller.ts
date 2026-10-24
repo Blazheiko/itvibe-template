@@ -5,7 +5,12 @@ import { mapControllerError } from '#app/controllers/shared/controller-error.js'
 import { applyAppErrorStatus } from '#app/services/shared/apply-service-status.js'
 import { pushSubscriptionService } from '#app/services/notifications/push-subscription-service.js'
 import { pushNotificationSenderService } from '#app/services/notifications/push-notification-sender-service.js'
-import { internalMessage, unauthorized } from '#app/services/shared/errors.js'
+import {
+    internalMessage,
+    notFound,
+    unauthorized,
+    type AppError,
+} from '#app/services/shared/errors.js'
 import type {
     GetSubscriptionsResponse,
     CreateSubscriptionResponse,
@@ -23,6 +28,15 @@ import type {
     PushSubscriptionTestInput,
     UpdateSubscriptionInput,
 } from 'shared/schemas'
+
+// Non-numeric ids (e.g. GET /test-push, which now only exists as POST) are the
+// same "not found" as someone else's subscription, instead of a BigInt 500.
+function resolveSubscriptionId(context: HttpContext<unknown, unknown>): bigint | null {
+    const raw = context.httpData.params['subscriptionId'] ?? ''
+    return /^\d+$/.test(raw) ? BigInt(raw) : null
+}
+
+const subscriptionNotFound = (): AppError => notFound('Subscription', 'Subscription not found')
 
 function resolveUserId(context: HttpContext<unknown, unknown>): bigint | null {
     if (!context.auth.check()) {
@@ -101,10 +115,11 @@ export default {
             return mapControllerError(context, unauthorized())
         }
 
-        const { subscriptionId } = context.httpData.params as {
-            subscriptionId: string
+        const subscriptionId = resolveSubscriptionId(context)
+        if (subscriptionId === null) {
+            return mapControllerError(context, subscriptionNotFound())
         }
-        const result = await pushSubscriptionService.getSubscription(userId, BigInt(subscriptionId))
+        const result = await pushSubscriptionService.getSubscription(userId, subscriptionId)
 
         if (Result.isError(result)) {
             return mapControllerError(context, result.error)
@@ -126,14 +141,15 @@ export default {
             return mapControllerError(context, unauthorized())
         }
 
-        const { subscriptionId } = context.httpData.params as {
-            subscriptionId: string
+        const subscriptionId = resolveSubscriptionId(context)
+        if (subscriptionId === null) {
+            return mapControllerError(context, subscriptionNotFound())
         }
         const payload = getTypedPayload(context)
 
         const result = await pushSubscriptionService.updateSubscription(
             userId,
-            BigInt(subscriptionId),
+            subscriptionId,
             payload,
         )
 
@@ -155,13 +171,11 @@ export default {
             return mapControllerError(context, unauthorized())
         }
 
-        const { subscriptionId } = context.httpData.params as {
-            subscriptionId: string
+        const subscriptionId = resolveSubscriptionId(context)
+        if (subscriptionId === null) {
+            return mapControllerError(context, subscriptionNotFound())
         }
-        const result = await pushSubscriptionService.deleteSubscription(
-            userId,
-            BigInt(subscriptionId),
-        )
+        const result = await pushSubscriptionService.deleteSubscription(userId, subscriptionId)
 
         if (Result.isError(result)) {
             return mapControllerError(context, result.error)
@@ -178,13 +192,11 @@ export default {
             return mapControllerError(context, unauthorized())
         }
 
-        const { subscriptionId } = context.httpData.params as {
-            subscriptionId: string
+        const subscriptionId = resolveSubscriptionId(context)
+        if (subscriptionId === null) {
+            return mapControllerError(context, subscriptionNotFound())
         }
-        const result = await pushSubscriptionService.getSubscriptionLogs(
-            userId,
-            BigInt(subscriptionId),
-        )
+        const result = await pushSubscriptionService.getSubscriptionLogs(userId, subscriptionId)
 
         if (Result.isError(result)) {
             return mapControllerError(context, result.error)
@@ -203,12 +215,13 @@ export default {
             return mapControllerError(context, unauthorized())
         }
 
-        const { subscriptionId } = context.httpData.params as {
-            subscriptionId: string
+        const subscriptionId = resolveSubscriptionId(context)
+        if (subscriptionId === null) {
+            return mapControllerError(context, subscriptionNotFound())
         }
         const result = await pushSubscriptionService.getSubscriptionStatistics(
             userId,
-            BigInt(subscriptionId),
+            subscriptionId,
         )
 
         if (Result.isError(result)) {
@@ -231,13 +244,11 @@ export default {
             return mapControllerError(context, unauthorized())
         }
 
-        const { subscriptionId } = context.httpData.params as {
-            subscriptionId: string
+        const subscriptionId = resolveSubscriptionId(context)
+        if (subscriptionId === null) {
+            return mapControllerError(context, subscriptionNotFound())
         }
-        const result = await pushSubscriptionService.deactivateSubscription(
-            userId,
-            BigInt(subscriptionId),
-        )
+        const result = await pushSubscriptionService.deactivateSubscription(userId, subscriptionId)
 
         if (Result.isError(result)) {
             return mapControllerError(context, result.error)

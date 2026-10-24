@@ -326,7 +326,7 @@ import { defineRoute } from '#app/routing/define-route.js'
 // ...
 import {
     // ...
-    PushSubscriptionTestQuerySchema,
+    PushSubscriptionTestInputSchema,
     CreateNoteInputSchema,
 } from 'shared/schemas'
 ```

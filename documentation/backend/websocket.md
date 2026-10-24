@@ -139,12 +139,12 @@ const WsMessageSchema = type({
 
 Визначені в [app/routes/ws-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts), контролери — у [controllers/ws/](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/ws):
 
-| Повна назва події (`event`)          | Контролер                                  | Призначення                                                                          | Ліміт групи |
-| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------ | ----------- |
-| `api/admin/subscribe_online_users`   | `AdminWsController.subscribeOnlineUsers`   | підписати з'єднання адміна на канал `admin` (не адмін → `status "403"`, `forbidden`) | 120 / 60 с  |
-| `api/admin/unsubscribe_online_users` | `AdminWsController.unsubscribeOnlineUsers` | відписати з'єднання від `admin`                                                      | 120 / 60 с  |
-| `api/support/support_open_chat`      | `SupportWsController.openChat`             | відкрити чат підтримки, запустити привітання                                         | 60 / 60 с   |
-| `api/support/support_chat`           | `SupportWsController.chat`                 | надіслати повідомлення агенту підтримки                                              | 60 / 60 с   |
+| Повна назва події (`event`)          | Контролер                                  | Призначення                                                                                                    | Ліміт групи |
+| ------------------------------------ | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | ----------- |
+| `api/admin/subscribe_online_users`   | `AdminWsController.subscribeOnlineUsers`   | підписати з'єднання адміна на канал `admin`; група з `ws_admin_guard` (не адмін → `status "403"`, `forbidden`) | 120 / 60 с  |
+| `api/admin/unsubscribe_online_users` | `AdminWsController.unsubscribeOnlineUsers` | відписати з'єднання від `admin`                                                                                | 120 / 60 с  |
+| `api/support/support_open_chat`      | `SupportWsController.openChat`             | відкрити чат підтримки, запустити привітання                                                                   | 60 / 60 с   |
+| `api/support/support_chat`           | `SupportWsController.chat`                 | надіслати повідомлення агенту підтримки                                                                        | 60 / 60 с   |
 
 Support-контролери ([support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/ws/support-controller.ts)) одразу відповідають `{ status: 'ok' }`, а саму відповідь агента запускають без `await` і доставляють push-подіями.
 

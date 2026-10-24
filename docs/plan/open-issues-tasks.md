@@ -113,15 +113,15 @@
 ### F04 Push Access & Methods (п. 47, 48, 67)
 
 - [x] **F04.S** Шаблон S.
-- [ ] **F04.1** `test-push` → `POST` у `http-routes.ts`; виклики у frontend і playground (п. 48).
+- [x] **F04.1** `test-push` → `POST` у `http-routes.ts`; виклики у frontend і playground (п. 48).
       **AC:** `GET` → 404/405; фронтенд-кнопка працює (ручна перевірка).
-- [ ] **F04.2** Група `push-subscriptions` з `auth_guard`; `vapid-public-key` — у групі без guard; перевірки `getUserId()` у контролері лишаються як defense-in-depth (п. 67).
+- [x] **F04.2** Група `push-subscriptions` з `auth_guard`; `vapid-public-key` — у групі без guard; перевірки `getUserId()` у контролері лишаються як defense-in-depth (п. 67).
       **AC:** тест: анонімно кожен маршрут групи → 401 від guard; `vapid-public-key` → 200.
-- [ ] **F04.3** WS `admin/subscribe_online_users`: guard ролі на маршруті (п. 67).
+- [x] **F04.3** WS `admin/subscribe_online_users`: guard ролі на маршруті (п. 67).
       **AC:** тест: не-адмін → помилка від guard, сервіс не викликано.
-- [ ] **F04.4** `createSubscription`: перенос на іншого користувача лише при збігу `p256dh` і `auth`, інакше `409 conflict` (Р2, п. 47).
+- [x] **F04.4** `createSubscription`: перенос на іншого користувача лише при збігу `p256dh` і `auth`, інакше `409 conflict` (Р2, п. 47).
       **AC:** unit: ті самі ключі → перенос; інші → 409, власник не змінився.
-- [ ] **F04.D** Шаблон D: `mail-push.md`, матриця доступу. **F04.E**, **F04.X**.
+- [x] **F04.D** Шаблон D: `mail-push.md`, матриця доступу. **F04.E**, **F04.X**.
 
 ### F06 Storage Hardening (п. 32, 44, 45, 46)
 

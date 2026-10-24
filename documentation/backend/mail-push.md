@@ -72,24 +72,24 @@ cd packages/backend && npx web-push generate-vapid-keys
 
 ### HTTP-маршрути
 
-Група `push-subscriptions` у [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) з middleware `session_web` і `csrf_guard`; контролер — [`push-subscription-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts). Фронтенд звертається до них з префіксом `/api` ([`utils/api.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/api.ts)).
+Група `push-subscriptions` у [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) з middleware `session_web` і `csrf_guard`; на кожному маршруті, крім `vapid-public-key`, стоїть `auth_guard` (анонімний запит → `401` до контролера); контролер — [`push-subscription-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts). Фронтенд звертається до них з префіксом `/api` ([`utils/api.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/api.ts)).
 
-| Метод    | Шлях                                             | Призначення                                                            |
-| -------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
-| `GET`    | `/push-subscriptions/vapid-public-key`           | Публічний VAPID-ключ                                                   |
-| `GET`    | `/push-subscriptions/test-push?title=&body=`     | Тестовий push поточному користувачу; відповідь містить `sent`/`failed` |
-| `GET`    | `/push-subscriptions`                            | Підписки користувача                                                   |
-| `POST`   | `/push-subscriptions`                            | Створити підписку (`CreateSubscriptionInputSchema`)                    |
-| `GET`    | `/push-subscriptions/:subscriptionId`            | Одна підписка                                                          |
-| `PUT`    | `/push-subscriptions/:subscriptionId`            | Оновити (`UpdateSubscriptionInputSchema`)                              |
-| `DELETE` | `/push-subscriptions/:subscriptionId`            | Видалити                                                               |
-| `GET`    | `/push-subscriptions/:subscriptionId/logs`       | Журнал відправок                                                       |
-| `GET`    | `/push-subscriptions/:subscriptionId/statistics` | Статистика                                                             |
-| `PUT`    | `/push-subscriptions/:subscriptionId/deactivate` | Деактивувати                                                           |
+| Метод    | Шлях                                             | Призначення                                                                                                                                                  |
+| -------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/push-subscriptions/vapid-public-key`           | Публічний VAPID-ключ                                                                                                                                         |
+| `POST`   | `/push-subscriptions/test-push`                  | Тестовий push поточному користувачу; тіло `{ title?, body? }` (`PushSubscriptionTestInputSchema`: до 200 / 1000 символів), відповідь містить `sent`/`failed` |
+| `GET`    | `/push-subscriptions`                            | Підписки користувача                                                                                                                                         |
+| `POST`   | `/push-subscriptions`                            | Створити підписку (`CreateSubscriptionInputSchema`)                                                                                                          |
+| `GET`    | `/push-subscriptions/:subscriptionId`            | Одна підписка                                                                                                                                                |
+| `PUT`    | `/push-subscriptions/:subscriptionId`            | Оновити (`UpdateSubscriptionInputSchema`)                                                                                                                    |
+| `DELETE` | `/push-subscriptions/:subscriptionId`            | Видалити                                                                                                                                                     |
+| `GET`    | `/push-subscriptions/:subscriptionId/logs`       | Журнал відправок                                                                                                                                             |
+| `GET`    | `/push-subscriptions/:subscriptionId/statistics` | Статистика                                                                                                                                                   |
+| `PUT`    | `/push-subscriptions/:subscriptionId/deactivate` | Деактивувати                                                                                                                                                 |
 
 ### Збереження підписки
 
-[`push-subscription-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.ts) у `createSubscription` шукає підписку за `endpoint`: якщо вона є — оновлює ключі `p256dhKey`/`authKey`, метадані пристрою, `notificationTypes`, `timezone` і знову робить `isActive: true`; інакше створює новий запис. Робота з таблицею — через репозиторій, див. [Репозиторії та трансформери](/backend/repositories-transformers).
+[`push-subscription-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.ts) у `createSubscription` шукає підписку за `endpoint` (він унікальний серед усіх користувачів). Якщо підписка належить іншому користувачу, її переносять на поточного лише тоді, коли `p256dhKey` і `authKey` збігаються з збереженими (той самий браузер, зміна акаунта); інакше — `409 conflict`, підписка лишається за старим власником. Якщо вона є — оновлює ключі `p256dhKey`/`authKey`, метадані пристрою, `notificationTypes`, `timezone` і знову робить `isActive: true`; інакше створює новий запис. Робота з таблицею — через репозиторій, див. [Репозиторії та трансформери](/backend/repositories-transformers).
 
 ### Відправка та формат payload
 
@@ -158,5 +158,5 @@ sequenceDiagram
 ## Локальне тестування
 
 - **Пошта:** підніміть локальний SMTP-перехоплювач (наприклад Mailpit або MailHog на порту `1025`), задайте `SMTP_ENABLED=true`, `SMTP_HOST=localhost`, `SMTP_PORT=1025`, `SMTP_REQUIRE_TLS=false`, `SMTP_FROM_EMAIL=noreply@example.com` без логіна/пароля і перевірте `pnpm --filter backend mail:test you@example.com`. Ці інструменти не входять до репозиторію.
-- **Push:** згенеруйте VAPID-ключі, перезапустіть бекенд, увімкніть нотифікації у фронтенді (service worker потребує `localhost` або HTTPS), потім викличте `GET /api/push-subscriptions/test-push` з активною сесією. Результат видно у відповіді (`sent`/`failed`), у логах бекенду та через `/:subscriptionId/logs`.
+- **Push:** згенеруйте VAPID-ключі, перезапустіть бекенд, увімкніть нотифікації у фронтенді (service worker потребує `localhost` або HTTPS), потім викличте `POST /api/push-subscriptions/test-push` (тіло `{}` або `{ "title": "…", "body": "…" }`, з CSRF-токеном) з активною сесією. Результат видно у відповіді (`sent`/`failed`), у логах бекенду та через `/:subscriptionId/logs`.
 - Юніт-тести: `pnpm --filter backend test` (включно з [`push-subscription-service.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts)).
