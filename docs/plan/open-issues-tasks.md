@@ -281,13 +281,13 @@
       **AC:** тест: файл 5 MiB не в Map, відповідь побайтно ідентична; лог розміру кешу ≤ ліміту.
 - [x] **F14.4** Збірка фронтенду генерує `.br`/`.gz`; сервер віддає їх за `Accept-Encoding` з `Vary` (п. 41).
       **AC:** тести: `Accept-Encoding: br` → `.br` з `Content-Encoding: br`; `gzip` → `.gz` з `Content-Encoding: gzip`; без заголовка — оригінал без `Content-Encoding`; у всіх трьох — `Vary: Accept-Encoding`; файл без `.br`/`.gz` поруч — оригінал.
-- [x] **F14.D** Шаблон D: `caching.md`, `configuration.md`. **F14.E**, **F14.X**.
+- [x] **F14.D** Шаблон D: `caching.md`, `configuration.md`. **F14.E** ✅, **F14.X** ✅.
 
 ## Хвиля 7 — пакети і фронтенд (паралельно, після F00)
 
 ### F15 Shared Cleanup (п. 56, 57, 58)
 
-- [ ] **F15.S** Шаблон S.
+- [x] **F15.S** Шаблон S.
 - [ ] **F15.1** Тести shared: enums мов, `utils/phone`, `isWsChannel`, ключові схеми; порожній `languages.test.js` замінено (п. 56).
       **AC:** `pnpm --filter shared test` — ≥ 1 реальний тест на кожен модуль.
 - [ ] **F15.2** `guards`: реекспорт у `src/index.ts` або підшлях задокументовано, відповідно до фактичних імпортів (п. 57).

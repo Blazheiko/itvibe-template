@@ -311,17 +311,17 @@
             "owner": "Blazheiko",
             "branch": "feat/static-caching",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #83 (merge 9d46bcf): immutable only for /assets, RFC 9110 If-None-Match, memory budget with streaming from disk, br/gzip variants at startup; backend 841, test:redis 31, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual on real uWS with the frontend build and a 5 MiB file; evidence in progress.md on feat/static-caching"
         },
         {
             "id": "feat-032",
             "name": "Shared Cleanup",
             "description": "real shared tests, guards export, branded EntityId (code-issues items 56, 57, 58). Roadmap F15: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/shared-cleanup",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
