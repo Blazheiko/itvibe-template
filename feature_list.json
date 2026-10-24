@@ -88,7 +88,7 @@
     {
       "id": "feat-010",
       "name": "Format Baseline",
-      "description": "Make pnpm format:check pass (193 files on main) and align backend code style with AGENTS.md (item 16). Details: docs/plan/code-issues-found-during-docs.md",
+      "description": "Make pnpm format:check pass (206 files on main) and align code style with AGENTS.md: root .prettierrc, one formatting commit, .git-blame-ignore-revs (item 16, Prettier part of item 68). Roadmap F00: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
       "owner": "",
       "branch": "",
       "dependencies": [],
@@ -166,6 +166,196 @@
       "dependencies": [],
       "status": "done",
       "evidence": "PR #40: test:e2e 12/12 on 4 browsers (36/36 with --repeat-each=3), geometry check fails at a 300 px viewport, frontend typecheck now includes e2e/, lint, pnpm test, docs:build + docs:verify; evidence in progress.md on fix/mobile-layout-e2e"
+    },
+    {
+      "id": "feat-018",
+      "name": "App CI",
+      "description": "CI workflow ci.yml (format:check, typecheck, lint, test, e2e on all Playwright projects, coverage artifact), vitest testTimeout, pnpm in Playwright webServer (code-issues items 36, 37, 38). Roadmap F01: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-019",
+      "name": "Docker Hardening",
+      "description": ".dockerignore with canary checks of builder stage and image layers, non-root user app, HEALTHCHECK, exec-form CMD node, migrations as one-shot runs (code-issues items 28, 29, 30). Roadmap F02: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-020",
+      "name": "HTTP/WS Response Safety",
+      "description": "401 before res.upgrade without a live session; Cache-Control: no-store on API responses by default (code-issues items 18, 42). Roadmap F03: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-021",
+      "name": "Push Access & Methods",
+      "description": "test-push -> POST, declarative auth_guard on push-subscriptions and role guard on admin WS route, subscription transfer only with matching p256dh/auth (decision R2) (code-issues items 47, 48, 67). Roadmap F04: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-022",
+      "name": "Push Data Access",
+      "description": "push-notification-log-repository, findByUserIdWithLogs in 2 queries keeping the 5-latest-logs contract, SQL aggregates for statistics, bounded parallel send with batch log insert (code-issues items 20, 21, 49). Roadmap F05: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-021", "feat-036"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-023",
+      "name": "Storage Hardening",
+      "description": "buildKey in deleteFromS3, magic-bytes file type check, publicRead avatars (decision R1), restricted corsS3.xml (code-issues items 32, 44, 45, 46). Roadmap F06: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-024",
+      "name": "WebSocket Cleanup",
+      "description": "WS event prefix from VITE_API_PATH_PREFIX, remove dead WS code (user-storage, unreachable branch, websocket-base reconnect) (code-issues items 17, 19). Roadmap F07: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-025",
+      "name": "Layering Cleanup",
+      "description": "controllers and ws-coordinator go through services, complete repositories barrel, no logger in repositories, clearEmbedding in a transaction (code-issues items 22, 24, 25). Roadmap F08: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-036"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-026",
+      "name": "Validation Cleanup",
+      "description": "ArkType errors as messages[{path,message}], remove dead validation/controller code, ADR 0001 leftovers decided (code-issues items 26, 27). Roadmap F09: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-027",
+      "name": "AI Reliability",
+      "description": "validate AI_TEXT_DRIVER, AI_REQUEST_TIMEOUT_MS with AbortSignal and cancellation on HTTP abort/WS close, prompt-controller through AI service with domain errors 502/504 (code-issues items 23, 50, 51). Roadmap F10: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-028",
+      "name": "AI Usage Accounting",
+      "description": "usage for translation, prompt test and embeddings; nullable token columns (NULL = provider did not report usage) with migration and contracts (code-issues items 53). Roadmap F11: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-027"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-029",
+      "name": "AI Quality",
+      "description": "Support AI language from profile/request, embedding dimension check, batched reindexAll, distance threshold, prompt cache TTL (code-issues items 43, 52, 54). Roadmap F12: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-030",
+      "name": "Observability",
+      "description": "LOG_LEVEL, requestId/userId in error logs, GET /ready with DB and Redis checks, HEALTHCHECK on /ready (code-issues items 33, 34, 35). Roadmap F13: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-031",
+      "name": "Static Caching",
+      "description": "immutable only for /assets, RFC 9110 If-None-Match, bounded RAM cache with streaming for large files, precompressed br/gz (code-issues items 39, 40, 41). Roadmap F14: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-032",
+      "name": "Shared Cleanup",
+      "description": "real shared tests, guards export, branded EntityId (code-issues items 56, 57, 58). Roadmap F15: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-033",
+      "name": "Frontend & Playground",
+      "description": "relative VITE_BASE_URL fallback, typed VITE_* vars, playground prefix/wss/no fake queue (decision R4), /health in playground (code-issues items 59, 61, 62, 63, 64). Roadmap F16: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-034",
+      "name": "Drop users.is_admin",
+      "description": "remove is_admin, role is the only source (decision R5): code first, then DROP COLUMN migration (code-issues items 66). Roadmap F17: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-035",
+      "name": "ESLint Strict",
+      "description": "enable strictTypeChecked rules for backend, frontend, api-playground (three PRs) (code-issues items 68). Roadmap F18: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010", "feat-018"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-036",
+      "name": "PG Test Harness",
+      "description": "*.pg.test.ts convention, test:pg, temporary DB with migrations, pg-tests.yml with pgvector/pgvector:pg16 (prerequisite for feat-022 and feat-025). Roadmap F19: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "",
+      "branch": "",
+      "dependencies": ["feat-010"],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }
