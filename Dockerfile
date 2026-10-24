@@ -121,12 +121,13 @@ WORKDIR /app/packages/backend
 # Файлы приложения принадлежат root и только читаются; процесс работает от app.
 USER app
 
-# Liveness через /api/ping. Проверяется тело, а не только код: при SERVE_STATIC
-# неизвестный путь отдаёт index.html со статусом 200 (SPA fallback). Если задан
-# другой PORT или API_PATH_PREFIX, переопределите проверку при запуске
-# (--health-cmd), см. documentation/backend/deployment.md.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${PORT:-3000}/api/ping" | grep -q '"status":"ok"' || exit 1
+# Readiness через /api/ready: 200 лишь когда отвечают PostgreSQL и Redis.
+# Проверяется тело, а не только код: при SERVE_STATIC неизвестный путь отдаёт
+# index.html со статусом 200 (SPA fallback). Если задан другой PORT или
+# API_PATH_PREFIX, переопределите проверку при запуске (--health-cmd), см.
+# documentation/backend/deployment.md. /api/ping остаётся liveness без зависимостей.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${PORT:-3000}/api/ready" | grep -q '"status":"ok"' || exit 1
 
 # PID 1 — Node, поэтому SIGTERM от `docker stop` доходит до stopGracefully.
 # Миграции не запускаются на старте (code-issues item 30): это отдельные one-shot

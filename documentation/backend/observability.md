@@ -1,12 +1,12 @@
 # Observability
 
-Сторінка описує, як бекенд пише логи, що потрапляє в Sentry, як влаштований health check і чого в шаблоні поки немає (метрики, readiness). Змінні оточення Sentry перелічені в [Конфігурації](/backend/configuration), обробка помилок HTTP — у [Життєвому циклі запиту](/backend/request-lifecycle), Sentry-аргументи збірки фронтенду — у [Деплої](/backend/deployment).
+Сторінка описує, як бекенд пише логи, що потрапляє в Sentry, як влаштовані liveness і readiness і чого в шаблоні поки немає (метрики). Змінні оточення Sentry перелічені в [Конфігурації](/backend/configuration), обробка помилок HTTP — у [Життєвому циклі запиту](/backend/request-lifecycle), Sentry-аргументи збірки фронтенду — у [Деплої](/backend/deployment).
 
 ## Логування
 
 Логер — [pino](https://getpino.io) 10, єдиний екземпляр експортується з [logger.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/logger.ts) (імпорт `#vendor/utils/logger.js`).
 
-- **Рівень.** Опція `level` не задається, тож діє дефолт pino — `info`. Змінної `LOG_LEVEL` у коді немає; `debug`/`trace` не виводяться.
+- **Рівень.** `LOG_LEVEL` ([`config/logging.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/logging.ts)): `fatal`, `error`, `warn`, `info` (за замовчуванням), `debug`, `trace` або `silent`, без огляду на регістр. Невідоме значення зупиняє старт (`Invalid logging configuration`).
 - **Формат.** Якщо `APP_ENV` дорівнює `prod` або `production`, логи йдуть у stdout як JSON-рядки (`destination({ sync: false })`). В інших оточеннях використовується `pino-pretty` з кольорами; пакет імпортується динамічно лише поза production.
 - **Потоки.** `multistream` має два потоки: основний (stdout) і `sentryStream` рівня `error`, який пересилає помилки в Sentry (див. нижче).
 - **Серіалізатори.** Додано лише серіалізатор `bigint` → рядок.
@@ -18,11 +18,11 @@
 
 ### Логер запиту
 
-Для кожного HTTP-запиту і WS-повідомлення створюється дочірній логер `logger.child({ requestId })`, де `requestId` — `randomUUID()`. Він доступний у контролерах як `ctx.logger` ([http-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts), [ws-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts)). `userId` у child-логер **не** додається.
+Для кожного HTTP-запиту і WS-повідомлення створюється дочірній логер `logger.child({ requestId })`, де `requestId` — `randomUUID()`. HTTP-`requestId` генерується на першому кроці обробки (`server.ts`), ще до читання тіла, тож його мають і помилки 413/415/422. Коли `session_web` відновив сесію з користувачем, логер запиту замінюється на `child({ userId })`; WS-логер отримує `userId` з даних з'єднання. Він доступний у контролерах як `ctx.logger` ([http-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts), [ws-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts)). `userId` у child-логер **не** додається.
 
 ### Що логується при помилці
 
-`handleError` у [server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) використовує глобальний `logger`, а не логер запиту:
+`handleError` у [server.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) пише через `logger.child({ requestId, userId, route, method })` — кожен запис нижче має ці поля (`userId` — коли відомий):
 
 | Помилка                                       | Рівень  | Поля                                                        |
 | --------------------------------------------- | ------- | ----------------------------------------------------------- |
@@ -33,7 +33,7 @@
 | `RedisUnavailableError` (відповідь 503)       | `error` | `err` + контекст; у Sentry не йде (див. нижче)              |
 | інше (відповідь 500)                          | `error` | `err` + `requestId`, `userId`, `route`, `method` (контекст) |
 
-Для маршрутів API контекст містить `requestId`, `userId`, `route.url`, `route.method`; для службового обробника документації маршрутів — лише `route` і `method`. Коди відповідей — у [Життєвому циклі запиту](/backend/request-lifecycle).
+Для маршрутів API контекст містить `requestId`, `userId`, `route.url`, `route.method`; для службового обробника документації маршрутів — лише `route` і `method`. `userId` береться в момент помилки: для 413/415/422 його немає, бо тіло читається й валідується до middleware сесії. Коди відповідей — у [Життєвому циклі запиту](/backend/request-lifecycle).
 
 Також у [index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts): `uncaughtException` логується як `error` з `sentrySkip: true` і окремо відправляється через `sentryService.captureException`; при graceful shutdown викликається `sentryService.flush(2000)`.
 
@@ -128,10 +128,14 @@ flowchart TD
 { "status": "ok" }
 ```
 
-Ендпоінт підтверджує лише, що процес слухає порт. Він не перевіряє PostgreSQL, Redis, S3 чи SMTP.
+`/api/ping` — **liveness**: підтверджує лише, що процес слухає порт, і нічого не перевіряє.
 
-::: warning Readiness check відсутній
-Окремого readiness-ендпоінта немає. Якщо оркестратор має виводити інстанс з балансування при недоступній БД чи Redis, потрібен окремий маршрут (наприклад, `SELECT 1` + `PING` у Redis). Шаблон вимог для цього — [template-health-readiness-observability.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/requirements/operations/template-health-readiness-observability.md).
+`GET /api/ready` — **readiness** ([`readiness-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/readiness-service.ts)): паралельно `SELECT 1` у PostgreSQL (через `healthRepository`) і `PING` основного Redis, кожна перевірка з таймаутом `READINESS_CHECK_TIMEOUT_MS` (за замовчуванням 1000 мс). Обидві відповіли — `200 { "status": "ok" }`; інакше `503 { "status": "unavailable" }` без деталей, а що саме впало — у `warn` «Readiness check failed» (`failed: ["redis"]` тощо). Маршрут без сесії й CSRF; глобальний ліміт за IP діє, але частота healthcheck на порядки нижча за поріг. S3 і SMTP не перевіряються. На `/ready` налаштований `HEALTHCHECK` Docker-образу (див. [Деплой](/backend/deployment)).
+
+Перевірено наживо: зупинка Redis → `503` за ~0,05 с; зупинка PostgreSQL → `503`, `/ping` далі `ok`; після повернення БД `/ready` знову `200`.
+
+::: tip Обрив з'єднання з PostgreSQL
+`pg.Pool` при обриві простою з'єднання (рестарт, failover) емітить `error`. Без обробника Node перетворював це на `uncaughtException`, і сервер зупинявся — знайдено під час feat-030. Тепер [`db.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/db.ts) логує подію (`PostgreSQL pool: idle client error`), пул сам замінює клієнт, а `/ready` відповідає `503`, доки БД недоступна.
 :::
 
 ## Метрики і трасування

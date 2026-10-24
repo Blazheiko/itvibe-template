@@ -64,7 +64,7 @@ flowchart LR
 3. `ENV NODE_ENV=production`.
 4. З `builder` копіюються `packages/backend/dist`, `packages/shared/dist`, `packages/backend/public`, `packages/backend/public-test`, `drizzle.config.ts` разом з `src/config/database.ts`, `src/drizzle/migrations` і `docs/support-knowledge-base` (його читає [`knowledge-base-init-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-init-service.ts)).
 5. `EXPOSE 3000`, `WORKDIR /app/packages/backend`, `USER app`. Файли застосунку належать root і лише читаються: у рантаймі застосунок нічого не пише на диск.
-6. `HEALTHCHECK` (interval 30 с, timeout 3 с, start-period 20 с, retries 3): `curl -fsS http://127.0.0.1:${PORT:-3000}/api/ping | grep -q '"status":"ok"'`. Перевіряється тіло, а не лише код: із `SERVE_STATIC=true` будь-який невідомий шлях повертає `index.html` зі статусом 200 (SPA fallback), тож перевірка лише статусу проходила б і при неправильному шляху.
+6. `HEALTHCHECK` (interval 30 с, timeout 5 с, start-period 20 с, retries 3): `curl -fsS http://127.0.0.1:${PORT:-3000}/api/ready | grep -q '"status":"ok"'` — readiness: контейнер `healthy`, лише коли відповідають PostgreSQL і Redis (див. [Observability](/backend/observability#health-check)). Перевіряється тіло, а не лише код: із `SERVE_STATIC=true` будь-який невідомий шлях повертає `index.html` зі статусом 200 (SPA fallback), тож перевірка лише статусу проходила б і при неправильному шляху.
 7. `CMD ["node", "dist/index.js"]` — PID 1 є Node, тож `SIGTERM` від `docker stop` доходить до `stopGracefully`. Міграції на старті **не** запускаються.
 
 Чого в образі немає:
@@ -94,11 +94,11 @@ docker run -d -p 3000:3000 --env-file ./production.env itvibe-template
 
 ```sh
 docker run -d -e API_PATH_PREFIX=v1 \
-  --health-cmd "curl -fsS http://127.0.0.1:3000/v1/ping | grep -q '\"status\":\"ok\"' || exit 1" \
+  --health-cmd "curl -fsS http://127.0.0.1:3000/v1/ready | grep -q '\"status\":\"ok\"' || exit 1" \
   --env-file ./production.env itvibe-template
 ```
 
-`/api/ping` — це liveness (процес відповідає), а не readiness: доступність PostgreSQL і Redis він не перевіряє.
+Healthcheck б'є в `/api/ready` (readiness): при недоступній БД чи Redis контейнер стає `unhealthy`. Docker сам контейнер не перезапускає; оркестратор, що зважає на health, виведе його з балансування. Liveness без залежностей — `/api/ping`.
 
 `production.env` — ваш файл зі змінними за сторінкою [Конфігурація](/backend/configuration) (секрети в ньому лише ваші, у репозиторії їх немає). Хост і порт задаються через `HOST` (default `0.0.0.0`) і `PORT` (default `3000`).
 

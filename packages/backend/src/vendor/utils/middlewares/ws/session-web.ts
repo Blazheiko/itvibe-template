@@ -44,6 +44,11 @@ const sessionWeb: Middleware = async (
         deleteLegacySessionCookie(responseData)
     }
     await sessionHandler(context, token, undefined)
+    // From here on the request's log records name the user (code-issues item 33).
+    const userId = context.auth.getUserId()
+    if (userId !== null) {
+        context.logger = context.logger.child({ userId })
+    }
 
     await next()
 

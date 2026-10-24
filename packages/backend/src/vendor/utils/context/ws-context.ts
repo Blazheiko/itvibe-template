@@ -36,6 +36,7 @@ export default (
     const requestId = randomUUID()
     const requestLogger = logger.child({
         requestId,
+        ...(userData?.userId !== undefined ? { userId: userData.userId } : {}),
     }) as unknown as WsContext['logger']
     // let session: Session | null = null;
     // if (userData && userData.sessionId && userData.userId) {

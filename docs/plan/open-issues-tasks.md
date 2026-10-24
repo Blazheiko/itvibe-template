@@ -258,17 +258,17 @@
 Перед F13.4 — rebase на F02 і F03, якщо вони влиті (спільні `Dockerfile`, `server.ts`).
 
 - [x] **F13.S** Шаблон S (M).
-- [ ] **F13.1** `LOG_LEVEL` (`fatal…trace`, default `info`, невалідне → помилка старту) у `logger.ts` (п. 34).
+- [x] **F13.1** `LOG_LEVEL` (`fatal…trace`, default `info`, невалідне → помилка старту) у `logger.ts` (п. 34).
       **AC:** тест конфігу; `LOG_LEVEL=debug` дає debug-записи.
-- [ ] **F13.2** `handleError` приймає request logger (п. 33).
+- [x] **F13.2** `handleError` приймає request logger (п. 33).
       **AC:** тест: warn для 413/415/422 містить `requestId`.
-- [ ] **F13.3** `userId` у child-контексті HTTP і WS, коли сесія відома (п. 33).
+- [x] **F13.3** `userId` у child-контексті HTTP і WS, коли сесія відома (п. 33).
       **AC:** тест: лог автентифікованого запиту містить `userId`, анонімного — ні.
-- [ ] **F13.4** `GET /<prefix>/ready`: `SELECT 1` + Redis `PING` з таймаутом `READINESS_CHECK_TIMEOUT_MS` (1 000); `200 ok` / `503 unavailable` без деталей; без L1-ліміту і сесії (п. 35).
+- [x] **F13.4** `GET /<prefix>/ready`: `SELECT 1` + Redis `PING` з таймаутом `READINESS_CHECK_TIMEOUT_MS` (1 000); `200 ok` / `503 unavailable` без деталей; без L1-ліміту і сесії (п. 35).
       **AC:** тести: обидва живі → 200; Redis або БД недоступні (мок) → 503 за ≤ таймаут + 200 мс.
-- [ ] **F13.5** → F13.4. `HEALTHCHECK` у `Dockerfile` → `/api/ready` (після F02).
+- [x] **F13.5** → F13.4. `HEALTHCHECK` у `Dockerfile` → `/api/ready` (після F02).
       **AC:** контейнер без БД — `unhealthy`; з БД — `healthy`.
-- [ ] **F13.D** Шаблон D: `observability.md`, `deployment.md`, `routes.md`, `configuration.md`. **F13.E**, **F13.X**.
+- [x] **F13.D** Шаблон D: `observability.md`, `deployment.md`, `routes.md`, `configuration.md`. **F13.E**, **F13.X**.
 
 ### F14 Static Caching (п. 39, 40, 41)
 

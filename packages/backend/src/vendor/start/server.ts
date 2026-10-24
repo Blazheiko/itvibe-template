@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import * as uWS from 'uWebSockets.js'
 import type { HttpRequest, HttpResponse, WebSocket, TemplatedApp } from 'uWebSockets.js'
 import appConfig from '#config/app.js'
@@ -41,6 +42,7 @@ import {
 import executeMiddlewares from '#vendor/utils/middlewares/core/execute-httpMiddlewares.js'
 import checkRateLimit, { checkGlobalRateLimit } from '#vendor/utils/rate-limit/http-rate-limit.js'
 import type {
+    HttpContext,
     HttpData,
     MyWebSocket,
     ResponseData,
@@ -355,13 +357,23 @@ type HttpSentryContext = {
     method?: string | undefined
 }
 
+const definedFields = (context: HttpSentryContext): Record<string, string> =>
+    Object.fromEntries(
+        Object.entries(context).filter(
+            (entry): entry is [string, string] => entry[1] !== undefined,
+        ),
+    )
+
 export const handleError = (
     res: HttpResponse,
     error: unknown,
     sentryContext?: HttpSentryContext,
 ): void => {
+    // The request's own logger: every record below carries requestId (and userId
+    // when known), including 413/415/422 thrown before the handler context exists.
+    const log = logger.child(definedFields(sentryContext ?? {}))
     if (error instanceof PayloadTooLargeError) {
-        logger.warn({ limit: error.limit, contentType: error.contentType }, 'Payload too large')
+        log.warn({ limit: error.limit, contentType: error.contentType }, 'Payload too large')
         sendErrorResponse(res, error.statusCode, {
             status: 'error',
             code: error.code,
@@ -375,7 +387,7 @@ export const handleError = (
     } else if (error instanceof RedisUnavailableError) {
         // Still error level for stdout; the Sentry transport skips this type
         // (redis-health reports one event per incident). No ioredis text in the body.
-        logger.error({ err: error, ...sentryContext }, 'Request failed: Redis unavailable')
+        log.error({ err: error }, 'Request failed: Redis unavailable')
         sendErrorResponse(
             res,
             error.statusCode,
@@ -388,14 +400,14 @@ export const handleError = (
         )
     } else if (error instanceof MalformedBodyError) {
         // A client error: warn without the body, keep it out of Sentry.
-        logger.warn({ bodyKind: error.bodyKind }, 'Malformed request body')
+        log.warn({ bodyKind: error.bodyKind }, 'Malformed request body')
         sendErrorResponse(res, error.statusCode, {
             status: 'error',
             code: error.code,
             message: error.message,
         })
     } else if (error instanceof UnsupportedMediaTypeError) {
-        logger.warn(
+        log.warn(
             {
                 receivedContentType: error.receivedContentType,
                 allowedKinds: error.allowedKinds,
@@ -413,7 +425,7 @@ export const handleError = (
             },
         })
     } else if (error instanceof ValidationError) {
-        logger.warn({ err: error }, 'Handle Error')
+        log.warn({ err: error }, 'Handle Error')
         sendErrorResponse(res, error.statusCode, {
             status: 'error',
             code: error.code,
@@ -425,7 +437,7 @@ export const handleError = (
             },
         })
     } else if (error instanceof ParameterValidationError) {
-        logger.warn({ err: error }, 'Handle Error')
+        log.warn({ err: error }, 'Handle Error')
         sendErrorResponse(res, error.statusCode, {
             status: 'error',
             code: error.code,
@@ -437,7 +449,7 @@ export const handleError = (
             },
         })
     } else {
-        logger.error({ err: error, ...sentryContext }, 'Handle Error')
+        log.error({ err: error }, 'Handle Error')
         const errorMessage = configApp.env === 'local' ? String(error) : 'Internal server error'
         sendErrorResponse(res, 500, {
             status: 'error',
@@ -518,8 +530,10 @@ const setHttpHandler = async (
     })
     const responseData = getResponseData()
     let origin: string | undefined
-    let requestId: string | undefined
-    let userId: string | undefined
+    // From the first step, so errors before the handler (413/415/422) are traceable.
+    const requestId = randomUUID()
+    // Read when the error happens: the session middleware sets the user later.
+    let context: HttpContext | undefined
 
     try {
         // Step 1: snapshot req synchronously — it is only valid until the first await.
@@ -571,9 +585,7 @@ const setHttpHandler = async (
             files,
             hasFile: (name: string): boolean => files?.has(name) ?? false,
         }
-        const context = contextHandler(httpData, responseData, requestAbort.signal)
-        requestId = context.requestId
-        userId = context.auth.getUserId() ?? undefined
+        context = contextHandler(httpData, responseData, requestAbort.signal, requestId)
 
         if (
             (route.middlewares?.length === 0 ||
@@ -593,7 +605,7 @@ const setHttpHandler = async (
         res.cork(() => {
             handleError(res, err, {
                 requestId,
-                userId,
+                userId: context?.auth.getUserId() ?? undefined,
                 route: route.url,
                 method: route.method,
             })

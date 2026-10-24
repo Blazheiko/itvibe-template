@@ -11,6 +11,7 @@ export { smsAuthChallengeRepository } from './auth/sms-auth-challenge-repository
 export { promptRepository } from './ai/prompt-repository.js'
 export { supportRepository } from './support/support-repository.js'
 export { supportKnowledgeRepository } from './support/support-knowledge-repository.js'
+export { healthRepository } from './health/health-repository.js'
 
 export type {
     UserRow,

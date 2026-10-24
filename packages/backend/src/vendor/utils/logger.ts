@@ -2,6 +2,7 @@ import { pino, destination, multistream } from 'pino'
 
 import { sentryService } from '#app/services/observability/sentry-service.js'
 import appConfig from '#config/app.js'
+import loggingConfig from '#config/logging.js'
 
 type BackendLogger = ReturnType<typeof pino>
 
@@ -114,6 +115,7 @@ export const __loggerTestHooks = {
 function createLogger(): BackendLogger {
     try {
         const baseConfig = {
+            level: loggingConfig.level,
             serializers: {
                 bigint: (value: bigint): string => value.toString(),
             },

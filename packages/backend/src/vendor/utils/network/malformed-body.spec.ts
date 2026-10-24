@@ -3,7 +3,14 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { MalformedBodyError } from './errors/malformed-body-error.js'
 
-const logger = { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }
+const logger = {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    // handleError logs through logger.child(...) bound to the request.
+    child: vi.fn((): unknown => logger),
+}
 vi.mock('#vendor/utils/logger.js', () => ({ default: logger }))
 vi.mock('uWebSockets.js', () => ({ App: () => ({}), getParts: vi.fn() }))
 vi.mock('#app/routes/http-routes.js', () => ({ default: [] }))

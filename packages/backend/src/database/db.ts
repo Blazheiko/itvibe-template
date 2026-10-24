@@ -3,6 +3,7 @@ import pg from 'pg'
 import databaseConfig from '#config/database.js'
 import appConfig from '#config/app.js'
 import { relations } from './relations.js'
+import logger from '#logger'
 
 const pool = new pg.Pool({
     host: databaseConfig.host,
@@ -14,6 +15,14 @@ const pool = new pg.Pool({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
     ssl: false,
+})
+
+// PostgreSQL dropping an idle connection (restart, failover) emits 'error' on the
+// pool; unhandled, Node turns it into an uncaughtException and the server stops.
+// The pool replaces the client on its own; requests meanwhile get errors and
+// /ready answers 503.
+pool.on('error', (err) => {
+    logger.error({ err }, 'PostgreSQL pool: idle client error')
 })
 
 const db = drizzle({

@@ -24,8 +24,8 @@ export default (
     httpData: HttpData,
     responseData: ResponseData,
     signal: AbortSignal = new AbortController().signal,
+    requestId: string = randomUUID(),
 ): HttpContext => {
-    const requestId = randomUUID()
     const requestLogger = logger.child({
         requestId,
     }) as unknown as HttpContext['logger']

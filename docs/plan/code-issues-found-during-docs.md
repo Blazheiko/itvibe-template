@@ -28,6 +28,7 @@
 | feat-027 | 23, 50, 51     |
 | feat-028 | 53             |
 | feat-029 | 43, 52, 54     |
+| feat-030 | 33, 34, 35     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -69,9 +70,9 @@
 | 30  | ~~`CMD` через `sh -c`: міграції на кожному старті, сигнали~~ ✅                                                   | Середня      | Docker / експлуатація        |
 | 31  | ~~Образ не вмикає `SERVE_STATIC` і не задає `APP_ENV`~~ ✅                                                        | Низька       | Docker / конфігурація        |
 | 32  | ~~`corsS3.xml`: `AllowedOrigin *` разом з `PUT`~~ ✅                                                              | Середня      | Безпека / S3                 |
-| 33  | `handleError` логує без `requestId`, контекст без `userId`                                                        | Низька       | Observability                |
-| 34  | Рівень логування не налаштовується (`LOG_LEVEL` немає)                                                            | Низька       | Observability                |
-| 35  | Немає readiness-перевірки (DB/Redis)                                                                              | Середня      | Observability / експлуатація |
+| 33  | ~~`handleError` логує без `requestId`, контекст без `userId`~~ ✅                                                 | Низька       | Observability                |
+| 34  | ~~Рівень логування не налаштовується (`LOG_LEVEL` немає)~~ ✅                                                     | Низька       | Observability                |
+| 35  | ~~Немає readiness-перевірки (DB/Redis)~~ ✅                                                                       | Середня      | Observability / експлуатація |
 | 36  | ~~Немає CI для тестів застосунку і coverage~~ ✅                                                                  | Середня      | Тести / CI                   |
 | 37  | ~~`vitest.config.ts` без `testTimeout`, таймаути під навантаженням~~ ✅                                           | Низька       | Тести                        |
 | 38  | ~~Playwright `webServer` використовує `npm` у pnpm-workspace~~ ✅                                                 | Низька       | Тести / frontend             |
@@ -392,15 +393,21 @@
 
 ### 33. `handleError` логує без `requestId`, контекст без `userId`
 
+> **Виправлено** у feat-030 (гілка `feat/observability`) за планом [`observability-plan.md`](./observability-plan.md): `requestId` генерується на першому кроці обробки запиту (раніше — у контексті після читання тіла, тож 413/415/422 його не мали взагалі); `handleError` пише через `logger.child({ requestId, userId, route, method })`; `userId` читається в момент помилки (раніше брався до `session_web` і завжди був `undefined`); `session_web` додає `userId` у логер запиту, WS-логер — з даних з'єднання.
+
 - **Що:** `handleError` у `src/vendor/start/server.ts` пише через глобальний `logger`, а не через дочірній logger запиту. Тому warn-записи (413/415/422) не мають `requestId`. Дочірні логери в `src/vendor/utils/context/http-context.ts` і `ws-context.ts` отримують лише `requestId`, без `userId`.
 - **Пропозиція:** передавати request logger у `handleError`; додати `userId` (коли відомий) у child-контекст.
 
 ### 34. Рівень логування не налаштовується
 
+> **Виправлено** у feat-030 (гілка `feat/observability`) за планом [`observability-plan.md`](./observability-plan.md): `LOG_LEVEL` (`config/logging.ts`, default `info`), невалідне значення зупиняє старт.
+
 - **Що:** `src/vendor/utils/logger.ts` створює pino без `level` (діє default `info`), змінної `LOG_LEVEL` немає. Увімкнути `debug` без зміни коду неможливо.
 - **Пропозиція:** `level: env.LOG_LEVEL ?? 'info'` і документування в `.env.example`.
 
 ### 35. Немає readiness-перевірки
+
+> **Виправлено** у feat-030 (гілка `feat/observability`) за планом [`observability-plan.md`](./observability-plan.md): `GET /<prefix>/ready`: `SELECT 1` + Redis `PING` з таймаутом `READINESS_CHECK_TIMEOUT_MS`, `200 ok` / `503 unavailable` без деталей; `HEALTHCHECK` образу — на `/api/ready`. Заодно виправлено падіння процесу при обриві з'єднання з PostgreSQL: `pg.Pool` `error` без обробника ставав `uncaughtException`.
 
 - **Що:** `GET /api/ping` повертає статичний `{status:"ok"}` (liveness) і не перевіряє PostgreSQL, Redis, S3 чи SMTP. Окремого readiness-маршруту немає.
 - **Наслідок:** оркестратор/балансувальник спрямує трафік на інстанс без доступу до БД чи Redis.
