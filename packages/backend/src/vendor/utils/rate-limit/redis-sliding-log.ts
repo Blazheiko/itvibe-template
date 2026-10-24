@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
-import type { Redis } from "ioredis";
-import type { RateLimitDecision } from "./rate-limit-store.js";
+import { randomUUID } from 'node:crypto'
+import type { Redis } from 'ioredis'
+import type { RateLimitDecision } from './rate-limit-store.js'
 
 // Sliding log on a ZSET with the semantics of the in-memory store: rejected
 // attempts are not stored and retryAfterMs is the moment a slot frees up.
@@ -23,32 +23,31 @@ end
 local blocking = redis.call('ZRANGE', KEYS[1], count - max, count - max, 'WITHSCORES')
 local resetAt = tonumber(blocking[2]) + window
 return {0, math.ceil(resetAt - now), math.ceil(resetAt)}
-`;
+`
 
 export interface SlidingLogOptions {
-  windowMs: number;
-  max: number;
+    windowMs: number
+    max: number
 }
 
-export const slidingLogKey = (scope: string, id: string): string =>
-  `rl:${scope}:${id}`;
+export const slidingLogKey = (scope: string, id: string): string => `rl:${scope}:${id}`
 
 export async function consumeRedisSlidingLog(
-  client: Pick<Redis, "eval">,
-  key: string,
-  { windowMs, max }: SlidingLogOptions,
-  nonce: string = randomUUID(),
+    client: Pick<Redis, 'eval'>,
+    key: string,
+    { windowMs, max }: SlidingLogOptions,
+    nonce: string = randomUUID(),
 ): Promise<RateLimitDecision> {
-  const reply = (await client.eval(
-    SLIDING_LOG_LUA,
-    1,
-    key,
-    String(windowMs),
-    String(max),
-    nonce,
-  )) as [number, number, number];
-  const [allowed, value, resetAt] = reply;
-  return allowed === 1
-    ? { allowed: true, limit: max, remaining: value, resetAt }
-    : { allowed: false, limit: max, retryAfterMs: value, resetAt };
+    const reply = (await client.eval(
+        SLIDING_LOG_LUA,
+        1,
+        key,
+        String(windowMs),
+        String(max),
+        nonce,
+    )) as [number, number, number]
+    const [allowed, value, resetAt] = reply
+    return allowed === 1
+        ? { allowed: true, limit: max, remaining: value, resetAt }
+        : { allowed: false, limit: max, retryAfterMs: value, resetAt }
 }

@@ -1,47 +1,37 @@
-import type {
-  Auth,
-  HttpContext,
-  HttpData,
-  ResponseData,
-  Session,
-} from "#vendor/types/types.js";
+import type { Auth, HttpContext, HttpData, ResponseData, Session } from '#vendor/types/types.js'
 
-import logger from "#vendor/utils/logger.js";
-import { randomUUID } from "crypto";
+import logger from '#vendor/utils/logger.js'
+import { randomUUID } from 'crypto'
 
 const getDefaultSession = (): Session => {
-  return {
-    sessionInfo: null,
-    updateSessionData: async () => Promise.resolve(null),
-    changeSessionData: async () => Promise.resolve(null),
-    destroySession: async () => Promise.resolve(),
-    destroyAllSessions: async () => Promise.resolve(0),
-  };
-};
+    return {
+        sessionInfo: null,
+        updateSessionData: async () => Promise.resolve(null),
+        changeSessionData: async () => Promise.resolve(null),
+        destroySession: async () => Promise.resolve(),
+        destroyAllSessions: async () => Promise.resolve(0),
+    }
+}
 const getDefaultAuth = (): Auth => ({
-  getUserId: () => null,
-  check: () => false,
-  login: () => Promise.resolve(false),
-  logout: () => Promise.resolve(false),
-  logoutAll: () => Promise.resolve(0),
-});
+    getUserId: () => null,
+    check: () => false,
+    login: () => Promise.resolve(false),
+    logout: () => Promise.resolve(false),
+    logoutAll: () => Promise.resolve(0),
+})
 
+export default (httpData: HttpData, responseData: ResponseData): HttpContext => {
+    const requestId = randomUUID()
+    const requestLogger = logger.child({
+        requestId,
+    }) as unknown as HttpContext['logger']
 
-export default (
-  httpData: HttpData,
-  responseData: ResponseData,
-): HttpContext => {
-  const requestId = randomUUID();
-  const requestLogger = logger.child({
-    requestId,
-  }) as unknown as HttpContext["logger"];
-
-  return {
-    requestId,
-    logger: requestLogger,
-    httpData,
-    responseData,
-    session: getDefaultSession(),
-    auth: getDefaultAuth(),
-  };
-};
+    return {
+        requestId,
+        logger: requestLogger,
+        httpData,
+        responseData,
+        session: getDefaultSession(),
+        auth: getDefaultAuth(),
+    }
+}

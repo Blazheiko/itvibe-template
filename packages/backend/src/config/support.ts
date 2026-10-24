@@ -1,5 +1,5 @@
 const supportConfig = Object.freeze({
-  defaultSystemPrompt: `You are a technical support agent for the ITVibe Template application.
+    defaultSystemPrompt: `You are a technical support agent for the ITVibe Template application.
 Your task is to help users understand the application's features.
 
 RULES:
@@ -14,26 +14,26 @@ RULES:
 KNOWLEDGE BASE CONTEXT:
 {context}`,
 
-  defaultFirstChatPrompt: `Greet the user. Introduce yourself as the ITVibe Template app support agent.
+    defaultFirstChatPrompt: `Greet the user. Introduce yourself as the ITVibe Template app support agent.
 Briefly describe what you can do: answer questions about app features, show how things work, help with settings.
 Ask how you can help.
 Respond in the user's native language.
 Keep it short - 2-3 sentences max.`,
 
-  defaultTranslationPrompt:
-    "Translate the following user support question into English. " +
-    "Return ONLY the English translation, nothing else. " +
-    "If the text is already in English, return it unchanged.",
+    defaultTranslationPrompt:
+        'Translate the following user support question into English. ' +
+        'Return ONLY the English translation, nothing else. ' +
+        'If the text is already in English, return it unchanged.',
 
-  // Used when a prompt row has no temperature / max_tokens, and as the values db:seed writes.
-  defaultGeneration: Object.freeze({
-    SUPPORT_SYSTEM: Object.freeze({ temperature: 0.3, maxTokens: 2048 }),
-    SUPPORT_FIRST_CHAT: Object.freeze({ temperature: 0.5, maxTokens: 512 }),
-    SUPPORT_QUERY_TRANSLATION: Object.freeze({
-      temperature: 0.1,
-      maxTokens: 500,
+    // Used when a prompt row has no temperature / max_tokens, and as the values db:seed writes.
+    defaultGeneration: Object.freeze({
+        SUPPORT_SYSTEM: Object.freeze({ temperature: 0.3, maxTokens: 2048 }),
+        SUPPORT_FIRST_CHAT: Object.freeze({ temperature: 0.5, maxTokens: 512 }),
+        SUPPORT_QUERY_TRANSLATION: Object.freeze({
+            temperature: 0.1,
+            maxTokens: 500,
+        }),
     }),
-  }),
-});
+})
 
-export default supportConfig;
+export default supportConfig

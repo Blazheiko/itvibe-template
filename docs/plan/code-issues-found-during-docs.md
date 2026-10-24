@@ -15,6 +15,7 @@
 | feat-012 | 65             |
 | feat-014 | 60             |
 | feat-016 | 70             |
+| feat-010 | 16             |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -39,7 +40,7 @@
 | 13  | ~~`sendResponse` при `payload === null` віддає `String(status)` як JSON~~ ✅                                      | Низька       | HTTP                         |
 | 14  | ~~Прогалини плану body limits: тести, `.env.example`, playground~~ ✅                                             | Низька       | HTTP / тести                 |
 | 15  | ~~Застарілі внутрішні документи~~ ✅                                                                              | Низька       | Документація                 |
-| 16  | Стиль коду бекенду не відповідає `AGENTS.md`                                                                      | Інформаційна | Стиль                        |
+| 16  | ~~Стиль коду бекенду не відповідає `AGENTS.md`~~ ✅                                                               | Інформаційна | Стиль                        |
 | 17  | Фронтенд вшиває префікс `api/` у WS-події                                                                         | Середня      | WebSocket / frontend         |
 | 18  | WS upgrade без валідної сесії не відхиляється                                                                     | Низька       | WebSocket / безпека          |
 | 19  | Мертвий код у WebSocket-шарі                                                                                      | Низька       | WebSocket / структура        |
@@ -94,6 +95,7 @@
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
 | 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
+| 71  | `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`                                                         | Низька       | Стиль                        |
 
 ## Безпека
 
@@ -236,6 +238,8 @@
 Також: `api-playground` не має скрипта `test`.
 
 ### 16. Стиль коду бекенду
+
+> **Виправлено** у feat-010 (гілка `feat/format-baseline`): один кореневий `.prettierrc.json` за `AGENTS.md` (4 пробіли, одинарні лапки, без `;`, ширина 100) замість конфігів `documentation`, `frontend`, `api-playground` (у playground був `tabWidth` 2); `.prettierignore`; окремий коміт форматування (422 файли, AST `.ts` ідентичний) записано в `.git-blame-ignore-revs`. Поза межами залишилися файли, яких не охоплює glob `format:check` — п. 71.
 
 Багато файлів бекенду використовують подвійні лапки і крапку з комою, тоді як `AGENTS.md` описує одинарні лапки без крапки з комою. На `main` `pnpm format:check` падає на 193 файлах.
 
@@ -540,7 +544,7 @@
 
 ### 68. ESLint `strictTypeChecked` фактично вимкнено
 
-- **Що:** `eslint.config.ts` для backend, frontend і api-playground вимикає більшість правил `strictTypeChecked`, тож суворий профіль діє лише на shared і кореневі файли. У корені немає `.prettierrc` — backend і shared форматуються дефолтами Prettier (доповнює п. 16).
+- **Що:** `eslint.config.ts` для backend, frontend і api-playground вимикає більшість правил `strictTypeChecked`, тож суворий профіль діє лише на shared і кореневі файли. ~~У корені немає `.prettierrc` — backend і shared форматуються дефолтами Prettier (доповнює п. 16).~~ Prettier-частину виправлено у feat-010.
 
 ### 69. `AGENTS.md`: застарілий опис
 
@@ -581,3 +585,10 @@
 13. Окремої фічі поки немає: п. 44, 45, 49 — storage/push cleanup; п. 50–55 — AI reliability & privacy.
 14. Окремої фічі поки немає: п. 56–58 — shared cleanup + тести; п. 59, 61 — frontend; п. 62–64 — playground.
 15. п. 66 — db-dx (feat-007); п. 68 — format-baseline (feat-010); п. 69 — internal-docs-cleanup (feat-009).
+
+## Знайдено під час feat-010
+
+### 71. `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`
+
+- **Що:** кореневі скрипти `format` / `format:check` мають glob `**/*.{ts,tsx,json,md}`. Vue-компоненти frontend і api-playground, `.js`/`.mjs` (зокрема `documentation/scripts`, `packages/shared/test`) і CSS у CI не перевіряються; пакетні скрипти `format` у frontend/playground форматують лише `src/` і тепер беруть кореневий конфіг (4 пробіли), тож для playground перший запуск переформатує `.vue` з 2 на 4 пробіли.
+- **Пропозиція:** розширити glob до `{ts,tsx,js,mjs,vue,json,md,css}` окремим комітом форматування (і додати його в `.git-blame-ignore-revs`).

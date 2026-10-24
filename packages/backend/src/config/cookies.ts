@@ -1,4 +1,4 @@
-import { env } from 'node:process';
+import { env } from 'node:process'
 export default Object.freeze({
     default: {
         path: '/',
@@ -7,4 +7,4 @@ export default Object.freeze({
         maxAge: 3600,
         sameSite: 'Lax',
     },
-});
+})

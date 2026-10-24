@@ -1,28 +1,28 @@
-import webpush from 'web-push';
-import pushConfig from '#config/push.js';
-import logger from '#logger';
-import { pushSubscriptionRepository } from '#app/repositories/index.js';
-import { db } from '#database/db.js';
-import { pushNotificationLogs } from '#database/schema.js';
-import { wsConnectionRegistry } from '#app/websocket/ws-connection-registry.js';
+import webpush from 'web-push'
+import pushConfig from '#config/push.js'
+import logger from '#logger'
+import { pushSubscriptionRepository } from '#app/repositories/index.js'
+import { db } from '#database/db.js'
+import { pushNotificationLogs } from '#database/schema.js'
+import { wsConnectionRegistry } from '#app/websocket/ws-connection-registry.js'
 
 export interface PushNotificationPayload {
-    title: string;
-    body: string;
-    url?: string;
-    tag?: string;
-    icon?: string;
-    data?: Record<string, unknown>;
+    title: string
+    body: string
+    url?: string
+    tag?: string
+    icon?: string
+    data?: Record<string, unknown>
 }
 
-let vapidConfigured = false;
+let vapidConfigured = false
 
 function ensureVapidConfigured(): boolean {
-    if (vapidConfigured) return true;
+    if (vapidConfigured) return true
 
     if (pushConfig.vapidPublicKey === '' || pushConfig.vapidPrivateKey === '') {
-        logger.warn('VAPID keys not configured — push notifications disabled');
-        return false;
+        logger.warn('VAPID keys not configured — push notifications disabled')
+        return false
     }
 
     try {
@@ -30,26 +30,26 @@ function ensureVapidConfigured(): boolean {
             pushConfig.vapidSubject,
             pushConfig.vapidPublicKey,
             pushConfig.vapidPrivateKey,
-        );
-        vapidConfigured = true;
-        return true;
+        )
+        vapidConfigured = true
+        return true
     } catch (error) {
-        logger.error({ err: error }, 'Failed to set VAPID details');
-        return false;
+        logger.error({ err: error }, 'Failed to set VAPID details')
+        return false
     }
 }
 
 function isUserOnline(userId: string): boolean {
-    return wsConnectionRegistry.isUserOnline(userId);
+    return wsConnectionRegistry.isUserOnline(userId)
 }
 
 export const pushNotificationSenderService = {
     isConfigured(): boolean {
-        return ensureVapidConfigured();
+        return ensureVapidConfigured()
     },
 
     getVapidPublicKey(): string {
-        return pushConfig.vapidPublicKey;
+        return pushConfig.vapidPublicKey
     },
 
     async sendToUser(
@@ -58,24 +58,24 @@ export const pushNotificationSenderService = {
         options: { skipIfOnline?: boolean; notificationType?: string } = {},
     ): Promise<{ sent: number; failed: number }> {
         if (!ensureVapidConfigured()) {
-            return { sent: 0, failed: 0 };
+            return { sent: 0, failed: 0 }
         }
 
         // Skip if user is online and option is set
         if (options.skipIfOnline === true && isUserOnline(String(userId))) {
-            logger.info({ userId: String(userId) }, 'User is online, skipping push notification');
-            return { sent: 0, failed: 0 };
+            logger.info({ userId: String(userId) }, 'User is online, skipping push notification')
+            return { sent: 0, failed: 0 }
         }
 
-        const subscriptions = await pushSubscriptionRepository.findByUserId(userId);
-        const activeSubscriptions = subscriptions.filter((sub) => sub.isActive);
+        const subscriptions = await pushSubscriptionRepository.findByUserId(userId)
+        const activeSubscriptions = subscriptions.filter((sub) => sub.isActive)
 
         if (activeSubscriptions.length === 0) {
-            return { sent: 0, failed: 0 };
+            return { sent: 0, failed: 0 }
         }
 
-        let sent = 0;
-        let failed = 0;
+        let sent = 0
+        let failed = 0
 
         const pushPayload = JSON.stringify({
             notification: {
@@ -94,7 +94,7 @@ export const pushNotificationSenderService = {
                     { action: 'close', title: 'Close' },
                 ],
             },
-        });
+        })
 
         for (const subscription of activeSubscriptions) {
             // Filter by notificationType if subscription has preferences
@@ -104,7 +104,7 @@ export const pushNotificationSenderService = {
                 (subscription.notificationTypes as string[]).length > 0 &&
                 !(subscription.notificationTypes as string[]).includes(options.notificationType)
             ) {
-                continue;
+                continue
             }
 
             try {
@@ -117,7 +117,7 @@ export const pushNotificationSenderService = {
                         },
                     },
                     pushPayload,
-                );
+                )
 
                 // Log success
                 await db.insert(pushNotificationLogs).values({
@@ -129,23 +129,23 @@ export const pushNotificationSenderService = {
                     status: 'SENT',
                     responseData: { statusCode: response.statusCode },
                     sentAt: new Date(),
-                });
+                })
 
                 // Update last used
-                await pushSubscriptionRepository.update(subscription.id, userId, {});
+                await pushSubscriptionRepository.update(subscription.id, userId, {})
 
-                sent++;
+                sent++
             } catch (error: unknown) {
-                const statusCode = (error as { statusCode?: number }).statusCode;
-                const errorMessage = error instanceof Error ? error.message : String(error);
+                const statusCode = (error as { statusCode?: number }).statusCode
+                const errorMessage = error instanceof Error ? error.message : String(error)
 
                 // 410 Gone or 404 — subscription expired, deactivate
                 if (statusCode === 410 || statusCode === 404) {
                     logger.info(
                         { subscriptionId: String(subscription.id), statusCode },
                         'Push subscription expired, deactivating',
-                    );
-                    await pushSubscriptionRepository.deactivate(subscription.id, userId);
+                    )
+                    await pushSubscriptionRepository.deactivate(subscription.id, userId)
                 }
 
                 // Log failure
@@ -159,17 +159,17 @@ export const pushNotificationSenderService = {
                     errorMessage,
                     responseData: { statusCode: statusCode ?? null },
                     sentAt: new Date(),
-                });
+                })
 
                 logger.error(
                     { err: error, subscriptionId: String(subscription.id) },
                     'Failed to send push notification',
-                );
+                )
 
-                failed++;
+                failed++
             }
         }
 
-        return { sent, failed };
+        return { sent, failed }
     },
-};
+}

@@ -1,6 +1,6 @@
-import { ValidationError } from "#app/validate/errors/validation-error.js";
+import { ValidationError } from '#app/validate/errors/validation-error.js'
 
-export type FlattenedQuery = Record<string, string | string[]>;
+export type FlattenedQuery = Record<string, string | string[]>
 
 /**
  * Converts a `URLSearchParams` instance into a plain object suitable for
@@ -17,29 +17,29 @@ export type FlattenedQuery = Record<string, string | string[]>;
  *    semantics on every existing route.
  */
 export function flattenQuery(
-  q: URLSearchParams,
-  arrayKeys: ReadonlySet<string> = new Set<string>(),
+    q: URLSearchParams,
+    arrayKeys: ReadonlySet<string> = new Set<string>(),
 ): FlattenedQuery {
-  const out: FlattenedQuery = {};
-  const seen = new Set<string>();
+    const out: FlattenedQuery = {}
+    const seen = new Set<string>()
 
-  for (const [key, value] of q) {
-    if (arrayKeys.has(key)) {
-      const slot = out[key];
-      if (Array.isArray(slot)) {
-        slot.push(value);
-      } else {
-        out[key] = [value];
-      }
-      continue;
+    for (const [key, value] of q) {
+        if (arrayKeys.has(key)) {
+            const slot = out[key]
+            if (Array.isArray(slot)) {
+                slot.push(value)
+            } else {
+                out[key] = [value]
+            }
+            continue
+        }
+
+        if (seen.has(key)) {
+            throw new ValidationError([`Duplicate query key: ${key}`])
+        }
+        seen.add(key)
+        out[key] = value
     }
 
-    if (seen.has(key)) {
-      throw new ValidationError([`Duplicate query key: ${key}`]);
-    }
-    seen.add(key);
-    out[key] = value;
-  }
-
-  return out;
+    return out
 }

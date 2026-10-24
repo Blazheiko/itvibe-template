@@ -28,27 +28,27 @@ API testing functionality development roadmap
 ### 🔥 High Priority
 
 - [ ] **Request History**
-  - Save last 100 requests
-  - Filtering and search
-  - Quick replay
-  - Export to JSON/CSV
+    - Save last 100 requests
+    - Filtering and search
+    - Quick replay
+    - Export to JSON/CSV
 
 - [ ] **Saved Requests**
-  - Request naming
-  - Favorites
-  - Quick access
-  - Import/export
+    - Request naming
+    - Favorites
+    - Quick access
+    - Import/export
 
 - [ ] **Environment Variables**
-  - Dev / Test / Prod environments
-  - Use in URL, headers, body
-  - Import/export configurations
+    - Dev / Test / Prod environments
+    - Use in URL, headers, body
+    - Import/export configurations
 
 - [ ] **Auth Management**
-  - Bearer Token
-  - Basic Auth
-  - API Key
-  - Auto-save tokens
+    - Bearer Token
+    - Basic Auth
+    - API Key
+    - Auto-save tokens
 
 **Time Estimate**: 3-4 weeks  
 **User Value**: ⭐⭐⭐⭐⭐
@@ -60,30 +60,30 @@ API testing functionality development roadmap
 ### 🟡 Medium Priority
 
 - [ ] **Extended Statistics**
-  - Response time charts
-  - Status code distribution
-  - Percentiles (p50, p95, p99)
-  - RPS (Requests per Second)
+    - Response time charts
+    - Status code distribution
+    - Percentiles (p50, p95, p99)
+    - RPS (Requests per Second)
 
 - [ ] **Code Generation**
-  - JavaScript (fetch, axios)
-  - TypeScript
-  - Python (requests)
-  - cURL
-  - Copy to clipboard
+    - JavaScript (fetch, axios)
+    - TypeScript
+    - Python (requests)
+    - cURL
+    - Copy to clipboard
 
 - [ ] **Assertions and Validation**
-  - Status code validation
-  - JSON schema validation
-  - Response time checking
-  - Header validation
+    - Status code validation
+    - JSON schema validation
+    - Response time checking
+    - Header validation
 
 - [ ] **Response Viewers**
-  - JSON with fold/unfold
-  - HTML preview
-  - XML formatting
-  - Image preview
-  - JSONPath selector
+    - JSON with fold/unfold
+    - HTML preview
+    - XML formatting
+    - Image preview
+    - JSONPath selector
 
 **Time Estimate**: 3-4 weeks  
 **User Value**: ⭐⭐⭐⭐
@@ -95,25 +95,25 @@ API testing functionality development roadmap
 ### 🟡 Medium Priority
 
 - [ ] **Request Collections**
-  - Folder organization
-  - Share between developers
-  - Collection variables
+    - Folder organization
+    - Share between developers
+    - Collection variables
 
 - [ ] **Request Chaining**
-  - Workflow from multiple requests
-  - Data transfer between requests
-  - Conditional logic
+    - Workflow from multiple requests
+    - Data transfer between requests
+    - Conditional logic
 
 - [ ] **WebSocket Testing**
-  - Connect to WS endpoints
-  - Send/receive messages
-  - Message history
-  - Auto-reconnect
+    - Connect to WS endpoints
+    - Send/receive messages
+    - Message history
+    - Auto-reconnect
 
 - [ ] **File Upload**
-  - Drag & drop
-  - Multiple files
-  - Multipart/form-data
+    - Drag & drop
+    - Multiple files
+    - Multipart/form-data
 
 **Time Estimate**: 4-5 weeks  
 **User Value**: ⭐⭐⭐⭐
@@ -125,26 +125,26 @@ API testing functionality development roadmap
 ### 🟢 Low Priority (but useful)
 
 - [ ] **UI/UX Improvements**
-  - Tabbed interface for requests
-  - Split view for comparison
-  - Keyboard shortcuts (Ctrl+Enter, Ctrl+K)
-  - Monaco editor integration
+    - Tabbed interface for requests
+    - Split view for comparison
+    - Keyboard shortcuts (Ctrl+Enter, Ctrl+K)
+    - Monaco editor integration
 
 - [ ] **Mock Data and Generators**
-  - Faker.js integration
-  - Schema-based generation
-  - Data templates
+    - Faker.js integration
+    - Schema-based generation
+    - Data templates
 
 - [ ] **Response Diff**
-  - JSON diff viewer
-  - Compare with baseline
-  - Highlight changes
+    - JSON diff viewer
+    - Compare with baseline
+    - Highlight changes
 
 - [ ] **Import from Other Tools**
-  - Postman Collections
-  - OpenAPI/Swagger spec
-  - cURL commands
-  - HAR files
+    - Postman Collections
+    - OpenAPI/Swagger spec
+    - cURL commands
+    - HAR files
 
 **Time Estimate**: 3-4 weeks  
 **User Value**: ⭐⭐⭐
@@ -156,33 +156,33 @@ API testing functionality development roadmap
 ### Advanced functionality for power users
 
 - [ ] **Scheduling and Monitoring**
-  - Cron-like scheduling
-  - Health check monitoring
-  - Notifications (Slack, Email)
-  - Uptime tracking
+    - Cron-like scheduling
+    - Health check monitoring
+    - Notifications (Slack, Email)
+    - Uptime tracking
 
 - [ ] **Collaboration**
-  - Team workspaces
-  - Comments on requests
-  - Link sharing
-  - Role-based access
+    - Team workspaces
+    - Comments on requests
+    - Link sharing
+    - Role-based access
 
 - [ ] **CI/CD Integration**
-  - GitHub Actions
-  - GitLab CI
-  - Jenkins
-  - Automation API
+    - GitHub Actions
+    - GitLab CI
+    - Jenkins
+    - Automation API
 
 - [ ] **Advanced Protocols**
-  - GraphQL support
-  - gRPC support
-  - Server-Sent Events (SSE)
+    - GraphQL support
+    - gRPC support
+    - Server-Sent Events (SSE)
 
 - [ ] **Plugin System**
-  - Functionality extensibility
-  - Custom validators
-  - Custom viewers
-  - Community plugins
+    - Functionality extensibility
+    - Custom validators
+    - Custom viewers
+    - Community plugins
 
 **Time Estimate**: 8-12 weeks  
 **User Value**: ⭐⭐⭐⭐ (for enterprise)

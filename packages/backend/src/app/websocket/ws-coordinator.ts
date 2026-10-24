@@ -1,10 +1,10 @@
-import type { MyWebSocket, UserConnection } from '#vendor/types/types.js';
-import { userRepository } from '#app/repositories/index.js';
-import { wsConnectionRegistry } from '#app/websocket/ws-connection-registry.js';
-import { adminWsChannelService } from '#app/services/admin/admin-ws-channel-service.js';
-import { userOnlineService } from '#app/services/communication/user-online-service.js';
-import { wsPresenceService } from '#app/services/communication/ws-presence-service.js';
-import logger from '#vendor/utils/logger.js';
+import type { MyWebSocket, UserConnection } from '#vendor/types/types.js'
+import { userRepository } from '#app/repositories/index.js'
+import { wsConnectionRegistry } from '#app/websocket/ws-connection-registry.js'
+import { adminWsChannelService } from '#app/services/admin/admin-ws-channel-service.js'
+import { userOnlineService } from '#app/services/communication/user-online-service.js'
+import { wsPresenceService } from '#app/services/communication/ws-presence-service.js'
+import logger from '#vendor/utils/logger.js'
 
 /**
  * Guards below narrow `userId`/`sessionId` from `string | undefined`
@@ -13,42 +13,39 @@ import logger from '#vendor/utils/logger.js';
  * data, so these branches should never fire — they exist solely for
  * TypeScript type narrowing.
  */
-const handleConnected = async (
-    ws: MyWebSocket,
-    userData: UserConnection,
-): Promise<void> => {
-    const { userId, sessionId } = userData;
-    if (userId === undefined || sessionId === undefined) return;
-    const connectedAt = new Date();
+const handleConnected = async (ws: MyWebSocket, userData: UserConnection): Promise<void> => {
+    const { userId, sessionId } = userData
+    if (userId === undefined || sessionId === undefined) return
+    const connectedAt = new Date()
 
-    const user = await userRepository.findById(BigInt(userId));
+    const user = await userRepository.findById(BigInt(userId))
     if (user !== undefined) {
-        userData.role = user.role;
+        userData.role = user.role
     }
 
-    const isFirstConnection = wsConnectionRegistry.registerConnection(
-        userId,
-        userData.uuid,
-        ws,
-        {
-            ip: userData.ip,
-            userAgent: userData.userAgent,
-            appType: userData.appType,
-        },
-    );
-    userOnlineService.trackConnected({
-        userId: BigInt(userId),
-        sessionId,
-        socketUuid: userData.uuid,
-        role: userData.role,
-        typeApp: userData.appType,
-        ipAddress: userData.ip,
+    const isFirstConnection = wsConnectionRegistry.registerConnection(userId, userData.uuid, ws, {
+        ip: userData.ip,
         userAgent: userData.userAgent,
-        connectedAt,
-        isFirstConnection,
-    }).catch((error: unknown) => {
-        logger.error({ err: error, userId, socketUuid: userData.uuid }, 'user_online: failed to track connect');
-    });
+        appType: userData.appType,
+    })
+    userOnlineService
+        .trackConnected({
+            userId: BigInt(userId),
+            sessionId,
+            socketUuid: userData.uuid,
+            role: userData.role,
+            typeApp: userData.appType,
+            ipAddress: userData.ip,
+            userAgent: userData.userAgent,
+            connectedAt,
+            isFirstConnection,
+        })
+        .catch((error: unknown) => {
+            logger.error(
+                { err: error, userId, socketUuid: userData.uuid },
+                'user_online: failed to track connect',
+            )
+        })
 
     if (isFirstConnection) {
         await wsPresenceService.onUserConnected({
@@ -59,39 +56,41 @@ const handleConnected = async (
             userAgent: userData.userAgent,
             timestamp: connectedAt.getTime(),
             ws,
-        });
+        })
     }
-};
+}
 
 const handleDisconnected = async (
     _ws: MyWebSocket,
     userData: UserConnection,
     code: number,
 ): Promise<void> => {
-    const { userId, sessionId } = userData;
-    if (userId === undefined || sessionId === undefined) return;
-    const disconnectedAt = new Date();
+    const { userId, sessionId } = userData
+    if (userId === undefined || sessionId === undefined) return
+    const disconnectedAt = new Date()
 
     // Remove the closed socket from the in-memory registry FIRST, synchronously.
     // uWS already invalidated the socket by the time onClose fires; if we await
     // anything before unregistering, broadcast loops can still pick up the dead
     // socket and crash on `.send()` with "Invalid access of closed uWS.WebSocket".
-    const isLastConnection = wsConnectionRegistry.unregisterConnection(
-        userId,
-        userData.uuid,
-    );
+    const isLastConnection = wsConnectionRegistry.unregisterConnection(userId, userData.uuid)
 
-    adminWsChannelService.handleConnectionClosed(_ws);
+    adminWsChannelService.handleConnectionClosed(_ws)
 
-    userOnlineService.trackDisconnected({
-        socketUuid: userData.uuid,
-        disconnectedAt,
-        closeCode: code,
-        connectionDurationMs: Math.max(0, Date.now() - userData.timeStart),
-        isLastConnection,
-    }).catch((error: unknown) => {
-        logger.error({ err: error, userId, socketUuid: userData.uuid }, 'user_online: failed to track disconnect');
-    });
+    userOnlineService
+        .trackDisconnected({
+            socketUuid: userData.uuid,
+            disconnectedAt,
+            closeCode: code,
+            connectionDurationMs: Math.max(0, Date.now() - userData.timeStart),
+            isLastConnection,
+        })
+        .catch((error: unknown) => {
+            logger.error(
+                { err: error, userId, socketUuid: userData.uuid },
+                'user_online: failed to track disconnect',
+            )
+        })
 
     if (isLastConnection) {
         await wsPresenceService.onUserDisconnected({
@@ -100,11 +99,11 @@ const handleDisconnected = async (
             uuid: userData.uuid,
             code,
             timestamp: disconnectedAt.getTime(),
-        });
+        })
     }
-};
+}
 
 export const websocketCoordinator = {
     handleConnected,
     handleDisconnected,
-};
+}

@@ -1,49 +1,49 @@
 {
-  "name": "api-playground",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": "^24.15.0"
-  },
-  "keywords": [],
-  "author": "Blazheiko",
-  "license": "MIT",
-  "scripts": {
-    "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build",
-    "typecheck": "vue-tsc --build --force",
-    "lint": "eslint . --fix",
-    "format": "prettier --write src/",
-    "lint:check": "eslint ."
-  },
-  "dependencies": {
-    "@vue/devtools-api": "^8.2.1",
-    "@vueuse/core": "^15.0.0",
-    "pinia": "^4.1.0",
-    "shared": "workspace:*",
-    "vue": "^3.5.44",
-    "vue-router": "^5.4.0"
-  },
-  "devDependencies": {
-    "@tsconfig/node24": "^24.0.5",
-    "@types/node": "^24.19.2",
-    "@vitejs/plugin-vue": "^6.0.10",
-    "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/eslint-config-typescript": "^14.9.0",
-    "@vue/tsconfig": "^0.9.1",
-    "autoprefixer": "^10.6.1",
-    "eslint-plugin-vue": "~10.11.1",
-    "jiti": "^2.7.0",
-    "npm-run-all2": "^9.0.3",
-    "postcss": "^8.5.30",
-    "tailwindcss": "^3.4.19",
-    "typescript": "6.0.3",
-    "vite": "^7.3.7",
-    "vite-plugin-vue-devtools": "^8.2.1",
-    "vue-tsc": "^3.3.13"
-  }
+    "name": "api-playground",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "engines": {
+        "node": "^24.15.0"
+    },
+    "keywords": [],
+    "author": "Blazheiko",
+    "license": "MIT",
+    "scripts": {
+        "dev": "vite",
+        "build": "run-p type-check \"build-only {@}\" --",
+        "preview": "vite preview",
+        "build-only": "vite build",
+        "type-check": "vue-tsc --build",
+        "typecheck": "vue-tsc --build --force",
+        "lint": "eslint . --fix",
+        "format": "prettier --write src/",
+        "lint:check": "eslint ."
+    },
+    "dependencies": {
+        "@vue/devtools-api": "^8.2.1",
+        "@vueuse/core": "^15.0.0",
+        "pinia": "^4.1.0",
+        "shared": "workspace:*",
+        "vue": "^3.5.44",
+        "vue-router": "^5.4.0"
+    },
+    "devDependencies": {
+        "@tsconfig/node24": "^24.0.5",
+        "@types/node": "^24.19.2",
+        "@vitejs/plugin-vue": "^6.0.10",
+        "@vue/eslint-config-prettier": "^10.2.0",
+        "@vue/eslint-config-typescript": "^14.9.0",
+        "@vue/tsconfig": "^0.9.1",
+        "autoprefixer": "^10.6.1",
+        "eslint-plugin-vue": "~10.11.1",
+        "jiti": "^2.7.0",
+        "npm-run-all2": "^9.0.3",
+        "postcss": "^8.5.30",
+        "tailwindcss": "^3.4.19",
+        "typescript": "6.0.3",
+        "vite": "^7.3.7",
+        "vite-plugin-vue-devtools": "^8.2.1",
+        "vue-tsc": "^3.3.13"
+    }
 }

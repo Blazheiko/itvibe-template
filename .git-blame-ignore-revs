@@ -1,0 +1,5 @@
+# Mass formatting commits, skipped by git blame.
+# Enable locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# feat-010: apply prettier baseline
+60c735c8617b47b081e78bd63cb35c7b0e4cc80f

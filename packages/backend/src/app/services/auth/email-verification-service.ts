@@ -1,77 +1,76 @@
-import { createHash, randomBytes } from "node:crypto";
-import appConfig from "#config/app.js";
-import logger from "#logger";
+import { createHash, randomBytes } from 'node:crypto'
+import appConfig from '#config/app.js'
+import logger from '#logger'
 import {
-  emailLinkVerificationRepository,
-  emailVerificationRepository,
-  userRepository,
-} from "#app/repositories/index.js";
-import { emailService } from "#app/services/notifications/email-service.js";
-import { Result } from "better-result";
+    emailLinkVerificationRepository,
+    emailVerificationRepository,
+    userRepository,
+} from '#app/repositories/index.js'
+import { emailService } from '#app/services/notifications/email-service.js'
+import { Result } from 'better-result'
 import {
-  badRequest,
-  conflict,
-  internal,
-  internalMessage,
-  notFound,
-  type AppResult,
-  appErrorMessage,
-} from "#app/services/shared/errors.js";
-import { tryInternal } from "#app/services/shared/result-helpers.js";
-import { consumeAuthThrottle } from "#app/services/auth/auth-throttle-service.js";
-import { throttlePolicies } from "#config/throttle-policies.js";
+    badRequest,
+    conflict,
+    internal,
+    internalMessage,
+    notFound,
+    type AppResult,
+    appErrorMessage,
+} from '#app/services/shared/errors.js'
+import { tryInternal } from '#app/services/shared/result-helpers.js'
+import { consumeAuthThrottle } from '#app/services/auth/auth-throttle-service.js'
+import { throttlePolicies } from '#config/throttle-policies.js'
 
-const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000
 const EMAIL_BRAND = {
-  accent: "#A8627A",
-  accentHover: "#96516A",
-  canvas: "#FAF0F3",
-  surface: "#FFFFFF",
-  textPrimary: "#2C3440",
-  textSecondary: "#5E6977",
-  border: "#D8DDE6",
-  accentSoft: "#F6E8EE",
-  accentLine: "#E7C8D3",
-} as const;
+    accent: '#A8627A',
+    accentHover: '#96516A',
+    canvas: '#FAF0F3',
+    surface: '#FFFFFF',
+    textPrimary: '#2C3440',
+    textSecondary: '#5E6977',
+    border: '#D8DDE6',
+    accentSoft: '#F6E8EE',
+    accentLine: '#E7C8D3',
+} as const
 
 function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+    return createHash('sha256').update(token).digest('hex')
 }
 
 function createVerificationToken(): string {
-  return randomBytes(32).toString("base64url");
+    return randomBytes(32).toString('base64url')
 }
 
 function buildVerificationUrl(token: string): string {
-  const baseUrl = appConfig.frontendUrl;
-  return `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
+    const baseUrl = appConfig.frontendUrl
+    return `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`
 }
 
 function buildLinkEmailContent(
-  name: string,
-  verificationUrl: string,
+    name: string,
+    verificationUrl: string,
 ): {
-  subject: string;
-  text: string;
-  html: string;
+    subject: string
+    text: string
+    html: string
 } {
-  const subject = "Confirm your new email";
-  const trimmedName = name.trim();
-  const safeName = trimmedName === "" ? "" : `, ${trimmedName}`;
-  const escapedGreeting =
-    trimmedName === "" ? "" : `, ${escapeHtml(trimmedName)}`;
-  const escapedVerificationUrl = escapeHtml(verificationUrl);
+    const subject = 'Confirm your new email'
+    const trimmedName = name.trim()
+    const safeName = trimmedName === '' ? '' : `, ${trimmedName}`
+    const escapedGreeting = trimmedName === '' ? '' : `, ${escapeHtml(trimmedName)}`
+    const escapedVerificationUrl = escapeHtml(verificationUrl)
 
-  const text = [
-    `Hello${safeName}.`,
-    "",
-    "Please confirm this new email address for your ITVibe Template account by opening this link:",
-    verificationUrl,
-    "",
-    "This link will expire in 24 hours.",
-  ].join("\n");
+    const text = [
+        `Hello${safeName}.`,
+        '',
+        'Please confirm this new email address for your ITVibe Template account by opening this link:',
+        verificationUrl,
+        '',
+        'This link will expire in 24 hours.',
+    ].join('\n')
 
-  const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
   <body style="margin:0;padding:0;background:${EMAIL_BRAND.canvas};font-family:Inter,Arial,sans-serif;color:${EMAIL_BRAND.textPrimary};">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${EMAIL_BRAND.canvas};padding:32px 16px;">
@@ -124,45 +123,44 @@ function buildLinkEmailContent(
       </tr>
     </table>
   </body>
-</html>`;
+</html>`
 
-  return { subject, text, html };
+    return { subject, text, html }
 }
 
 function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
 }
 
 function buildEmailContent(
-  name: string,
-  verificationUrl: string,
+    name: string,
+    verificationUrl: string,
 ): {
-  subject: string;
-  text: string;
-  html: string;
+    subject: string
+    text: string
+    html: string
 } {
-  const subject = "Confirm your email";
-  const trimmedName = name.trim();
-  const safeName = trimmedName === "" ? "" : `, ${trimmedName}`;
-  const escapedGreeting =
-    trimmedName === "" ? "" : `, ${escapeHtml(trimmedName)}`;
-  const escapedVerificationUrl = escapeHtml(verificationUrl);
+    const subject = 'Confirm your email'
+    const trimmedName = name.trim()
+    const safeName = trimmedName === '' ? '' : `, ${trimmedName}`
+    const escapedGreeting = trimmedName === '' ? '' : `, ${escapeHtml(trimmedName)}`
+    const escapedVerificationUrl = escapeHtml(verificationUrl)
 
-  const text = [
-    `Hello${safeName}.`,
-    "",
-    "Please confirm your email address by opening this link:",
-    verificationUrl,
-    "",
-    "This link will expire in 24 hours.",
-  ].join("\n");
+    const text = [
+        `Hello${safeName}.`,
+        '',
+        'Please confirm your email address by opening this link:',
+        verificationUrl,
+        '',
+        'This link will expire in 24 hours.',
+    ].join('\n')
 
-  const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
   <body style="margin:0;padding:0;background:${EMAIL_BRAND.canvas};font-family:Inter,Arial,sans-serif;color:${EMAIL_BRAND.textPrimary};">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
@@ -240,409 +238,374 @@ function buildEmailContent(
       </tr>
     </table>
   </body>
-</html>`;
+</html>`
 
-  return { subject, text, html };
+    return { subject, text, html }
 }
 
 export const emailVerificationService = {
-  async sendVerificationEmail(
-    userId: bigint,
-  ): Promise<AppResult<{ message: string }>> {
-    const userResult = await tryInternal(
-      () => userRepository.findById(userId),
-      "Failed to load user",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
-
-    const user = userResult.value;
-    if (user === undefined) {
-      return Result.err(notFound("User", "User not found"));
-    }
-
-    if (user.emailVerifiedAt !== null) {
-      return Result.ok({ message: "Email is already verified" });
-    }
-
-    const invalidateResult = await tryInternal(
-      () => emailVerificationRepository.invalidatePendingByUserId(userId),
-      "Failed to invalidate email verification tokens",
-    );
-    if (Result.isError(invalidateResult)) {
-      return Result.err(invalidateResult.error);
-    }
-
-    const rawToken = createVerificationToken();
-    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
-    const createResult = await tryInternal(
-      () =>
-        emailVerificationRepository.create({
-          userId,
-          tokenHash: hashToken(rawToken),
-          expiresAt,
-        }),
-      "Failed to create email verification token",
-    );
-    if (Result.isError(createResult)) {
-      return Result.err(createResult.error);
-    }
-
-    if (user.email === null) {
-      return Result.err(
-        badRequest("Email verification requires an email address"),
-      );
-    }
-
-    const verificationUrl = buildVerificationUrl(rawToken);
-    const emailContent = buildEmailContent(user.name, verificationUrl);
-    const sendResult = await emailService.send({
-      to: user.email,
-      subject: emailContent.subject,
-      text: emailContent.text,
-      html: emailContent.html,
-    });
-
-    if (Result.isError(sendResult)) {
-      return Result.err(
-        internal(sendResult.error, "Failed to send verification email"),
-      );
-    }
-
-    return Result.ok({ message: "Verification email sent" });
-  },
-
-  async verifyEmail(
-    token: string,
-    requestMeta: { ipAddress: string },
-  ): Promise<AppResult<{ message: string }>> {
-    const throttle = await tryInternal(
-      () =>
-        consumeAuthThrottle(
-          throttlePolicies.verifyEmailIp,
-          requestMeta.ipAddress,
-        ),
-      "Failed to enforce email verification throttle",
-    );
-    if (Result.isError(throttle)) {
-      return Result.err(throttle.error);
-    }
-    if (!throttle.value.allowed) {
-      return Result.err(
-        badRequest("Too many verification attempts. Please try again later."),
-      );
-    }
-
-    const normalizedToken = token.trim();
-    if (normalizedToken === "") {
-      return Result.err(badRequest("Verification token is required"));
-    }
-
-    const verificationResult = await tryInternal(
-      () =>
-        emailVerificationRepository.findByTokenHash(hashToken(normalizedToken)),
-      "Failed to load email verification token",
-    );
-    if (Result.isError(verificationResult)) {
-      return Result.err(verificationResult.error);
-    }
-
-    const verification = verificationResult.value;
-    if (verification === undefined) {
-      const linkVerificationResult = await tryInternal(
-        () =>
-          emailLinkVerificationRepository.findByTokenHash(
-            hashToken(normalizedToken),
-          ),
-        "Failed to load email link token",
-      );
-      if (Result.isError(linkVerificationResult)) {
-        return Result.err(linkVerificationResult.error);
-      }
-
-      const linkVerification = linkVerificationResult.value;
-      if (linkVerification === undefined) {
-        return Result.err(badRequest("Verification link is invalid"));
-      }
-
-      if (linkVerification.usedAt !== null) {
-        return Result.err(
-          badRequest("Verification link has already been used"),
-        );
-      }
-
-      if (linkVerification.expiresAt.getTime() < Date.now()) {
-        const markExpiredResult = await tryInternal(
-          () => emailLinkVerificationRepository.markUsed(linkVerification.id),
-          "Failed to mark email link token used",
-        );
-        if (Result.isError(markExpiredResult)) {
-          return Result.err(markExpiredResult.error);
+    async sendVerificationEmail(userId: bigint): Promise<AppResult<{ message: string }>> {
+        const userResult = await tryInternal(
+            () => userRepository.findById(userId),
+            'Failed to load user',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
         }
 
-        return Result.err(badRequest("Verification link has expired"));
-      }
-
-      const userResult = await tryInternal(
-        () => userRepository.findById(linkVerification.userId),
-        "Failed to load user",
-      );
-      if (Result.isError(userResult)) {
-        return Result.err(userResult.error);
-      }
-
-      const user = userResult.value;
-      if (user === undefined) {
-        return Result.err(notFound("User", "User not found"));
-      }
-
-      const conflictingUserResult = await tryInternal(
-        () =>
-          userRepository.findByEmail(
-            linkVerification.targetEmail.toLowerCase(),
-          ),
-        "Failed to load user by email",
-      );
-      if (Result.isError(conflictingUserResult)) {
-        return Result.err(conflictingUserResult.error);
-      }
-
-      if (
-        conflictingUserResult.value !== undefined &&
-        conflictingUserResult.value.id !== user.id
-      ) {
-        return Result.err(
-          conflict("Email is already linked to another account"),
-        );
-      }
-
-      const updatedUserResult = await tryInternal(
-        () =>
-          userRepository.update(user.id, {
-            email: linkVerification.targetEmail.toLowerCase(),
-            emailVerifiedAt: new Date(),
-          }),
-        "Failed to link email",
-      );
-      if (Result.isError(updatedUserResult)) {
-        if (
-          updatedUserResult.error._tag === "Internal" &&
-          updatedUserResult.error.cause !== null &&
-          typeof updatedUserResult.error.cause === "object" &&
-          "code" in updatedUserResult.error.cause &&
-          updatedUserResult.error.cause.code === "23505"
-        ) {
-          return Result.err(
-            conflict("Email is already linked to another account"),
-          );
+        const user = userResult.value
+        if (user === undefined) {
+            return Result.err(notFound('User', 'User not found'))
         }
-        return Result.err(updatedUserResult.error);
-      }
 
-      const updatedUser = updatedUserResult.value;
-      if (updatedUser === undefined) {
-        return Result.err(internalMessage("Failed to link email"));
-      }
+        if (user.emailVerifiedAt !== null) {
+            return Result.ok({ message: 'Email is already verified' })
+        }
 
-      const usedResult = await tryInternal(
-        () => emailLinkVerificationRepository.markUsed(linkVerification.id),
-        "Failed to mark email link token used",
-      );
-      if (Result.isError(usedResult)) {
-        return Result.err(usedResult.error);
-      }
+        const invalidateResult = await tryInternal(
+            () => emailVerificationRepository.invalidatePendingByUserId(userId),
+            'Failed to invalidate email verification tokens',
+        )
+        if (Result.isError(invalidateResult)) {
+            return Result.err(invalidateResult.error)
+        }
 
-      return Result.ok({ message: "Email linked successfully" });
-    }
+        const rawToken = createVerificationToken()
+        const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS)
+        const createResult = await tryInternal(
+            () =>
+                emailVerificationRepository.create({
+                    userId,
+                    tokenHash: hashToken(rawToken),
+                    expiresAt,
+                }),
+            'Failed to create email verification token',
+        )
+        if (Result.isError(createResult)) {
+            return Result.err(createResult.error)
+        }
 
-    if (verification.usedAt !== null) {
-      return Result.err(badRequest("Verification link has already been used"));
-    }
+        if (user.email === null) {
+            return Result.err(badRequest('Email verification requires an email address'))
+        }
 
-    if (verification.expiresAt.getTime() < Date.now()) {
-      const markExpiredResult = await tryInternal(
-        () => emailVerificationRepository.markUsed(verification.id),
-        "Failed to mark email verification token used",
-      );
-      if (Result.isError(markExpiredResult)) {
-        return Result.err(markExpiredResult.error);
-      }
+        const verificationUrl = buildVerificationUrl(rawToken)
+        const emailContent = buildEmailContent(user.name, verificationUrl)
+        const sendResult = await emailService.send({
+            to: user.email,
+            subject: emailContent.subject,
+            text: emailContent.text,
+            html: emailContent.html,
+        })
 
-      return Result.err(badRequest("Verification link has expired"));
-    }
+        if (Result.isError(sendResult)) {
+            return Result.err(internal(sendResult.error, 'Failed to send verification email'))
+        }
 
-    const userResult = await tryInternal(
-      () => userRepository.findById(verification.userId),
-      "Failed to load user",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
+        return Result.ok({ message: 'Verification email sent' })
+    },
 
-    const user = userResult.value;
-    if (user === undefined) {
-      return Result.err(notFound("User", "User not found"));
-    }
+    async verifyEmail(
+        token: string,
+        requestMeta: { ipAddress: string },
+    ): Promise<AppResult<{ message: string }>> {
+        const throttle = await tryInternal(
+            () => consumeAuthThrottle(throttlePolicies.verifyEmailIp, requestMeta.ipAddress),
+            'Failed to enforce email verification throttle',
+        )
+        if (Result.isError(throttle)) {
+            return Result.err(throttle.error)
+        }
+        if (!throttle.value.allowed) {
+            return Result.err(badRequest('Too many verification attempts. Please try again later.'))
+        }
 
-    if (user.emailVerifiedAt === null) {
-      const updatedUserResult = await tryInternal(
-        () =>
-          userRepository.update(user.id, {
-            emailVerifiedAt: new Date(),
-          }),
-        "Failed to verify email",
-      );
-      if (Result.isError(updatedUserResult)) {
-        return Result.err(updatedUserResult.error);
-      }
+        const normalizedToken = token.trim()
+        if (normalizedToken === '') {
+            return Result.err(badRequest('Verification token is required'))
+        }
 
-      const updatedUser = updatedUserResult.value;
-      if (updatedUser === undefined) {
-        return Result.err(internalMessage("Failed to verify email"));
-      }
-    }
+        const verificationResult = await tryInternal(
+            () => emailVerificationRepository.findByTokenHash(hashToken(normalizedToken)),
+            'Failed to load email verification token',
+        )
+        if (Result.isError(verificationResult)) {
+            return Result.err(verificationResult.error)
+        }
 
-    const usedResult = await tryInternal(
-      () => emailVerificationRepository.markUsed(verification.id),
-      "Failed to mark email verification token used",
-    );
-    if (Result.isError(usedResult)) {
-      return Result.err(usedResult.error);
-    }
+        const verification = verificationResult.value
+        if (verification === undefined) {
+            const linkVerificationResult = await tryInternal(
+                () => emailLinkVerificationRepository.findByTokenHash(hashToken(normalizedToken)),
+                'Failed to load email link token',
+            )
+            if (Result.isError(linkVerificationResult)) {
+                return Result.err(linkVerificationResult.error)
+            }
 
-    return Result.ok({ message: "Email confirmed successfully" });
-  },
+            const linkVerification = linkVerificationResult.value
+            if (linkVerification === undefined) {
+                return Result.err(badRequest('Verification link is invalid'))
+            }
 
-  async queueVerificationEmail(
-    userId: bigint,
-  ): Promise<AppResult<{ message: string }>> {
-    const throttle = await tryInternal(
-      () =>
-        consumeAuthThrottle(
-          throttlePolicies.resendVerificationUser,
-          String(userId),
-        ),
-      "Failed to enforce verification email throttle",
-    );
-    if (Result.isError(throttle)) {
-      return Result.err(throttle.error);
-    }
-    if (!throttle.value.allowed) {
-      return Result.err(
-        badRequest(
-          "Too many verification emails requested. Please try again later.",
-        ),
-      );
-    }
+            if (linkVerification.usedAt !== null) {
+                return Result.err(badRequest('Verification link has already been used'))
+            }
 
-    const userResult = await tryInternal(
-      () => userRepository.findById(userId),
-      "Failed to load user",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
+            if (linkVerification.expiresAt.getTime() < Date.now()) {
+                const markExpiredResult = await tryInternal(
+                    () => emailLinkVerificationRepository.markUsed(linkVerification.id),
+                    'Failed to mark email link token used',
+                )
+                if (Result.isError(markExpiredResult)) {
+                    return Result.err(markExpiredResult.error)
+                }
 
-    const user = userResult.value;
-    if (user === undefined) {
-      return Result.err(notFound("User", "User not found"));
-    }
+                return Result.err(badRequest('Verification link has expired'))
+            }
 
-    if (user.emailVerifiedAt !== null) {
-      return Result.ok({ message: "Email is already verified" });
-    }
+            const userResult = await tryInternal(
+                () => userRepository.findById(linkVerification.userId),
+                'Failed to load user',
+            )
+            if (Result.isError(userResult)) {
+                return Result.err(userResult.error)
+            }
 
-    void this.sendVerificationEmailInBackground(userId, "manual resend");
-    return Result.ok({ message: "Verification email will be sent shortly" });
-  },
+            const user = userResult.value
+            if (user === undefined) {
+                return Result.err(notFound('User', 'User not found'))
+            }
 
-  async sendVerificationEmailInBackground(
-    userId: bigint,
-    reason: "registration" | "manual resend",
-  ): Promise<void> {
-    try {
-      const result = await this.sendVerificationEmail(userId);
-      if (Result.isError(result)) {
-        logger.warn(
-          {
-            userId: String(userId),
-            reason: appErrorMessage(result.error),
-            trigger: reason,
-          },
-          "Failed to send verification email in background",
-        );
-      }
-    } catch (err) {
-      logger.error(
-        { err, userId: String(userId), trigger: reason },
-        "Unexpected error while sending verification email in background",
-      );
-    }
-  },
+            const conflictingUserResult = await tryInternal(
+                () => userRepository.findByEmail(linkVerification.targetEmail.toLowerCase()),
+                'Failed to load user by email',
+            )
+            if (Result.isError(conflictingUserResult)) {
+                return Result.err(conflictingUserResult.error)
+            }
 
-  async sendVerificationEmailAfterRegistration(userId: bigint): Promise<void> {
-    await this.sendVerificationEmailInBackground(userId, "registration");
-  },
+            if (
+                conflictingUserResult.value !== undefined &&
+                conflictingUserResult.value.id !== user.id
+            ) {
+                return Result.err(conflict('Email is already linked to another account'))
+            }
 
-  async sendLinkVerificationEmail(
-    userId: bigint,
-    targetEmail: string,
-  ): Promise<AppResult<{ message: string }>> {
-    const userResult = await tryInternal(
-      () => userRepository.findById(userId),
-      "Failed to load user",
-    );
-    if (Result.isError(userResult)) {
-      return Result.err(userResult.error);
-    }
+            const updatedUserResult = await tryInternal(
+                () =>
+                    userRepository.update(user.id, {
+                        email: linkVerification.targetEmail.toLowerCase(),
+                        emailVerifiedAt: new Date(),
+                    }),
+                'Failed to link email',
+            )
+            if (Result.isError(updatedUserResult)) {
+                if (
+                    updatedUserResult.error._tag === 'Internal' &&
+                    updatedUserResult.error.cause !== null &&
+                    typeof updatedUserResult.error.cause === 'object' &&
+                    'code' in updatedUserResult.error.cause &&
+                    updatedUserResult.error.cause.code === '23505'
+                ) {
+                    return Result.err(conflict('Email is already linked to another account'))
+                }
+                return Result.err(updatedUserResult.error)
+            }
 
-    const user = userResult.value;
-    if (user === undefined) {
-      return Result.err(notFound("User", "User not found"));
-    }
+            const updatedUser = updatedUserResult.value
+            if (updatedUser === undefined) {
+                return Result.err(internalMessage('Failed to link email'))
+            }
 
-    const invalidateResult = await tryInternal(
-      () => emailLinkVerificationRepository.invalidatePendingByUserId(userId),
-      "Failed to invalidate email link tokens",
-    );
-    if (Result.isError(invalidateResult)) {
-      return Result.err(invalidateResult.error);
-    }
+            const usedResult = await tryInternal(
+                () => emailLinkVerificationRepository.markUsed(linkVerification.id),
+                'Failed to mark email link token used',
+            )
+            if (Result.isError(usedResult)) {
+                return Result.err(usedResult.error)
+            }
 
-    const rawToken = createVerificationToken();
-    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
-    const createResult = await tryInternal(
-      () =>
-        emailLinkVerificationRepository.create({
-          userId,
-          targetEmail,
-          tokenHash: hashToken(rawToken),
-          expiresAt,
-        }),
-      "Failed to create email link token",
-    );
-    if (Result.isError(createResult)) {
-      return Result.err(createResult.error);
-    }
+            return Result.ok({ message: 'Email linked successfully' })
+        }
 
-    const verificationUrl = buildVerificationUrl(rawToken);
-    const emailContent = buildLinkEmailContent(user.name, verificationUrl);
-    const sendResult = await emailService.send({
-      to: targetEmail,
-      subject: emailContent.subject,
-      text: emailContent.text,
-      html: emailContent.html,
-    });
+        if (verification.usedAt !== null) {
+            return Result.err(badRequest('Verification link has already been used'))
+        }
 
-    if (Result.isError(sendResult)) {
-      return Result.err(
-        internal(sendResult.error, "Failed to send email link verification"),
-      );
-    }
+        if (verification.expiresAt.getTime() < Date.now()) {
+            const markExpiredResult = await tryInternal(
+                () => emailVerificationRepository.markUsed(verification.id),
+                'Failed to mark email verification token used',
+            )
+            if (Result.isError(markExpiredResult)) {
+                return Result.err(markExpiredResult.error)
+            }
 
-    return Result.ok({
-      message: "Verification email will be sent shortly",
-    });
-  },
-};
+            return Result.err(badRequest('Verification link has expired'))
+        }
+
+        const userResult = await tryInternal(
+            () => userRepository.findById(verification.userId),
+            'Failed to load user',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
+        }
+
+        const user = userResult.value
+        if (user === undefined) {
+            return Result.err(notFound('User', 'User not found'))
+        }
+
+        if (user.emailVerifiedAt === null) {
+            const updatedUserResult = await tryInternal(
+                () =>
+                    userRepository.update(user.id, {
+                        emailVerifiedAt: new Date(),
+                    }),
+                'Failed to verify email',
+            )
+            if (Result.isError(updatedUserResult)) {
+                return Result.err(updatedUserResult.error)
+            }
+
+            const updatedUser = updatedUserResult.value
+            if (updatedUser === undefined) {
+                return Result.err(internalMessage('Failed to verify email'))
+            }
+        }
+
+        const usedResult = await tryInternal(
+            () => emailVerificationRepository.markUsed(verification.id),
+            'Failed to mark email verification token used',
+        )
+        if (Result.isError(usedResult)) {
+            return Result.err(usedResult.error)
+        }
+
+        return Result.ok({ message: 'Email confirmed successfully' })
+    },
+
+    async queueVerificationEmail(userId: bigint): Promise<AppResult<{ message: string }>> {
+        const throttle = await tryInternal(
+            () => consumeAuthThrottle(throttlePolicies.resendVerificationUser, String(userId)),
+            'Failed to enforce verification email throttle',
+        )
+        if (Result.isError(throttle)) {
+            return Result.err(throttle.error)
+        }
+        if (!throttle.value.allowed) {
+            return Result.err(
+                badRequest('Too many verification emails requested. Please try again later.'),
+            )
+        }
+
+        const userResult = await tryInternal(
+            () => userRepository.findById(userId),
+            'Failed to load user',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
+        }
+
+        const user = userResult.value
+        if (user === undefined) {
+            return Result.err(notFound('User', 'User not found'))
+        }
+
+        if (user.emailVerifiedAt !== null) {
+            return Result.ok({ message: 'Email is already verified' })
+        }
+
+        void this.sendVerificationEmailInBackground(userId, 'manual resend')
+        return Result.ok({ message: 'Verification email will be sent shortly' })
+    },
+
+    async sendVerificationEmailInBackground(
+        userId: bigint,
+        reason: 'registration' | 'manual resend',
+    ): Promise<void> {
+        try {
+            const result = await this.sendVerificationEmail(userId)
+            if (Result.isError(result)) {
+                logger.warn(
+                    {
+                        userId: String(userId),
+                        reason: appErrorMessage(result.error),
+                        trigger: reason,
+                    },
+                    'Failed to send verification email in background',
+                )
+            }
+        } catch (err) {
+            logger.error(
+                { err, userId: String(userId), trigger: reason },
+                'Unexpected error while sending verification email in background',
+            )
+        }
+    },
+
+    async sendVerificationEmailAfterRegistration(userId: bigint): Promise<void> {
+        await this.sendVerificationEmailInBackground(userId, 'registration')
+    },
+
+    async sendLinkVerificationEmail(
+        userId: bigint,
+        targetEmail: string,
+    ): Promise<AppResult<{ message: string }>> {
+        const userResult = await tryInternal(
+            () => userRepository.findById(userId),
+            'Failed to load user',
+        )
+        if (Result.isError(userResult)) {
+            return Result.err(userResult.error)
+        }
+
+        const user = userResult.value
+        if (user === undefined) {
+            return Result.err(notFound('User', 'User not found'))
+        }
+
+        const invalidateResult = await tryInternal(
+            () => emailLinkVerificationRepository.invalidatePendingByUserId(userId),
+            'Failed to invalidate email link tokens',
+        )
+        if (Result.isError(invalidateResult)) {
+            return Result.err(invalidateResult.error)
+        }
+
+        const rawToken = createVerificationToken()
+        const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS)
+        const createResult = await tryInternal(
+            () =>
+                emailLinkVerificationRepository.create({
+                    userId,
+                    targetEmail,
+                    tokenHash: hashToken(rawToken),
+                    expiresAt,
+                }),
+            'Failed to create email link token',
+        )
+        if (Result.isError(createResult)) {
+            return Result.err(createResult.error)
+        }
+
+        const verificationUrl = buildVerificationUrl(rawToken)
+        const emailContent = buildLinkEmailContent(user.name, verificationUrl)
+        const sendResult = await emailService.send({
+            to: targetEmail,
+            subject: emailContent.subject,
+            text: emailContent.text,
+            html: emailContent.html,
+        })
+
+        if (Result.isError(sendResult)) {
+            return Result.err(internal(sendResult.error, 'Failed to send email link verification'))
+        }
+
+        return Result.ok({
+            message: 'Verification email will be sent shortly',
+        })
+    },
+}

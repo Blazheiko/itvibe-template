@@ -1,49 +1,41 @@
 // import redis from '#database/redis.js';
 // import { DateTime } from "luxon";
-import crypto from "node:crypto";
+import crypto from 'node:crypto'
 
 import type {
-  HttpContext,
-  Session,
-  SessionData,
-  SessionInfo,
-  // WsContext,
-} from "#vendor/types/types.js";
-import sessionConfig from "#config/session.js";
+    HttpContext,
+    Session,
+    SessionData,
+    SessionInfo,
+    // WsContext,
+} from '#vendor/types/types.js'
+import sessionConfig from '#config/session.js'
 import {
-  saveSession,
-  getSession,
-  updateSessionData,
-  changeSessionData,
-  destroySession,
-  destroyAllSessions,
-} from "#vendor/utils/session/redis-session-storage.js";
-import logger from "#vendor/utils/logger.js";
-import { RedisUnavailableError } from "#vendor/utils/network/errors/redis-unavailable-error.js";
-import { maskTokenForLogs } from "#vendor/utils/helpers/mask-sensitive.js";
-import {
-  createSignedToken,
-  verifySignedToken,
-} from "#vendor/utils/session/token-handler.js";
-import type { ResponseData } from "#vendor/types/types.js";
-import {
-  generateCsrfToken,
-  isValidCsrfToken,
-} from "#vendor/utils/session/csrf-token.js";
+    saveSession,
+    getSession,
+    updateSessionData,
+    changeSessionData,
+    destroySession,
+    destroyAllSessions,
+} from '#vendor/utils/session/redis-session-storage.js'
+import logger from '#vendor/utils/logger.js'
+import { RedisUnavailableError } from '#vendor/utils/network/errors/redis-unavailable-error.js'
+import { maskTokenForLogs } from '#vendor/utils/helpers/mask-sensitive.js'
+import { createSignedToken, verifySignedToken } from '#vendor/utils/session/token-handler.js'
+import type { ResponseData } from '#vendor/types/types.js'
+import { generateCsrfToken, isValidCsrfToken } from '#vendor/utils/session/csrf-token.js'
 
 const isValidUserToken = (token: unknown): token is string =>
-  typeof token === "string" && /^[a-zA-Z0-9_-]{10,}$/.test(token);
+    typeof token === 'string' && /^[a-zA-Z0-9_-]{10,}$/.test(token)
 
-logger.info(`Session storage: ${sessionConfig.storage}`);
+logger.info(`Session storage: ${sessionConfig.storage}`)
 
-const generateSessionId = (): string => crypto.randomUUID();
+const generateSessionId = (): string => crypto.randomUUID()
 
 const withCsrfToken = (data: SessionData): SessionData => ({
-  ...data,
-  csrfToken: isValidCsrfToken(data.csrfToken)
-    ? data.csrfToken
-    : generateCsrfToken(),
-});
+    ...data,
+    csrfToken: isValidCsrfToken(data.csrfToken) ? data.csrfToken : generateCsrfToken(),
+})
 
 /**
  * Sanitizes Redis keys for protection against injections
@@ -57,318 +49,298 @@ const withCsrfToken = (data: SessionData): SessionData => ({
 //     return key;
 // };
 
-const createSessionInfo = async (
-  data: SessionData = {},
-): Promise<SessionInfo> => {
-  const session: SessionInfo = {
-    id: generateSessionId(),
-    data: withCsrfToken(data),
-    createdAt: new Date().toISOString(),
-    // expiresAt: DateTime.now().plus({ seconds: sessionConfig.age }).toISO(),
-  };
+const createSessionInfo = async (data: SessionData = {}): Promise<SessionInfo> => {
+    const session: SessionInfo = {
+        id: generateSessionId(),
+        data: withCsrfToken(data),
+        createdAt: new Date().toISOString(),
+        // expiresAt: DateTime.now().plus({ seconds: sessionConfig.age }).toISO(),
+    }
 
-  await saveSession(session);
+    await saveSession(session)
 
-  return session;
-};
+    return session
+}
 
-const ANON_TOKEN = "anon_session";
+const ANON_TOKEN = 'anon_session'
 
-const createCookieValue = (
-  sessionId: string,
-  userToken: string | undefined,
-): string =>
-  userToken !== undefined
-    ? `${userToken}.${sessionId}`
-    : `${ANON_TOKEN}.${sessionId}`;
+const createCookieValue = (sessionId: string, userToken: string | undefined): string =>
+    userToken !== undefined ? `${userToken}.${sessionId}` : `${ANON_TOKEN}.${sessionId}`
 
 const updateContextWithNewSession = (
-  context: HttpContext,
-  newSessionInfo: SessionInfo,
-  userToken: string | undefined,
-  responseData: ResponseData,
+    context: HttpContext,
+    newSessionInfo: SessionInfo,
+    userToken: string | undefined,
+    responseData: ResponseData,
 ): SessionInfo => {
-  const cookieValue = createCookieValue(newSessionInfo.id, userToken);
-  const signedToken = createSignedToken(cookieValue);
+    const cookieValue = createCookieValue(newSessionInfo.id, userToken)
+    const signedToken = createSignedToken(cookieValue)
 
-  responseData.setCookie(sessionConfig.cookieName, signedToken, {
-    path: sessionConfig.cookie.path,
-    httpOnly: sessionConfig.cookie.httpOnly,
-    secure: sessionConfig.cookie.secure,
-    maxAge: sessionConfig.age,
-    sameSite: sessionConfig.cookie.sameSite,
-    expires: new Date(Date.now() + sessionConfig.age * 1000),
-  });
+    responseData.setCookie(sessionConfig.cookieName, signedToken, {
+        path: sessionConfig.cookie.path,
+        httpOnly: sessionConfig.cookie.httpOnly,
+        secure: sessionConfig.cookie.secure,
+        maxAge: sessionConfig.age,
+        sameSite: sessionConfig.cookie.sameSite,
+        expires: new Date(Date.now() + sessionConfig.age * 1000),
+    })
 
-  context.session.sessionInfo = newSessionInfo;
+    context.session.sessionInfo = newSessionInfo
 
-  return newSessionInfo;
-};
+    return newSessionInfo
+}
 
 export const sessionHandler = async (
-  context: HttpContext,
-  accessToken: string | undefined,
-  _userId: string | undefined,
+    context: HttpContext,
+    accessToken: string | undefined,
+    _userId: string | undefined,
 ): Promise<void> => {
-  const { responseData } = context;
+    const { responseData } = context
 
-  let sessionId: string | undefined;
-  let cookieUserToken: string | undefined;
+    let sessionId: string | undefined
+    let cookieUserToken: string | undefined
 
-  if (accessToken !== undefined) {
-    const verifiedData = verifySignedToken(accessToken);
+    if (accessToken !== undefined) {
+        const verifiedData = verifySignedToken(accessToken)
 
-    if (verifiedData !== null) {
-      ({ cookieUserToken, sessionId } = verifiedData);
+        if (verifiedData !== null) {
+            ;({ cookieUserToken, sessionId } = verifiedData)
 
-      if (!isValidUserToken(cookieUserToken)) {
-        logger.warn(
-          {
-            ip: context.httpData.ip,
-            userAgent: context.httpData.headers.get("user-agent"),
-          },
-          "Invalid cookieUserToken format in token",
-        );
-        cookieUserToken = undefined;
-        sessionId = undefined;
-      }
-    } else {
-      logger.warn(
-        {
-          ip: context.httpData.ip,
-          userAgent: context.httpData.headers.get("user-agent"),
-        },
-        "Invalid access token",
-      );
+            if (!isValidUserToken(cookieUserToken)) {
+                logger.warn(
+                    {
+                        ip: context.httpData.ip,
+                        userAgent: context.httpData.headers.get('user-agent'),
+                    },
+                    'Invalid cookieUserToken format in token',
+                )
+                cookieUserToken = undefined
+                sessionId = undefined
+            }
+        } else {
+            logger.warn(
+                {
+                    ip: context.httpData.ip,
+                    userAgent: context.httpData.headers.get('user-agent'),
+                },
+                'Invalid access token',
+            )
+        }
     }
-  }
 
-  let sessionInfo: SessionInfo | null = null;
+    let sessionInfo: SessionInfo | null = null
 
-  if (sessionId !== undefined && cookieUserToken !== undefined) {
-    sessionInfo = await getSession(sessionId, cookieUserToken);
-  }
-
-  // Anonymous session — no userToken, stored with placeholder key
-  sessionInfo ??= await createSessionInfo({});
-
-  const sessionUserToken =
-    cookieUserToken ??
-    (typeof sessionInfo.data.userToken === "string"
-      ? sessionInfo.data.userToken
-      : undefined);
-  if (!isValidCsrfToken(sessionInfo.data.csrfToken)) {
-    const updatedSessionInfo = await updateSessionData(
-      sessionInfo.id,
-      {
-        csrfToken: generateCsrfToken(),
-      },
-      sessionUserToken ?? ANON_TOKEN,
-    );
-    if (updatedSessionInfo !== null) {
-      sessionInfo = updatedSessionInfo;
+    if (sessionId !== undefined && cookieUserToken !== undefined) {
+        sessionInfo = await getSession(sessionId, cookieUserToken)
     }
-  }
-  const cookieValue = createCookieValue(sessionInfo.id, sessionUserToken);
-  const signedToken = createSignedToken(cookieValue);
 
-  responseData.setCookie(sessionConfig.cookieName, signedToken, {
-    path: sessionConfig.cookie.path,
-    httpOnly: sessionConfig.cookie.httpOnly,
-    secure: sessionConfig.cookie.secure,
-    maxAge: sessionConfig.age,
-    sameSite: sessionConfig.cookie.sameSite,
-    expires: new Date(Date.now() + sessionConfig.age * 1000),
-  });
+    // Anonymous session — no userToken, stored with placeholder key
+    sessionInfo ??= await createSessionInfo({})
 
-  const contextUserToken = sessionUserToken ?? ANON_TOKEN;
-
-  context.session.sessionInfo = sessionInfo;
-  context.session.updateSessionData = async (
-    newData: SessionData,
-  ): Promise<SessionInfo | null> =>
-    await updateSessionData(sessionInfo?.id, newData, contextUserToken);
-  context.session.changeSessionData = async (
-    newData: SessionData,
-  ): Promise<SessionInfo | null> =>
-    await changeSessionData(sessionInfo?.id, newData, contextUserToken);
-  context.session.destroySession = async (): Promise<void> => {
-    await destroySession(sessionInfo?.id, contextUserToken);
-  };
-
-  context.auth.getUserId = (): string | null => {
-    if (sessionInfo === null) return null;
-    if (sessionInfo.data.userId === undefined) return null;
-    return typeof sessionInfo.data.userId === "string"
-      ? sessionInfo.data.userId
-      : null;
-  };
-  context.auth.check = (): boolean => Boolean(sessionInfo?.data.userId);
-  context.auth.login = async (
-    userId: string | undefined,
-    userToken: string | undefined,
-  ): Promise<boolean> => {
-    if (userId === undefined || userToken === undefined) return false;
-    try {
-      const oldSessionId = sessionInfo?.id;
-      const oldUserToken =
-        typeof sessionInfo?.data.userToken === "string"
-          ? sessionInfo.data.userToken
-          : undefined;
-
-      if (oldSessionId !== undefined && oldUserToken !== undefined) {
-        await destroySession(oldSessionId, oldUserToken);
-      }
-
-      const newSessionInfo = await createSessionInfo({
-        userId,
-        userToken,
-      });
-
-      sessionInfo = updateContextWithNewSession(
-        context,
-        newSessionInfo,
-        userToken,
-        responseData,
-      );
-
-      logger.info({ userId, sessionId: newSessionInfo.id }, `User logged in`);
-
-      return true;
-    } catch (err) {
-      logger.error({ err }, "Login error:");
-      throw err;
+    const sessionUserToken =
+        cookieUserToken ??
+        (typeof sessionInfo.data.userToken === 'string' ? sessionInfo.data.userToken : undefined)
+    if (!isValidCsrfToken(sessionInfo.data.csrfToken)) {
+        const updatedSessionInfo = await updateSessionData(
+            sessionInfo.id,
+            {
+                csrfToken: generateCsrfToken(),
+            },
+            sessionUserToken ?? ANON_TOKEN,
+        )
+        if (updatedSessionInfo !== null) {
+            sessionInfo = updatedSessionInfo
+        }
     }
-  };
+    const cookieValue = createCookieValue(sessionInfo.id, sessionUserToken)
+    const signedToken = createSignedToken(cookieValue)
 
-  context.auth.logout = async (): Promise<boolean> => {
-    try {
-      const currentUserToken =
-        typeof sessionInfo?.data.userToken === "string"
-          ? sessionInfo.data.userToken
-          : undefined;
-      const currentSessionId = sessionInfo?.id;
-      if (currentUserToken !== undefined && currentSessionId !== undefined) {
-        await destroySession(currentSessionId, currentUserToken);
-        logger.info(
-          {
-            userId: sessionInfo?.data.userId,
-            sessionId: currentSessionId,
-          },
-          `User logged out`,
-        );
-      }
+    responseData.setCookie(sessionConfig.cookieName, signedToken, {
+        path: sessionConfig.cookie.path,
+        httpOnly: sessionConfig.cookie.httpOnly,
+        secure: sessionConfig.cookie.secure,
+        maxAge: sessionConfig.age,
+        sameSite: sessionConfig.cookie.sameSite,
+        expires: new Date(Date.now() + sessionConfig.age * 1000),
+    })
 
-      const newSessionInfo = await createSessionInfo({});
+    const contextUserToken = sessionUserToken ?? ANON_TOKEN
 
-      sessionInfo = updateContextWithNewSession(
-        context,
-        newSessionInfo,
-        undefined,
-        responseData,
-      );
-
-      return true;
-    } catch (err) {
-      logger.error({ err }, "Logout error");
-      throw err;
+    context.session.sessionInfo = sessionInfo
+    context.session.updateSessionData = async (newData: SessionData): Promise<SessionInfo | null> =>
+        await updateSessionData(sessionInfo?.id, newData, contextUserToken)
+    context.session.changeSessionData = async (newData: SessionData): Promise<SessionInfo | null> =>
+        await changeSessionData(sessionInfo?.id, newData, contextUserToken)
+    context.session.destroySession = async (): Promise<void> => {
+        await destroySession(sessionInfo?.id, contextUserToken)
     }
-  };
 
-  context.auth.logoutAll = async (): Promise<number> => {
-    try {
-      const currentUserToken =
-        typeof sessionInfo?.data.userToken === "string"
-          ? sessionInfo.data.userToken
-          : undefined;
-      if (currentUserToken === undefined) return 0;
-
-      // The current session survives a stopped run, so the client can repeat
-      // logoutAll while still authenticated; it is deleted last.
-      const deletedCount = await destroyAllSessions(
-        currentUserToken,
-        sessionInfo?.id,
-      );
-      logger.info(
-        {
-          userId: sessionInfo?.data.userId,
-          deletedCount,
-        },
-        `User logged out all sessions`,
-      );
-
-      const newSessionInfo = await createSessionInfo({});
-
-      sessionInfo = updateContextWithNewSession(
-        context,
-        newSessionInfo,
-        undefined,
-        responseData,
-      );
-
-      return deletedCount;
-    } catch (err) {
-      logger.error({ err }, "LogoutAll error");
-      throw err;
+    context.auth.getUserId = (): string | null => {
+        if (sessionInfo === null) return null
+        if (sessionInfo.data.userId === undefined) return null
+        return typeof sessionInfo.data.userId === 'string' ? sessionInfo.data.userId : null
     }
-  };
-};
+    context.auth.check = (): boolean => Boolean(sessionInfo?.data.userId)
+    context.auth.login = async (
+        userId: string | undefined,
+        userToken: string | undefined,
+    ): Promise<boolean> => {
+        if (userId === undefined || userToken === undefined) return false
+        try {
+            const oldSessionId = sessionInfo?.id
+            const oldUserToken =
+                typeof sessionInfo?.data.userToken === 'string'
+                    ? sessionInfo.data.userToken
+                    : undefined
+
+            if (oldSessionId !== undefined && oldUserToken !== undefined) {
+                await destroySession(oldSessionId, oldUserToken)
+            }
+
+            const newSessionInfo = await createSessionInfo({
+                userId,
+                userToken,
+            })
+
+            sessionInfo = updateContextWithNewSession(
+                context,
+                newSessionInfo,
+                userToken,
+                responseData,
+            )
+
+            logger.info({ userId, sessionId: newSessionInfo.id }, `User logged in`)
+
+            return true
+        } catch (err) {
+            logger.error({ err }, 'Login error:')
+            throw err
+        }
+    }
+
+    context.auth.logout = async (): Promise<boolean> => {
+        try {
+            const currentUserToken =
+                typeof sessionInfo?.data.userToken === 'string'
+                    ? sessionInfo.data.userToken
+                    : undefined
+            const currentSessionId = sessionInfo?.id
+            if (currentUserToken !== undefined && currentSessionId !== undefined) {
+                await destroySession(currentSessionId, currentUserToken)
+                logger.info(
+                    {
+                        userId: sessionInfo?.data.userId,
+                        sessionId: currentSessionId,
+                    },
+                    `User logged out`,
+                )
+            }
+
+            const newSessionInfo = await createSessionInfo({})
+
+            sessionInfo = updateContextWithNewSession(
+                context,
+                newSessionInfo,
+                undefined,
+                responseData,
+            )
+
+            return true
+        } catch (err) {
+            logger.error({ err }, 'Logout error')
+            throw err
+        }
+    }
+
+    context.auth.logoutAll = async (): Promise<number> => {
+        try {
+            const currentUserToken =
+                typeof sessionInfo?.data.userToken === 'string'
+                    ? sessionInfo.data.userToken
+                    : undefined
+            if (currentUserToken === undefined) return 0
+
+            // The current session survives a stopped run, so the client can repeat
+            // logoutAll while still authenticated; it is deleted last.
+            const deletedCount = await destroyAllSessions(currentUserToken, sessionInfo?.id)
+            logger.info(
+                {
+                    userId: sessionInfo?.data.userId,
+                    deletedCount,
+                },
+                `User logged out all sessions`,
+            )
+
+            const newSessionInfo = await createSessionInfo({})
+
+            sessionInfo = updateContextWithNewSession(
+                context,
+                newSessionInfo,
+                undefined,
+                responseData,
+            )
+
+            return deletedCount
+        } catch (err) {
+            logger.error({ err }, 'LogoutAll error')
+            throw err
+        }
+    }
+}
 
 export type WsSessionResult =
-  | { kind: "ok"; session: Session }
-  | { kind: "missing" }
-  | { kind: "unavailable" };
+    { kind: 'ok'; session: Session } | { kind: 'missing' } | { kind: 'unavailable' }
 
-const MISSING: WsSessionResult = { kind: "missing" };
+const MISSING: WsSessionResult = { kind: 'missing' }
 
 export const wsSessionHandler = async (
-  sessionId: string,
-  userToken: string,
+    sessionId: string,
+    userToken: string,
 ): Promise<WsSessionResult> => {
-  try {
-    if (!isValidUserToken(userToken)) {
-      logger.warn({ sessionId }, "wsSessionHandler: invalid userToken format");
-      return MISSING;
+    try {
+        if (!isValidUserToken(userToken)) {
+            logger.warn({ sessionId }, 'wsSessionHandler: invalid userToken format')
+            return MISSING
+        }
+
+        const sessionInfo = await getSession(sessionId, userToken)
+
+        if (sessionInfo === null) {
+            logger.warn({ sessionId, userToken: maskTokenForLogs(userToken) }, 'Session not found')
+            return MISSING
+        }
+
+        if (typeof sessionInfo.data.userId !== 'string' || sessionInfo.data.userId === '') {
+            logger.warn(
+                { sessionId, userToken: maskTokenForLogs(userToken) },
+                'wsSessionHandler: session has no userId — not authenticated',
+            )
+            return MISSING
+        }
+
+        const session: Session = {
+            sessionInfo,
+            updateSessionData: async (newData: SessionData) =>
+                await updateSessionData(sessionInfo.id, newData, userToken),
+            changeSessionData: async (newData: SessionData) =>
+                await changeSessionData(sessionInfo.id, newData, userToken),
+            destroySession: async (): Promise<void> => {
+                await destroySession(sessionInfo.id, userToken)
+            },
+            destroyAllSessions: async (): Promise<number> => {
+                return await destroyAllSessions(userToken)
+            },
+        }
+        return { kind: 'ok', session }
+    } catch (err) {
+        // Not an expired session: the caller keeps the connection open.
+        if (err instanceof RedisUnavailableError) return { kind: 'unavailable' }
+        logger.error(
+            { err, sessionId, userToken: maskTokenForLogs(userToken) },
+            'wsSessionHandler error',
+        )
+        return MISSING
     }
-
-    const sessionInfo = await getSession(sessionId, userToken);
-
-    if (sessionInfo === null) {
-      logger.warn({ sessionId, userToken: maskTokenForLogs(userToken) }, "Session not found");
-      return MISSING;
-    }
-
-    if (
-      typeof sessionInfo.data.userId !== "string" ||
-      sessionInfo.data.userId === ""
-    ) {
-      logger.warn(
-        { sessionId, userToken: maskTokenForLogs(userToken) },
-        "wsSessionHandler: session has no userId — not authenticated",
-      );
-      return MISSING;
-    }
-
-    const session: Session = {
-      sessionInfo,
-      updateSessionData: async (newData: SessionData) =>
-        await updateSessionData(sessionInfo.id, newData, userToken),
-      changeSessionData: async (newData: SessionData) =>
-        await changeSessionData(sessionInfo.id, newData, userToken),
-      destroySession: async (): Promise<void> => {
-        await destroySession(sessionInfo.id, userToken);
-      },
-      destroyAllSessions: async (): Promise<number> => {
-        return await destroyAllSessions(userToken);
-      },
-    };
-    return { kind: "ok", session };
-  } catch (err) {
-    // Not an expired session: the caller keeps the connection open.
-    if (err instanceof RedisUnavailableError) return { kind: "unavailable" };
-    logger.error({ err, sessionId, userToken: maskTokenForLogs(userToken) }, "wsSessionHandler error");
-    return MISSING;
-  }
-};
+}
 
 // export default { sessionHandler, wsSessionHandler };

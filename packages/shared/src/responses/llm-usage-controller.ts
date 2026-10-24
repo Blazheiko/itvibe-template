@@ -1,4 +1,4 @@
-import { type } from '@arktype/type';
+import { type } from '@arktype/type'
 
 export const GetTextUsageResponseSchema = type({
     status: "'success' | 'error'",
@@ -9,8 +9,8 @@ export const GetTextUsageResponseSchema = type({
         page: 'number',
         limit: 'number',
     },
-});
-export type GetTextUsageResponse = typeof GetTextUsageResponseSchema.infer;
+})
+export type GetTextUsageResponse = typeof GetTextUsageResponseSchema.infer
 
 export const GetUsageStatsResponseSchema = type({
     status: "'success' | 'error'",
@@ -18,5 +18,5 @@ export const GetUsageStatsResponseSchema = type({
     'data?': {
         text: 'unknown[]',
     },
-});
-export type GetUsageStatsResponse = typeof GetUsageStatsResponseSchema.infer;
+})
+export type GetUsageStatsResponse = typeof GetUsageStatsResponseSchema.infer

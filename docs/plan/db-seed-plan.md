@@ -54,27 +54,27 @@ CLI друкує звіт; за наявності `exists_without_admin_role` �
 
 1. **Спільні defaults:** перенести текст перекладу в `src/config/support.ts`, оновити імпорт у `support-query-translation-service.ts`, без зміни поведінки.
 2. **Модуль seed** — `src/db/seed/`:
-   - `prompts.ts`: мапа `PromptType` → рядок seed (`satisfies Record<PromptType, …>`);
-   - `run-seed.ts`: `runSeed(db, { env, demo }): Promise<SeedReport>`, усе в одній `db.transaction` (помилка відкочує все);
-   - `src/db/seed.ts`: CLI. Підключається через `resolveDatabaseConfig()`, розбирає `--demo`, друкує звіт, при помилці ставить `process.exitCode = 1`, пул закриває у `finally`.
+    - `prompts.ts`: мапа `PromptType` → рядок seed (`satisfies Record<PromptType, …>`);
+    - `run-seed.ts`: `runSeed(db, { env, demo }): Promise<SeedReport>`, усе в одній `db.transaction` (помилка відкочує все);
+    - `src/db/seed.ts`: CLI. Підключається через `resolveDatabaseConfig()`, розбирає `--demo`, друкує звіт, при помилці ставить `process.exitCode = 1`, пул закриває у `finally`.
 3. **Скрипти** у `package.json`: `db:seed` (`tsx src/db/seed.ts`) і новий `db:seed:prod` (`node dist/db/seed.js`). Перевірити, що seed потрапляє в `dist`.
 4. **Unit-тести** (`src/db/seed/run-seed.spec.ts`, мок `db`):
-   - промпти вставляються з `onConflictDoNothing`; мапа покриває всі `PromptType`;
-   - тексти seed ідентичні runtime-fallback з `supportConfig`;
-   - без `--demo` користувачі не створюються (`demo_disabled`), незалежно від `APP_ENV`;
-   - без `SEED_*` — `missing_credentials`, без помилки;
-   - email нормалізується; пароль передається хешованим, а не відкритим текстом;
-   - email адміна зайнятий звичайним користувачем → `exists_without_admin_role`, жодного `UPDATE`;
-   - помилка вставки → транзакція відкочується, CLI повертає exit code 1.
+    - промпти вставляються з `onConflictDoNothing`; мапа покриває всі `PromptType`;
+    - тексти seed ідентичні runtime-fallback з `supportConfig`;
+    - без `--demo` користувачі не створюються (`demo_disabled`), незалежно від `APP_ENV`;
+    - без `SEED_*` — `missing_credentials`, без помилки;
+    - email нормалізується; пароль передається хешованим, а не відкритим текстом;
+    - email адміна зайнятий звичайним користувачем → `exists_without_admin_role`, жодного `UPDATE`;
+    - помилка вставки → транзакція відкочується, CLI повертає exit code 1.
 5. **Конфігурація:** додати `SEED_*` у `.env.example` з placeholder-значеннями та коментарем «тільки для `--demo`».
 6. **Документація** (в тому ж PR, за `AGENTS.md`):
-   - `documentation/backend/database.md`: рядок `db:seed`, опис reference- і demo-частини, `--demo`;
-   - `documentation/guide/getting-started.md`: прибрати примітку «заглушка»;
-   - `documentation/backend/configuration.md`: змінні `SEED_*`;
-   - `documentation/reference/scripts.md`: `db:seed:prod`;
-   - **кеш промптів:** запускати seed до старту backend, або перезапустити backend після seed. `promptService.load()` читає промпти один раз на старті (`src/index.ts`), тому вставка ззовні кеш не оновлює (див. також п. 43);
-   - **перший production-адмін:** окремий розділ, не пов'язаний із demo. Варіанти: реєстрація, потім `UPDATE users SET role = 'admin' WHERE LOWER(email) = …`, або разовий `db:seed:prod --demo` з тимчасово заданими `SEED_ADMIN_*` і негайним видаленням їх з env;
-   - позначити п. 10 як виправлений у `code-issues-found-during-docs.md`.
+    - `documentation/backend/database.md`: рядок `db:seed`, опис reference- і demo-частини, `--demo`;
+    - `documentation/guide/getting-started.md`: прибрати примітку «заглушка»;
+    - `documentation/backend/configuration.md`: змінні `SEED_*`;
+    - `documentation/reference/scripts.md`: `db:seed:prod`;
+    - **кеш промптів:** запускати seed до старту backend, або перезапустити backend після seed. `promptService.load()` читає промпти один раз на старті (`src/index.ts`), тому вставка ззовні кеш не оновлює (див. також п. 43);
+    - **перший production-адмін:** окремий розділ, не пов'язаний із demo. Варіанти: реєстрація, потім `UPDATE users SET role = 'admin' WHERE LOWER(email) = …`, або разовий `db:seed:prod --demo` з тимчасово заданими `SEED_ADMIN_*` і негайним видаленням їх з env;
+    - позначити п. 10 як виправлений у `code-issues-found-during-docs.md`.
 7. **Перевірка:** `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm docs:build && pnpm docs:verify`.
 
 ## Ручна перевірка на реальній БД

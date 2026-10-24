@@ -1,5 +1,5 @@
-import sessionConfig from "#config/session.js";
-import type { ResponseData } from "#vendor/types/types.js";
+import sessionConfig from '#config/session.js'
+import type { ResponseData } from '#vendor/types/types.js'
 
 /**
  * Emit a `Set-Cookie` tombstone that removes the legacy session cookie from
@@ -13,11 +13,11 @@ import type { ResponseData } from "#vendor/types/types.js";
  * already rolled back).
  */
 export const deleteLegacySessionCookie = (responseData: ResponseData): void => {
-  if (sessionConfig.cookieName === sessionConfig.legacyCookieName) return;
+    if (sessionConfig.cookieName === sessionConfig.legacyCookieName) return
 
-  responseData.deleteCookie(sessionConfig.legacyCookieName, {
-    path: sessionConfig.cookie.path,
-    secure: sessionConfig.cookie.secure,
-    sameSite: sessionConfig.cookie.sameSite,
-  });
-};
+    responseData.deleteCookie(sessionConfig.legacyCookieName, {
+        path: sessionConfig.cookie.path,
+        secure: sessionConfig.cookie.secure,
+        sameSite: sessionConfig.cookie.sameSite,
+    })
+}

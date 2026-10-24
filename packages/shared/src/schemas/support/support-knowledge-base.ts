@@ -1,4 +1,4 @@
-import { type } from '@arktype/type';
+import { type } from '@arktype/type'
 
 export const SupportKnowledgeBaseCreateSchema = type({
     title: 'string >= 1',
@@ -6,9 +6,9 @@ export const SupportKnowledgeBaseCreateSchema = type({
     'category?': 'string',
     'isActive?': 'boolean',
     '+': 'reject',
-});
+})
 
-export type SupportKnowledgeBaseCreateInput = typeof SupportKnowledgeBaseCreateSchema.infer;
+export type SupportKnowledgeBaseCreateInput = typeof SupportKnowledgeBaseCreateSchema.infer
 
 export const SupportKnowledgeBaseUpdateSchema = type({
     'title?': 'string >= 1',
@@ -16,6 +16,6 @@ export const SupportKnowledgeBaseUpdateSchema = type({
     'category?': 'string',
     'isActive?': 'boolean',
     '+': 'reject',
-});
+})
 
-export type SupportKnowledgeBaseUpdateInput = typeof SupportKnowledgeBaseUpdateSchema.infer;
+export type SupportKnowledgeBaseUpdateInput = typeof SupportKnowledgeBaseUpdateSchema.infer

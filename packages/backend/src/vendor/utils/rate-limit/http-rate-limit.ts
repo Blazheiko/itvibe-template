@@ -1,108 +1,92 @@
-import type {
-  RateLimit,
-  ResponseData,
-  RouteItem,
-} from "#vendor/types/types.js";
-import rateLimitConfig from "#config/rate-limit.js";
-import logger from "#vendor/utils/logger.js";
+import type { RateLimit, ResponseData, RouteItem } from '#vendor/types/types.js'
+import rateLimitConfig from '#config/rate-limit.js'
+import logger from '#vendor/utils/logger.js'
 import {
-  clientKey,
-  rateLimitStore,
-  retryAfterSeconds,
-  type ConsumeOptions,
-  type RateLimitDecision,
-} from "./rate-limit-store.js";
+    clientKey,
+    rateLimitStore,
+    retryAfterSeconds,
+    type ConsumeOptions,
+    type RateLimitDecision,
+} from './rate-limit-store.js'
 
-function determineRateLimit(
-  route: RouteItem,
-  groupRateLimit?: RateLimit,
-): RateLimit | null {
-  // Route limits override group limits
-  if (route.rateLimit !== undefined) {
-    return route.rateLimit;
-  }
+function determineRateLimit(route: RouteItem, groupRateLimit?: RateLimit): RateLimit | null {
+    // Route limits override group limits
+    if (route.rateLimit !== undefined) {
+        return route.rateLimit
+    }
 
-  if (groupRateLimit !== undefined) {
-    return groupRateLimit;
-  }
+    if (groupRateLimit !== undefined) {
+        return groupRateLimit
+    }
 
-  return null;
+    return null
 }
 
-const writeRateLimitHeaders = (
-  responseData: ResponseData,
-  decision: RateLimitDecision,
-): void => {
-  responseData.setHeader("X-RateLimit-Limit", decision.limit.toString());
-  responseData.setHeader(
-    "X-RateLimit-Remaining",
-    (decision.allowed ? decision.remaining : 0).toString(),
-  );
-  responseData.setHeader(
-    "X-RateLimit-Reset",
-    Math.ceil(decision.resetAt / 1000).toString(),
-  );
-};
+const writeRateLimitHeaders = (responseData: ResponseData, decision: RateLimitDecision): void => {
+    responseData.setHeader('X-RateLimit-Limit', decision.limit.toString())
+    responseData.setHeader(
+        'X-RateLimit-Remaining',
+        (decision.allowed ? decision.remaining : 0).toString(),
+    )
+    responseData.setHeader('X-RateLimit-Reset', Math.ceil(decision.resetAt / 1000).toString())
+}
 
-const rejectRateLimited = (
-  responseData: ResponseData,
-  retryAfterMs: number,
-): void => {
-  const retryAfter = retryAfterSeconds(retryAfterMs);
-  responseData.status = 429;
-  responseData.payload = {
-    status: "error",
-    code: "rate_limited",
-    message: "Too many requests, please try again later.",
-    reason: "rate_limit_exceeded",
-    retryAfter,
-    details: {
-      kind: "rate_limited",
-      retryAfterMs: retryAfter * 1000,
-    },
-  };
-  responseData.setHeader("Retry-After", retryAfter.toString());
-};
+const rejectRateLimited = (responseData: ResponseData, retryAfterMs: number): void => {
+    const retryAfter = retryAfterSeconds(retryAfterMs)
+    responseData.status = 429
+    responseData.payload = {
+        status: 'error',
+        code: 'rate_limited',
+        message: 'Too many requests, please try again later.',
+        reason: 'rate_limit_exceeded',
+        retryAfter,
+        details: {
+            kind: 'rate_limited',
+            retryAfterMs: retryAfter * 1000,
+        },
+    }
+    responseData.setHeader('Retry-After', retryAfter.toString())
+}
 
 const rejectUnavailable = (responseData: ResponseData): void => {
-  responseData.status = 503;
-  responseData.payload = {
-    status: "error",
-    code: "rate_limit_unavailable",
-    message: "Request throttling is temporarily unavailable.",
-    reason: "rate_limit_check_failed",
-    details: {
-      kind: "rate_limit_unavailable",
-    },
-  };
-};
+    responseData.status = 503
+    responseData.payload = {
+        status: 'error',
+        code: 'rate_limit_unavailable',
+        message: 'Request throttling is temporarily unavailable.',
+        reason: 'rate_limit_check_failed',
+        details: {
+            kind: 'rate_limit_unavailable',
+        },
+    }
+}
 
 const consumeOrReject = (
-  key: string,
-  options: ConsumeOptions,
-  responseData: ResponseData,
-  headers: "always" | "on-reject",
+    key: string,
+    options: ConsumeOptions,
+    responseData: ResponseData,
+    headers: 'always' | 'on-reject',
 ): boolean => {
-  try {
-    const decision = rateLimitStore.consume(key, options);
-    if (headers === "always" || !decision.allowed) {
-      writeRateLimitHeaders(responseData, decision);
+    try {
+        const decision = rateLimitStore.consume(key, options)
+        if (headers === 'always' || !decision.allowed) {
+            writeRateLimitHeaders(responseData, decision)
+        }
+        if (!decision.allowed) {
+            logger.warn(
+                { key, limit: decision.limit, retryAfterMs: decision.retryAfterMs },
+                'Rate limit exceeded',
+            )
+            rejectRateLimited(responseData, decision.retryAfterMs)
+            return false
+        }
+        return true
+    } catch (err) {
+        logger.error({ err }, 'Rate limit check failed')
+        rejectUnavailable(responseData)
+        return false
     }
-    if (!decision.allowed) {
-      logger.warn(
-        { key, limit: decision.limit, retryAfterMs: decision.retryAfterMs },
-        "Rate limit exceeded",
-      );
-      rejectRateLimited(responseData, decision.retryAfterMs);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    logger.error({ err }, "Rate limit check failed");
-    rejectUnavailable(responseData);
-    return false;
-  }
-};
+}
 
 /**
  * L1: one fixed-window budget per IP for every API request (routes, API 404,
@@ -110,34 +94,34 @@ const consumeOrReject = (
  * response carries only the route limiter's headers.
  */
 export function checkGlobalRateLimit(
-  ip: string | null | undefined,
-  responseData: ResponseData,
+    ip: string | null | undefined,
+    responseData: ResponseData,
 ): boolean {
-  const { windowMs, max } = rateLimitConfig.httpGlobal;
-  if (max === 0) return true;
-  return consumeOrReject(
-    `http:${clientKey(ip)}`,
-    { windowMs, max, algorithm: "fixed-window" },
-    responseData,
-    "on-reject",
-  );
+    const { windowMs, max } = rateLimitConfig.httpGlobal
+    if (max === 0) return true
+    return consumeOrReject(
+        `http:${clientKey(ip)}`,
+        { windowMs, max, algorithm: 'fixed-window' },
+        responseData,
+        'on-reject',
+    )
 }
 
 export default function checkRateLimit(
-  ip: string | null | undefined,
-  responseData: ResponseData,
-  route: RouteItem,
-  groupRateLimit?: RateLimit,
+    ip: string | null | undefined,
+    responseData: ResponseData,
+    route: RouteItem,
+    groupRateLimit?: RateLimit,
 ): boolean {
-  const rateLimit = determineRateLimit(route, groupRateLimit);
-  if (rateLimit === null) {
-    return true;
-  }
+    const rateLimit = determineRateLimit(route, groupRateLimit)
+    if (rateLimit === null) {
+        return true
+    }
 
-  return consumeOrReject(
-    `route:${clientKey(ip)}:${route.url}`,
-    { windowMs: rateLimit.windowMs, max: rateLimit.maxRequests },
-    responseData,
-    "always",
-  );
+    return consumeOrReject(
+        `route:${clientKey(ip)}:${route.url}`,
+        { windowMs: rateLimit.windowMs, max: rateLimit.maxRequests },
+        responseData,
+        'always',
+    )
 }

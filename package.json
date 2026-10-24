@@ -1,48 +1,48 @@
 {
-  "name": "itvibe-template",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "engines": {
-    "node": "^24.15.0",
-    "pnpm": ">=9.0.0"
-  },
-  "packageManager": "pnpm@9.15.0",
-  "scripts": {
-    "build": "pnpm -r build",
-    "build:shared": "pnpm --filter shared build",
-    "dev": "pnpm run build:shared && pnpm --filter backend build && pnpm --filter backend --filter frontend --parallel dev",
-    "dev:manual_test": "pnpm run build:shared && sh -c 'pnpm --filter ./packages/backend dev & pnpm --filter ./packages/api-playground dev & wait'",
-    "dev:backend": "pnpm --filter backend dev",
-    "dev:frontend": "pnpm --filter frontend dev",
-    "docs:dev": "pnpm --filter documentation docs:dev",
-    "docs:build": "pnpm --filter documentation docs:build",
-    "docs:preview": "pnpm --filter documentation docs:preview",
-    "docs:verify": "pnpm --filter documentation docs:verify",
-    "start": "pnpm --filter backend start",
-    "prod:local": "./scripts/prod-local.sh",
-    "lint": "eslint . && pnpm -r --if-present lint:check",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "clean": "pnpm -r clean && rm -rf node_modules"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^24.19.2",
-    "eslint": "^10.13.0",
-    "prettier": "^3.9.10",
-    "typescript": "6.0.3",
-    "typescript-eslint": "^8.71.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "@typescript-eslint/utils": "^8.71.2",
-      "@typescript-eslint/typescript-estree": "^8.71.2",
-      "@typescript-eslint/project-service": "^8.71.2",
-      "@typescript-eslint/tsconfig-utils": "^8.71.2"
+    "name": "itvibe-template",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "engines": {
+        "node": "^24.15.0",
+        "pnpm": ">=9.0.0"
+    },
+    "packageManager": "pnpm@9.15.0",
+    "scripts": {
+        "build": "pnpm -r build",
+        "build:shared": "pnpm --filter shared build",
+        "dev": "pnpm run build:shared && pnpm --filter backend build && pnpm --filter backend --filter frontend --parallel dev",
+        "dev:manual_test": "pnpm run build:shared && sh -c 'pnpm --filter ./packages/backend dev & pnpm --filter ./packages/api-playground dev & wait'",
+        "dev:backend": "pnpm --filter backend dev",
+        "dev:frontend": "pnpm --filter frontend dev",
+        "docs:dev": "pnpm --filter documentation docs:dev",
+        "docs:build": "pnpm --filter documentation docs:build",
+        "docs:preview": "pnpm --filter documentation docs:preview",
+        "docs:verify": "pnpm --filter documentation docs:verify",
+        "start": "pnpm --filter backend start",
+        "prod:local": "./scripts/prod-local.sh",
+        "lint": "eslint . && pnpm -r --if-present lint:check",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+        "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+        "typecheck": "pnpm -r typecheck",
+        "test": "pnpm -r test",
+        "clean": "pnpm -r clean && rm -rf node_modules"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@types/node": "^24.19.2",
+        "eslint": "^10.13.0",
+        "prettier": "^3.9.10",
+        "typescript": "6.0.3",
+        "typescript-eslint": "^8.71.2"
+    },
+    "pnpm": {
+        "overrides": {
+            "@typescript-eslint/utils": "^8.71.2",
+            "@typescript-eslint/typescript-estree": "^8.71.2",
+            "@typescript-eslint/project-service": "^8.71.2",
+            "@typescript-eslint/tsconfig-utils": "^8.71.2"
+        }
     }
-  }
 }

@@ -13,14 +13,14 @@
 - У `src/vendor/start/static-server.ts` закоментовано `buildCspValue`, `setCspHeader` та їхні виклики.
 - `setSecurityHeaders` (`src/vendor/utils/network/http-response-handlers.ts`) додає `nosniff`, `X-Frame-Options`, `Referrer-Policy`, HSTS, але не CSP.
 - Шляхи відповідей, які обходять `setSecurityHeaders`:
-  - `staticIndexHandler` (`static-server.ts`);
-  - статичні 400 (небезпечний URL) і 404 у `staticHandler` (`static-server.ts` ~275);
-  - CORS `OPTIONS` у `server.ts` (~569).
+    - `staticIndexHandler` (`static-server.ts`);
+    - статичні 400 (небезпечний URL) і 404 у `staticHandler` (`static-server.ts` ~275);
+    - CORS `OPTIONS` у `server.ts` (~569).
 - Вади самого конфігу:
-  - `default-src` містить `blob:` і `https://fonts.googleapis.com`;
-  - `connect-src` дозволяє `https:` / `wss:` на будь-який хост;
-  - `script-src 'unsafe-inline'` не потрібен: єдиний inline у `frontend/index.html` — `application/ld+json`, на який `script-src` не діє;
-  - хост `https://hel1.your-objectstorage.com` захардкоджено.
+    - `default-src` містить `blob:` і `https://fonts.googleapis.com`;
+    - `connect-src` дозволяє `https:` / `wss:` на будь-який хост;
+    - `script-src 'unsafe-inline'` не потрібен: єдиний inline у `frontend/index.html` — `application/ld+json`, на який `script-src` не діє;
+    - хост `https://hel1.your-objectstorage.com` захардкоджено.
 - Тестовий збирач заголовків у `static-server.spec.ts` (~40) пише в словник і **перезаписує дублікати** — перевірити «рівно один CSP» ним неможливо.
 - Playwright (`frontend/playwright.config.ts` ~93) піднімає Vite dev/preview, тобто бекенд і його заголовки не перевіряються. `frontend build` не копіює `dist` у `backend/public` — це робить лише `Dockerfile` (~54).
 
@@ -159,13 +159,13 @@ export const hasCspHeader = (headers: Header[]): boolean
 - Позитивні сценарії (жодного `securitypolicyviolation`): логін, WS-з'єднання й чат, показ аватара з CDN/S3, Google Fonts, реєстрація service worker і робота offline (перезавантаження з `context.setOffline(true)`).
 - Контрольований тестовий origin: Playwright піднімає локальний HTTP-сервер на іншому порту (напр. `http://127.0.0.1:4599/probe`), який відповідає `200` з `Access-Control-Allow-Origin: *`. Цього origin **немає** в політиці. Так результат `fetch` залежить лише від CSP, а не від CORS, DNS чи TLS.
 - Негативні сценарії, enforcing-прогін:
-  - `page.evaluate` вставляє inline `<script>`, що виставляє `window.__inlineRan = true` → прапорець не виставлено; подія `securitypolicyviolation` з `effectiveDirective === 'script-src-elem'` (для inline-елемента ефективна директива завжди `script-src-elem`, навіть коли обмеження приходить через fallback `script-src` — [CSP3 §effective directive for inline check](https://w3c.github.io/webappsec-csp/#effective-directive-for-inline-check)) і `disposition === 'enforce'`;
-  - `fetch` на тестовий origin → reject (`TypeError`), violation з `effectiveDirective === 'connect-src'` і `disposition === 'enforce'`;
-  - відповідь HTML містить заголовок `content-security-policy` і **не** містить `-report-only` (`response.headers()`).
+    - `page.evaluate` вставляє inline `<script>`, що виставляє `window.__inlineRan = true` → прапорець не виставлено; подія `securitypolicyviolation` з `effectiveDirective === 'script-src-elem'` (для inline-елемента ефективна директива завжди `script-src-elem`, навіть коли обмеження приходить через fallback `script-src` — [CSP3 §effective directive for inline check](https://w3c.github.io/webappsec-csp/#effective-directive-for-inline-check)) і `disposition === 'enforce'`;
+    - `fetch` на тестовий origin → reject (`TypeError`), violation з `effectiveDirective === 'connect-src'` і `disposition === 'enforce'`;
+    - відповідь HTML містить заголовок `content-security-policy` і **не** містить `-report-only` (`response.headers()`).
 - Report-only-прогін (ті ж сценарії):
-  - inline-скрипт виконався (`__inlineRan === true`), violation з `disposition === 'report'`;
-  - `fetch` на тестовий origin повертає `200` і тіло probe, violation з `disposition === 'report'`;
-  - HTML містить лише `content-security-policy-report-only`.
+    - inline-скрипт виконався (`__inlineRan === true`), violation з `disposition === 'report'`;
+    - `fetch` на тестовий origin повертає `200` і тіло probe, violation з `disposition === 'report'`;
+    - HTML містить лише `content-security-policy-report-only`.
 
 ### Крок 6. Ручна перевірка (golden path)
 

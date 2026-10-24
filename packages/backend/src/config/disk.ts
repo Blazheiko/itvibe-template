@@ -1,4 +1,4 @@
-import { env } from "node:process";
+import { env } from 'node:process'
 export default Object.freeze({
     s3Region: env['S3_REGION'],
     s3AccessKeyId: env['S3_ACCESS_KEY_ID'],

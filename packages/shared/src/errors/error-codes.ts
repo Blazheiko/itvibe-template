@@ -2,69 +2,69 @@
 // import pulls the whole engine into its bundle. The schema lives in
 // responses/error-code-schema.ts.
 export const ErrorCode = {
-  BadRequest: "bad_request",
-  Unauthorized: "unauthorized",
-  Forbidden: "forbidden",
-  NotFound: "not_found",
-  Conflict: "conflict",
-  ValidationFailed: "validation_failed",
-  PayloadTooLarge: "payload_too_large",
-  UnsupportedMediaType: "unsupported_media_type",
-  RateLimited: "rate_limited",
-  CsrfInvalid: "csrf_invalid",
-  InternalError: "internal_error",
-  ServiceUnavailable: "service_unavailable",
-} as const;
+    BadRequest: 'bad_request',
+    Unauthorized: 'unauthorized',
+    Forbidden: 'forbidden',
+    NotFound: 'not_found',
+    Conflict: 'conflict',
+    ValidationFailed: 'validation_failed',
+    PayloadTooLarge: 'payload_too_large',
+    UnsupportedMediaType: 'unsupported_media_type',
+    RateLimited: 'rate_limited',
+    CsrfInvalid: 'csrf_invalid',
+    InternalError: 'internal_error',
+    ServiceUnavailable: 'service_unavailable',
+} as const
 
 export const ErrorCodeValues = [
-  "bad_request",
-  "unauthorized",
-  "forbidden",
-  "not_found",
-  "conflict",
-  "validation_failed",
-  "payload_too_large",
-  "unsupported_media_type",
-  "rate_limited",
-  "csrf_invalid",
-  "internal_error",
-  "service_unavailable",
-] as const;
+    'bad_request',
+    'unauthorized',
+    'forbidden',
+    'not_found',
+    'conflict',
+    'validation_failed',
+    'payload_too_large',
+    'unsupported_media_type',
+    'rate_limited',
+    'csrf_invalid',
+    'internal_error',
+    'service_unavailable',
+] as const
 
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
 
 export interface ValidationErrorDetails {
-  kind: "validation";
-  messages: string[];
-  fields?: string[];
+    kind: 'validation'
+    messages: string[]
+    fields?: string[]
 }
 
 export interface ParameterValidationErrorDetails {
-  kind: "parameter_validation";
-  parameter: string;
-  messages?: string[];
+    kind: 'parameter_validation'
+    parameter: string
+    messages?: string[]
 }
 
 export interface PayloadTooLargeErrorDetails {
-  kind: "payload_too_large";
-  limit: number;
-  contentType?: string;
+    kind: 'payload_too_large'
+    limit: number
+    contentType?: string
 }
 
 export interface UnsupportedMediaTypeErrorDetails {
-  kind: "unsupported_media_type";
-  receivedContentType?: string;
-  allowedKinds: string[];
+    kind: 'unsupported_media_type'
+    receivedContentType?: string
+    allowedKinds: string[]
 }
 
 export interface RateLimitedErrorDetails {
-  kind: "rate_limited";
-  retryAfterMs?: number;
+    kind: 'rate_limited'
+    retryAfterMs?: number
 }
 
 export type ErrorDetails =
-  | ValidationErrorDetails
-  | ParameterValidationErrorDetails
-  | PayloadTooLargeErrorDetails
-  | UnsupportedMediaTypeErrorDetails
-  | RateLimitedErrorDetails;
+    | ValidationErrorDetails
+    | ParameterValidationErrorDetails
+    | PayloadTooLargeErrorDetails
+    | UnsupportedMediaTypeErrorDetails
+    | RateLimitedErrorDetails

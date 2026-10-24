@@ -1,6 +1,6 @@
-export { arkValidator as defaultValidator, arkValidator } from "./adapters/arktype-adapter.js";
+export { arkValidator as defaultValidator, arkValidator } from './adapters/arktype-adapter.js'
 
-import type { Type } from "@arktype/type";
+import type { Type } from '@arktype/type'
 
 /**
  * Infers the controller-side type of `httpData.query` from a route's
@@ -15,5 +15,4 @@ import type { Type } from "@arktype/type";
  * @example
  *   const list: HttpHandler<never, InferQuery<typeof MyQuerySchema>> = ...;
  */
-export type InferQuery<S extends Type | undefined> =
-  S extends Type<infer Q> ? Q : null;
+export type InferQuery<S extends Type | undefined> = S extends Type<infer Q> ? Q : null

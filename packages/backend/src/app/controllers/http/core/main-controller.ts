@@ -1,102 +1,86 @@
-import type { HttpContext } from "#vendor/types/types.js";
-import { mainService } from "#app/services/core/main-service.js";
-import { mapControllerError } from "#app/controllers/shared/controller-error.js";
+import type { HttpContext } from '#vendor/types/types.js'
+import { mainService } from '#app/services/core/main-service.js'
+import { mapControllerError } from '#app/controllers/shared/controller-error.js'
 import type {
-  InitResponse,
-  PingResponse,
-  TestHeadersResponse,
-  GetSetCookiesResponse,
-  TestSessionResponse,
-  SetHeaderAndCookieResponse,
-  TestMiddlewareResponse,
-  UpdateWsTokenResponse,
-} from "shared";
-import { Result } from "better-result";
+    InitResponse,
+    PingResponse,
+    TestHeadersResponse,
+    GetSetCookiesResponse,
+    TestSessionResponse,
+    SetHeaderAndCookieResponse,
+    TestMiddlewareResponse,
+    UpdateWsTokenResponse,
+} from 'shared'
+import { Result } from 'better-result'
 
 export default {
-  ping(): PingResponse {
-    return mainService.ping();
-  },
+    ping(): PingResponse {
+        return mainService.ping()
+    },
 
-  testSentryError({ logger }: HttpContext): never {
-    logger.info("testSentryError");
-    throw new Error("Sentry test error");
-  },
+    testSentryError({ logger }: HttpContext): never {
+        logger.info('testSentryError')
+        throw new Error('Sentry test error')
+    },
 
-  testHeaders({ httpData, logger }: HttpContext): TestHeadersResponse {
-    logger.info("testHeaders");
-    return mainService.testHeaders(httpData);
-  },
+    testHeaders({ httpData, logger }: HttpContext): TestHeadersResponse {
+        logger.info('testHeaders')
+        return mainService.testHeaders(httpData)
+    },
 
-  getSetCookies({ httpData, logger }: HttpContext): GetSetCookiesResponse {
-    logger.info("testCookies");
-    return mainService.getSetCookies(httpData);
-  },
+    getSetCookies({ httpData, logger }: HttpContext): GetSetCookiesResponse {
+        logger.info('testCookies')
+        return mainService.getSetCookies(httpData)
+    },
 
-  testSession({ session, httpData, logger }: HttpContext): TestSessionResponse {
-    logger.info("testSession");
-    return mainService.testSession(httpData, session.sessionInfo ?? null);
-  },
+    testSession({ session, httpData, logger }: HttpContext): TestSessionResponse {
+        logger.info('testSession')
+        return mainService.testSession(httpData, session.sessionInfo ?? null)
+    },
 
-  async updateWsToken({
-    responseData,
-    session,
-    logger,
-  }: HttpContext): Promise<UpdateWsTokenResponse> {
-    logger.info("updateWsToken");
+    async updateWsToken({
+        responseData,
+        session,
+        logger,
+    }: HttpContext): Promise<UpdateWsTokenResponse> {
+        logger.info('updateWsToken')
 
-    const result = await mainService.updateWsToken(session.sessionInfo ?? null);
-    if (Result.isError(result)) {
-      return mapControllerError({ responseData }, result.error);
-    }
+        const result = await mainService.updateWsToken(session.sessionInfo ?? null)
+        if (Result.isError(result)) {
+            return mapControllerError({ responseData }, result.error)
+        }
 
-    return { status: "ok", ...result.value };
-  },
+        return { status: 'ok', ...result.value }
+    },
 
-  async init({
-    responseData,
-    session,
-    logger,
-  }: HttpContext): Promise<InitResponse> {
-    logger.info("init");
+    async init({ responseData, session, logger }: HttpContext): Promise<InitResponse> {
+        logger.info('init')
 
-    const result = await mainService.init(session.sessionInfo ?? null);
-    if (Result.isError(result)) {
-      return mapControllerError({ responseData }, result.error);
-    }
+        const result = await mainService.init(session.sessionInfo ?? null)
+        if (Result.isError(result)) {
+            return mapControllerError({ responseData }, result.error)
+        }
 
-    return { status: "ok", ...result.value };
-  },
+        return { status: 'ok', ...result.value }
+    },
 
-  setHeaderAndCookie({
-    responseData,
-    logger,
-  }: HttpContext): SetHeaderAndCookieResponse {
-    logger.info("set-header-and-cookie");
-    return mainService.setHeaderAndCookie(responseData);
-  },
+    setHeaderAndCookie({ responseData, logger }: HttpContext): SetHeaderAndCookieResponse {
+        logger.info('set-header-and-cookie')
+        return mainService.setHeaderAndCookie(responseData)
+    },
 
-  testMiddleware({
-    responseData,
-    logger,
-  }: HttpContext): TestMiddlewareResponse {
-    logger.info("testMiddleware controller");
-    return mainService.testMiddleware(responseData);
-  },
+    testMiddleware({ responseData, logger }: HttpContext): TestMiddlewareResponse {
+        logger.info('testMiddleware controller')
+        return mainService.testMiddleware(responseData)
+    },
 
-  testMiddleware2({
-    responseData,
-    logger,
-  }: HttpContext): TestMiddlewareResponse {
-    logger.info("testMiddleware2 controller");
-    return mainService.testMiddleware(responseData);
-  },
+    testMiddleware2({ responseData, logger }: HttpContext): TestMiddlewareResponse {
+        logger.info('testMiddleware2 controller')
+        return mainService.testMiddleware(responseData)
+    },
 
-  testMiddleware3({
-    responseData,
-    logger,
-  }: HttpContext): TestMiddlewareResponse {
-    logger.info("testMiddleware3 controller");
-    return mainService.testMiddleware(responseData);
-  },
-};
+    testMiddleware3({ responseData, logger }: HttpContext): TestMiddlewareResponse {
+        logger.info('testMiddleware3 controller')
+        return mainService.testMiddleware(responseData)
+    },
+}

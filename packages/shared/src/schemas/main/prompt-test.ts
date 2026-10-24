@@ -1,8 +1,8 @@
-import { type } from "@arktype/type";
+import { type } from '@arktype/type'
 
 export const PromptTestInputSchema = type({
-  message: "string >= 1",
-  "+": "reject",
-});
+    message: 'string >= 1',
+    '+': 'reject',
+})
 
-export type PromptTestInput = typeof PromptTestInputSchema.infer;
+export type PromptTestInput = typeof PromptTestInputSchema.infer

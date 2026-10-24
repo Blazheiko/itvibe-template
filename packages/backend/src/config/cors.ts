@@ -1,23 +1,20 @@
-import { env } from "node:process";
+import { env } from 'node:process'
 
-function parseBoolean(
-  value: string | undefined,
-  defaultValue = false,
-): boolean {
-  if (value === undefined) return defaultValue;
-  return value === "true" || value === "1" || value === "yes" || value === "on";
+function parseBoolean(value: string | undefined, defaultValue = false): boolean {
+    if (value === undefined) return defaultValue
+    return value === 'true' || value === '1' || value === 'yes' || value === 'on'
 }
 
 function parseOriginsList(value: string | undefined): readonly string[] {
-  if (value === undefined || value.trim() === "") return [];
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+    if (value === undefined || value.trim() === '') return []
+    return value
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
 }
 
 export default Object.freeze({
-  /*
+    /*
    |--------------------------------------------------------------------------
    | Enabled
    |--------------------------------------------------------------------------
@@ -26,9 +23,9 @@ export default Object.freeze({
    | preflight requests fall through to the default handler.
    |
    */
-  enabled: parseBoolean(env["ENABLED_CORS"], false),
+    enabled: parseBoolean(env['ENABLED_CORS'], false),
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | Allowed Origins (whitelist)
   |--------------------------------------------------------------------------
@@ -45,16 +42,16 @@ export default Object.freeze({
   |   CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
   |
   */
-  allowedOrigins: parseOriginsList(env["CORS_ALLOWED_ORIGINS"]),
+    allowedOrigins: parseOriginsList(env['CORS_ALLOWED_ORIGINS']),
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | Methods
   |--------------------------------------------------------------------------
   */
-  methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    methods: 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | Expose Headers
   |--------------------------------------------------------------------------
@@ -62,10 +59,9 @@ export default Object.freeze({
   | https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Expose-Headers
   |
   */
-  exposeHeaders:
-    "Cache-Control Content-Language Content-Type Expires Last-Modified Pragma",
+    exposeHeaders: 'Cache-Control Content-Language Content-Type Expires Last-Modified Pragma',
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | Allowed Request Headers
   |--------------------------------------------------------------------------
@@ -73,10 +69,9 @@ export default Object.freeze({
   | https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
   |
   */
-  allowHeaders:
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token",
+    allowHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token',
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | Credentials
   |--------------------------------------------------------------------------
@@ -88,9 +83,9 @@ export default Object.freeze({
   | https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
   |
   */
-  credentials: parseBoolean(env["CREDENTIONALS_CORS"], false),
+    credentials: parseBoolean(env['CREDENTIONALS_CORS'], false),
 
-  /*
+    /*
   |--------------------------------------------------------------------------
   | MaxAge
   |--------------------------------------------------------------------------
@@ -99,5 +94,5 @@ export default Object.freeze({
   | https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
   |
   */
-  maxAge: 90,
-});
+    maxAge: 90,
+})

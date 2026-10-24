@@ -30,17 +30,17 @@
 Решта фіч стартує лише після F00 `done`.
 
 - [x] **F00.S** Шаблон S. Перед стартом — оголошення заморозки: усі відкриті гілки влиті або запушені.
-- [ ] **F00.1** Інвентар: `pnpm format:check` (кількість файлів по пакетах), наявні конфіги Prettier у пакетах, стильові правила ESLint.
+- [x] **F00.1** Інвентар: `pnpm format:check` (кількість файлів по пакетах), наявні конфіги Prettier у пакетах, стильові правила ESLint.
       **AC:** таблиця в `progress.md`.
-- [ ] **F00.2** Кореневий `.prettierrc` (`tabWidth: 4`, `singleQuote: true`, `semi: false`, `printWidth: 100`); пакетні конфіги прибрати або звести до кореневого, якщо пакет не має причини відрізнятися (причину записати).
+- [x] **F00.2** Кореневий `.prettierrc` (`tabWidth: 4`, `singleQuote: true`, `semi: false`, `printWidth: 100`); пакетні конфіги прибрати або звести до кореневого, якщо пакет не має причини відрізнятися (причину записати).
       **AC:** `prettier --find-config-path` для файлу кожного пакета вказує на очікуваний конфіг.
-- [ ] **F00.3** `.prettierignore`: `dist`, `node_modules`, `coverage`, `playwright-report`, `test-results`, `src/drizzle/migrations`, `documentation/.vitepress/cache`, `documentation/.vitepress/dist`, `pnpm-lock.yaml`, `graphify-out`.
+- [x] **F00.3** `.prettierignore`: `dist`, `node_modules`, `coverage`, `playwright-report`, `test-results`, `src/drizzle/migrations`, `documentation/.vitepress/cache`, `documentation/.vitepress/dist`, `pnpm-lock.yaml`, `graphify-out`.
       **AC:** `prettier --check` не заходить у ці каталоги (`--log-level debug` на вибірці).
-- [ ] **F00.4** ESLint: стильові правила, що конфліктують з Prettier, вимкнено (`eslint-config-prettier` або явне вимкнення).
+- [x] **F00.4** ESLint: стильові правила, що конфліктують з Prettier, вимкнено (`eslint-config-prettier` або явне вимкнення).
       **AC:** `pnpm lint` після F00.5 не дає стильових помилок.
-- [ ] **F00.5** → F00.2–F00.4. Окремий коміт `format: apply prettier baseline` — лише `pnpm format`.
+- [x] **F00.5** → F00.2–F00.4. Окремий коміт `format: apply prettier baseline` — лише `pnpm format`.
       **AC:** `pnpm format:check` — 0 файлів; `git diff -w --ignore-blank-lines --stat` для коміту на вибірці не показує змін логіки; typecheck, lint, test, e2e зелені.
-- [ ] **F00.6** → F00.5. `.git-blame-ignore-revs` з хешем коміту F00.5; рядок у `README.md` про `git config blame.ignoreRevsFile`.
+- [x] **F00.6** → F00.5. `.git-blame-ignore-revs` з хешем коміту F00.5; рядок у `README.md` про `git config blame.ignoreRevsFile`.
       **AC:** `git blame` на зміненому файлі пропускає коміт.
 - [ ] **F00.E** Шаблон E. **F00.X** Шаблон X + повідомлення власникам гілок про rebase.
 

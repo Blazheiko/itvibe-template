@@ -1,61 +1,61 @@
-import logger from "#vendor/utils/logger.js";
-import { isSessionUserId } from "./entity-id.js";
+import logger from '#vendor/utils/logger.js'
+import { isSessionUserId } from './entity-id.js'
 
 // Branded types for type safety
-declare const __userIdBrand: unique symbol;
-export type UserId = string & { readonly [__userIdBrand]: true };
+declare const __userIdBrand: unique symbol
+export type UserId = string & { readonly [__userIdBrand]: true }
 
-declare const __rawUserIdBrand: unique symbol;
+declare const __rawUserIdBrand: unique symbol
 export type RawUserId = (string | bigint | number | undefined | null) & {
-  readonly [__rawUserIdBrand]: true;
-};
+    readonly [__rawUserIdBrand]: true
+}
 
 // More specific error types
 export class UserIdValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly receivedValue: unknown,
-    public readonly receivedType: string,
-  ) {
-    super(message);
-    this.name = "UserIdValidationError";
-  }
+    constructor(
+        message: string,
+        public readonly receivedValue: unknown,
+        public readonly receivedType: string,
+    ) {
+        super(message)
+        this.name = 'UserIdValidationError'
+    }
 }
 
 export class UserIdFormatError extends UserIdValidationError {
-  constructor(receivedValue: unknown) {
-    super(
-      "Invalid userId format: contains non-digit characters",
-      receivedValue,
-      typeof receivedValue,
-    );
-    this.name = "UserIdFormatError";
-  }
+    constructor(receivedValue: unknown) {
+        super(
+            'Invalid userId format: contains non-digit characters',
+            receivedValue,
+            typeof receivedValue,
+        )
+        this.name = 'UserIdFormatError'
+    }
 }
 
 export class UserIdTypeError extends UserIdValidationError {
-  constructor(receivedValue: unknown, receivedType: string) {
-    super(`Invalid userId type: ${receivedType}`, receivedValue, receivedType);
-    this.name = "UserIdTypeError";
-  }
+    constructor(receivedValue: unknown, receivedType: string) {
+        super(`Invalid userId type: ${receivedType}`, receivedValue, receivedType)
+        this.name = 'UserIdTypeError'
+    }
 }
 
 // Type guards
 export function isValidUserIdString(value: string): value is UserId {
-  const trimmed = value.trim();
-  return trimmed !== "" && isSessionUserId(trimmed);
+    const trimmed = value.trim()
+    return trimmed !== '' && isSessionUserId(trimmed)
 }
 
 export function isValidUserIdNumber(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && Number.isSafeInteger(value);
+    return Number.isInteger(value) && value >= 0 && Number.isSafeInteger(value)
 }
 
 export function isValidUserIdBigInt(value: bigint): boolean {
-  return value >= 0n;
+    return value >= 0n
 }
 
 // Input validation constants
-const MAX_SAFE_USER_ID = Number.MAX_SAFE_INTEGER;
+const MAX_SAFE_USER_ID = Number.MAX_SAFE_INTEGER
 /**
  * Normalizes internal/session userId to string format for protection against type coercion attacks.
  * This helper may return the sentinel '0' for unauthenticated session state.
@@ -74,116 +74,111 @@ const MAX_SAFE_USER_ID = Number.MAX_SAFE_INTEGER;
  * const userId4 = normalizeUserId("abc"); // throws UserIdFormatError
  * ```
  */
-export const normalizeUserId = (
-  userId: string | bigint | number | undefined | null,
-): UserId => {
-  // Handle null/undefined cases - return unauthorized user ID
-  if (userId === undefined || userId === null || userId === "") {
-    return "0" as UserId;
-  }
+export const normalizeUserId = (userId: string | bigint | number | undefined | null): UserId => {
+    // Handle null/undefined cases - return unauthorized user ID
+    if (userId === undefined || userId === null || userId === '') {
+        return '0' as UserId
+    }
 
-  // Handle numeric types (number and bigint)
-  if (typeof userId === "number") {
-    // Additional validation for numbers
-    if (!isValidUserIdNumber(userId)) {
-      const error = new UserIdTypeError(
-        userId,
-        "number (invalid range or not integer)",
-      );
-      logger.error(
+    // Handle numeric types (number and bigint)
+    if (typeof userId === 'number') {
+        // Additional validation for numbers
+        if (!isValidUserIdNumber(userId)) {
+            const error = new UserIdTypeError(userId, 'number (invalid range or not integer)')
+            logger.error(
+                {
+                    userId,
+                    type: typeof userId,
+                },
+                `Invalid userId number: ${String(userId)}`,
+            )
+            throw error
+        }
+        return userId.toString() as UserId
+    }
+
+    if (typeof userId === 'bigint') {
+        // Additional validation for bigint
+        if (!isValidUserIdBigInt(userId)) {
+            const error = new UserIdTypeError(userId, 'bigint (negative value)')
+            logger.error(
+                {
+                    userId,
+                    type: typeof userId,
+                },
+                `Invalid userId bigint: ${String(userId)}`,
+            )
+            throw error
+        }
+        return userId.toString() as UserId
+    }
+
+    // Handle string type
+    if (typeof userId === 'string') {
+        // Remove whitespace
+        const trimmed = userId.trim()
+
+        // Empty string = unauthorized user
+        if (trimmed === '') {
+            return '0' as UserId
+        }
+
+        // Internal/session user IDs may be the '0' sentinel or a canonical positive ID.
+        if (!/^\d+$/.test(trimmed)) {
+            const error = new UserIdFormatError(userId)
+            logger.error(
+                {
+                    userId,
+                    type: typeof userId,
+                    trimmed,
+                },
+                `Invalid userId format: ${userId}`,
+            )
+            throw error
+        }
+
+        const canonicalUserId = BigInt(trimmed).toString()
+        if (!isSessionUserId(canonicalUserId)) {
+            const error = new UserIdFormatError(userId)
+            logger.error(
+                {
+                    userId,
+                    type: typeof userId,
+                    trimmed,
+                    canonicalUserId,
+                },
+                `Invalid canonical userId format: ${userId}`,
+            )
+            throw error
+        }
+
+        // Additional check for extremely large numbers that could cause issues
+        const numericValue = Number(canonicalUserId)
+        if (numericValue > MAX_SAFE_USER_ID) {
+            logger.warn(
+                {
+                    userId: canonicalUserId,
+                    maxSafe: MAX_SAFE_USER_ID,
+                },
+                `UserId exceeds MAX_SAFE_INTEGER: ${canonicalUserId}`,
+            )
+        }
+
+        return canonicalUserId as UserId
+    }
+
+    // Handle unsupported types
+    const receivedType = typeof userId
+    const error = new UserIdTypeError(userId, receivedType)
+    logger.error(
         {
-          userId,
-          type: typeof userId,
+            userId,
+            type: receivedType,
         },
-        `Invalid userId number: ${String(userId)}`,
-      );
-      throw error;
-    }
-    return userId.toString() as UserId;
-  }
-
-  if (typeof userId === "bigint") {
-    // Additional validation for bigint
-    if (!isValidUserIdBigInt(userId)) {
-      const error = new UserIdTypeError(userId, "bigint (negative value)");
-      logger.error(
-        {
-          userId,
-          type: typeof userId,
-        },
-        `Invalid userId bigint: ${String(userId)}`,
-      );
-      throw error;
-    }
-    return userId.toString() as UserId;
-  }
-
-  // Handle string type
-  if (typeof userId === "string") {
-    // Remove whitespace
-    const trimmed = userId.trim();
-
-    // Empty string = unauthorized user
-    if (trimmed === "") {
-      return "0" as UserId;
-    }
-
-    // Internal/session user IDs may be the '0' sentinel or a canonical positive ID.
-    if (!/^\d+$/.test(trimmed)) {
-      const error = new UserIdFormatError(userId);
-      logger.error(
-        {
-          userId,
-          type: typeof userId,
-          trimmed,
-        },
-        `Invalid userId format: ${userId}`,
-      );
-      throw error;
-    }
-
-    const canonicalUserId = BigInt(trimmed).toString();
-    if (!isSessionUserId(canonicalUserId)) {
-      const error = new UserIdFormatError(userId);
-      logger.error(
-        {
-          userId,
-          type: typeof userId,
-          trimmed,
-          canonicalUserId,
-        },
-        `Invalid canonical userId format: ${userId}`,
-      );
-      throw error;
-    }
-
-    // Additional check for extremely large numbers that could cause issues
-    const numericValue = Number(canonicalUserId);
-    if (numericValue > MAX_SAFE_USER_ID) {
-      logger.warn(
-        {
-          userId: canonicalUserId,
-          maxSafe: MAX_SAFE_USER_ID,
-        },
-        `UserId exceeds MAX_SAFE_INTEGER: ${canonicalUserId}`,
-      );
-    }
-
-    return canonicalUserId as UserId;
-  }
-
-  // Handle unsupported types
-  const receivedType = typeof userId;
-  const error = new UserIdTypeError(userId, receivedType);
-  logger.error(
-    {
-      userId,
-      type: receivedType,
-    },
-    `Unsupported userId type: ${receivedType}`,
-  );
-  throw error;
-};
+        `Unsupported userId type: ${receivedType}`,
+    )
+    throw error
+}
 
 /**
  * Creates a branded UserId from a validated string
@@ -193,8 +188,8 @@ export const normalizeUserId = (
  * @returns Branded UserId type
  */
 export const createUserId = (validUserId: string): UserId => {
-  return validUserId as UserId;
-};
+    return validUserId as UserId
+}
 
 /**
  * Safely converts any value to UserId with comprehensive error handling
@@ -205,22 +200,20 @@ export const createUserId = (validUserId: string): UserId => {
  * @returns Normalized UserId or fallback
  */
 export const safeNormalizeUserId = (
-  userId: unknown,
-  fallbackId: UserId = "0" as UserId,
+    userId: unknown,
+    fallbackId: UserId = '0' as UserId,
 ): UserId => {
-  try {
-    return normalizeUserId(
-      userId as string | bigint | number | undefined | null,
-    );
-  } catch (error) {
-    logger.warn(
-      {
-        userId,
-        fallbackId,
-        error: error instanceof Error ? error.message : String(error),
-      },
-      "Failed to normalize userId, using fallback",
-    );
-    return fallbackId;
-  }
-};
+    try {
+        return normalizeUserId(userId as string | bigint | number | undefined | null)
+    } catch (error) {
+        logger.warn(
+            {
+                userId,
+                fallbackId,
+                error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to normalize userId, using fallback',
+        )
+        return fallbackId
+    }
+}

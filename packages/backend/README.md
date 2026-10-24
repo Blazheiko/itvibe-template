@@ -188,8 +188,8 @@ Avoid replacing `X-Forwarded-For` with a raw client-controlled value. The backen
   confirmation.
 - `AUTH_PHONE_ENABLED` — enables phone login/register/link/reset flows
 - `AUTH_SMS_PROVIDER` — SMS backend:
-  - `unsupported` — safe default, phone flows fail closed
-  - `fake` — local/test only
+    - `unsupported` — safe default, phone flows fail closed
+    - `fake` — local/test only
 - `AUTH_OTP_HMAC_KEY` — optional dedicated HMAC secret for hashing OTP codes stored in the database; falls back to `APP_KEY`; minimum 32 characters when phone auth is enabled
 - `AUTH_SMS_PROVIDER_ALLOW_FAKE` — explicit override required before `AUTH_SMS_PROVIDER=fake` can start
 - `AUTH_FAKE_SMS_CODE` — deterministic local/test code; must be explicitly set when fake provider is enabled; the example `123456` is for local/dev only
@@ -471,9 +471,9 @@ src/
 | `#logger`     | `src/vendor/utils/logger` |
 
 ```ts
-import { db } from "#database/db.js";
-import logger from "#logger";
-import { defineRoute } from "#app/routing/define-route.js";
+import { db } from '#database/db.js'
+import logger from '#logger'
+import { defineRoute } from '#app/routing/define-route.js'
 ```
 
 ---
@@ -513,62 +513,58 @@ Individual routes can also declare their own `middlewares`, `rateLimit`, and `al
 
 ```ts
 // src/app/routes/http-routes.ts
-import AuthController from "#app/controllers/http/auth/auth-controller.js";
-import AvatarController from "#app/controllers/http/user/avatar-controller.js";
-import { defineRoute } from "#app/routing/define-route.js";
-import {
-  RegisterEmailInputSchema,
-  LoginInputSchema,
-  EmptyFormInputSchema,
-} from "shared/schemas";
-import * as ResponseSchemas from "shared/responses";
+import AuthController from '#app/controllers/http/auth/auth-controller.js'
+import AvatarController from '#app/controllers/http/user/avatar-controller.js'
+import { defineRoute } from '#app/routing/define-route.js'
+import { RegisterEmailInputSchema, LoginInputSchema, EmptyFormInputSchema } from 'shared/schemas'
+import * as ResponseSchemas from 'shared/responses'
 
 export default [
-  {
-    group: [
-      defineRoute({
-        url: "/register/email",
-        method: "post",
-        handler: AuthController.registerByEmail.bind(AuthController),
-        validator: RegisterEmailInputSchema, // ArkType schema from shared/schemas
-        // allowedContentTypes defaults to ['json'] — no need to specify
-        ResponseSchema: ResponseSchemas.RegisterEmailResponseSchema,
-        description: "Register a new user by email",
-      }),
-      defineRoute({
-        url: "/login",
-        method: "post",
-        handler: AuthController.login.bind(AuthController),
-        validator: LoginInputSchema,
-        ResponseSchema: ResponseSchemas.LoginResponseSchema,
-        description: "Login a user by email or phone identifier",
-      }),
-      defineRoute({
-        url: "/logout",
-        method: "post",
-        handler: AuthController.logout.bind(AuthController),
-        validator: EmptyFormInputSchema,
-        ResponseSchema: ResponseSchemas.LogoutResponseSchema,
-        description: "Logout a user",
-        middlewares: ["auth_guard"], // route-level middleware
-      }),
-    ],
-  },
-  {
-    prefix: "avatar", // groups can share a URL prefix and middlewares
-    middlewares: ["auth_guard"], // applied to every route in the group
-    group: [
-      defineRoute({
-        url: "/upload",
-        method: "post",
-        handler: AvatarController.uploadAvatar.bind(AvatarController),
-        allowedContentTypes: ["multipart"], // must be explicit for file uploads
-        ResponseSchema: ResponseSchemas.UploadAvatarResponseSchema,
-        description: "Upload user avatar",
-      }),
-    ],
-  },
-];
+    {
+        group: [
+            defineRoute({
+                url: '/register/email',
+                method: 'post',
+                handler: AuthController.registerByEmail.bind(AuthController),
+                validator: RegisterEmailInputSchema, // ArkType schema from shared/schemas
+                // allowedContentTypes defaults to ['json'] — no need to specify
+                ResponseSchema: ResponseSchemas.RegisterEmailResponseSchema,
+                description: 'Register a new user by email',
+            }),
+            defineRoute({
+                url: '/login',
+                method: 'post',
+                handler: AuthController.login.bind(AuthController),
+                validator: LoginInputSchema,
+                ResponseSchema: ResponseSchemas.LoginResponseSchema,
+                description: 'Login a user by email or phone identifier',
+            }),
+            defineRoute({
+                url: '/logout',
+                method: 'post',
+                handler: AuthController.logout.bind(AuthController),
+                validator: EmptyFormInputSchema,
+                ResponseSchema: ResponseSchemas.LogoutResponseSchema,
+                description: 'Logout a user',
+                middlewares: ['auth_guard'], // route-level middleware
+            }),
+        ],
+    },
+    {
+        prefix: 'avatar', // groups can share a URL prefix and middlewares
+        middlewares: ['auth_guard'], // applied to every route in the group
+        group: [
+            defineRoute({
+                url: '/upload',
+                method: 'post',
+                handler: AvatarController.uploadAvatar.bind(AvatarController),
+                allowedContentTypes: ['multipart'], // must be explicit for file uploads
+                ResponseSchema: ResponseSchemas.UploadAvatarResponseSchema,
+                description: 'Upload user avatar',
+            }),
+        ],
+    },
+]
 ```
 
 ### Body Size Limits
@@ -607,8 +603,8 @@ When the limit is exceeded the server responds **429 Too Many Requests**:
 
 ```json
 {
-  "message": "Too many requests, please try again later.",
-  "retryAfter": 37
+    "message": "Too many requests, please try again later.",
+    "retryAfter": 37
 }
 ```
 
@@ -643,41 +639,41 @@ Defined in `src/app/routes/ws-routes.ts`. Same structure as HTTP routes but use 
 
 ```ts
 // src/app/routes/ws-routes.ts
-import WSApiController from "#app/controllers/ws/ws-api-controller.js";
-import { defineWsRoute } from "#app/routing/define-ws-route.js";
-import { WSEventTypingPayloadSchema } from "shared/schemas";
-import * as ResponseSchemas from "shared/responses";
+import WSApiController from '#app/controllers/ws/ws-api-controller.js'
+import { defineWsRoute } from '#app/routing/define-ws-route.js'
+import { WSEventTypingPayloadSchema } from 'shared/schemas'
+import * as ResponseSchemas from 'shared/responses'
 
 export default [
-  {
-    prefix: "main",
-    description: "Main WS routes",
-    rateLimit: {
-      windowMs: 1 * 60 * 1000,
-      maxRequests: 600,
-    },
-    group: [
-      defineWsRoute({
-        url: "event_typing",
-        handler: WSApiController.eventTyping.bind(WSApiController),
-        validator: WSEventTypingPayloadSchema,
-        ResponseSchema: ResponseSchemas.EventTypingResponseSchema,
-        description: "Handle typing events",
+    {
+        prefix: 'main',
+        description: 'Main WS routes',
         rateLimit: {
-          windowMs: 1 * 60 * 1000,
-          maxRequests: 30,
+            windowMs: 1 * 60 * 1000,
+            maxRequests: 600,
         },
-      }),
-      defineWsRoute({
-        url: "read_message",
-        handler: WSApiController.readMessage.bind(WSApiController),
-        validator: ReadMessagesInputSchema,
-        ResponseSchema: ResponseSchemas.ReadMessageResponseSchema,
-        description: "Handle read message events",
-      }),
-    ],
-  },
-];
+        group: [
+            defineWsRoute({
+                url: 'event_typing',
+                handler: WSApiController.eventTyping.bind(WSApiController),
+                validator: WSEventTypingPayloadSchema,
+                ResponseSchema: ResponseSchemas.EventTypingResponseSchema,
+                description: 'Handle typing events',
+                rateLimit: {
+                    windowMs: 1 * 60 * 1000,
+                    maxRequests: 30,
+                },
+            }),
+            defineWsRoute({
+                url: 'read_message',
+                handler: WSApiController.readMessage.bind(WSApiController),
+                validator: ReadMessagesInputSchema,
+                ResponseSchema: ResponseSchemas.ReadMessageResponseSchema,
+                description: 'Handle read message events',
+            }),
+        ],
+    },
+]
 ```
 
 ---
@@ -690,23 +686,23 @@ Middleware lives in `src/app/middlewares/` and is registered by string key in `s
 
 ```ts
 // src/app/middlewares/kernel.ts
-import sessionWeb from "#vendor/utils/middlewares/ws/session-web.js";
-import sessionAPI from "#vendor/utils/middlewares/http/session-api.js";
-import csrfGuard from "#app/middlewares/csrf-guard.js";
-import authGuard from "#vendor/utils/middlewares/core/auth-guard.js";
-import adminGuard from "#app/middlewares/admin-guard.js";
-import partnerGuard from "#app/middlewares/partner-guard.js";
+import sessionWeb from '#vendor/utils/middlewares/ws/session-web.js'
+import sessionAPI from '#vendor/utils/middlewares/http/session-api.js'
+import csrfGuard from '#app/middlewares/csrf-guard.js'
+import authGuard from '#vendor/utils/middlewares/core/auth-guard.js'
+import adminGuard from '#app/middlewares/admin-guard.js'
+import partnerGuard from '#app/middlewares/partner-guard.js'
 
 const middlewares: Record<string, Function> = {
-  session_web: sessionWeb,
-  session_api: sessionAPI,
-  csrf_guard: csrfGuard,
-  auth_guard: authGuard,
-  admin_guard: adminGuard,
-  partner_guard: partnerGuard,
-};
+    session_web: sessionWeb,
+    session_api: sessionAPI,
+    csrf_guard: csrfGuard,
+    auth_guard: authGuard,
+    admin_guard: adminGuard,
+    partner_guard: partnerGuard,
+}
 
-export default middlewares;
+export default middlewares
 ```
 
 ### Middleware signature
@@ -715,37 +711,37 @@ A middleware receives `(context, next)`. Call `next()` to continue. **Do not cal
 
 ```ts
 // src/app/middlewares/admin-guard.ts
-import type { HttpContext, Middleware } from "#vendor/types/types.js";
-import { userRepository } from "#app/repositories/index.js";
+import type { HttpContext, Middleware } from '#vendor/types/types.js'
+import { userRepository } from '#app/repositories/index.js'
 
 const adminGuard: Middleware = async (
-  context: HttpContext,
-  next: () => Promise<void>,
+    context: HttpContext,
+    next: () => Promise<void>,
 ): Promise<void> => {
-  const userId = context.auth.getUserId();
-  if (userId === null) {
-    context.responseData.status = 403;
-    context.responseData.payload = {
-      status: "forbidden",
-      message: "Admin access required",
-    };
-    return; // ← abort, handler is never called
-  }
+    const userId = context.auth.getUserId()
+    if (userId === null) {
+        context.responseData.status = 403
+        context.responseData.payload = {
+            status: 'forbidden',
+            message: 'Admin access required',
+        }
+        return // ← abort, handler is never called
+    }
 
-  const user = await userRepository.findById(BigInt(userId));
-  if (user?.role !== "admin") {
-    context.responseData.status = 403;
-    context.responseData.payload = {
-      status: "forbidden",
-      message: "Admin access required",
-    };
-    return;
-  }
+    const user = await userRepository.findById(BigInt(userId))
+    if (user?.role !== 'admin') {
+        context.responseData.status = 403
+        context.responseData.payload = {
+            status: 'forbidden',
+            message: 'Admin access required',
+        }
+        return
+    }
 
-  await next(); // ← continue to the next middleware / handler
-};
+    await next() // ← continue to the next middleware / handler
+}
 
-export default adminGuard;
+export default adminGuard
 ```
 
 ### Built-in middleware
@@ -768,25 +764,25 @@ ArkType is used only as the project schema engine; route registration goes throu
 
 ```ts
 // shared/schemas (example, defined in packages/shared)
-import { type } from "arktype";
+import { type } from 'arktype'
 
 export const CreateNoteInputSchema = type({
-  title: "string",
-  "description?": "string",
-});
+    title: 'string',
+    'description?': 'string',
+})
 
-export type CreateNoteInput = typeof CreateNoteInputSchema.infer;
+export type CreateNoteInput = typeof CreateNoteInputSchema.infer
 ```
 
 ### Using in a route
 
 ```ts
 defineRoute({
-  url: "/",
-  method: "post",
-  validator: CreateNoteInputSchema, // schema passed directly to defineRoute
-  handler: NotesController.createNote.bind(NotesController),
-});
+    url: '/',
+    method: 'post',
+    validator: CreateNoteInputSchema, // schema passed directly to defineRoute
+    handler: NotesController.createNote.bind(NotesController),
+})
 ```
 
 Do not wrap route validators manually with `arkValidator(...)` in route files. `defineRoute` / `defineWsRoute` normalize the schema through the active validation wrapper internally.
@@ -857,97 +853,93 @@ and returns the error response body), and otherwise returns `result.value`.
 
 ```ts
 // src/app/controllers/http/auth/auth-controller.ts
-import type { HttpContext } from "#vendor/types/types.js";
-import { getTypedPayload } from "#vendor/utils/validation/get-typed-payload.js";
-import { mapControllerError } from "#app/controllers/shared/controller-error.js";
-import { authService } from "#app/services/auth/auth-service.js";
-import { Result } from "better-result";
-import { unauthorized } from "#app/services/shared/errors.js";
+import type { HttpContext } from '#vendor/types/types.js'
+import { getTypedPayload } from '#vendor/utils/validation/get-typed-payload.js'
+import { mapControllerError } from '#app/controllers/shared/controller-error.js'
+import { authService } from '#app/services/auth/auth-service.js'
+import { Result } from 'better-result'
+import { unauthorized } from '#app/services/shared/errors.js'
 import type {
-  LoginResponse,
-  RegisterEmailResponse,
-  LogoutResponse,
-  ChangePasswordResponse,
-} from "shared";
+    LoginResponse,
+    RegisterEmailResponse,
+    LogoutResponse,
+    ChangePasswordResponse,
+} from 'shared'
 import type {
-  LoginInput,
-  RegisterEmailInput,
-  ChangePasswordInput,
-  EmptyFormInput,
-} from "shared/schemas";
+    LoginInput,
+    RegisterEmailInput,
+    ChangePasswordInput,
+    EmptyFormInput,
+} from 'shared/schemas'
 
 export default {
-  async registerByEmail(
-    context: HttpContext<RegisterEmailInput>,
-  ): Promise<RegisterEmailResponse> {
-    context.logger.info("registerByEmail handler");
-    const payload = getTypedPayload(context); // typed as RegisterEmailInput
-    const result = await authService.registerByEmail(
-      payload,
-      context.auth,
-      context.session,
-      context.logger,
-      { ipAddress: context.httpData.ip ?? "" },
-    );
+    async registerByEmail(
+        context: HttpContext<RegisterEmailInput>,
+    ): Promise<RegisterEmailResponse> {
+        context.logger.info('registerByEmail handler')
+        const payload = getTypedPayload(context) // typed as RegisterEmailInput
+        const result = await authService.registerByEmail(
+            payload,
+            context.auth,
+            context.session,
+            context.logger,
+            { ipAddress: context.httpData.ip ?? '' },
+        )
 
-    if (Result.isError(result)) {
-      return mapControllerError(context, result.error);
-    }
+        if (Result.isError(result)) {
+            return mapControllerError(context, result.error)
+        }
 
-    return result.value;
-  },
+        return result.value
+    },
 
-  async login(context: HttpContext<LoginInput>): Promise<LoginResponse> {
-    context.logger.info("login handler");
+    async login(context: HttpContext<LoginInput>): Promise<LoginResponse> {
+        context.logger.info('login handler')
 
-    const payload = getTypedPayload(context);
-    const result = await authService.login(
-      payload,
-      context.auth,
-      context.session,
-    );
+        const payload = getTypedPayload(context)
+        const result = await authService.login(payload, context.auth, context.session)
 
-    if (Result.isError(result)) {
-      return mapControllerError(context, result.error);
-    }
+        if (Result.isError(result)) {
+            return mapControllerError(context, result.error)
+        }
 
-    return result.value;
-  },
+        return result.value
+    },
 
-  async logout(context: HttpContext<EmptyFormInput>): Promise<LogoutResponse> {
-    context.logger.info("logout handler");
-    const result = await authService.logout(context.auth, context.session);
-    if (Result.isError(result)) {
-      return mapControllerError(context, result.error);
-    }
+    async logout(context: HttpContext<EmptyFormInput>): Promise<LogoutResponse> {
+        context.logger.info('logout handler')
+        const result = await authService.logout(context.auth, context.session)
+        if (Result.isError(result)) {
+            return mapControllerError(context, result.error)
+        }
 
-    return result.value;
-  },
+        return result.value
+    },
 
-  // requires the auth_guard middleware on the route
-  async changePassword(
-    context: HttpContext<ChangePasswordInput>,
-  ): Promise<ChangePasswordResponse> {
-    context.logger.info("changePassword handler");
+    // requires the auth_guard middleware on the route
+    async changePassword(
+        context: HttpContext<ChangePasswordInput>,
+    ): Promise<ChangePasswordResponse> {
+        context.logger.info('changePassword handler')
 
-    if (!context.auth.check()) {
-      return mapControllerError(context, unauthorized());
-    }
+        if (!context.auth.check()) {
+            return mapControllerError(context, unauthorized())
+        }
 
-    const userId = context.auth.getUserId();
-    if (userId === null) {
-      return mapControllerError(context, unauthorized());
-    }
+        const userId = context.auth.getUserId()
+        if (userId === null) {
+            return mapControllerError(context, unauthorized())
+        }
 
-    const payload = getTypedPayload(context);
-    const result = await authService.changePassword(BigInt(userId), payload);
-    if (Result.isError(result)) {
-      return mapControllerError(context, result.error);
-    }
+        const payload = getTypedPayload(context)
+        const result = await authService.changePassword(BigInt(userId), payload)
+        if (Result.isError(result)) {
+            return mapControllerError(context, result.error)
+        }
 
-    return { status: "success" };
-  },
-};
+        return { status: 'success' }
+    },
+}
 ```
 
 Notes drawn from the real controller:
@@ -993,32 +985,28 @@ handlers:
 
 ```ts
 const ListQuerySchema = type({
-  page: [type("string.integer.parse").pipe(type("number > 0")), "=", "1"],
-  limit: [
-    type("string.integer.parse").pipe(type("0 < number <= 200")),
-    "=",
-    "50",
-  ],
-  "userId?": "string",
-});
+    page: [type('string.integer.parse').pipe(type('number > 0')), '=', '1'],
+    limit: [type('string.integer.parse').pipe(type('0 < number <= 200')), '=', '50'],
+    'userId?': 'string',
+})
 
 defineRoute({
-  url: "/items",
-  method: "get",
-  queryValidator: ListQuerySchema,
-  handler: ItemsController.list,
-});
+    url: '/items',
+    method: 'get',
+    queryValidator: ListQuerySchema,
+    handler: ItemsController.list,
+})
 ```
 
 Short admin example from the current codebase:
 
 ```ts
 defineRoute({
-  url: "/users",
-  method: "get",
-  queryValidator: AdminUserListQuerySchema,
-  handler: AdminUserController.list.bind(AdminUserController),
-});
+    url: '/users',
+    method: 'get',
+    queryValidator: AdminUserListQuerySchema,
+    handler: AdminUserController.list.bind(AdminUserController),
+})
 ```
 
 That route reads filters such as `userId`, `dateFrom`, `dateTo`, `promoCode`,
@@ -1045,16 +1033,16 @@ Example for repeated keys:
 
 ```ts
 const SearchQuerySchema = type({
-  "tags?": "string[]",
-});
+    'tags?': 'string[]',
+})
 
 defineRoute({
-  url: "/search",
-  method: "get",
-  queryValidator: SearchQuerySchema,
-  queryArrays: ["tags"],
-  handler: SearchController.search,
-});
+    url: '/search',
+    method: 'get',
+    queryValidator: SearchQuerySchema,
+    queryArrays: ['tags'],
+    handler: SearchController.search,
+})
 ```
 
 With that setup, `?tags=vue&tags=backend` becomes `{ tags: ["vue", "backend"] }`.
@@ -1069,126 +1057,121 @@ Services live in `src/app/services/`. They contain all business logic and usuall
 ```ts
 // src/app/services/shared/errors.ts
 export type AppError =
-  | { _tag: "BadRequest"; message: string; reason?: string }
-  | { _tag: "Unauthorized"; message: string }
-  | { _tag: "Forbidden"; message: string; reason?: string }
-  | { _tag: "NotFound"; resource: string; message: string }
-  | { _tag: "Conflict"; message: string; reason?: string }
-  | { _tag: "Internal"; publicMessage: string; cause?: unknown };
+    | { _tag: 'BadRequest'; message: string; reason?: string }
+    | { _tag: 'Unauthorized'; message: string }
+    | { _tag: 'Forbidden'; message: string; reason?: string }
+    | { _tag: 'NotFound'; resource: string; message: string }
+    | { _tag: 'Conflict'; message: string; reason?: string }
+    | { _tag: 'Internal'; publicMessage: string; cause?: unknown }
 
-export type AppResult<T> = Result<T, AppError>;
+export type AppResult<T> = Result<T, AppError>
 
-export function badRequest(message: string, reason?: string): AppError;
-export function unauthorized(message?: string): AppError;
-export function forbidden(message: string, reason?: string): AppError;
-export function notFound(resource: string, message: string): AppError;
-export function conflict(message: string, reason?: string): AppError;
-export function internal(cause: unknown, publicMessage?: string): AppError;
+export function badRequest(message: string, reason?: string): AppError
+export function unauthorized(message?: string): AppError
+export function forbidden(message: string, reason?: string): AppError
+export function notFound(resource: string, message: string): AppError
+export function conflict(message: string, reason?: string): AppError
+export function internal(cause: unknown, publicMessage?: string): AppError
 ```
 
 ### Service example
 
 ```ts
 // src/app/services/auth-service.ts (excerpt)
-import { Result } from "better-result";
-import { hashPassword, validatePassword } from "metautil";
-import type { Auth, Session } from "#vendor/types/types.js";
-import { userRepository } from "#app/repositories/index.js";
-import { userTransformer } from "#app/transformers/index.js";
-import {
-  badRequest,
-  conflict,
-  unauthorized,
-  type AppResult,
-} from "#app/services/shared/errors.js";
-import { tryInternal } from "#app/services/shared/result-helpers.js";
-import { generateWsToken } from "#app/services/generate-ws-token-service.js";
-import { getWsUrl } from "#app/services/get-ws-url-service.js";
-import type { LoginInput, RegisterInput } from "shared/schemas";
+import { Result } from 'better-result'
+import { hashPassword, validatePassword } from 'metautil'
+import type { Auth, Session } from '#vendor/types/types.js'
+import { userRepository } from '#app/repositories/index.js'
+import { userTransformer } from '#app/transformers/index.js'
+import { badRequest, conflict, unauthorized, type AppResult } from '#app/services/shared/errors.js'
+import { tryInternal } from '#app/services/shared/result-helpers.js'
+import { generateWsToken } from '#app/services/generate-ws-token-service.js'
+import { getWsUrl } from '#app/services/get-ws-url-service.js'
+import type { LoginInput, RegisterInput } from 'shared/schemas'
 
 export const authService = {
-  async register(
-    payload: RegisterInput,
-    auth: Auth,
-    session: Session,
-  ): Promise<
-    AppResult<{
-      status: "success";
-      user: SerializedUser;
-      wsUrl: string;
-      wsToken: string;
-    }>
-  > {
-    const email = payload.email.toLowerCase();
+    async register(
+        payload: RegisterInput,
+        auth: Auth,
+        session: Session,
+    ): Promise<
+        AppResult<{
+            status: 'success'
+            user: SerializedUser
+            wsUrl: string
+            wsToken: string
+        }>
+    > {
+        const email = payload.email.toLowerCase()
 
-    const existResult = await tryInternal(
-      () => userRepository.findByEmail(email),
-      "Failed to load user by email",
-    );
-    if (Result.isError(existResult)) return Result.err(existResult.error);
-    if (existResult.value !== undefined) {
-      return Result.err(conflict("Email already exists"));
-    }
+        const existResult = await tryInternal(
+            () => userRepository.findByEmail(email),
+            'Failed to load user by email',
+        )
+        if (Result.isError(existResult)) return Result.err(existResult.error)
+        if (existResult.value !== undefined) {
+            return Result.err(conflict('Email already exists'))
+        }
 
-    const hash = await hashPassword(payload.password);
-    const user = await userRepository.create({
-      name: payload.name,
-      email,
-      password: hash,
-    });
+        const hash = await hashPassword(payload.password)
+        const user = await userRepository.create({
+            name: payload.name,
+            email,
+            password: hash,
+        })
 
-    await auth.login(String(user.id), session);
-    const wsToken = await generateWsToken(user.id);
+        await auth.login(String(user.id), session)
+        const wsToken = await generateWsToken(user.id)
 
-    return Result.ok({
-      status: "success",
-      user: userTransformer.serialize(user),
-      wsUrl: getWsUrl(),
-      wsToken,
-    });
-  },
+        return Result.ok({
+            status: 'success',
+            user: userTransformer.serialize(user),
+            wsUrl: getWsUrl(),
+            wsToken,
+        })
+    },
 
-  async login(
-    payload: LoginInput,
-    auth: Auth,
-    session: Session,
-  ): Promise<
-    AppResult<{
-      status: "success";
-      user: SerializedUser;
-      wsUrl: string;
-      wsToken: string;
-    }>
-  > {
-    const userResult = await tryInternal(
-      () => userRepository.findByEmail(payload.email.toLowerCase()),
-      "Failed to load user by email",
-    );
-    if (Result.isError(userResult)) return Result.err(userResult.error);
-    const user = userResult.value;
-    if (user === undefined || user.password === null) {
-      return Result.err(unauthorized("Invalid email or password"));
-    }
+    async login(
+        payload: LoginInput,
+        auth: Auth,
+        session: Session,
+    ): Promise<
+        AppResult<{
+            status: 'success'
+            user: SerializedUser
+            wsUrl: string
+            wsToken: string
+        }>
+    > {
+        const userResult = await tryInternal(
+            () => userRepository.findByEmail(payload.email.toLowerCase()),
+            'Failed to load user by email',
+        )
+        if (Result.isError(userResult)) return Result.err(userResult.error)
+        const user = userResult.value
+        if (user === undefined || user.password === null) {
+            return Result.err(unauthorized('Invalid email or password'))
+        }
 
-    const valid = await validatePassword(payload.password, user.password);
-    if (!valid) return Result.err(unauthorized("Invalid email or password"));
+        const valid = await validatePassword(payload.password, user.password)
+        if (!valid) return Result.err(unauthorized('Invalid email or password'))
 
-    await auth.login(String(user.id), session);
-    const wsToken = await generateWsToken(user.id);
+        await auth.login(String(user.id), session)
+        const wsToken = await generateWsToken(user.id)
 
-    return Result.ok({
-      status: "success",
-      user: userTransformer.serialize(user),
-      wsUrl: getWsUrl(),
-      wsToken,
-    });
-  },
+        return Result.ok({
+            status: 'success',
+            user: userTransformer.serialize(user),
+            wsUrl: getWsUrl(),
+            wsToken,
+        })
+    },
 
-  async logout(auth: Auth): Promise<AppResult<{ status: "success" }>> {
-    await auth.logout();
-    return Result.ok({ status: "success" });
-  },
-};
+    async logout(auth: Auth): Promise<AppResult<{ status: 'success' }>> {
+        await auth.logout()
+        return Result.ok({ status: 'success' })
+    },
+}
 ```
 
 ---
@@ -1199,77 +1182,71 @@ Repositories live in `src/app/repositories/`. **Only** Drizzle queries — no HT
 
 ```ts
 // src/app/repositories/user-repository.ts (excerpt)
-import { db } from "#database/db.js";
-import { users } from "#database/schema.js";
-import { eq, sql } from "drizzle-orm";
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { db } from '#database/db.js'
+import { users } from '#database/schema.js'
+import { eq, sql } from 'drizzle-orm'
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
 
-export type UserRow = InferSelectModel<typeof users>;
-export type UserInsert = InferInsertModel<typeof users>;
+export type UserRow = InferSelectModel<typeof users>
+export type UserInsert = InferInsertModel<typeof users>
 export type UserUpdate = Partial<
-  Pick<
-    UserInsert,
-    | "name"
-    | "email"
-    | "password"
-    | "phone"
-    | "avatar"
-    | "role"
-    | "emailVerifiedAt"
-  >
->;
+    Pick<
+        UserInsert,
+        'name' | 'email' | 'password' | 'phone' | 'avatar' | 'role' | 'emailVerifiedAt'
+    >
+>
 
 export interface IUserRepository {
-  create(data: UserInsert): Promise<UserRow>;
-  findById(id: bigint): Promise<UserRow | undefined>;
-  findByEmail(email: string): Promise<UserRow | undefined>;
-  update(id: bigint, data: UserUpdate): Promise<UserRow | undefined>;
-  delete(id: bigint): Promise<boolean>;
+    create(data: UserInsert): Promise<UserRow>
+    findById(id: bigint): Promise<UserRow | undefined>
+    findByEmail(email: string): Promise<UserRow | undefined>
+    update(id: bigint, data: UserUpdate): Promise<UserRow | undefined>
+    delete(id: bigint): Promise<boolean>
 }
 
 export const userRepository: IUserRepository = {
-  async create(data) {
-    const now = new Date();
-    const [created] = await db
-      .insert(users)
-      .values({ ...data, createdAt: now, updatedAt: now })
-      .returning();
-    if (created === undefined) throw new Error("Failed to create user");
-    return created;
-  },
+    async create(data) {
+        const now = new Date()
+        const [created] = await db
+            .insert(users)
+            .values({ ...data, createdAt: now, updatedAt: now })
+            .returning()
+        if (created === undefined) throw new Error('Failed to create user')
+        return created
+    },
 
-  async findById(id) {
-    return await db
-      .select()
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1)
-      .then((r) => r.at(0));
-  },
+    async findById(id) {
+        return await db
+            .select()
+            .from(users)
+            .where(eq(users.id, id))
+            .limit(1)
+            .then((r) => r.at(0))
+    },
 
-  async findByEmail(email) {
-    // case-insensitive lookup — emails are stored as user typed them
-    return await db
-      .select()
-      .from(users)
-      .where(sql`LOWER(${users.email}) = LOWER(${email})`)
-      .limit(1)
-      .then((r) => r.at(0));
-  },
+    async findByEmail(email) {
+        // case-insensitive lookup — emails are stored as user typed them
+        return await db
+            .select()
+            .from(users)
+            .where(sql`LOWER(${users.email}) = LOWER(${email})`)
+            .limit(1)
+            .then((r) => r.at(0))
+    },
 
-  async update(id, data) {
-    await db
-      .update(users)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(users.id, id));
-    return userRepository.findById(id);
-  },
+    async update(id, data) {
+        await db
+            .update(users)
+            .set({ ...data, updatedAt: new Date() })
+            .where(eq(users.id, id))
+        return userRepository.findById(id)
+    },
 
-  async delete(id) {
-    const deleted = await db.delete(users).where(eq(users.id, id)).returning();
-    return deleted.length > 0;
-  },
-};
+    async delete(id) {
+        const deleted = await db.delete(users).where(eq(users.id, id)).returning()
+        return deleted.length > 0
+    },
+}
 ```
 
 ---
@@ -1280,48 +1257,46 @@ Transformers live in `src/app/transformers/`. They convert DB rows to API-safe p
 
 ```ts
 // src/app/transformers/user-transformer.ts
-import { DateTime } from "luxon";
-import type { UserRow } from "#app/repositories/user-repository.js";
+import { DateTime } from 'luxon'
+import type { UserRow } from '#app/repositories/user-repository.js'
 
 export type SerializedUser = Omit<
-  UserRow,
-  "id" | "password" | "isAdmin" | "createdAt" | "updatedAt" | "emailVerifiedAt"
+    UserRow,
+    'id' | 'password' | 'isAdmin' | 'createdAt' | 'updatedAt' | 'emailVerifiedAt'
 > & {
-  id: string;
-  created_at: string | null;
-  updated_at: string | null;
-  emailVerified: boolean;
-  emailVerifiedAt: string | null;
-};
+    id: string
+    created_at: string | null
+    updated_at: string | null
+    emailVerified: boolean
+    emailVerifiedAt: string | null
+}
 
 export const userTransformer = {
-  serialize(user: UserRow): SerializedUser {
-    const {
-      id,
-      password: _password,
-      isAdmin: _isAdmin,
-      createdAt,
-      updatedAt,
-      emailVerifiedAt,
-      ...rest
-    } = user;
-    return {
-      ...rest,
-      id: String(id), // bigint → string for safe JSON
-      created_at: DateTime.fromJSDate(createdAt).toISO(),
-      updated_at: DateTime.fromJSDate(updatedAt).toISO(),
-      emailVerified: emailVerifiedAt !== null,
-      emailVerifiedAt:
-        emailVerifiedAt === null
-          ? null
-          : DateTime.fromJSDate(emailVerifiedAt).toISO(),
-    };
-  },
+    serialize(user: UserRow): SerializedUser {
+        const {
+            id,
+            password: _password,
+            isAdmin: _isAdmin,
+            createdAt,
+            updatedAt,
+            emailVerifiedAt,
+            ...rest
+        } = user
+        return {
+            ...rest,
+            id: String(id), // bigint → string for safe JSON
+            created_at: DateTime.fromJSDate(createdAt).toISO(),
+            updated_at: DateTime.fromJSDate(updatedAt).toISO(),
+            emailVerified: emailVerifiedAt !== null,
+            emailVerifiedAt:
+                emailVerifiedAt === null ? null : DateTime.fromJSDate(emailVerifiedAt).toISO(),
+        }
+    },
 
-  serializeArray(rows: UserRow[]): SerializedUser[] {
-    return rows.map((u) => userTransformer.serialize(u));
-  },
-};
+    serializeArray(rows: UserRow[]): SerializedUser[] {
+        return rows.map((u) => userTransformer.serialize(u))
+    },
+}
 ```
 
 Notes:
@@ -1339,21 +1314,21 @@ Notes:
 `src/database/db.ts` creates a `pg.Pool` and passes it to Drizzle. The pool is configured for up to 10 concurrent connections. Redis clients live in `src/database/redis.ts` and are shared by sessions, the WS coordinator, and presence services.
 
 ```ts
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema.js";
+import { drizzle } from 'drizzle-orm/node-postgres'
+import pg from 'pg'
+import * as schema from './schema.js'
 
 const pool = new pg.Pool({
-  host: databaseConfig.host,
-  port: databaseConfig.port,
-  user: databaseConfig.user,
-  password: databaseConfig.password,
-  database: databaseConfig.database,
-  max: 10,
-});
+    host: databaseConfig.host,
+    port: databaseConfig.port,
+    user: databaseConfig.user,
+    password: databaseConfig.password,
+    database: databaseConfig.database,
+    max: 10,
+})
 
-export const db = drizzle(pool, { schema, logger: appConfig.env !== "prod" });
-export { pool };
+export const db = drizzle(pool, { schema, logger: appConfig.env !== 'prod' })
+export { pool }
 ```
 
 ### Schema
@@ -1363,43 +1338,43 @@ All tables are defined in `src/database/schema.ts` using Drizzle's `pgTable` bui
 ```ts
 // src/database/schema.ts (excerpt)
 import {
-  pgTable,
-  bigserial,
-  bigint,
-  varchar,
-  text,
-  timestamp,
-  boolean,
-  pgEnum,
-} from "drizzle-orm/pg-core";
+    pgTable,
+    bigserial,
+    bigint,
+    varchar,
+    text,
+    timestamp,
+    boolean,
+    pgEnum,
+} from 'drizzle-orm/pg-core'
 
-export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+export const userRoleEnum = pgEnum('user_role', ['user', 'admin'])
 
-export const users = pgTable("users", {
-  id: bigserial("id", { mode: "bigint" }).primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  password: varchar("password", { length: 255 }),
-  avatar: varchar("avatar", { length: 500 }),
-  role: userRoleEnum("role").notNull().default("user"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const users = pgTable('users', {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    email: varchar('email', { length: 255 }).notNull().unique(),
+    password: varchar('password', { length: 255 }),
+    avatar: varchar('avatar', { length: 500 }),
+    role: userRoleEnum('role').notNull().default('user'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+        .notNull()
+        .defaultNow()
+        .$onUpdate(() => new Date()),
+})
 
-export const notes = pgTable("notes", {
-  id: bigserial("id", { mode: "bigint" }).primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description").notNull(),
-  userId: bigint("user_id", { mode: "bigint" }).notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const notes = pgTable('notes', {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description').notNull(),
+    userId: bigint('user_id', { mode: 'bigint' }).notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+        .notNull()
+        .defaultNow()
+        .$onUpdate(() => new Date()),
+})
 ```
 
 ### Migrations
@@ -1427,50 +1402,39 @@ the current user from it. WS errors are produced with `appErrorToWsError(...)`
 
 ```ts
 // src/app/controllers/ws/support-controller.ts
-import type { WsContext } from "#vendor/types/types.js";
-import { getTypedPayload } from "#vendor/utils/validation/get-typed-payload.js";
-import { supportService } from "#app/services/support/support-service.js";
-import { appErrorToWsError } from "#app/services/shared/ws-error.js";
-import { unauthorized } from "#app/services/shared/errors.js";
-import type { SupportChatInput, SupportOpenChatInput } from "shared/schemas";
-import type {
-  SupportChatResponse,
-  SupportOpenChatResponse,
-} from "shared/responses";
+import type { WsContext } from '#vendor/types/types.js'
+import { getTypedPayload } from '#vendor/utils/validation/get-typed-payload.js'
+import { supportService } from '#app/services/support/support-service.js'
+import { appErrorToWsError } from '#app/services/shared/ws-error.js'
+import { unauthorized } from '#app/services/shared/errors.js'
+import type { SupportChatInput, SupportOpenChatInput } from 'shared/schemas'
+import type { SupportChatResponse, SupportOpenChatResponse } from 'shared/responses'
 
 export default {
-  async openChat(
-    context: WsContext<SupportOpenChatInput>,
-  ): Promise<SupportOpenChatResponse> {
-    const { userData } = context;
-    if (userData?.userId === undefined) {
-      return appErrorToWsError(unauthorized());
-    }
+    async openChat(context: WsContext<SupportOpenChatInput>): Promise<SupportOpenChatResponse> {
+        const { userData } = context
+        if (userData?.userId === undefined) {
+            return appErrorToWsError(unauthorized())
+        }
 
-    void supportService.openChat(BigInt(userData.userId), userData.uuid);
+        void supportService.openChat(BigInt(userData.userId), userData.uuid)
 
-    return { status: "ok" };
-  },
+        return { status: 'ok' }
+    },
 
-  async chat(
-    context: WsContext<SupportChatInput>,
-  ): Promise<SupportChatResponse> {
-    const { userData } = context;
-    if (userData?.userId === undefined) {
-      return appErrorToWsError(unauthorized());
-    }
+    async chat(context: WsContext<SupportChatInput>): Promise<SupportChatResponse> {
+        const { userData } = context
+        if (userData?.userId === undefined) {
+            return appErrorToWsError(unauthorized())
+        }
 
-    const payload = getTypedPayload(context);
+        const payload = getTypedPayload(context)
 
-    void supportService.chat(
-      BigInt(userData.userId),
-      payload.message,
-      userData.uuid,
-    );
+        void supportService.chat(BigInt(userData.userId), payload.message, userData.uuid)
 
-    return { status: "ok" };
-  },
-};
+        return { status: 'ok' }
+    },
+}
 ```
 
 ---
@@ -1479,11 +1443,11 @@ export default {
 
 WS connection state is managed by three modules in `src/app/websocket/`:
 
-| Module                      | Purpose                                                                                   |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
+| Module                      | Purpose                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
 | `ws-session-auth.ts`        | Authenticates the WS handshake and resolves connection user identity for `context.userData` |
-| `ws-connection-registry.ts` | In-process map of `userId → sockets`; used to fan messages out locally                    |
-| `ws-coordinator.ts`         | Cross-instance pub/sub over Redis so multiple Node processes can deliver to the same user |
+| `ws-connection-registry.ts` | In-process map of `userId → sockets`; used to fan messages out locally                      |
+| `ws-coordinator.ts`         | Cross-instance pub/sub over Redis so multiple Node processes can deliver to the same user   |
 
 Presence and broadcast helpers live in `src/app/services/` (`ws-presence-service.ts`, `broadcast-service.ts`, `ws-service.ts`).
 
@@ -1494,17 +1458,17 @@ Presence and broadcast helpers live in `src/app/services/` (`ws-presence-service
 Files arrive as `context.httpData.files` — a `Map<string, UploadedFile>`.
 
 ```ts
-import { uploadToS3 } from "#vendor/utils/storage/s3.js";
-import { badRequest } from "#app/services/shared/errors.js";
-import { Result } from "better-result";
+import { uploadToS3 } from '#vendor/utils/storage/s3.js'
+import { badRequest } from '#app/services/shared/errors.js'
+import { Result } from 'better-result'
 
-const file = context.httpData.files?.get("photo");
+const file = context.httpData.files?.get('photo')
 if (file === undefined) {
-  return Result.err(badRequest("No file uploaded"));
+    return Result.err(badRequest('No file uploaded'))
 }
 
-const s3Key = `my-notes/${String(userId)}/${randomUUID()}${path.extname(file.filename)}`;
-await uploadToS3(s3Key, Buffer.from(file.data), file.type);
+const s3Key = `my-notes/${String(userId)}/${randomUUID()}${path.extname(file.filename)}`
+await uploadToS3(s3Key, Buffer.from(file.data), file.type)
 ```
 
 ---
@@ -1514,14 +1478,14 @@ await uploadToS3(s3Key, Buffer.from(file.data), file.type);
 Each request has a scoped Pino logger available on `context.logger`. Use the global logger for startup/background tasks.
 
 ```ts
-import logger from "#logger";
+import logger from '#logger'
 
 // inside a handler or service
-context.logger.info("createNote handler");
-context.logger.error({ err }, "Failed to create note");
+context.logger.info('createNote handler')
+context.logger.error({ err }, 'Failed to create note')
 
 // outside a request context
-logger.info("Server started");
+logger.info('Server started')
 ```
 
 When Sentry is enabled, `logger.error` and `logger.fatal` are the only log levels forwarded to Sentry. Keep `warn` / `info` for local observability and routine status messages so Sentry stays focused on actionable incidents.

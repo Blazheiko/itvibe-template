@@ -25,13 +25,16 @@ export const useSupportStore = defineStore('support', () => {
         try {
             isLoadingHistory.value = true
             error.value = null
-            await historyResource.ensureLoaded(async ({ signal, isAborted }) => {
-                const history = await supportApi.getChatHistory({ signal })
-                if (isAborted()) {
-                    throw new DOMException('The operation was aborted.', 'AbortError')
-                }
-                messages.value = history
-            }, { force })
+            await historyResource.ensureLoaded(
+                async ({ signal, isAborted }) => {
+                    const history = await supportApi.getChatHistory({ signal })
+                    if (isAborted()) {
+                        throw new DOMException('The operation was aborted.', 'AbortError')
+                    }
+                    messages.value = history
+                },
+                { force },
+            )
         } catch (caughtError) {
             if (isAbortError(caughtError)) {
                 return

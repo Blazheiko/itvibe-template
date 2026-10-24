@@ -4,7 +4,7 @@
  * Helper functions for file operations and type detection
  */
 
-import { BINARY_EXTENSIONS } from "#vendor/constants/index.js";
+import { BINARY_EXTENSIONS } from '#vendor/constants/index.js'
 
 /**
  * Check if a file extension represents a binary file
@@ -12,7 +12,7 @@ import { BINARY_EXTENSIONS } from "#vendor/constants/index.js";
  * @returns true if the file should be treated as binary
  */
 export function isBinaryExtension(extension: string): boolean {
-  return BINARY_EXTENSIONS.includes(extension.toLowerCase());
+    return BINARY_EXTENSIONS.includes(extension.toLowerCase())
 }
 
 /**
@@ -21,11 +21,11 @@ export function isBinaryExtension(extension: string): boolean {
  * @returns File extension without the dot, in lowercase
  */
 export function getFileExtension(filePath: string): string {
-  const lastDotIndex = filePath.lastIndexOf(".");
-  if (lastDotIndex === -1 || lastDotIndex === filePath.length - 1) {
-    return "";
-  }
-  return filePath.substring(lastDotIndex + 1).toLowerCase();
+    const lastDotIndex = filePath.lastIndexOf('.')
+    if (lastDotIndex === -1 || lastDotIndex === filePath.length - 1) {
+        return ''
+    }
+    return filePath.substring(lastDotIndex + 1).toLowerCase()
 }
 
 /**
@@ -34,6 +34,6 @@ export function getFileExtension(filePath: string): string {
  * @returns true if the file should be treated as binary
  */
 export function isBinaryFile(filePath: string): boolean {
-  const extension = getFileExtension(filePath);
-  return isBinaryExtension(extension);
+    const extension = getFileExtension(filePath)
+    return isBinaryExtension(extension)
 }

@@ -2,20 +2,20 @@ import type { ArkSchema, RateLimit, RouteParameter } from '@/stores/api-doc'
 import { getJsonSchemaFields, getJsonSchemaVariants } from '@/utils/json-schema-guards'
 
 export function getMethodClass(method: string | undefined): string {
-  if (!method) return 'method-unknown'
-  return `method-${method.toLowerCase()}`
+    if (!method) return 'method-unknown'
+    return `method-${method.toLowerCase()}`
 }
 
 export function getTypeClass(type: string): string {
-  const typeClasses: Record<string, string> = {
-    string: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
-    number: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
-    boolean: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
-    enum: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-    unknown: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300',
-  }
+    const typeClasses: Record<string, string> = {
+        string: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+        number: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+        boolean: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
+        enum: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+        unknown: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300',
+    }
 
-  return typeClasses[type] || typeClasses.unknown
+    return typeClasses[type] || typeClasses.unknown
 }
 
 /**
@@ -23,135 +23,136 @@ export function getTypeClass(type: string): string {
  * based on the ArkType expression string.
  */
 export function getFieldTypeClass(typeExpr: string): string {
-  if (typeExpr.startsWith('{')) {
-    return 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200'
-  }
-  if (typeExpr.includes('|')) {
-    return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-  }
-  if (typeExpr.includes('string')) {
-    return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-  }
-  if (typeExpr.includes('number')) {
-    return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-  }
-  if (typeExpr.includes('boolean')) {
-    return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
-  }
-  return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+    if (typeExpr.startsWith('{')) {
+        return 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200'
+    }
+    if (typeExpr.includes('|')) {
+        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+    }
+    if (typeExpr.includes('string')) {
+        return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+    }
+    if (typeExpr.includes('number')) {
+        return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+    }
+    if (typeExpr.includes('boolean')) {
+        return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+    }
+    return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
 }
 
 export function extractParameters(url: string): RouteParameter[] {
-  const params: RouteParameter[] = []
-  const matches = url.match(/:([^/]+)/g)
+    const params: RouteParameter[] = []
+    const matches = url.match(/:([^/]+)/g)
 
-  if (matches) {
-    matches.forEach((match) => {
-      params.push({
-        name: match.substring(1),
-        type: 'path',
-        required: true,
-      })
-    })
-  }
+    if (matches) {
+        matches.forEach((match) => {
+            params.push({
+                name: match.substring(1),
+                type: 'path',
+                required: true,
+            })
+        })
+    }
 
-  return params
+    return params
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${Number((bytes / (1024 * 1024)).toFixed(1))} MiB`
-  if (bytes >= 1024) return `${Number((bytes / 1024).toFixed(1))} KiB`
-  return `${bytes} B`
+    if (bytes >= 1024 * 1024) return `${Number((bytes / (1024 * 1024)).toFixed(1))} MiB`
+    if (bytes >= 1024) return `${Number((bytes / 1024).toFixed(1))} KiB`
+    return `${bytes} B`
 }
 
 export function formatRateLimit(rateLimit?: RateLimit) {
-  if (!rateLimit || (!rateLimit.windowMs && !rateLimit.maxRequests)) {
-    return null
-  }
+    if (!rateLimit || (!rateLimit.windowMs && !rateLimit.maxRequests)) {
+        return null
+    }
 
-  const windowMs = rateLimit.windowMs || 0
-  const maxRequests = rateLimit.maxRequests || 0
+    const windowMs = rateLimit.windowMs || 0
+    const maxRequests = rateLimit.maxRequests || 0
 
-  let timeFormat = ''
+    let timeFormat = ''
 
-  if (windowMs >= 60 * 60 * 1000) {
-    const hours = Math.floor(windowMs / (60 * 60 * 1000))
-    const minutes = Math.floor((windowMs % (60 * 60 * 1000)) / (60 * 1000))
-    timeFormat = hours > 0 ? `${hours}h ${minutes > 0 ? minutes + 'm' : ''}`.trim() : `${minutes}m`
-  } else if (windowMs >= 60 * 1000) {
-    const minutes = Math.floor(windowMs / (60 * 1000))
-    const seconds = Math.floor((windowMs % (60 * 1000)) / 1000)
-    timeFormat = `${minutes}m${seconds > 0 ? ` ${seconds}s` : ''}`
-  } else if (windowMs >= 1000) {
-    const seconds = Math.floor(windowMs / 1000)
-    timeFormat = `${seconds}s`
-  } else {
-    timeFormat = `${windowMs}ms`
-  }
+    if (windowMs >= 60 * 60 * 1000) {
+        const hours = Math.floor(windowMs / (60 * 60 * 1000))
+        const minutes = Math.floor((windowMs % (60 * 60 * 1000)) / (60 * 1000))
+        timeFormat =
+            hours > 0 ? `${hours}h ${minutes > 0 ? minutes + 'm' : ''}`.trim() : `${minutes}m`
+    } else if (windowMs >= 60 * 1000) {
+        const minutes = Math.floor(windowMs / (60 * 1000))
+        const seconds = Math.floor((windowMs % (60 * 1000)) / 1000)
+        timeFormat = `${minutes}m${seconds > 0 ? ` ${seconds}s` : ''}`
+    } else if (windowMs >= 1000) {
+        const seconds = Math.floor(windowMs / 1000)
+        timeFormat = `${seconds}s`
+    } else {
+        timeFormat = `${windowMs}ms`
+    }
 
-  return {
-    windowMs,
-    maxRequests,
-    formatted: `${maxRequests} req/${timeFormat}`,
-  }
+    return {
+        windowMs,
+        maxRequests,
+        formatted: `${maxRequests} req/${timeFormat}`,
+    }
 }
 
 function generateDefaultValue(name: string, typeExpr: string): unknown {
-  if (typeExpr.includes('email')) return 'user@example.com'
-  if (typeExpr.includes('password')) return 'your_password'
-  if (typeExpr.includes('string')) {
-    return name.includes('name') ? 'Example Name' : `sample_${name}`
-  }
-  if (typeExpr.includes('number')) return name.includes('id') ? 1 : 123
-  if (typeExpr.includes('boolean')) return true
-  return `sample_${name}`
+    if (typeExpr.includes('email')) return 'user@example.com'
+    if (typeExpr.includes('password')) return 'your_password'
+    if (typeExpr.includes('string')) {
+        return name.includes('name') ? 'Example Name' : `sample_${name}`
+    }
+    if (typeExpr.includes('number')) return name.includes('id') ? 1 : 123
+    if (typeExpr.includes('boolean')) return true
+    return `sample_${name}`
 }
 
 export function getDefaultRequestBody(inputSchema: ArkSchema | undefined): string {
-  if (inputSchema === undefined) return '{\n  "key": "value"\n}'
-  const schemaFields =
-    inputSchema.fields.length > 0
-      ? inputSchema.fields
-      : // TODO(api-playground): let testers choose a union branch instead of always seeding the first one.
-        (getJsonSchemaVariants(inputSchema.jsonSchema)[0]?.fields ??
-        getJsonSchemaFields(inputSchema.jsonSchema))
+    if (inputSchema === undefined) return '{\n  "key": "value"\n}'
+    const schemaFields =
+        inputSchema.fields.length > 0
+            ? inputSchema.fields
+            : // TODO(api-playground): let testers choose a union branch instead of always seeding the first one.
+              (getJsonSchemaVariants(inputSchema.jsonSchema)[0]?.fields ??
+              getJsonSchemaFields(inputSchema.jsonSchema))
 
-  if (schemaFields.length === 0) return '{}'
+    if (schemaFields.length === 0) return '{}'
 
-  const defaultBody: Record<string, unknown> = {}
-  for (const field of schemaFields) {
-    if (field.required) {
-      defaultBody[field.name] = generateDefaultValue(field.name, field.type)
+    const defaultBody: Record<string, unknown> = {}
+    for (const field of schemaFields) {
+        if (field.required) {
+            defaultBody[field.name] = generateDefaultValue(field.name, field.type)
+        }
     }
-  }
 
-  return JSON.stringify(defaultBody, null, 2)
+    return JSON.stringify(defaultBody, null, 2)
 }
 
 export function validateJSON(jsonString: string): {
-  isValid: boolean
-  data?: unknown
-  error?: string
+    isValid: boolean
+    data?: unknown
+    error?: string
 } {
-  if (!jsonString.trim()) {
-    return { isValid: true }
-  }
-
-  try {
-    const parsed = JSON.parse(jsonString)
-    return { isValid: true, data: parsed }
-  } catch (error) {
-    return {
-      isValid: false,
-      error: error instanceof Error ? error.message : 'Invalid JSON',
+    if (!jsonString.trim()) {
+        return { isValid: true }
     }
-  }
+
+    try {
+        const parsed = JSON.parse(jsonString)
+        return { isValid: true, data: parsed }
+    } catch (error) {
+        return {
+            isValid: false,
+            error: error instanceof Error ? error.message : 'Invalid JSON',
+        }
+    }
 }
 
 export function normalizePath(path: string): string {
-  if (!path) return ''
-  let normalizedPath = path
-  if (normalizedPath.endsWith('/')) normalizedPath = normalizedPath.slice(0, -1)
-  if (normalizedPath.startsWith('/')) normalizedPath = normalizedPath.slice(1)
-  return normalizedPath
+    if (!path) return ''
+    let normalizedPath = path
+    if (normalizedPath.endsWith('/')) normalizedPath = normalizedPath.slice(0, -1)
+    if (normalizedPath.startsWith('/')) normalizedPath = normalizedPath.slice(1)
+    return normalizedPath
 }

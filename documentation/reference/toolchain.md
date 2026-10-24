@@ -53,13 +53,13 @@ Path aliases бекенду в [`packages/backend/tsconfig.json`](https://github
 
 ## Prettier
 
-- У корені немає `.prettierrc`, лише [`.prettierignore`](https://github.com/Blazheiko/itvibe-template/blob/main/.prettierignore) (кеш і dist VitePress). Кореневі `pnpm format` / `pnpm format:check` обробляють `**/*.{ts,tsx,json,md}`, і для файлів без локального конфігу діють **дефолти Prettier** (подвійні лапки, крапки з комою, ширина 80, відступ 2).
-- [`packages/frontend/.prettierrc.json`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/.prettierrc.json): `semi: false`, `singleQuote: true`, `printWidth: 100`, `tabWidth: 4`.
-- [`packages/api-playground/.prettierrc.json`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/.prettierrc.json): те саме, але без `tabWidth` (тобто 2).
-- У `backend` і `shared` власних конфігів немає.
+- Один кореневий [`.prettierrc.json`](https://github.com/Blazheiko/itvibe-template/blob/main/.prettierrc.json) для всіх пакетів: `tabWidth: 4`, `singleQuote: true`, `semi: false`, `printWidth: 100` — стиль з `AGENTS.md`. Пакетних конфігів немає.
+- [`.prettierignore`](https://github.com/Blazheiko/itvibe-template/blob/main/.prettierignore): `node_modules`, `dist`, `coverage`, звіти Playwright, міграції Drizzle, кеш і dist VitePress, `pnpm-lock.yaml`, `graphify-out`.
+- Кореневі `pnpm format` / `pnpm format:check` обробляють `**/*.{ts,tsx,json,md}`; на `main` `format:check` проходить.
+- Масове форматування (feat-010) записано в [`.git-blame-ignore-revs`](https://github.com/Blazheiko/itvibe-template/blob/main/.git-blame-ignore-revs). Щоб `git blame` його пропускав: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 ::: warning Відома проблема
-`AGENTS.md` описує стиль «4 пробіли, одинарні лапки, без крапок з комою», але бекенд здебільшого написаний з подвійними лапками й крапками з комою. На `main` `pnpm format:check` падає (див. п. 16 у [`code-issues-found-during-docs.md`](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)). Тому `format:check` не входить у Definition of Done, а `prettier --write` варто запускати лише для файлів, які ви змінюєте.
+Glob `format:check` не охоплює `.vue`, `.js`, `.mjs` і `.css`, тож ці файли не перевіряються (п. 71 у [`code-issues-found-during-docs.md`](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)). Пакетні `pnpm --filter frontend format` і `pnpm --filter api-playground format` форматують `src/` за кореневим конфігом.
 :::
 
 ## Drizzle
