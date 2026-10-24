@@ -78,11 +78,11 @@
     {
       "id": "feat-009",
       "name": "Internal Docs Cleanup",
-      "description": "Update or remove stale internal docs (SESSION_SECURITY, SECURITY_ANALYSIS, etag-improvements, directory-structure, scripts README), turn VALIDATOR_ABSTRACTION_PLAN into an ADR, fix backend README drift list (item 15). Details: docs/plan/code-issues-found-during-docs.md",
-      "owner": "",
-      "branch": "",
+      "description": "Clean up stale internal docs outside documentation/ (item 15, scope extended): backend (remove SESSION_SECURITY, etag-improvements, directory-structure, dead export-types.js; SECURITY_ANALYSIS -> traceable status table in docs/security/; VALIDATOR_ABSTRACTION_PLAN -> ADR in docs/adr/; move HTTP_BODY_LIMITS_PLAN to docs/plan/; update backend README and scripts README); root README and AGENTS.md fixes; api-playground docs merged into documentation/playground and removed, short README; frontend README and composables docs; status lines for finished plans in docs/plan/. Plan: docs/plan/internal-docs-cleanup-plan.md",
+      "owner": "Blazheiko",
+      "branch": "feat/internal-docs-cleanup",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     },
     {
