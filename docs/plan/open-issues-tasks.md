@@ -273,15 +273,15 @@
 ### F14 Static Caching (п. 39, 40, 41)
 
 - [x] **F14.S** Шаблон S (M).
-- [ ] **F14.1** `Cache-Control`: `immutable` лише `/assets/*`, решта — `no-cache` + ETag (п. 39).
+- [x] **F14.1** `Cache-Control`: `immutable` лише `/assets/*`, решта — `no-cache` + ETag (п. 39).
       **AC:** тести для `/assets/x.js`, `/manifest.json`, `/service-worker.js`, `/index.html`.
-- [ ] **F14.2** Парсер `If-None-Match` (RFC 9110: список, `*`, `W/`) (п. 40).
+- [x] **F14.2** Парсер `If-None-Match` (RFC 9110: список, `*`, `W/`) (п. 40).
       **AC:** unit на кожен випадок; 304 у static handler.
-- [ ] **F14.3** RAM-кеш з `STATIC_MAX_MEMORY_FILE_SIZE` (1 MiB) і `STATIC_MAX_MEMORY_TOTAL` (64 MiB); решта — стрімінг з диска, ETag за `size+mtime` (п. 41).
+- [x] **F14.3** RAM-кеш з `STATIC_MAX_MEMORY_FILE_SIZE` (1 MiB) і `STATIC_MAX_MEMORY_TOTAL` (64 MiB); решта — стрімінг з диска, ETag за `size+mtime` (п. 41).
       **AC:** тест: файл 5 MiB не в Map, відповідь побайтно ідентична; лог розміру кешу ≤ ліміту.
-- [ ] **F14.4** Збірка фронтенду генерує `.br`/`.gz`; сервер віддає їх за `Accept-Encoding` з `Vary` (п. 41).
+- [x] **F14.4** Збірка фронтенду генерує `.br`/`.gz`; сервер віддає їх за `Accept-Encoding` з `Vary` (п. 41).
       **AC:** тести: `Accept-Encoding: br` → `.br` з `Content-Encoding: br`; `gzip` → `.gz` з `Content-Encoding: gzip`; без заголовка — оригінал без `Content-Encoding`; у всіх трьох — `Vary: Accept-Encoding`; файл без `.br`/`.gz` поруч — оригінал.
-- [ ] **F14.D** Шаблон D: `caching.md`, `configuration.md`. **F14.E**, **F14.X**.
+- [x] **F14.D** Шаблон D: `caching.md`, `configuration.md`. **F14.E**, **F14.X**.
 
 ## Хвиля 7 — пакети і фронтенд (паралельно, після F00)
 

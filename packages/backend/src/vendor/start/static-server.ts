@@ -1,7 +1,8 @@
 import process from 'node:process'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { promises as fs } from 'node:fs'
+import { createReadStream, promises as fs } from 'node:fs'
+import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:zlib'
 import logger from '#vendor/utils/logger.js'
 import appConfig from '#config/app.js'
 import type { HttpRequest, HttpResponse } from '#vendor/start/server.js'
@@ -12,6 +13,7 @@ import {
     setSecurityHeaders,
     writeHttpStatus,
 } from '#vendor/utils/network/http-response-handlers.js'
+import { matchesIfNoneMatch } from '#vendor/utils/network/if-none-match.js'
 
 const STATIC_PATH =
     appConfig.env === 'manual-test'
@@ -56,30 +58,108 @@ const isUrlSafe = (url: string): boolean =>
     !url.toLowerCase().includes('%2e%2e') &&
     !url.includes('%00')
 
-const cache = new Map<string, string | Buffer>()
+/**
+ * One static file. Small files live in memory (with br/gzip variants for text
+ * types); large ones, and everything past the memory budget, are streamed from
+ * disk (code-issues item 41).
+ */
+export type StaticEntry =
+    | {
+          kind: 'memory'
+          data: string | Buffer
+          etag: string
+          br?: Buffer
+          gzip?: Buffer
+      }
+    | { kind: 'disk'; filePath: string; size: number; etag: string }
+
+const cache = new Map<string, StaticEntry>()
+let memoryUsed = 0
 
 /**
  * Validators must be derived from content, not from byte length: a rebuild
  * typically changes only the fixed-length asset hashes inside `index.html`, so a
  * length-based ETag would keep validating an obsolete app shell and a client
  * would hold on to a shell referencing assets the new deployment no longer has.
- * Files are read once at startup, so each hash is computed once too.
+ * Files are read once at startup, so each hash is computed once too. Streamed
+ * files are not read at startup; their ETag comes from size and mtime.
  */
-const etags = new Map<string, string>()
-
 const computeEtag = (data: string | Buffer): string =>
     `"${crypto.createHash('sha1').update(data).digest('base64url')}"`
 
-const getEtag = (key: string, data: string | Buffer): string => etags.get(key) ?? computeEtag(data)
+const COMPRESSIBLE_EXTENSIONS = new Set([
+    'html',
+    'htm',
+    'js',
+    'mjs',
+    'css',
+    'svg',
+    'json',
+    'webmanifest',
+    'manifest',
+    'txt',
+    'xml',
+])
+const MIN_COMPRESS_BYTES = 1024
+
+const byteLength = (data: string | Buffer): number =>
+    Buffer.isBuffer(data) ? data.length : Buffer.byteLength(data, 'utf8')
+
+// br/gzip computed once at startup; a variant is kept only when it is smaller.
+const compressedVariants = (ext: string, data: string | Buffer): { br?: Buffer; gzip?: Buffer } => {
+    const size = byteLength(data)
+    if (!COMPRESSIBLE_EXTENSIONS.has(ext) || size < MIN_COMPRESS_BYTES) return {}
+    const input = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8')
+    const br = brotliCompressSync(input, {
+        params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 },
+    })
+    const gzip = gzipSync(input, { level: 9 })
+    return {
+        ...(br.length < size ? { br } : {}),
+        ...(gzip.length < size ? { gzip } : {}),
+    }
+}
+
+const memoryCost = (entry: StaticEntry | undefined): number =>
+    entry?.kind === 'memory'
+        ? byteLength(entry.data) + (entry.br?.length ?? 0) + (entry.gzip?.length ?? 0)
+        : 0
+
+/** An in-memory entry for `data`, with its ETag and compressed variants. */
+const memoryEntry = (data: string | Buffer, ext = ''): StaticEntry => ({
+    kind: 'memory',
+    data,
+    etag: computeEtag(data),
+    ...compressedVariants(ext, data),
+})
 
 const cacheFile = async (filePath: string): Promise<void> => {
     const ext = path.extname(filePath).substring(1).toLowerCase()
     if (!ALLOWED_STATIC_EXTENSIONS.has(ext)) return
-    const isBinary = isBinaryExtension(ext)
-    const data = await fs.readFile(filePath, isBinary ? null : 'utf8')
     const key = filePath.substring(STATIC_PATH.length)
-    cache.set(key, data)
-    etags.set(key, computeEtag(data))
+    const stats = await fs.stat(filePath)
+    // Re-caching a file (rebuild in place) frees the budget of its previous version.
+    memoryUsed -= memoryCost(cache.get(key))
+
+    // The SPA shell always stays in memory: the fallback route serves it for every path.
+    const fitsInMemory =
+        key === '/index.html' ||
+        (stats.size <= appConfig.staticMaxMemoryFileSize &&
+            memoryUsed + stats.size <= appConfig.staticMaxMemoryTotal)
+    if (!fitsInMemory) {
+        cache.set(key, {
+            kind: 'disk',
+            filePath,
+            size: stats.size,
+            etag: `W/"${stats.size.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`,
+        })
+        return
+    }
+
+    const data = await fs.readFile(filePath, isBinaryExtension(ext) ? null : 'utf8')
+    const entry = memoryEntry(data, ext)
+    memoryUsed += memoryCost(entry)
+    cache.set(key, entry)
 }
 
 const cacheDirectory = async (directoryPath: string): Promise<void> => {
@@ -92,8 +172,7 @@ const cacheDirectory = async (directoryPath: string): Promise<void> => {
     }
 }
 
-const cacheStaticSource = async (): Promise<Map<string, string | Buffer> | null> => {
-    // logger.info('cachStaticSource');
+const cacheStaticSource = async (): Promise<Map<string, StaticEntry> | null> => {
     if (appConfig.serveStatic) {
         const stats = await fs.stat(STATIC_PATH).catch(() => null)
         if (stats === null || !stats.isDirectory()) {
@@ -104,12 +183,13 @@ const cacheStaticSource = async (): Promise<Map<string, string | Buffer> | null>
             return null
         }
         await cacheDirectory(STATIC_PATH)
-        // logger.info('Success cache Directory ' + STATIC_PATH);
-        const indexHtml = cache.get('/index.html')
-        if (indexHtml !== undefined && indexHtml !== '') {
-            cache.set('/', indexHtml)
-            etags.set('/', getEtag('/index.html', indexHtml))
-        }
+        const index = cache.get('/index.html')
+        if (index !== undefined) cache.set('/', index)
+        const onDisk = [...cache.values()].filter((entry) => entry.kind === 'disk').length
+        logger.info(
+            { files: cache.size, memoryBytes: memoryUsed, streamedFromDisk: onDisk },
+            'Static files cached',
+        )
         return cache
     }
     return null
@@ -123,9 +203,14 @@ const getAssetCspKind = (url: string, ext: string): CspKind | null => {
     return ext === 'svg' ? 'svg' : null
 }
 
+const indexData = (): string | Buffer | undefined => {
+    const entry = cache.get('/index.html')
+    return entry?.kind === 'memory' && entry.data !== '' ? entry.data : undefined
+}
+
 const staticIndexHandler = (res: HttpResponse): void => {
-    const data = cache.get('/index.html')
-    const statusCode = data !== undefined && data !== '' ? 200 : 404
+    const data = indexData()
+    const statusCode = data !== undefined ? 200 : 404
     const mimeType = MIME_TYPES['html']
     res.cork(() => {
         writeHttpStatus(res, statusCode)
@@ -133,11 +218,7 @@ const staticIndexHandler = (res: HttpResponse): void => {
         if (mimeType !== undefined && mimeType !== '') {
             res.writeHeader('Content-Type', mimeType)
         }
-        if (data !== undefined && data !== '') {
-            res.end(data)
-        } else {
-            res.end('404 Not Found')
-        }
+        res.end(data ?? '404 Not Found')
     })
 }
 
@@ -147,88 +228,176 @@ const staticIndexHandler = (res: HttpResponse): void => {
  * CSRF token are issued by the API on app initialization.
  */
 const HTML_CACHE_CONTROL = 'public, max-age=0, must-revalidate'
+// Vite puts content-hashed files under /assets/: safe to keep for a year.
+const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable'
+// Everything else keeps its name across deployments (manifest, service worker,
+// icons, audio): cacheable, but revalidated by ETag every time (code-issues item 39).
+const REVALIDATE_CACHE_CONTROL = 'no-cache'
+
+const cacheControlFor = (url: string): string =>
+    url.startsWith('/assets/') ? IMMUTABLE_CACHE_CONTROL : REVALIDATE_CACHE_CONTROL
+
+type Encoding = 'br' | 'gzip'
+
+// Picks the smallest stored variant the client accepts (q=0 means "not acceptable").
+const pickEncoding = (
+    acceptEncoding: string,
+    entry: { br?: Buffer; gzip?: Buffer },
+): Encoding | null => {
+    const accepted = new Set(
+        acceptEncoding
+            .toLowerCase()
+            .split(',')
+            .map((part) => part.trim())
+            .filter((part) => !/;\s*q=0(\.0+)?\s*$/.test(part))
+            .map((part) => part.split(';')[0]?.trim() ?? ''),
+    )
+    if (entry.br !== undefined && accepted.has('br')) return 'br'
+    if (entry.gzip !== undefined && accepted.has('gzip')) return 'gzip'
+    return null
+}
 
 const handleHtmlRequest = (
     res: HttpResponse,
     req: HttpRequest,
-    htmlData: string | Buffer,
-    etag: string,
+    entry: Extract<StaticEntry, { kind: 'memory' }>,
 ): void => {
-    const ifNoneMatch = req.getHeader('if-none-match')
+    const notModified = matchesIfNoneMatch(req.getHeader('if-none-match'), entry.etag)
+    const encoding = notModified ? null : pickEncoding(req.getHeader('accept-encoding'), entry)
 
     res.cork(() => {
-        const notModified = ifNoneMatch === etag
         writeHttpStatus(res, notModified ? 304 : 200)
         res.writeHeader('content-type', MIME_TYPES['html'] ?? '')
         res.writeHeader('Cache-Control', HTML_CACHE_CONTROL)
-        res.writeHeader('ETag', etag)
+        res.writeHeader('ETag', entry.etag)
+        if (entry.br !== undefined || entry.gzip !== undefined) {
+            res.writeHeader('Vary', 'Accept-Encoding')
+        }
         setSecurityHeaders(res, [], 'document')
         if (notModified) {
             res.end()
             return
         }
-        res.end(htmlData)
+        if (encoding !== null) {
+            res.writeHeader('Content-Encoding', encoding)
+            res.end(entry[encoding])
+            return
+        }
+        res.end(entry.data)
+    })
+}
+
+// Streams a file with uWS backpressure: tryEnd until it does not fit, then wait
+// for onWritable. Every write is corked; an aborted request stops the read.
+const streamFile = (
+    res: HttpResponse,
+    entry: Extract<StaticEntry, { kind: 'disk' }>,
+    writeHeaders: () => void,
+): void => {
+    const stream = createReadStream(entry.filePath)
+    let aborted = false
+    res.onAborted(() => {
+        aborted = true
+        stream.destroy()
+    })
+    res.cork(() => {
+        writeHttpStatus(res, 200)
+        writeHeaders()
+    })
+    stream.on('error', (err) => {
+        logger.error({ err, filePath: entry.filePath }, 'Static file stream failed')
+        if (!aborted) res.cork(() => res.close())
+    })
+    stream.on('data', (chunk) => {
+        if (aborted) return
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+        const arrayBuffer = buffer.buffer.slice(
+            buffer.byteOffset,
+            buffer.byteOffset + buffer.byteLength,
+        ) as ArrayBuffer
+        const startOffset = res.getWriteOffset()
+        let ok = false
+        let done = false
+        res.cork(() => {
+            ;[ok, done] = res.tryEnd(arrayBuffer, entry.size)
+        })
+        if (done) {
+            stream.destroy()
+            return
+        }
+        if (!ok) {
+            stream.pause()
+            res.onWritable((offset) => {
+                let retryOk = false
+                let retryDone = false
+                res.cork(() => {
+                    ;[retryOk, retryDone] = res.tryEnd(
+                        arrayBuffer.slice(offset - startOffset),
+                        entry.size,
+                    )
+                })
+                if (retryDone) stream.destroy()
+                else if (retryOk) stream.resume()
+                return retryOk
+            })
+        }
     })
 }
 
 const staticCacheHandler = async (
     res: HttpResponse,
     req: HttpRequest,
-    cachedData: string | Buffer,
+    entry: StaticEntry,
 ): Promise<void> => {
     const url = req.getUrl()
     const ext = url.includes('.') ? path.extname(url).substring(1).toLowerCase() : ''
-
     const mimeType = ext !== '' ? (MIME_TYPES[ext] ?? MIME_TYPES['default']) : MIME_TYPES['html']
-
-    const etag = getEtag(url, cachedData)
     const cspKind = getAssetCspKind(url, ext)
+    const cacheControl = cacheControlFor(url)
 
-    if (mimeType === MIME_TYPES['html']) {
-        handleHtmlRequest(res, req, cachedData, etag)
+    if (entry.kind === 'memory' && mimeType === MIME_TYPES['html']) {
+        handleHtmlRequest(res, req, entry)
         return
     }
 
-    // Add cache headers for better performance
-    const maxAge = 31536000 // 1 year in seconds
-
-    const dataLength = Buffer.isBuffer(cachedData)
-        ? cachedData.length
-        : Buffer.byteLength(cachedData, 'utf8')
-
-    // Check if client has cached version
-    const ifNoneMatch = req.getHeader('if-none-match')
-    if (ifNoneMatch === etag) {
-        // Cache hit - file not modified
-        // logger.info(`Cache hit for ${url} - returning 304`);
+    if (matchesIfNoneMatch(req.getHeader('if-none-match'), entry.etag)) {
         res.cork(() => {
             writeHttpStatus(res, 304)
-            res.writeHeader('Cache-Control', `public, max-age=${String(maxAge)}, immutable`)
-            res.writeHeader('ETag', etag)
+            res.writeHeader('Cache-Control', cacheControl)
+            res.writeHeader('ETag', entry.etag)
             setSecurityHeaders(res, [], cspKind)
             res.end()
         })
         return
     }
-    res.cork(() => {
-        writeHttpStatus(res, 200)
 
-        // Set appropriate headers
+    const writeCommonHeaders = (): void => {
         if (mimeType !== undefined && mimeType !== '') {
             res.writeHeader('Content-Type', mimeType)
         }
-        res.writeHeader('Content-Length', dataLength.toString())
-
-        // For static assets, use longer cache time
-        res.writeHeader('Cache-Control', `public, max-age=${String(maxAge)}, immutable`)
-        res.writeHeader('ETag', etag)
-
+        res.writeHeader('Cache-Control', cacheControl)
+        res.writeHeader('ETag', entry.etag)
         setSecurityHeaders(res, [], cspKind)
+    }
 
-        // Note: Compression not implemented yet
-        // When adding compression support, add: res.writeHeader('Vary', 'Accept-Encoding');
+    if (entry.kind === 'disk') {
+        streamFile(res, entry, writeCommonHeaders)
+        return
+    }
 
-        res.end(cachedData)
+    const encoding = pickEncoding(req.getHeader('accept-encoding'), entry)
+    res.cork(() => {
+        writeHttpStatus(res, 200)
+        writeCommonHeaders()
+        if (entry.br !== undefined || entry.gzip !== undefined) {
+            res.writeHeader('Vary', 'Accept-Encoding')
+        }
+        if (encoding !== null) {
+            res.writeHeader('Content-Encoding', encoding)
+            res.end(entry[encoding])
+            return
+        }
+        res.end(entry.data)
     })
 }
 
@@ -244,30 +413,24 @@ const staticHandler = async (res: HttpResponse, req: HttpRequest): Promise<void>
         return
     }
 
-    let data: string | Buffer | null = null
-    let statusCode = 404
-    let mimeType = ''
-
     if (!url.includes('.')) {
-        const indexHtml = cache.get('/index.html')
-        data = indexHtml ?? null
-        statusCode = indexHtml !== undefined && indexHtml !== '' ? 200 : 404
-        mimeType = indexHtml !== undefined && indexHtml !== '' ? (MIME_TYPES['html'] ?? '') : ''
-        if (data !== null && statusCode === 200) {
-            handleHtmlRequest(res, req, data, getEtag('/index.html', data))
+        const index = cache.get('/index.html')
+        if (index?.kind === 'memory' && index.data !== '') {
+            handleHtmlRequest(res, req, index)
             return
         }
     }
 
     res.cork(() => {
-        writeHttpStatus(res, statusCode)
-        res.writeHeader('Content-Type', mimeType)
+        writeHttpStatus(res, 404)
+        res.writeHeader('Content-Type', '')
         setSecurityHeaders(res)
-        res.end(data ?? '')
+        res.end('')
     })
 }
 
 export {
+    memoryEntry,
     cacheFile,
     cacheDirectory,
     cacheStaticSource,

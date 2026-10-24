@@ -29,6 +29,7 @@
 | feat-028 | 53             |
 | feat-029 | 43, 52, 54     |
 | feat-030 | 33, 34, 35     |
+| feat-031 | 39, 40, 41     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -76,9 +77,9 @@
 | 36  | ~~Немає CI для тестів застосунку і coverage~~ ✅                                                                  | Середня      | Тести / CI                   |
 | 37  | ~~`vitest.config.ts` без `testTimeout`, таймаути під навантаженням~~ ✅                                           | Низька       | Тести                        |
 | 38  | ~~Playwright `webServer` використовує `npm` у pnpm-workspace~~ ✅                                                 | Низька       | Тести / frontend             |
-| 39  | Річний `immutable` для всіх не-HTML файлів, зокрема без хешу                                                      | Середня      | Кешування                    |
-| 40  | `If-None-Match` порівнюється як точний рядок                                                                      | Низька       | Кешування                    |
-| 41  | Статика повністю в RAM без стиснення і ліміту                                                                     | Низька       | Продуктивність               |
+| 39  | ~~Річний `immutable` для всіх не-HTML файлів, зокрема без хешу~~ ✅                                               | Середня      | Кешування                    |
+| 40  | ~~`If-None-Match` порівнюється як точний рядок~~ ✅                                                               | Низька       | Кешування                    |
+| 41  | ~~Статика повністю в RAM без стиснення і ліміту~~ ✅                                                              | Низька       | Продуктивність               |
 | 42  | ~~API JSON без `Cache-Control: no-store`~~ ✅                                                                     | Середня      | Кешування / безпека          |
 | 43  | ~~Кеш промптів у пам'яті процесу без TTL~~ ✅                                                                     | Низька       | Кешування / AI               |
 | 44  | ~~`deleteFromS3` без `buildKey`, логіка префікса в трьох місцях~~ ✅                                              | Низька       | Сховище                      |
@@ -442,16 +443,22 @@
 
 ### 39. Річний `immutable` для всіх не-HTML файлів
 
+> **Виправлено** у feat-031 (гілка `feat/static-caching`) за планом [`static-caching-plan.md`](./static-caching-plan.md): `immutable` лише для `/assets/*`, решта — `no-cache` з ETag (`manifest.json`, `service-worker.js`, іконки, аудіо).
+
 - **Що:** `src/vendor/start/static-server.ts` віддає `public, max-age=31536000, immutable` для кожного не-HTML файлу, а не лише для хешованих `/assets/*`. Під нього потрапляють `manifest.json`, `favicon.svg`, `/icons/*`, `/audio/*` і `service-worker.js` (збирається з фіксованим ім'ям у `packages/frontend/vite.sw.config.ts`).
 - **Наслідок:** зміни в цих файлах без зміни імені клієнти можуть не бачити до року. Скрипт SW браузер перевіряє в обхід HTTP-кешу, але маніфест, іконки й аудіо — ні.
 - **Пропозиція:** `immutable` лише для `/assets/` (хешовані імена), для решти `no-cache` або короткий `max-age`.
 
 ### 40. `If-None-Match` порівнюється як точний рядок
 
+> **Виправлено** у feat-031 (гілка `feat/static-caching`) за планом [`static-caching-plan.md`](./static-caching-plan.md): `matchesIfNoneMatch` за RFC 9110: `*`, списки, слабке порівняння `W/`.
+
 - **Що:** у `static-server.ts` перевірка `ifNoneMatch === etag`. Списки ETag, `*` і слабкі `W/"…"` не обробляються.
 - **Пропозиція:** розбирати заголовок за RFC 9110.
 
 ### 41. Статика повністю в RAM без стиснення і ліміту
+
+> **Виправлено** у feat-031 (гілка `feat/static-caching`) за планом [`static-caching-plan.md`](./static-caching-plan.md): `STATIC_MAX_MEMORY_FILE_SIZE` (1 MiB) і `STATIC_MAX_MEMORY_TOTAL` (64 MiB), решта стрімінгом з диска з backpressure; `br`/`gzip`-варіанти текстових файлів на старті з `Vary: Accept-Encoding`. Відступ від roadmap: стиснення на старті сервера, а не `.br`/`.gz` при збірці фронтенду — без нових залежностей і для будь-якого вмісту `public`.
 
 - **Що:** увесь `public` читається в пам'ять на старті без ліміту розміру; gzip/brotli немає.
 - **Пропозиція:** попередньо стиснуті `.br`/`.gz` при збірці; ліміт або стрімінг для великих файлів; або роздача статики через CDN/проксі (`CDN_URL`).
