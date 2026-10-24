@@ -512,7 +512,7 @@ export type AppResult&lt;T&gt; = Result&lt;T, AppError&gt;</code></pre>
   <h2>Transformer — контракт відповіді</h2>
   <pre><code class="language-ts">export const userTransformer = {
   serialize(user: UserRow): SerializedUser {
-    const { id, password: _p, isAdmin: _a,
+    const { id, password: _p,
             createdAt, updatedAt, emailVerifiedAt, ...rest } = user
     return {
       ...rest,
@@ -525,7 +525,7 @@ export type AppResult&lt;T&gt; = Result&lt;T, AppError&gt;</code></pre>
     }
   },
 }</code></pre>
-  <p class="small">Саме тут — і лише тут — зрізаються <b>password</b>/<b>isAdmin</b>, конвертується bigint і форматуються дати.</p>
+  <p class="small">Саме тут — і лише тут — зрізається <b>password</b>, конвертується bigint і форматуються дати.</p>
 </section>
 
 <!-- 25 -->

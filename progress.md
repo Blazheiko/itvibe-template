@@ -3,37 +3,33 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-033 - Frontend & Playground (F16 of `docs/plan/open-issues-roadmap.md`, items 59, 61, 62, 63, 64)
-**Branch:** `feat/frontend-playground`
-**Tasks:** `docs/plan/open-issues-tasks.md`, F16
+**Active Feature:** feat-034 - Drop users.is_admin (F17 of `docs/plan/open-issues-roadmap.md`, item 66, decision R5)
+**Branch:** `feat/drop-is-admin`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F17
 
 ## Status
 
 ### Done
 
-- [x] F16.S: PR #86 (feat-032 done, feat-033 `in_progress`)
-- [x] F16.1 (item 59): `base-api.ts` falls back to `''` (same origin) instead of the example domain; `.env.example` has an empty `VITE_BASE_URL`
-- [x] F16.2 (item 61): `env.d.ts` types every `VITE_*` the app reads; dead push code and the wrong "every minute" comment removed from `main.ts`
-- [x] F16.3 (item 62): `utils/api-path.ts` — `apiUrl(baseUrl, path)` under `VITE_API_PATH_PREFIX` (default `api`); the dev proxy uses the same variable
-- [x] F16.4 (item 63): `toWsUrl`: `https` → `wss`, `http` → `ws`
-- [x] F16.5 (item 64, R4): `sendMessage` without a connection logs `WebSocket is not connected: message not sent` and returns `false`; no queue
-- [x] F16.6: Test Connection calls `/<prefix>/ping` instead of the missing `/health`
-- [x] Playground tests: `test` script, Vitest, `tsconfig.vitest.json`, `vitest.config.ts` with a package-local `fsModuleCachePath` (the workspace-root cache raced with frontend under `pnpm test`: `ENOTEMPTY ... .vitest-cache`)
-- [x] F16.D: `documentation/frontend/index.md`, `documentation/playground/index.md`; code-issues 59, 61–64 fixed
+- [x] F17.S: PR #88 (feat-033 done, feat-034 `in_progress`)
+- [x] F17.1: dev DB `SELECT count(*) FROM users WHERE is_admin <> (role = 'admin')` — **0** mismatches (94 users, 1 admin by both fields)
+- [x] F17.2: `isAdmin` removed from `user-transformer.ts`, the auth spec fixture, the backend README and from the Drizzle schema (separate commit, the column still exists in the DB at that point — the schema field had to go too, otherwise the transformer would start leaking it). Left: frontend `userStore.isAdmin()` (reads `role`), the `isAdminChannelSubscribed` WS flag, an "extra key" fixture in `ws-payload-guards.spec.ts`
+- [x] F17.3: migration `20261024171546_drop_users_is_admin` — `ALTER TABLE "users" DROP COLUMN "is_admin";`
+- [x] F17.D: `database.md` (migration row with the irreversibility note), `roles-capabilities.md`, `repositories-transformers.md`, `architecture.md`, `glossary.md`; code-issues 66 fixed
 
 ## Evidence of Completion
 
-- `pnpm --filter api-playground test` — 11 passed
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` passed 3 runs in a row (backend 843, frontend 58, api-playground 11, shared, documentation); `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
-- bundles: no `itvibe-template.example` in the frontend build, no hard-coded `/api/doc/routes` or `/health` in the playground build
-- not met: a typecheck error on an undeclared `VITE_*` — `vite/client` declares an index signature on `ImportMetaEnv`
-- not done: manual playground check against a live backend (port 3000 is taken by another local process)
+- `drizzle-kit check` — clean
+- fresh DB `itvibe_f17`: `db:migrate` (3 migrations) succeeded, no `is_admin` column; `db:seed --demo` succeeded
+- manual golden path on that DB (backend on :3199): admin login `success` with `role: admin`, `GET /api/admin/knowledge-base/init-status` → 200 for the admin and 403 for the user
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` passed; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
+- note: drizzle config reads `PGSQL_DB_NAME`, not `DATABASE_URL` — a `DATABASE_URL=... db:migrate` run went to the dev DB and failed on the init migration (`type "chat_role" already exists`) without changes; the dev DB's migration journal is out of sync with the folder and still has `is_admin`
 
 ## Files Modified
 
-- new: `packages/api-playground/src/utils/api-path.ts`, `src/utils/__tests__/api-path.spec.ts`, `src/composables/__tests__/useWebSocketConnection.spec.ts`, `tsconfig.vitest.json`, `vitest.config.ts`
-- updated: playground `stores/api-doc.ts`, `utils/base-api.ts`, `components/api/TestFormWs.vue`, `composables/useWebSocketConnection.ts`, `vite.config.ts`, `env.d.ts`, `.env.example`, `package.json`, `tsconfig.json`; frontend `utils/base-api.ts`, `env.d.ts`, `main.ts`, `.env.example`; docs
+- new: `packages/backend/src/drizzle/migrations/20261024171546_drop_users_is_admin/`
+- updated: `packages/backend/src/database/schema.ts`, `src/app/transformers/user-transformer.ts`, `src/app/services/auth/auth-phone-foundation.spec.ts`, `packages/backend/README.md`, docs listed above, `docs/presentations/PRESENTATION.html`
 
 ## Notes for Next Session
 
-- F17 (feat-034): drop `users.is_admin` (R5)
+- F18 (feat-035): ESLint strictTypeChecked, three PRs

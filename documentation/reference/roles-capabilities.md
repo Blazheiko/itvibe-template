@@ -9,9 +9,7 @@
 - **Admin**: [`admin-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/middlewares/admin-guard.ts) завантажує користувача з БД і пропускає далі тільки при `user.role === 'admin'` (інакше `403`). Фронтенд перевіряє те саме поле: `isAdmin()` у [`stores/user.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/stores/user.ts) повертає `user.role === 'admin'`. WS-підписка на адмін-канал теж перевіряє `userData.role !== "admin"` в [`admin-ws-channel-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/admin/admin-ws-channel-service.ts).
 - **Developer/QA** і **Operator** у коді як ролі не існують. Це люди з доступом до локального оточення, `.env`, БД і деплою.
 
-::: warning Дублювання поля адміна
-У таблиці `users` у [`schema.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts) є **два** поля: `isAdmin: boolean('is_admin')` і `role: userRoleEnum('role')` (`'user' | 'admin'`). Права перевіряються **тільки** за `role`. `isAdmin` ніде не читається, а [`user-transformer.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) лише вирізає його з відповіді. Якщо виставити `is_admin = true` без `role = 'admin'`, адмінського доступу не буде.
-:::
+Окремого прапорця адміна немає: колонку `is_admin` прибрала міграція [`20261024171546_drop_users_is_admin`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/drizzle/migrations/20261024171546_drop_users_is_admin/migration.sql), тож єдине джерело — `users.role` (`'user' | 'admin'`).
 
 ## Матриця
 

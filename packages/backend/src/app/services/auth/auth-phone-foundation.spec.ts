@@ -755,7 +755,6 @@ describe('authService phone foundation', () => {
             updatedAt: new Date('2026-05-15T10:01:00.000Z'),
             emailVerifiedAt: null,
             avatar: null,
-            isAdmin: false,
             role: 'user',
         })
 

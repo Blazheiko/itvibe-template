@@ -1262,7 +1262,7 @@ import type { UserRow } from '#app/repositories/user-repository.js'
 
 export type SerializedUser = Omit<
     UserRow,
-    'id' | 'password' | 'isAdmin' | 'createdAt' | 'updatedAt' | 'emailVerifiedAt'
+    'id' | 'password' | 'createdAt' | 'updatedAt' | 'emailVerifiedAt'
 > & {
     id: string
     created_at: string | null
@@ -1273,15 +1273,7 @@ export type SerializedUser = Omit<
 
 export const userTransformer = {
     serialize(user: UserRow): SerializedUser {
-        const {
-            id,
-            password: _password,
-            isAdmin: _isAdmin,
-            createdAt,
-            updatedAt,
-            emailVerifiedAt,
-            ...rest
-        } = user
+        const { id, password: _password, createdAt, updatedAt, emailVerifiedAt, ...rest } = user
         return {
             ...rest,
             id: String(id), // bigint → string for safe JSON
@@ -1302,7 +1294,7 @@ export const userTransformer = {
 Notes:
 
 - `id` is converted from `bigint` → `string` so it survives JSON serialization.
-- Internal fields like `password` and `isAdmin` are stripped here, not at the controller.
+- Internal fields like `password` are stripped here, not at the controller.
 - Dates are emitted in ISO 8601 via Luxon.
 
 ---

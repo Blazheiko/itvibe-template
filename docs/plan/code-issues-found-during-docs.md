@@ -32,6 +32,7 @@
 | feat-031 | 39, 40, 41     |
 | feat-032 | 56, 57, 58     |
 | feat-033 | 59, 61, 62–64  |
+| feat-034 | 66             |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -106,7 +107,7 @@
 | 63  | ~~Playground: `https://` → `ws://` замість `wss://`~~ ✅                                                          | Низька       | Playground                   |
 | 64  | ~~Playground: «message queued», хоча повідомлення відкидається~~ ✅                                               | Низька       | Playground                   |
 | 65  | ~~`POST /main/save-user`: анонімне створення користувача з паролем у відкритому тексті~~ ✅ виправлено (feat-012) | **Критична** | Безпека                      |
-| 66  | `users.isAdmin` — мертве поле поруч із `role`                                                                     | Низька       | БД / ролі                    |
+| 66  | ~~`users.isAdmin` — мертве поле поруч із `role`~~ ✅                                                              | Низька       | БД / ролі                    |
 | 67  | ~~Push-група без `auth_guard`, перевірка в контролері~~ ✅                                                        | Низька       | Безпека / ролі               |
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
 | 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
@@ -637,6 +638,8 @@
 - **Пропозиція:** видалити маршрут (схоже на залишок демо) або закрити `admin_guard` і хешувати пароль. Перевірити БД на вже створені записи з нехешованими паролями.
 
 ### 66. `users.isAdmin` — мертве поле
+
+> **Виправлено** у feat-034 (гілка `feat/drop-is-admin`): поле прибрано з коду й схеми, колонку — міграцією `20261024171546_drop_users_is_admin` (рішення Р5); права — лише за `role`. На dev-БД розбіжностей `is_admin`/`role` не було (0 з 94).
 
 - **Що:** `src/database/schema.ts` має і `isAdmin` (`is_admin`), і `role` (`user`/`admin`). `admin-guard.ts`, фронтенд-стор `isAdmin()` і WS-сервіс адмін-каналу перевіряють лише `role`.
 - **Пропозиція:** видалити `is_admin` міграцією або синхронізувати з `role`.
