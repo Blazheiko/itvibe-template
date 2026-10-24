@@ -101,8 +101,8 @@
             "owner": "Blazheiko",
             "branch": "feat/format-baseline",
             "dependencies": [],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #53 (merge 0655aca): root .prettierrc.json, formatting commit 60c735c in .git-blame-ignore-revs; format:check clean (was 206 files), typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), build, test:e2e 12/12 on 4 projects, docs:build + docs:verify, AST of 385 .ts files identical; evidence in progress.md on feat/format-baseline"
         },
         {
             "id": "feat-011",
@@ -178,10 +178,10 @@
             "id": "feat-018",
             "name": "App CI",
             "description": "CI workflow ci.yml (format:check, typecheck, lint, test, e2e on all Playwright projects, coverage artifact), vitest testTimeout, pnpm in Playwright webServer (code-issues items 36, 37, 38). Roadmap F01: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/app-ci",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
