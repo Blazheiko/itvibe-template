@@ -89,10 +89,10 @@
       "id": "feat-010",
       "name": "Format Baseline",
       "description": "Make pnpm format:check pass (206 files on main) and align code style with AGENTS.md: root .prettierrc, one formatting commit, .git-blame-ignore-revs (item 16, Prettier part of item 68). Roadmap F00: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-      "owner": "",
-      "branch": "",
+      "owner": "Blazheiko",
+      "branch": "feat/format-baseline",
       "dependencies": [],
-      "status": "not-started",
+      "status": "in_progress",
       "evidence": ""
     },
     {
