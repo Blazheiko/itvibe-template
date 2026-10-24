@@ -78,7 +78,7 @@
       **AC:** зелений локально з Docker `pgvector/pgvector:pg16`.
 - [x] **F19.4** `.github/workflows/pg-tests.yml` за зразком `redis-tests.yml`: сервіс `pgvector/pgvector:pg16` з healthcheck, `PG_TEST_URL`, shared build, `test:pg`; ті самі `paths`.
       **AC:** job зелений на PR.
-- [x] **F19.D** Шаблон D: `testing.md` (локальний запуск pg-тестів). **F19.E**, **F19.X**.
+- [x] **F19.D** Шаблон D: `testing.md` (локальний запуск pg-тестів). **F19.E** ✅, **F19.X** ✅.
 
 ### F02 Docker Hardening (п. 28, 29, 30)
 
@@ -112,7 +112,7 @@
 
 ### F04 Push Access & Methods (п. 47, 48, 67)
 
-- [ ] **F04.S** Шаблон S.
+- [x] **F04.S** Шаблон S.
 - [ ] **F04.1** `test-push` → `POST` у `http-routes.ts`; виклики у frontend і playground (п. 48).
       **AC:** `GET` → 404/405; фронтенд-кнопка працює (ручна перевірка).
 - [ ] **F04.2** Група `push-subscriptions` з `auth_guard`; `vapid-public-key` — у групі без guard; перевірки `getUserId()` у контролері лишаються як defense-in-depth (п. 67).
