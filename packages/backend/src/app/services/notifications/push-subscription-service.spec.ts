@@ -61,7 +61,10 @@ describe('pushSubscriptionService', () => {
     it('updates an existing subscription', async () => {
         pushSubscriptionRepositoryMock.findByEndpoint.mockResolvedValue({
             id: 1n,
+            userId: 7n,
             endpoint: 'https://push.example.com/ep',
+            p256dhKey: 'old-key',
+            authKey: 'old-auth',
         })
         pushSubscriptionRepositoryMock.updateByEndpoint.mockResolvedValue({
             id: 1n,
@@ -84,6 +87,58 @@ describe('pushSubscriptionService', () => {
                 },
             })
         }
+    })
+
+    describe('endpoint owned by another user', () => {
+        const existing = {
+            id: 1n,
+            userId: 3n,
+            endpoint: 'https://push.example.com/ep',
+            p256dhKey: 'key',
+            authKey: 'auth',
+        }
+
+        it('moves the subscription when p256dh and auth keys match', async () => {
+            pushSubscriptionRepositoryMock.findByEndpoint.mockResolvedValue(existing)
+            pushSubscriptionRepositoryMock.updateByEndpoint.mockResolvedValue({
+                ...existing,
+                userId: 7n,
+            })
+
+            const { pushSubscriptionService } = await loadPushSubscriptionService()
+            const result = await pushSubscriptionService.createSubscription(7n, {
+                endpoint: existing.endpoint,
+                p256dhKey: 'key',
+                authKey: 'auth',
+            })
+
+            expect(Result.isOk(result)).toBe(true)
+            expect(pushSubscriptionRepositoryMock.updateByEndpoint).toHaveBeenCalledWith(
+                existing.endpoint,
+                7n,
+                expect.objectContaining({ p256dhKey: 'key', authKey: 'auth' }),
+            )
+        })
+
+        it.each([
+            ['p256dh', { p256dhKey: 'other-key', authKey: 'auth' }],
+            ['auth', { p256dhKey: 'key', authKey: 'other-auth' }],
+        ])('rejects with conflict when the %s key differs', async (_name, keys) => {
+            pushSubscriptionRepositoryMock.findByEndpoint.mockResolvedValue(existing)
+
+            const { pushSubscriptionService } = await loadPushSubscriptionService()
+            const result = await pushSubscriptionService.createSubscription(7n, {
+                endpoint: existing.endpoint,
+                ...keys,
+            })
+
+            expect(Result.isError(result)).toBe(true)
+            if (Result.isError(result)) {
+                expect(result.error).toMatchObject({ _tag: 'Conflict' })
+            }
+            expect(pushSubscriptionRepositoryMock.updateByEndpoint).not.toHaveBeenCalled()
+            expect(pushSubscriptionRepositoryMock.create).not.toHaveBeenCalled()
+        })
     })
 
     it('returns not found for missing subscription statistics', async () => {

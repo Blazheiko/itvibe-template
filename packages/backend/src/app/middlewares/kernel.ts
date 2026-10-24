@@ -7,6 +7,7 @@ import sessionAPI from '#vendor/utils/middlewares/http/session-api.js'
 import authGuard from '#vendor/utils/middlewares/core/auth-guard.js'
 import adminGuard from '#app/middlewares/admin-guard.js'
 import csrfGuard from '#app/middlewares/csrf-guard.js'
+import wsAdminGuard from '#app/middlewares/ws-admin-guard.js'
 
 const middlewares: Record<string, Function> = {
     session_web: sessionWeb,
@@ -14,6 +15,7 @@ const middlewares: Record<string, Function> = {
     csrf_guard: csrfGuard,
     auth_guard: authGuard,
     admin_guard: adminGuard,
+    ws_admin_guard: wsAdminGuard,
     test1: testMiddleware,
     test2: testMiddleware2,
     test3: testMiddleware3,

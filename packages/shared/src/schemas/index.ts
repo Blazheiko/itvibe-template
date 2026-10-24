@@ -48,6 +48,10 @@ export {
     UpdateSubscriptionInputSchema,
     type UpdateSubscriptionInput,
 } from './push-subscription/update-subscription.js'
+export {
+    PushSubscriptionTestInputSchema,
+    type PushSubscriptionTestInput,
+} from './push-subscription/test-push.js'
 
 export {
     WSAdminUserOnlineUpsertPayloadSchema,
@@ -71,13 +75,10 @@ export {
 export type { SharedQuerySchema, DateString, PositiveIntInput } from './query/types.js'
 export {
     AdminUserSearchQuerySchema,
-    PushSubscriptionTestQuerySchema,
     OAuthRedirectQuerySchema,
     OAuthCallbackQuerySchema,
     type AdminUserSearchQuery,
     type AdminUserSearchQueryInput,
-    type PushSubscriptionTestQuery,
-    type PushSubscriptionTestQueryInput,
     type OAuthRedirectQuery,
     type OAuthRedirectQueryInput,
     type OAuthCallbackQuery,

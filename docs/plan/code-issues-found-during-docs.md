@@ -17,6 +17,7 @@
 | feat-016 | 70             |
 | feat-010 | 16             |
 | feat-018 | 36, 37, 38     |
+| feat-021 | 47, 48, 67     |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -72,8 +73,8 @@
 | 44  | `deleteFromS3` без `buildKey`, логіка префікса в трьох місцях                                                     | Низька       | Сховище                      |
 | 45  | Аватари без `public-read`, але читаються напряму через CDN                                                        | Низька       | Сховище                      |
 | 46  | MIME-тип довіряється заголовку клієнта                                                                            | Середня      | Сховище / безпека            |
-| 47  | Підписка push перепризначається іншому користувачу за endpoint                                                    | Низька       | Push / безпека               |
-| 48  | `GET /test-push` з побічними ефектами (оминає CSRF)                                                               | Низька       | Push / безпека               |
+| 47  | ~~Підписка push перепризначається іншому користувачу за endpoint~~ ✅                                             | Низька       | Push / безпека               |
+| 48  | ~~`GET /test-push` з побічними ефектами (оминає CSRF)~~ ✅                                                        | Низька       | Push / безпека               |
 | 49  | Push надсилається лише з `test-push`, послідовно без батчів                                                       | Низька       | Push                         |
 | 50  | Невідомий `AI_TEXT_DRIVER` мовчки дає Mistral                                                                     | Низька       | AI / конфігурація            |
 | 51  | Виклики AI-провайдерів без timeout/`AbortSignal`                                                                  | Середня      | AI / надійність              |
@@ -92,7 +93,7 @@
 | 64  | Playground: «message queued», хоча повідомлення відкидається                                                      | Низька       | Playground                   |
 | 65  | ~~`POST /main/save-user`: анонімне створення користувача з паролем у відкритому тексті~~ ✅ виправлено (feat-012) | **Критична** | Безпека                      |
 | 66  | `users.isAdmin` — мертве поле поруч із `role`                                                                     | Низька       | БД / ролі                    |
-| 67  | Push-група без `auth_guard`, перевірка в контролері                                                               | Низька       | Безпека / ролі               |
+| 67  | ~~Push-група без `auth_guard`, перевірка в контролері~~ ✅                                                        | Низька       | Безпека / ролі               |
 | 68  | ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground                                      | Низька       | Toolchain                    |
 | 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
@@ -438,11 +439,15 @@
 
 ### 47. Підписка push перепризначається іншому користувачу
 
+> **Виправлено** у feat-021 (гілка `feat/push-access`): за рішенням Р2 ([`open-issues-roadmap.md`](./open-issues-roadmap.md)) endpoint іншого користувача переноситься лише при збігу `p256dhKey` і `authKey`, інакше `409 conflict` і власник не змінюється.
+
 - **Що:** `push-subscription-service.ts` → `createSubscription` шукає endpoint серед усіх користувачів і викликає `updateByEndpoint(endpoint, userId, …)`, що переносить підписку на поточного користувача.
 - **Наслідок:** ризик невеликий, бо endpoint — секретний URL від push-сервісу. Але поведінка неявна (наприклад, при зміні акаунта на тому ж пристрої це бажано, при витоку endpoint — ні).
 - **Пропозиція:** явно задокументувати або обмежити перенесення (наприклад, лише з тим самим `p256dh`/`auth`).
 
 ### 48. `GET /test-push` з побічними ефектами
+
+> **Виправлено** у feat-021 (гілка `feat/push-access`): `POST /push-subscriptions/test-push` з тілом `PushSubscriptionTestInputSchema` (`title?` ≤ 200, `body?` ≤ 1000) замість query; тепер маршрут захищений `csrf_guard`. `GET /test-push` потрапляє в `GET /:subscriptionId` і дає `404` (нечисловий id більше не дає 500 через `BigInt`).
 
 - **Що:** у `src/app/routes/http-routes.ts` `test-push` має метод `get`, але надсилає push і пише логи. `csrf_guard` перевіряє лише небезпечні методи (`UNSAFE_METHODS`), тож маршрут від CSRF не захищено.
 - **Пропозиція:** `POST`.
@@ -545,6 +550,8 @@
 - **Пропозиція:** видалити `is_admin` міграцією або синхронізувати з `role`.
 
 ### 67. Push-група без `auth_guard`
+
+> **Виправлено** у feat-021 (гілка `feat/push-access`): `auth_guard` на кожному маршруті `push-subscriptions`, крім `vapid-public-key`; WS-група `admin/*` з новим `ws_admin_guard` (роль з `userData` з'єднання). Перевірки в контролері й сервісі лишилися як додатковий захист; матрицю перевіряє `src/app/routes/route-access.spec.ts`.
 
 - **Що:** група `push-subscriptions` у `http-routes.ts` не має `auth_guard`; автентифікація перевіряється в контролері через `getUserId()`; `vapid-public-key` доступний анонімно (це нормально). WS-маршрут `admin/subscribe_online_users` без guard — роль перевіряється в `admin-ws-channel-service.ts`.
 - **Пропозиція:** декларативні guard'и на маршрутах, щоб матриця доступу читалася з `http-routes.ts`.

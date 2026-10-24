@@ -20,6 +20,7 @@ export default [
         ],
         prefix: 'admin',
         description: 'Admin websocket routes',
+        middlewares: ['ws_admin_guard'],
         rateLimit: { windowMs: 60_000, maxRequests: 120 },
     },
     {

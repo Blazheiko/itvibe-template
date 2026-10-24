@@ -38,7 +38,7 @@ import type {
     AdminKnowledgeBaseListQueryInput,
     AdminOnlineHistoryListQueryInput,
     AdminUserListQueryInput,
-    PushSubscriptionTestQueryInput,
+    PushSubscriptionTestInput,
     RegisterEmailInput,
     RegisterPhoneStartInput,
     RegisterPhoneConfirmInput,
@@ -284,18 +284,14 @@ export const pushSubscriptionApi = {
     },
 
     testPush: async (
-        title?: PushSubscriptionTestQueryInput['title'],
-        body?: PushSubscriptionTestQueryInput['body'],
+        payload: PushSubscriptionTestInput = {},
     ): Promise<
         ApiResponse<{ status: string; message: string; sent?: number; failed?: number }>
     > => {
-        const params = new URLSearchParams()
-        if (title) params.set('title', title)
-        if (body) params.set('body', body)
-        const query = params.toString()
         return baseApi.http<{ status: string; message: string; sent?: number; failed?: number }>(
-            'GET',
-            `/api/push-subscriptions/test-push${query ? `?${query}` : ''}`,
+            'POST',
+            '/api/push-subscriptions/test-push',
+            payload,
         )
     },
 }

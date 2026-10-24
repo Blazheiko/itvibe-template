@@ -7,14 +7,6 @@ export const AdminUserSearchQuerySchema = type({
 export type AdminUserSearchQuery = typeof AdminUserSearchQuerySchema.infer
 export type AdminUserSearchQueryInput = AdminUserSearchQuery
 
-export const PushSubscriptionTestQuerySchema = type({
-    'title?': 'string',
-    'body?': 'string',
-})
-
-export type PushSubscriptionTestQuery = typeof PushSubscriptionTestQuerySchema.infer
-export type PushSubscriptionTestQueryInput = PushSubscriptionTestQuery
-
 export const OAuthRedirectQuerySchema = type({})
 
 export type OAuthRedirectQuery = typeof OAuthRedirectQuerySchema.infer
