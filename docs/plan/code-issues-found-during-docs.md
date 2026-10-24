@@ -24,6 +24,7 @@
 | feat-019 | 28, 29, 30     |
 | feat-020 | 18, 42         |
 | feat-023 | 32, 44, 45, 46 |
+| feat-024 | 17, 19         |
 
 Решта відкрита; п. 55 відкладено. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
@@ -49,9 +50,9 @@
 | 14  | ~~Прогалини плану body limits: тести, `.env.example`, playground~~ ✅                                             | Низька       | HTTP / тести                 |
 | 15  | ~~Застарілі внутрішні документи~~ ✅                                                                              | Низька       | Документація                 |
 | 16  | ~~Стиль коду бекенду не відповідає `AGENTS.md`~~ ✅                                                               | Інформаційна | Стиль                        |
-| 17  | Фронтенд вшиває префікс `api/` у WS-події                                                                         | Середня      | WebSocket / frontend         |
+| 17  | ~~Фронтенд вшиває префікс `api/` у WS-події~~ ✅                                                                  | Середня      | WebSocket / frontend         |
 | 18  | ~~WS upgrade без валідної сесії не відхиляється~~ ✅                                                              | Низька       | WebSocket / безпека          |
-| 19  | Мертвий код у WebSocket-шарі                                                                                      | Низька       | WebSocket / структура        |
+| 19  | ~~Мертвий код у WebSocket-шарі~~ ✅                                                                               | Низька       | WebSocket / структура        |
 | 20  | ~~Сервіси push-нотифікацій звертаються до БД напряму~~ ✅                                                         | Середня      | Шари / БД                    |
 | 21  | ~~N+1 у `findByUserIdWithLogs` і статистика в JS~~ ✅                                                             | Середня      | Продуктивність               |
 | 22  | ~~Контролери та middleware оминають сервіси~~ ✅                                                                  | Низька       | Шари                         |
@@ -105,6 +106,7 @@
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
 | 71  | `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`                                                         | Низька       | Стиль                        |
 | 72  | Push не надсилається жодною бізнес-подією                                                                         | Низька       | Push                         |
+| 73  | HTTP-виклики фронтенду вшивають `/api/`                                                                           | Низька       | Frontend                     |
 
 ## Безпека
 
@@ -256,6 +258,8 @@
 
 ### 17. Фронтенд вшиває префікс `api/` у WS-події
 
+> **Виправлено** у feat-024 (гілка `feat/ws-cleanup`): події будує `buildWsEvent` (`utils/ws-event.ts`) з `VITE_API_PATH_PREFIX` (за замовчуванням `api`, тип у `env.d.ts`, змінна в `.env.example`). Перевірено бекендом з `API_PATH_PREFIX=v1`: `v1/admin/subscribe_online_users` → `200`, `api/…` → `not_found`. Заодно follow-up feat-009: перевірка «Request already in progress» шукала ключ `${timestamp}_${event}`, а запит зберігався під `event`, тож два одночасні запити однієї події перезаписували один одного — тепер `hasPendingRequest` перевіряє той самий ключ. HTTP-виклики з вшитим `/api/` — п. 73.
+
 - **Що:** `packages/frontend/src/composables/useWebSocketConnection.ts` (і `utils/websocket-base.ts`) формує подію як `` `api/${route}` ``, а ключі WS-маршрутів на сервері залежать від `API_PATH_PREFIX`.
 - **Наслідок:** з будь-яким префіксом, крім `api`, усі WS-виклики отримують `not_found`.
 - **Пропозиція:** брати префікс з конфігурації фронтенду (env) або з відповіді сервера.
@@ -269,6 +273,8 @@
 - **Пропозиція:** відповідати `401` до `res.upgrade`, якщо `dataAccess === null`.
 
 ### 19. Мертвий код у WebSocket-шарі
+
+> **Виправлено** у feat-024 (гілка `feat/ws-cleanup`): видалено `src/app/state/user-storage.ts`, недосяжну гілку «Event not found» (диспетчер тепер типізовано як такий, що завжди відповідає) і клас `websocket-base.ts` (637 рядків); типи та `buildApiError` перенесено в `utils/websocket-types.ts`.
 
 - `src/app/state/user-storage.ts` ніде не імпортується; стан з'єднань живе в `src/app/websocket/ws-connection-registry.ts`.
 - Гілка «Event not found» в `onMessage` (`ws-handlers.ts`) недосяжна: диспетчер сам повертає `not_found` «Route not found».
@@ -656,3 +662,10 @@
 
 - **Що:** `pushNotificationSenderService.sendToUser` викликає лише `POST /push-subscriptions/test-push`. Параметри `skipIfOnline` і `notificationType` реалізовані й покриті тестами, але жоден виклик їх не передає; типи `mention` / `system` у підписці ні на що не впливають.
 - **Пропозиція:** визначити події, що мають надсилати push (наприклад, відповідь підтримки, коли користувач офлайн), і викликати `sendToUser` з `skipIfOnline: true` та відповідним `notificationType`.
+
+## Знайдено під час feat-024
+
+### 73. HTTP-виклики фронтенду вшивають `/api/`
+
+- **Що:** `packages/frontend/src/utils/api.ts` має 46 шляхів виду `'/api/...'`, а Vite proxy (`vite.config.ts`) теж налаштований лише на `/api`. Після feat-024 WS-події беруть префікс з `VITE_API_PATH_PREFIX`, а HTTP — ні, тож бекенд з іншим `API_PATH_PREFIX` працює з фронтендом лише через переписування шляхів на проксі.
+- **Пропозиція:** будувати HTTP-шляхи з того самого `WS_API_PREFIX` (перейменувати на `API_PREFIX`) і брати proxy-ключ з тієї ж змінної; суміжне з п. 62 (playground).

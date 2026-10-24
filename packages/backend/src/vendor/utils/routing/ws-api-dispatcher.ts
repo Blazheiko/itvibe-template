@@ -37,7 +37,7 @@ export default async (
     userData: UserConnection,
     session: Session,
     wsRoutesByUrl: Readonly<WsRoutes>,
-): Promise<WsResponseData | null> => {
+): Promise<WsResponseData> => {
     const responseData: WsResponseData = {
         data: {},
         event: message.event,

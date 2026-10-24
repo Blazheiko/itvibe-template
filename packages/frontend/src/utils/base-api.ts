@@ -1,4 +1,3 @@
-// WebsocketBase больше не используется - заменен на useWebSocketConnection
 import { useEventBus } from './event-bus'
 import { useWebSocketConnection } from '@/composables/useWebSocketConnection'
 import {

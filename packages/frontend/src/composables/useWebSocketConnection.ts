@@ -2,7 +2,7 @@
 import { useWebSocket } from '@vueuse/core'
 import { createHeartbeatOptions } from '@/utils/websocket-heartbeat'
 import { ref, computed } from 'vue'
-import type { WebsocketMessage, WebsocketPayload } from '@/utils/websocket-base'
+import type { WebsocketMessage, WebsocketPayload } from '@/utils/websocket-types'
 import {
     getResponseMessage,
     getTransportCode,
@@ -15,7 +15,8 @@ import { useEventBus } from '@/utils/event-bus'
 import { mainApi } from '@/utils/api'
 import { getCurrentAppType } from '@/utils/app-type'
 import { sentryService } from '@/utils/sentry-service'
-import { settleApiResponse, type ApiResolveItem } from '@/utils/ws-api-response'
+import { hasPendingRequest, settleApiResponse, type ApiResolveItem } from '@/utils/ws-api-response'
+import { buildWsEvent } from '@/utils/ws-event'
 import { resolveWebSocketCloseAction } from '@/utils/websocket-close'
 
 interface SendPayload {
@@ -326,10 +327,10 @@ const websocketApi = async (
             return
         }
 
-        const event = `api/${route}`
+        const event = buildWsEvent(route)
         const timestamp = Date.now()
-        const key = `${timestamp}_${event}`
-        if (apiResolve.value[key]) {
+        // One pending request per event: a second one would overwrite the first.
+        if (hasPendingRequest(apiResolve.value, event)) {
             console.error('Request already in progress')
             reject(new Error('Request already in progress'))
             return

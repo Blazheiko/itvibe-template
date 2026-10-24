@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { settleApiResponse, type ApiResolveItem } from '../ws-api-response'
-import type { WebsocketMessage } from '../websocket-base'
+import { hasPendingRequest, settleApiResponse, type ApiResolveItem } from '../ws-api-response'
+import type { WebsocketMessage } from '../websocket-types'
 
 const pendingFor = (event: string) => {
     const item: ApiResolveItem = {
@@ -58,5 +58,13 @@ describe('settleApiResponse', () => {
         } as unknown as WebsocketMessage)
         expect(item.reject).not.toHaveBeenCalled()
         expect(Object.keys(pending)).toEqual(['api/a'])
+    })
+})
+
+describe('hasPendingRequest (feat-009 follow-up)', () => {
+    it('finds a request pending under the same event key it is stored with', () => {
+        const { pending } = pendingFor('api/user/me')
+        expect(hasPendingRequest(pending, 'api/user/me')).toBe(true)
+        expect(hasPendingRequest(pending, 'api/user/other')).toBe(false)
     })
 })

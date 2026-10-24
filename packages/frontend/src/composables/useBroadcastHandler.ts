@@ -1,7 +1,7 @@
 import { useEventBus } from '@/utils/event-bus'
 import { reportValidationFailure } from '@/utils/sentry-payload-summary'
 import { isWSAdminUserOnlineUpsertPayload } from '@/utils/ws-payload-guards'
-import type { WebsocketMessage } from '@/utils/websocket-base'
+import type { WebsocketMessage } from '@/utils/websocket-types'
 
 export const useBroadcastHandler = () => {
     const eventBus = useEventBus()
