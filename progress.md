@@ -3,37 +3,32 @@
 ## Current State
 
 **Last Updated:** 2026-10-24
-**Active Feature:** feat-025 - Layering Cleanup (F08 of `docs/plan/open-issues-roadmap.md`, items 22, 24, 25)
-**Branch:** `feat/layering-cleanup`
-**Tasks:** `docs/plan/open-issues-tasks.md`, F08
+**Active Feature:** feat-026 - Validation Cleanup (F09 of `docs/plan/open-issues-roadmap.md`, items 26, 27)
+**Branch:** `feat/validation-cleanup`
+**Tasks:** `docs/plan/open-issues-tasks.md`, F09
 
 ## Status
 
 ### Done
 
-- [x] F08.S: PR #62 (feat-022 done, feat-025 `in_progress`); `./init.sh` green
-- [x] F08.1 (item 24): barrel exports `promptRepository`, `supportRepository`, `supportKnowledgeRepository` and their types (+ `AdminUserListFilters`, `TextFilter`); 12 files outside `app/repositories` switched from file paths to the barrel
-- [x] F08.2 (item 24): `user-online-repository` no longer imports the logger; `completeBySocketUuid` returns `false` and `userOnlineService.trackDisconnected` writes the same warning
-- [x] F08.3 (item 22): `admin-user-controller` → new `adminUserService.listUsers`; `ws-coordinator` → new `userRoleService.findRole`
-- [x] F08.4 (item 22): `prompt-controller` and `llm-usage-controller` take `PromptType`/`PromptUpdate`/`TextFilter` from their services
-- [x] F08.5 (item 22): **changed from the plan** — instead of documenting `admin_guard` as an exception, it also uses `userRoleService.findRole`, so there are no exceptions. Rules documented in `architecture.md` and locked by `src/app/layering.spec.ts`
-- [x] F08.6 (item 25): **changed from the plan** — instead of wrapping two queries in `db.transaction`, `clearEmbedding` is one `UPDATE` (`embedding = NULL` with `updatedAt`), atomic by itself; `setEmbedding` uses `update().set()`, `searchByEmbedding` references schema columns
-- [x] F08.D: `documentation/backend/{architecture,repositories-transformers,ai}.md`; code-issues 22, 24, 25 fixed
+- [x] F09.S: PR #64 (feat-025 done, feat-026 `in_progress`); `./init.sh` green
+- [x] F09.1 (item 26): `ValidationResult` failure may carry `issues: ValidationIssue[]` (`{ path, message }`); `arkValidator` maps every `ArkError` (`path` = `propString`, `''` for the root); `ValidationError.issues`; `details.issues` in HTTP 422 (`server.ts`) and both WS validation errors (`ws-api-dispatcher.ts`, envelope in `ws-handlers.ts`); `ValidationIssue` + `ValidationErrorDetails.issues` in `shared`. **Changed from the roadmap:** `messages` stays `string[]` (now one line per problem instead of one `summary`) because the frontend reads `details.messages` (`response-normalizer.ts`); the objects go to the new `issues`
+- [x] F09.2 (item 27): removed `app/validate/schemas/schemas.ts` and its commented imports in `src/index.ts`, `vendor/start/server.ts`; removed the unregistered `MainController.testSentryError` (`observability.md` now explains how to check Sentry without it)
+- [x] F09.3 (item 27): `ValidationError` docstring no longer says ArkType; `nativeValidator` → `bodySchema` in `serialize-routes.ts`; backend README already says `422` (fixed in feat-009)
+- [x] F09.4 (item 27): ADR 0001 — §3.6, §9, §5.6 recorded as «не робимо» with reasons
+- [x] F09.D: `documentation/backend/validation.md` (contract, adapter, 422 example with `issues`, WS), `documentation/backend/observability.md`; code-issues 26, 27 fixed
 
 ## Evidence of Completion
 
-- `src/app/layering.spec.ts` (5 rules: controllers/middlewares/websocket without repositories; repositories only via the barrel; barrel exports every `*-repository.ts`; no logger in repositories; no `#database` in services). Negative control: an added `userRepository` import in `admin-user-controller.ts` fails with `controllers/http/admin/admin-user-controller.ts -> #app/repositories/index.js`
-- `src/app/repositories/support/support-knowledge.pg.test.ts`: RED first (`clearEmbedding` made 2 queries), then green — one query, vector dropped; `setEmbedding` stores; `searchByEmbedding` orders active articles by distance (0, 1) and skips the inactive one
-- unit: `admin-user-service.spec.ts` (filters passed, mapping incl. `email: null` → `''`), `admin-guard.spec.ts` (anonymous / user / deleted user → 403, admin passes via `findRole(7n)`), `user-online-service.spec.ts` (warning only when no record)
-- `PG_TEST_URL=… pnpm --filter backend test:pg` — 18 passed
-- Manual (backend from source on 3999, disposable DB, demo users; Redis keys `manual-feat025:*` removed afterwards): user `GET /api/admin/users?limit=10` → 403 `Admin access required`, admin → 200 `success` with `{ id, name, email, registeredAt }` items; WS `api/admin/subscribe_online_users`: user → `403 forbidden`, admin → `success` (role set by `userRoleService` in `ws-coordinator`)
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 703, frontend 45, shared pass 3, documentation pass 26; `pnpm docs:build && pnpm docs:verify` — passed
+- RED first: `arktype-adapter.spec.ts` (4 fields incl. nested `nested.name` and rejected `extra`; root-level path `''`), `server.spec.ts` (`details.issues` in the 422 body), `ws-validation.spec.ts` (`details.messages` + `details.issues` for an invalid WS payload) — 4 failing, then green
+- Manual (backend from source on 3999, disposable DB; Redis keys `manual-feat026:*` removed): `POST /api/auth/register/email` with 4 bad fields → 422, `messages` and `issues` with paths `email`, `name`, `password`, `extra`; `POST /api/auth/login` (union schema) → one root issue `path: ''` — ArkType reports a union failure as a whole
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` — clean; `pnpm test` — backend 706, frontend 45, shared pass 3, documentation pass 26; `pnpm --filter frontend test:e2e` — 12 passed; `pnpm docs:build && pnpm docs:verify` — passed
 
 ## Files Modified
 
-- new: `packages/backend/src/app/services/admin/admin-user-service.ts` (+ spec), `packages/backend/src/app/services/user/user-role-service.ts`, `packages/backend/src/app/middlewares/admin-guard.spec.ts`, `packages/backend/src/app/services/communication/user-online-service.spec.ts`, `packages/backend/src/app/layering.spec.ts`, `packages/backend/src/app/repositories/support/support-knowledge.pg.test.ts`
-- updated: `packages/backend/src/app/repositories/{index.ts,communication/user-online-repository.ts,support/support-knowledge-repository.ts}`, controllers `admin-user`, `prompt`, `llm-usage`; `middlewares/admin-guard.ts`, `websocket/ws-coordinator.ts`, services `prompt`, `llm-usage`, `user-online`, 5 support services, 2 transformers; docs listed above; `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
+- removed: `packages/backend/src/app/validate/schemas/schemas.ts`
+- updated: `packages/backend/src/vendor/contracts/validator.ts`, `packages/backend/src/app/validate/{adapters/arktype-adapter.ts,errors/validation-error.ts}`, `packages/backend/src/vendor/utils/validation/validate-route-payload.ts`, `packages/backend/src/vendor/start/server.ts`, `packages/backend/src/vendor/utils/routing/{ws-api-dispatcher,serialize-routes}.ts`, `packages/backend/src/vendor/utils/network/ws-handlers.ts`, `packages/backend/src/index.ts`, `packages/backend/src/app/controllers/http/core/main-controller.ts`, `packages/shared/src/errors/error-codes.ts`, specs (`arktype-adapter`, `server`, `ws-validation`), `documentation/backend/{validation,observability}.md`, `docs/adr/0001-validator-abstraction.md`, `docs/plan/code-issues-found-during-docs.md`, `docs/plan/open-issues-tasks.md`
 
 ## Notes for Next Session
 
-- Next: F09 Validation Cleanup (feat-026) or F02 Docker (feat-019).
+- Next: F02 Docker (feat-019), F03 (feat-020), F06 (feat-023), F07 (feat-024), F10 (feat-027) …
