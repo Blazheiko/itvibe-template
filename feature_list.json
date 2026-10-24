@@ -301,17 +301,17 @@
             "owner": "Blazheiko",
             "branch": "feat/observability",
             "dependencies": ["feat-010"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #81 (merge df9c591): LOG_LEVEL, requestId from the first request step and userId in request logs (handleError child logger), GET /ready with DB+Redis checks, HEALTHCHECK on /api/ready, pg.Pool error no longer crashes the server; backend 815, test:redis 31, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual DB/Redis outage and image health checks; evidence in progress.md on feat/observability"
         },
         {
             "id": "feat-031",
             "name": "Static Caching",
             "description": "immutable only for /assets, RFC 9110 If-None-Match, bounded RAM cache with streaming for large files, precompressed br/gz (code-issues items 39, 40, 41). Roadmap F14: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/static-caching",
             "dependencies": ["feat-010"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {

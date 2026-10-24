@@ -268,11 +268,11 @@
       **AC:** тести: обидва живі → 200; Redis або БД недоступні (мок) → 503 за ≤ таймаут + 200 мс.
 - [x] **F13.5** → F13.4. `HEALTHCHECK` у `Dockerfile` → `/api/ready` (після F02).
       **AC:** контейнер без БД — `unhealthy`; з БД — `healthy`.
-- [x] **F13.D** Шаблон D: `observability.md`, `deployment.md`, `routes.md`, `configuration.md`. **F13.E**, **F13.X**.
+- [x] **F13.D** Шаблон D: `observability.md`, `deployment.md`, `routes.md`, `configuration.md`. **F13.E** ✅, **F13.X** ✅.
 
 ### F14 Static Caching (п. 39, 40, 41)
 
-- [ ] **F14.S** Шаблон S (M).
+- [x] **F14.S** Шаблон S (M).
 - [ ] **F14.1** `Cache-Control`: `immutable` лише `/assets/*`, решта — `no-cache` + ETag (п. 39).
       **AC:** тести для `/assets/x.js`, `/manifest.json`, `/service-worker.js`, `/index.html`.
 - [ ] **F14.2** Парсер `If-None-Match` (RFC 9110: список, `*`, `W/`) (п. 40).
