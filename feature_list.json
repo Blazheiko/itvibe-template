@@ -401,8 +401,8 @@
             "owner": "Blazheiko",
             "branch": "feat/security-regression-tests",
             "dependencies": ["feat-039"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #109: regression tests for C-1, H-1, H-3, H-4, M-2, M-3, M-4, L-1, L-2, L-3, each checked by mutation; typecheck, lint, format:check, test (backend 908), docs:build + docs:verify; evidence in progress.md on feat/security-regression-tests"
         }
     ]
 }
