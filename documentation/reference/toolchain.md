@@ -58,8 +58,8 @@ Path aliases бекенду в [`packages/backend/tsconfig.json`](https://github
 
 - Один кореневий [`.prettierrc.json`](https://github.com/Blazheiko/itvibe-template/blob/main/.prettierrc.json) для всіх пакетів: `tabWidth: 4`, `singleQuote: true`, `semi: false`, `printWidth: 100` — стиль з `AGENTS.md`. Пакетних конфігів немає.
 - [`.prettierignore`](https://github.com/Blazheiko/itvibe-template/blob/main/.prettierignore): `node_modules`, `dist`, `coverage`, звіти Playwright, міграції Drizzle, кеш і dist VitePress, `pnpm-lock.yaml`, `graphify-out`.
-- Кореневі `pnpm format` / `pnpm format:check` обробляють `**/*.{ts,tsx,json,md}`; на `main` `format:check` проходить.
-- Масове форматування (feat-010) записано в [`.git-blame-ignore-revs`](https://github.com/Blazheiko/itvibe-template/blob/main/.git-blame-ignore-revs). Щоб `git blame` його пропускав: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+- Кореневі `pnpm format` / `pnpm format:check` обробляють `**/*.{ts,tsx,js,mjs,vue,json,md,css}` — зокрема `.vue` frontend і playground, `.js`/`.mjs` скриптів документації й тестів shared, CSS; CI перевіряє все це через `format:check`. Пакетні `format` у frontend і playground форматують лише `src/`: для всього репозиторію запускайте кореневий `pnpm format`.
+- Масове форматування (feat-010 і feat-038) записано в [`.git-blame-ignore-revs`](https://github.com/Blazheiko/itvibe-template/blob/main/.git-blame-ignore-revs). Щоб `git blame` його пропускав: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 ::: warning Відома проблема
 Glob `format:check` не охоплює `.vue`, `.js`, `.mjs` і `.css`, тож ці файли не перевіряються (п. 71 у [`code-issues-found-during-docs.md`](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)). Пакетні `pnpm --filter frontend format` і `pnpm --filter api-playground format` форматують `src/` за кореневим конфігом.

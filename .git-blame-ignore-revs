@@ -3,3 +3,6 @@
 
 # feat-010: apply prettier baseline
 60c735c8617b47b081e78bd63cb35c7b0e4cc80f
+
+# feat-038: apply prettier to .vue, .js, .mjs and .css (code-issues item 71)
+dd9db8bd8ae36bae0b5379e69f72329e0cf59bb5
