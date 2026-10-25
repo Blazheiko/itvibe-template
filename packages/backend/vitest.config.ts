@@ -11,7 +11,10 @@ export default defineConfig({
         // The default 5 s is too tight when typecheck/lint run in parallel (code-issues item 37).
         testTimeout: 15_000,
         // CI sets VITEST_MAX_WORKERS to keep runners from oversubscribing.
-        ...(maxWorkers ? { maxWorkers: Number(maxWorkers) } : {}),
+        // A count (`2`) or a share of the CPUs (`50%`), as Vitest's own option takes it.
+        ...(maxWorkers !== undefined && maxWorkers !== ''
+            ? { maxWorkers: /^\d+$/.test(maxWorkers) ? Number(maxWorkers) : maxWorkers }
+            : {}),
         // *.redis.test.ts and *.pg.test.ts need a real Redis / PostgreSQL:
         // run them with `pnpm test:redis` / `pnpm test:pg`.
         exclude: [...configDefaults.exclude, 'dist/**', '**/*.redis.test.ts', '**/*.pg.test.ts'],

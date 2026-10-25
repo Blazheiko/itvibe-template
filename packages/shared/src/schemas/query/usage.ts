@@ -3,7 +3,8 @@ import { PaginationFields, DateRangeFields } from './common.js'
 import type { DateRangeQueryInput, PaginationQueryInput } from './common.js'
 import type { SharedQuerySchema } from './types.js'
 
-export type LlmTextUsageFeature = 'SUPPORT_CHAT' | 'SUPPORT_QUERY_TRANSLATION' | 'PROMPT_TEST'
+export type LlmTextUsageFeature =
+    'SUPPORT_CHAT' | 'SUPPORT_QUERY_TRANSLATION' | 'PROMPT_TEST' | 'SUPPORT_EMBEDDING'
 
 export interface BaseUsageQuery<TFeature extends string> {
     page: number

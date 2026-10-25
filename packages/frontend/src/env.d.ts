@@ -19,6 +19,11 @@ declare module 'vue-router' {
 }
 
 declare global {
+    // An undeclared VITE_* variable is a type error (code-issues item 61).
+    interface ViteTypeOptions {
+        strictImportMetaEnv: unknown
+    }
+
     // Every VITE_* the app reads (code-issues item 61); values are build-time strings.
     interface ImportMetaEnv {
         /** API origin; empty — same origin (Vite proxy in dev). */

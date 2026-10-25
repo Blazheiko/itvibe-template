@@ -48,7 +48,16 @@ export const promptTestService = {
             }
             return Result.ok(result)
         } catch (error) {
-            logger.error({ err: error, model: textAdapter.model }, 'Prompt test LLM call failed')
+            const abortKind = aiAbortKind(error)
+            if (abortKind === 'aborted') {
+                // The client went away: nothing failed upstream and nobody reads the answer.
+                logger.info({ model: textAdapter.model }, 'Prompt test cancelled by the client')
+            } else {
+                logger.error(
+                    { err: error, model: textAdapter.model },
+                    'Prompt test LLM call failed',
+                )
+            }
             return Result.err(
                 aiAbortKind(error) === 'timeout' ? upstreamTimeout(error) : upstreamError(error),
             )

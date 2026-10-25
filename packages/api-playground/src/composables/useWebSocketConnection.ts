@@ -2,6 +2,7 @@
 import { useIntervalFn, useWebSocket } from '@vueuse/core'
 import { ref, computed } from 'vue'
 import { useEventBus } from '@/utils/event-bus'
+import { classifyWsMessage } from '@/utils/ws-message-kind'
 
 export type WebsocketPayload = Record<string, unknown>
 
@@ -186,14 +187,22 @@ const handleMessage = async (messageData: string | Blob | ArrayBuffer) => {
             return
         }
 
-        if (data.event === 'service:error') {
-            handleServiceError(data)
-        } else if (data.event.startsWith('broadcast:')) {
-            processBroadcast(data)
-        } else if (data.event.startsWith('service:')) {
-            service(data)
-        } else if (data.event.startsWith('api')) {
-            messageHandler(data)
+        switch (classifyWsMessage(data.event, apiResolve.value[data.event] !== undefined)) {
+            case 'service-error':
+                handleServiceError(data)
+                break
+            case 'broadcast':
+                processBroadcast(data)
+                break
+            case 'service':
+                service(data)
+                break
+            case 'api':
+                messageHandler(data)
+                break
+            case 'unknown':
+                console.warn('WS message without a pending request:', data.event)
+                break
         }
     } catch (error) {
         console.error('Error parsing message:', error)

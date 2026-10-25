@@ -46,7 +46,7 @@ location / {
 flowchart LR
   A[builder: ubuntu 24.04 + Node 24 + pnpm 9.15.0] -->|dist, public, migrations| B[production: ubuntu 24.04 + prod deps]
   M[one-shot: db:create:prod, db:migrate] -.->|перед rollout| C
-  B --> C[USER app, CMD node dist/index.js, HEALTHCHECK /api/ping]
+  B --> C[USER app, CMD node dist/index.js, HEALTHCHECK /api/ready]
 ```
 
 **Етап `builder`**

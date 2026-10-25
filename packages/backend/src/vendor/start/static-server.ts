@@ -296,9 +296,27 @@ const streamFile = (
 ): void => {
     const stream = createReadStream(entry.filePath)
     let aborted = false
+    let finished = false
+    let ended = false
+    let waitingForWritable = false
     res.onAborted(() => {
         aborted = true
         stream.destroy()
+    })
+    // Content-Length is the size seen at startup. A file that got shorter since (public/
+    // rebuilt under a running server) would leave the response open forever: close it.
+    const closeTruncated = (): void => {
+        logger.warn(
+            { filePath: entry.filePath, expected: entry.size, sent: res.getWriteOffset() },
+            'Static file is shorter than at startup: response closed',
+        )
+        res.cork(() => res.close())
+    }
+    stream.on('end', () => {
+        ended = true
+        // A chunk still waiting for onWritable finishes (or closes) the response there.
+        if (aborted || finished || waitingForWritable) return
+        closeTruncated()
     })
     res.cork(() => {
         writeHttpStatus(res, 200)
@@ -323,19 +341,27 @@ const streamFile = (
         })
         const [ok, done] = result
         if (done) {
+            finished = true
             stream.destroy()
             return
         }
         if (!ok) {
             stream.pause()
+            waitingForWritable = true
             res.onWritable((offset) => {
                 let retry: [boolean, boolean] = [false, false]
                 res.cork(() => {
                     retry = res.tryEnd(arrayBuffer.slice(offset - startOffset), entry.size)
                 })
                 const [retryOk, retryDone] = retry
-                if (retryDone) stream.destroy()
-                else if (retryOk) stream.resume()
+                if (retryDone) {
+                    finished = true
+                    stream.destroy()
+                } else if (retryOk) {
+                    waitingForWritable = false
+                    if (ended) closeTruncated()
+                    else stream.resume()
+                }
                 return retryOk
             })
         }
@@ -360,11 +386,16 @@ const staticCacheHandler = async (
         return
     }
 
+    // The 304 must carry the same Vary as the 200 (RFC 9110 §15.4.5).
+    const hasEncodings =
+        entry.kind === 'memory' && (entry.br !== undefined || entry.gzip !== undefined)
+
     if (matchesIfNoneMatch(req.getHeader('if-none-match'), entry.etag)) {
         res.cork(() => {
             writeHttpStatus(res, 304)
             res.writeHeader('Cache-Control', cacheControl)
             res.writeHeader('ETag', entry.etag)
+            if (hasEncodings) res.writeHeader('Vary', 'Accept-Encoding')
             setSecurityHeaders(res, [], cspKind)
             res.end()
         })
@@ -389,9 +420,7 @@ const staticCacheHandler = async (
     res.cork(() => {
         writeHttpStatus(res, 200)
         writeCommonHeaders()
-        if (entry.br !== undefined || entry.gzip !== undefined) {
-            res.writeHeader('Vary', 'Accept-Encoding')
-        }
+        if (hasEncodings) res.writeHeader('Vary', 'Accept-Encoding')
         if (encoding !== null) {
             res.writeHeader('Content-Encoding', encoding)
             res.end(entry[encoding])

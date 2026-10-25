@@ -21,6 +21,13 @@ export default async function setup(): Promise<(() => Promise<void>) | undefined
     await admin.query(`CREATE DATABASE ${quoteIdent(database)}`)
     await admin.end()
 
+    const dropDatabase = async (): Promise<void> => {
+        const dropper = new pg.Client({ connectionString: PG_TEST_URL })
+        await dropper.connect()
+        await dropper.query(`DROP DATABASE IF EXISTS ${quoteIdent(database)} WITH (FORCE)`)
+        await dropper.end()
+    }
+
     const connection = {
         host: url.hostname,
         port: Number(url.port === '' ? 5432 : url.port),
@@ -29,8 +36,8 @@ export default async function setup(): Promise<(() => Promise<void>) | undefined
         database,
     }
     const client = new pg.Client(connection)
-    await client.connect()
     try {
+        await client.connect()
         await client.query('CREATE EXTENSION IF NOT EXISTS vector')
         // Same migrations table as drizzle.config.ts, so the schema matches db:migrate.
         await migrate(drizzle({ client }), {
@@ -38,9 +45,13 @@ export default async function setup(): Promise<(() => Promise<void>) | undefined
             migrationsTable: '__drizzle_migrations',
             migrationsSchema: 'drizzle',
         })
-    } finally {
-        await client.end()
+    } catch (error: unknown) {
+        // Teardown is not registered yet: drop the half-migrated database here.
+        await client.end().catch(() => undefined)
+        await dropDatabase()
+        throw error
     }
+    await client.end()
 
     process.env['PGSQL_HOST'] = connection.host
     process.env['PGSQL_PORT'] = String(connection.port)
@@ -48,10 +59,5 @@ export default async function setup(): Promise<(() => Promise<void>) | undefined
     process.env['PGSQL_PASSWORD'] = connection.password
     process.env['PGSQL_DB_NAME'] = database
 
-    return async () => {
-        const dropper = new pg.Client({ connectionString: PG_TEST_URL })
-        await dropper.connect()
-        await dropper.query(`DROP DATABASE IF EXISTS ${quoteIdent(database)} WITH (FORCE)`)
-        await dropper.end()
-    }
+    return dropDatabase
 }

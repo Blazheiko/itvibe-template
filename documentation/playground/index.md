@@ -26,18 +26,17 @@
 
 У [`vite.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/vite.config.ts) dev-сервер слухає порт **5174** і проксіює запити:
 
-| Префікс                                             | Ціль                    | Примітка                    |
-| --------------------------------------------------- | ----------------------- | --------------------------- |
-| `/<VITE_API_PATH_PREFIX>` (за замовчуванням `/api`) | `http://127.0.0.1:3000` | `changeOrigin: true`        |
-| `/ws`                                               | `ws://127.0.0.1:3000`   | `ws: true`, WebSocket proxy |
+| Префікс                                             | Ціль                    | Примітка                                                                    |
+| --------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------- |
+| `/<VITE_API_PATH_PREFIX>` (за замовчуванням `/api`) | `http://127.0.0.1:3000` | `changeOrigin: true`, `ws: true` — HTTP і WS-ендпоінт `/<prefix>/websocket` |
 
-Префікс API береться з `VITE_API_PATH_PREFIX` (має збігатися з бекендовим `API_PATH_PREFIX`, за замовчуванням `api`). Базовий URL для HTTP-викликів за замовчуванням порожній. Тому запити йдуть відносно origin dev-сервера і проходять через proxy. Його можна перевизначити змінною `VITE_API_BASE_URL` або в налаштуваннях UI ([`stores/api-settings.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/stores/api-settings.ts)).
+Префікс API береться з `VITE_API_PATH_PREFIX` (має збігатися з бекендовим `API_PATH_PREFIX`, за замовчуванням `api`). WS-відповідь розпізнається за очікуваним запитом з тим самим event, тож працює з будь-яким префіксом. Базовий URL для HTTP-викликів за замовчуванням порожній. Тому запити йдуть відносно origin dev-сервера і проходять через proxy. Його можна перевизначити змінною `VITE_API_BASE_URL` або в налаштуваннях UI ([`stores/api-settings.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/src/stores/api-settings.ts)).
 
 ```mermaid
 flowchart LR
     UI[api-playground :5174] -->|GET /api/doc/routes| P[Vite proxy]
     UI -->|HTTP /api/...| P
-    UI -->|WebSocket /ws| P
+    UI -->|WebSocket /api/websocket| P
     P -->|http://127.0.0.1:3000| B[backend]
     B -->|httpRoutes, wsRoutes, pathPrefix| P
 ```

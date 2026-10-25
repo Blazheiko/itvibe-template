@@ -51,6 +51,7 @@ export const xaiTextAdapter: ITextAdapter = {
               )
             : undefined
 
+        const abortSignal = aiRequestSignal(opts.signal)
         const streamParams = {
             // @ai-sdk/xai 5 dropped the Chat Completions model (`.chat()`); xAI is now
             // reached through its Responses API.
@@ -61,7 +62,7 @@ export const xaiTextAdapter: ITextAdapter = {
             maxOutputTokens: opts.maxOutputTokens ?? 2000,
             // step 1 = LLM text + tool call, step 2 = tool execution, step 3 = LLM continuation
             stopWhen: hasTools ? stepCountIs(3) : stepCountIs(1),
-            abortSignal: aiRequestSignal(opts.signal),
+            abortSignal,
             ...(wrappedTools !== undefined ? { tools: wrappedTools } : {}),
         }
         const result = streamText(streamParams)
@@ -75,6 +76,13 @@ export const xaiTextAdapter: ITextAdapter = {
             if (part.type === 'text-delta') {
                 fullText += part.text
                 yield part.text
+            } else if (part.type === 'abort') {
+                // The AI SDK reports an abort as a stream part and ends the stream without
+                // throwing. Surface it, so a timeout is a 504 and a closed client gets no
+                // partial answer saved (code-issues item 51).
+                throw abortSignal.reason
+            } else if (part.type === 'error') {
+                throw part.error
             } else {
                 // Log every non-text part type for diagnostics
                 logger.info({ partType: part.type }, 'XAI adapter: stream part')
@@ -101,8 +109,9 @@ export const xaiTextAdapter: ITextAdapter = {
                     modelName,
                     finalPrompt,
                 )
-            } catch {
-                // ignore usage tracking errors
+            } catch (err: unknown) {
+                if (abortSignal.aborted) throw abortSignal.reason
+                logger.warn({ err }, 'XAI adapter: usage is unavailable')
             }
         }
 

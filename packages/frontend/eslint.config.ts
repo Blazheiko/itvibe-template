@@ -42,15 +42,6 @@ export default defineConfigWithVueTs(
             },
         },
     },
-    {
-        ignores: ['vite.sw.config.ts'],
-    },
-    {
-        files: ['src/types/i18n.d.ts'],
-        rules: {
-            '@typescript-eslint/no-empty-object-type': 'off',
-        },
-    },
 
     {
         files: ['**/*.{ts,mts,tsx,vue}'],

@@ -22,12 +22,10 @@ export default defineConfig(({ mode }) => {
         server: {
             port: 5174,
             proxy: {
+                // Covers HTTP and the WS endpoint `/<prefix>/websocket`.
                 [`/${prefix}`]: {
                     target: 'http://127.0.0.1:3000',
                     changeOrigin: true,
-                },
-                '/ws': {
-                    target: 'ws://127.0.0.1:3000',
                     ws: true,
                 },
             },

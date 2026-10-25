@@ -109,6 +109,7 @@ export const pushNotificationSenderService = {
         let failed = 0
         const logs: PushNotificationLogInsert[] = []
         const usedIds: bigint[] = []
+        const expiredIds: bigint[] = []
 
         const pushPayload = JSON.stringify({
             notification: {
@@ -182,7 +183,7 @@ export const pushNotificationSenderService = {
                         { subscriptionId: String(subscription.id), statusCode },
                         'Push subscription expired, deactivating',
                     )
-                    await pushSubscriptionRepository.deactivate(subscription.id, userId)
+                    expiredIds.push(subscription.id)
                 }
             }
         })
@@ -199,6 +200,17 @@ export const pushNotificationSenderService = {
                 { err: error, userId: String(userId), logs: logs.length },
                 'Failed to record push notification results',
             )
+        }
+        // Separate from the log write: a failed deactivation must not lose the logs.
+        for (const id of expiredIds) {
+            try {
+                await pushSubscriptionRepository.deactivate(id, userId)
+            } catch (error: unknown) {
+                logger.error(
+                    { err: error, subscriptionId: String(id) },
+                    'Failed to deactivate an expired push subscription',
+                )
+            }
         }
 
         return { sent, failed }

@@ -91,50 +91,115 @@ describe('openai text adapter', () => {
     })
 })
 
-describe('xai, mistral and embedding adapters pass the signal on', () => {
-    it('xai: abortSignal follows the caller', async () => {
-        xaiStreamText.mockReturnValue({ stream: (async function* () {})() })
+// AI SDK 7 does not throw on abort: it emits an `abort` part and ends the stream normally,
+// and `result.usage` rejects. This fake behaves the same way.
+const sdkLikeStreamText = (params: { abortSignal: AbortSignal }): unknown => ({
+    stream: (async function* () {
+        yield { type: 'text-delta', text: 'partial' }
+        if (!params.abortSignal.aborted) {
+            await new Promise((resolve) => {
+                params.abortSignal.addEventListener('abort', resolve)
+            })
+        }
+        yield { type: 'abort' }
+    })(),
+    get usage(): Promise<never> {
+        return Promise.reject(new Error('usage unavailable after abort'))
+    },
+})
+
+const rejectOnAbort = (signal: AbortSignal): Promise<never> =>
+    new Promise((_resolve, reject) => {
+        if (signal.aborted) {
+            reject(signal.reason as Error)
+            return
+        }
+        signal.addEventListener('abort', () => {
+            reject(signal.reason as Error)
+        })
+    })
+
+describe('xai text adapter', () => {
+    it('turns the SDK abort part into a TimeoutError after the timeout', async () => {
+        xaiStreamText.mockImplementation(sdkLikeStreamText)
+        const { xaiTextAdapter } = await import('./xai-text-adapter.js')
+        const onComplete = vi.fn()
+        await expect(
+            drain(xaiTextAdapter.streamText({ systemPrompt: 's', userPrompt: 'u' }, onComplete)),
+        ).rejects.toMatchObject({ name: 'TimeoutError' })
+        expect(onComplete).not.toHaveBeenCalled()
+    })
+
+    it("turns the SDK abort part into an AbortError when the caller's signal aborts", async () => {
+        xaiStreamText.mockImplementation(sdkLikeStreamText)
         const { xaiTextAdapter } = await import('./xai-text-adapter.js')
         const controller = new AbortController()
-        await drain(
+        const pending = drain(
             xaiTextAdapter.streamText({
                 systemPrompt: 's',
                 userPrompt: 'u',
                 signal: controller.signal,
             }),
         )
-        const params = xaiStreamText.mock.calls[0]?.[0] as { abortSignal: AbortSignal }
-        expect(params.abortSignal.aborted).toBe(false)
         controller.abort()
-        expect(params.abortSignal.aborted).toBe(true)
+        await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     })
 
-    it('mistral: fetchOptions.signal follows the caller', async () => {
-        mistralStream.mockResolvedValue((async function* () {})())
+    it('rethrows an error part instead of returning the partial text', async () => {
+        xaiStreamText.mockReturnValue({
+            stream: (async function* () {
+                yield { type: 'error', error: new Error('provider failed') }
+            })(),
+        })
+        const { xaiTextAdapter } = await import('./xai-text-adapter.js')
+        await expect(
+            drain(xaiTextAdapter.streamText({ systemPrompt: 's', userPrompt: 'u' })),
+        ).rejects.toThrow('provider failed')
+    })
+})
+
+describe('mistral text adapter', () => {
+    it('aborts a hanging provider after the timeout', async () => {
+        mistralStream.mockImplementation(
+            (_request: unknown, options: { fetchOptions: { signal: AbortSignal } }) =>
+                rejectOnAbort(options.fetchOptions.signal),
+        )
+        const { mistralaiTextAdapter } = await import('./mistralai-text-adapter.js')
+        await expect(
+            drain(mistralaiTextAdapter.streamText({ systemPrompt: 's', userPrompt: 'u' })),
+        ).rejects.toMatchObject({ name: 'TimeoutError' })
+    })
+
+    it("stops at once when the caller's signal aborts", async () => {
+        mistralStream.mockImplementation(
+            (_request: unknown, options: { fetchOptions: { signal: AbortSignal } }) =>
+                rejectOnAbort(options.fetchOptions.signal),
+        )
         const { mistralaiTextAdapter } = await import('./mistralai-text-adapter.js')
         const controller = new AbortController()
-        await drain(
+        const pending = drain(
             mistralaiTextAdapter.streamText({
                 systemPrompt: 's',
                 userPrompt: 'u',
                 signal: controller.signal,
             }),
         )
-        const options = mistralStream.mock.calls[0]?.[1] as {
-            fetchOptions: { signal: AbortSignal }
-        }
         controller.abort()
-        expect(options.fetchOptions.signal.aborted).toBe(true)
+        await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     })
+})
 
-    it('embeddings: the request options carry a timeout signal', async () => {
-        embeddingsCreate.mockResolvedValue({ data: [{ index: 0, embedding: [1, 2, 3] }] })
+describe('openai embedding adapter', () => {
+    it('aborts a hanging embed and embedBatch after the timeout', async () => {
+        embeddingsCreate.mockImplementation((_request: unknown, options: { signal: AbortSignal }) =>
+            rejectOnAbort(options.signal),
+        )
         const { openaiEmbeddingAdapter } = await import('./openai-embedding-adapter.js')
-        await openaiEmbeddingAdapter.embed('text')
-        await openaiEmbeddingAdapter.embedBatch(['a'])
-        for (const call of embeddingsCreate.mock.calls) {
-            expect((call[1] as { signal: AbortSignal }).signal).toBeInstanceOf(AbortSignal)
-        }
-        expect(embeddingsCreate).toHaveBeenCalledTimes(2)
+        await expect(openaiEmbeddingAdapter.embed('text')).rejects.toMatchObject({
+            name: 'TimeoutError',
+        })
+        await expect(openaiEmbeddingAdapter.embedBatch(['a'])).rejects.toMatchObject({
+            name: 'TimeoutError',
+        })
     })
 })

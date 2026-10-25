@@ -15,7 +15,12 @@ import { useEventBus } from '@/utils/event-bus'
 import { mainApi } from '@/utils/api'
 import { getCurrentAppType } from '@/utils/app-type'
 import { sentryService } from '@/utils/sentry-service'
-import { hasPendingRequest, settleApiResponse, type ApiResolveItem } from '@/utils/ws-api-response'
+import {
+    classifyWsMessage,
+    hasPendingRequest,
+    settleApiResponse,
+    type ApiResolveItem,
+} from '@/utils/ws-api-response'
 import { buildWsEvent } from '@/utils/ws-event'
 import { resolveWebSocketCloseAction } from '@/utils/websocket-close'
 
@@ -223,14 +228,22 @@ const handleMessage = async (messageData: string | Blob | ArrayBuffer) => {
             return
         }
 
-        if (data.event === 'service:error') {
-            handleServiceError(data)
-        } else if (data.event.startsWith('broadcast:')) {
-            processBroadcast(data)
-        } else if (data.event.startsWith('service:')) {
-            service(data)
-        } else if (data.event.startsWith('api')) {
-            messageHandler(data)
+        switch (classifyWsMessage(data.event, hasPendingRequest(apiResolve.value, data.event))) {
+            case 'service-error':
+                handleServiceError(data)
+                break
+            case 'broadcast':
+                processBroadcast(data)
+                break
+            case 'service':
+                service(data)
+                break
+            case 'api':
+                messageHandler(data)
+                break
+            case 'unknown':
+                console.warn('WS message without a pending request:', data.event)
+                break
         }
     } catch (error) {
         console.error('Error parsing message:', error)
