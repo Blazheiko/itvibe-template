@@ -63,6 +63,7 @@ const KEY_PAGES = [
     { page: 'reference/toolchain.md', h1: 'Toolchain' },
     { page: 'reference/glossary.md', h1: 'Глосарій' },
     { page: 'reference/roles-capabilities.md', h1: 'Ролі та можливості' },
+    { page: 'reference/author.md', h1: 'Про автора' },
     { page: 'shared/index.md', h1: 'Пакет shared' },
     { page: 'frontend/index.md', h1: 'Фронтенд' },
     { page: 'playground/index.md', h1: 'API Playground' },

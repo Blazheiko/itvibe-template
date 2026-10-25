@@ -2,6 +2,8 @@ import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const repoUrl = 'https://github.com/Blazheiko/itvibe-template'
+const author = 'Олександр Блажейко'
+const authorEmail = 'blazheiko@gmail.com'
 
 const packagesItems = [
     { text: 'Пакет shared', link: '/shared/' },
@@ -19,7 +21,32 @@ export default withMermaid(
         cleanUrls: true,
         lastUpdated: true,
         ignoreDeadLinks: false,
-        head: [['link', { rel: 'icon', href: '/itvibe-template/logo.svg' }]],
+        head: [
+            ['link', { rel: 'icon', href: '/itvibe-template/logo.svg' }],
+            ['meta', { name: 'author', content: `${author} <${authorEmail}>` }],
+            ['meta', { name: 'creator', content: author }],
+            ['meta', { name: 'publisher', content: author }],
+            ['meta', { property: 'og:site_name', content: 'itvibe-template' }],
+            ['meta', { property: 'og:type', content: 'website' }],
+            ['meta', { property: 'article:author', content: author }],
+            ['link', { rel: 'author', href: '/itvibe-template/reference/author' }],
+            [
+                'script',
+                { type: 'application/ld+json' },
+                JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'WebSite',
+                    name: 'itvibe-template',
+                    url: 'https://blazheiko.github.io/itvibe-template/',
+                    author: {
+                        '@type': 'Person',
+                        name: author,
+                        email: `mailto:${authorEmail}`,
+                        url: 'https://github.com/Blazheiko',
+                    },
+                }),
+            ],
+        ],
         themeConfig: {
             logo: '/logo.svg',
             nav: [
@@ -114,9 +141,14 @@ export default withMermaid(
                             { text: 'Toolchain', link: '/reference/toolchain' },
                             { text: 'Глосарій', link: '/reference/glossary' },
                             { text: 'Ролі та можливості', link: '/reference/roles-capabilities' },
+                            { text: 'Про автора', link: '/reference/author' },
                         ],
                     },
                 ],
+            },
+            footer: {
+                message: `Автор: ${author} · <a href="mailto:${authorEmail}">${authorEmail}</a>`,
+                copyright: `© ${String(new Date().getFullYear())} ${author}`,
             },
             search: { provider: 'local' },
             editLink: {
