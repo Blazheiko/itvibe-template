@@ -727,3 +727,41 @@
 
 - **Що:** `packages/frontend/src/utils/api.ts` має 46 шляхів виду `'/api/...'`, а Vite proxy (`vite.config.ts`) теж налаштований лише на `/api`. Після feat-024 WS-події беруть префікс з `VITE_API_PATH_PREFIX`, а HTTP — ні, тож бекенд з іншим `API_PATH_PREFIX` працює з фронтендом лише через переписування шляхів на проксі.
 - **Пропозиція:** будувати HTTP-шляхи з того самого `WS_API_PREFIX` (перейменувати на `API_PREFIX`) і брати proxy-ключ з тієї ж змінної; суміжне з п. 62 (playground).
+
+## Знайдено під час роботи над документацією для початківців
+
+### 74. Спільні контракти ловлять розбіжності лише частково
+
+- **Що:** перевірено перейменуванням полів у `packages/shared/src/responses` і `pnpm typecheck`. `AdminUserListItem.name` → помилки і в backend, і у frontend. `InitResponseSchema.wsUrl` → помилок немає: тип `InitResponse` написано вручну окремо від схеми і він `extends Record<string, unknown>`. Перейменування поля в інтерфейсі `InitResponse` дає одну помилку у frontend (`App.vue`), backend не помічає, бо зайві ключі дозволені. `PushSubscriptionSchema.isActive` → помилок немає: frontend має власні типи підписок, backend не прив'язує повернення до цього типу. `ResponseSchema` маршрутів використовується лише для серіалізації опису API (`serialize-routes.ts`), відповідь під час виконання не перевіряється.
+- **Пропозиція:** виводити типи відповідей лише зі схем (`.infer`) і прибрати ручні інтерфейси з `Record<string, unknown>`; у frontend `utils/api.ts` використовувати типи зі `shared/responses` замість локальних; розглянути перевірку відповіді за `ResponseSchema` у dev/test-режимі.
+
+### 75. OAuth без налаштувань веде на провайдера з порожнім `client_id`
+
+- **Що:** з `.env.example` (порожні `GOOGLE_CLIENT_ID` тощо) `GET /api/auth/oauth/google/redirect` відповідає `302` на `accounts.google.com/...&client_id=&redirect_uri=`. Користувач бачить помилку Google замість зрозумілої відповіді застосунку, а кнопки соцвходу показуються, хоча провайдер не налаштований.
+- **Пропозиція:** повертати `404`/`503 provider_not_configured` для провайдера без `client_id`/`secret` і віддавати фронтенду список налаштованих провайдерів, щоб ховати зайві кнопки.
+
+### 76. Дати користувача зсунуті на часовий пояс сервера
+
+- **Що:** demo-акаунт, створений seed-ом одним викликом, у `GET /api/main/init` має `emailVerifiedAt: 2026-10-25T15:05:42Z` і `createdAt: 2026-10-25T17:05:42Z` (сервер у UTC+2). Одне з полів інтерпретується як локальний час замість UTC. Крім того, відповідь `POST /api/auth/login` віддає `created_at`/`updated_at` (snake_case, з офсетом), а `init` — `createdAt`/`updatedAt` (camelCase, `Z`).
+- **Причина (перевірено):** колонки оголошено як `timestamp` без часового поясу. `defaultNow()` пише `now()` у поясі сесії PostgreSQL (локальна інсталяція — `Europe/Kiev`), а значення з JS `Date` (`email_verified_at`) пишуться в UTC; node-pg читає обидва як UTC. Після `ALTER DATABASE ... SET timezone TO 'UTC'` зсув зникає. В образі `pgvector/pgvector` пояс UTC, тому в Docker проблеми не видно. Туторіал «Як додати фічу» повторює той самий патерн для `notes`.
+- **Пропозиція:** перейти на `timestamp(..., { withTimezone: true })` (міграція `timestamptz`) або фіксувати `timezone=UTC` у пулі з'єднань (`options: '-c timezone=UTC'`); привести відповідь login до того ж DTO, що й init (через `userTransformer`).
+
+### 77. Поле `token` у схемі входу обов'язкове, але не використовується
+
+- **Що:** `LoginInputSchema` вимагає `token: 'string <= 60'`, фронтенд завжди передає `props.token` (зазвичай порожній), а сервіс входу його не читає. Без поля вхід дає `422`, що збиває з пантелику при ручних запитах.
+- **Пропозиція:** зробити `token?` опційним або прибрати, якщо він ніде не потрібен; задокументувати призначення, якщо потрібен.
+
+### 78. Вхід без CSRF-токена відхиляється при `CSRF_ENFORCE=true`
+
+- **Що:** `POST /api/auth/login` без попереднього `GET /api/main/init` дає `CSRF validation failed, reason: token_mismatch` (при `CSRF_ENFORCE=false` лише WARN). Для браузера це коректно, бо фронтенд спершу викликає `init`, але для API-клієнтів (мобільний застосунок, інтеграційні тести) поведінка неочевидна.
+- **Пропозиція:** описати в `auth-security.md` (зроблено в гайді «Швидкий старт»); за потреби — окремий режим для не-браузерних клієнтів.
+
+### 79. `admin_guard` відповідає не в канонічному форматі помилки
+
+- **Що:** звичайний користувач на `GET /api/admin/users` отримує `403 {"status":"forbidden","message":"Admin access required","csrfToken":"..."}`. Решта помилок мають `{"status":"error","code":"<code>","message":...}` (`CanonicalErrorResponseSchema`), тож клієнт, що перевіряє `status === 'error'` або `code`, цю відмову не розпізнає.
+- **Пропозиція:** формувати відповідь `admin_guard` (і `ws-admin-guard`) через `forbidden()` з `errors.ts`, щоб отримати `status: 'error'`, `code: 'forbidden'`.
+
+### 80. Туторіал «Як додати фічу» порушував правило шарів
+
+- **Що:** крок 5 імпортував `NoteRow` з `#app/repositories/note/note-repository.js`, а `layering.spec.ts` дозволяє поза `app/repositories` лише barrel. Код туторіалу, перенесений дослівно, давав червоний `pnpm test`.
+- **Виправлено** в документації: імпорт з `#app/repositories/index.js`, повний `pnpm --filter backend test` зелений (124 файли, 920 тестів на момент перевірки).

@@ -2,6 +2,33 @@
 
 Маршрути бекенду описуються декларативно у двох файлах: HTTP — у [`src/app/routes/http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts), WebSocket — у [`src/app/routes/ws-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts). Під час старту роутер ([`src/vendor/start/router.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/router.ts)) розгортає групи, склеює префікси та списки middleware і реєструє маршрути в uWebSockets.js. Загальний шлях запиту описано на сторінці [Життєвий цикл запиту](/backend/request-lifecycle).
 
+## Коротко на прикладі: закрити маршрут для незалогінених
+
+Middleware задаються списком назв на групі маршрутів (або на окремому маршруті) і виконуються по черзі до обробника.
+
+```ts
+{
+    group: [ /* defineRoute(...) */ ],
+    prefix: 'notes',
+    middlewares: ['session_web', 'csrf_guard', 'auth_guard'],
+}
+```
+
+| Набір middleware                                         | Хто пройде                | Інші отримають                                    |
+| -------------------------------------------------------- | ------------------------- | ------------------------------------------------- |
+| немає                                                    | усі (як `GET /api/hello`) | —                                                 |
+| `session_web`, `csrf_guard`, `auth_guard`                | лише залогінені           | `401 unauthorized`                                |
+| `session_web`, `csrf_guard`, `auth_guard`, `admin_guard` | лише роль `admin`         | `401` без входу, `403` для звичайного користувача |
+
+Відповіді перевірено на запущеному сервері (`GET /api/admin/users`):
+
+```text
+без cookie            → 401 {"status":"error","code":"unauthorized","message":"Session expired or not found",...}
+звичайний користувач  → 403 {"status":"forbidden","message":"Admin access required",...}
+```
+
+`session_web` має стояти першим: решта читає сесію, яку він піднімає. Повний список middleware і як додати свій — нижче.
+
 ## HTTP-маршрути: `defineRoute`
 
 Хелпер `defineRoute` лежить у [`src/app/routing/define-route.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) (а не у `vendor/utils/routing`). Він загортає ArkType-схеми у `defaultValidator` і виводить типи `payload`/`query` для handler-а.

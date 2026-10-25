@@ -2,6 +2,8 @@ import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const repoUrl = 'https://github.com/Blazheiko/itvibe-template'
+const author = 'Олександр Блажейко'
+const authorEmail = 'blazheiko@gmail.com'
 
 const packagesItems = [
     { text: 'Пакет shared', link: '/shared/' },
@@ -19,11 +21,36 @@ export default withMermaid(
         cleanUrls: true,
         lastUpdated: true,
         ignoreDeadLinks: false,
-        head: [['link', { rel: 'icon', href: '/itvibe-template/logo.svg' }]],
+        head: [
+            ['link', { rel: 'icon', href: '/itvibe-template/logo.svg' }],
+            ['meta', { name: 'author', content: `${author} <${authorEmail}>` }],
+            ['meta', { name: 'creator', content: author }],
+            ['meta', { name: 'publisher', content: author }],
+            ['meta', { property: 'og:site_name', content: 'itvibe-template' }],
+            ['meta', { property: 'og:type', content: 'website' }],
+            ['meta', { property: 'article:author', content: author }],
+            ['link', { rel: 'author', href: '/itvibe-template/reference/author' }],
+            [
+                'script',
+                { type: 'application/ld+json' },
+                JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'WebSite',
+                    name: 'itvibe-template',
+                    url: 'https://blazheiko.github.io/itvibe-template/',
+                    author: {
+                        '@type': 'Person',
+                        name: author,
+                        email: `mailto:${authorEmail}`,
+                        url: 'https://github.com/Blazheiko',
+                    },
+                }),
+            ],
+        ],
         themeConfig: {
             logo: '/logo.svg',
             nav: [
-                { text: 'Гайд', link: '/guide/introduction' },
+                { text: 'Почати навчання', link: '/guide/introduction' },
                 { text: 'Бекенд', link: '/backend/' },
                 {
                     text: 'Пакети',
@@ -38,11 +65,19 @@ export default withMermaid(
             sidebar: {
                 '/guide/': [
                     {
+                        text: 'Перший день',
+                        items: [
+                            { text: '1. Вступ', link: '/guide/introduction' },
+                            { text: '2. Швидкий старт', link: '/guide/getting-started' },
+                            { text: '3. Як влаштований бекенд', link: '/guide/how-backend-works' },
+                            { text: '4. Перший маршрут', link: '/guide/first-endpoint' },
+                            { text: '5. Як додати фічу', link: '/backend/adding-a-feature' },
+                            { text: '6. Свій проєкт на шаблоні', link: '/guide/your-project' },
+                        ],
+                    },
+                    {
                         text: 'Гайд',
                         items: [
-                            { text: 'Вступ', link: '/guide/introduction' },
-                            { text: 'Швидкий старт', link: '/guide/getting-started' },
-                            { text: 'Як влаштований бекенд', link: '/guide/how-backend-works' },
                             { text: 'Структура проєкту', link: '/guide/project-structure' },
                             { text: 'Процес роботи', link: '/guide/workflow' },
                         ],
@@ -52,6 +87,10 @@ export default withMermaid(
                     {
                         text: 'Бекенд',
                         items: [
+                            {
+                                text: 'Як влаштований (для новачків)',
+                                link: '/guide/how-backend-works',
+                            },
                             { text: 'Огляд', link: '/backend/' },
                             { text: 'Архітектура', link: '/backend/architecture' },
                             { text: 'Життєвий цикл запиту', link: '/backend/request-lifecycle' },
@@ -102,9 +141,14 @@ export default withMermaid(
                             { text: 'Toolchain', link: '/reference/toolchain' },
                             { text: 'Глосарій', link: '/reference/glossary' },
                             { text: 'Ролі та можливості', link: '/reference/roles-capabilities' },
+                            { text: 'Про автора', link: '/reference/author' },
                         ],
                     },
                 ],
+            },
+            footer: {
+                message: `Автор: ${author} · <a href="mailto:${authorEmail}">${authorEmail}</a>`,
+                copyright: `© ${String(new Date().getFullYear())} ${author}`,
             },
             search: { provider: 'local' },
             editLink: {

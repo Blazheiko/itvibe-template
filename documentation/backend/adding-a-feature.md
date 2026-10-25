@@ -2,10 +2,14 @@
 
 Цей туторіал крок за кроком додає новий ресурс **`notes`** (нотатки поточного користувача) з двома ендпоінтами, `GET /api/notes` і `POST /api/notes`, і проходить усі шари архітектури проєкту: shared-схеми → Drizzle-таблиця й міграція → repository → transformer → service → controller → реєстрація маршруту → unit-тест на Vitest.
 
+::: info Перед читанням
+Пройдіть вправу [Перший маршрут](/guide/first-endpoint): там ті самі шари (схема → service → controller → route) показано без бази даних. Цей туторіал додає до них таблицю, міграцію, repository, transformer і захист маршруту сесією.
+:::
+
 Загальну картину шарів описано в [Архітектурі](/backend/architecture), роутинг і middleware — у [Роутингу та middleware](/backend/routing-middlewares), роботу з БД — у [Базі даних](/backend/database), а шлях запиту — у [Життєвому циклі запиту](/backend/request-lifecycle).
 
 ::: tip Перевірено на практиці
-Весь код нижче було реально додано в чисту копію репозиторію, після чого пройшли `pnpm --filter shared build`, `pnpm typecheck`, `pnpm --filter backend test` (52 файли, 271 тест, разом із новим `note-service.spec.ts`) та `npx eslint` для змінених файлів. Як зразок узято наявну фічу push-підписок.
+Весь код нижче було реально додано в чисту копію репозиторію, після чого пройшли `pnpm --filter shared build`, `pnpm typecheck`, повний `pnpm --filter backend test` (разом із новим `note-service.spec.ts` і перевіркою шарів `layering.spec.ts`) та `npx eslint` для змінених файлів, а запити з кроку 10 виконано на запущеному сервері. Як зразок узято наявну фічу push-підписок.
 :::
 
 ## Що буде створено
@@ -112,6 +116,10 @@ export const notes = pgTable(
 )
 ```
 
+::: warning Часовий пояс
+Колонка `timestamp` без часового поясу зберігає `now()` у часовому поясі PostgreSQL, а читається як UTC. Якщо PostgreSQL працює не в UTC (наприклад, встановлений локально з поясом `Europe/Kiev`), `created_at` у відповіді буде зсунутий на різницю поясів. В образі `pgvector/pgvector` пояс UTC, і проблеми не видно. Так само оголошено дати в наявних таблицях шаблону, див. [п. 76](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
+:::
+
 Згенеруйте міграцію ([drizzle.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts) пише їх у `src/drizzle/migrations` у форматі «тека на міграцію»):
 
 ```bash
@@ -188,7 +196,7 @@ Transformer перетворює рядок БД на публічний DTO: `b
 // packages/backend/src/app/transformers/note-transformer.ts
 import { DateTime } from 'luxon'
 import type { Note } from 'shared'
-import type { NoteRow } from '#app/repositories/note/note-repository.js'
+import type { NoteRow } from '#app/repositories/index.js'
 
 export const noteTransformer = {
     serialize(note: NoteRow): Note {
@@ -205,6 +213,8 @@ export const noteTransformer = {
     },
 }
 ```
+
+Тип `NoteRow` імпортується з barrel `#app/repositories/index.js`, а не з файлу репозиторію: прямий імпорт поза `app/repositories` заборонено, і [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts) на ньому впаде.
 
 Експорт у [transformers/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/index.ts):
 
@@ -464,7 +474,91 @@ npx eslint packages/backend/src/app/services/note packages/backend/src/app/contr
   packages/shared/src/responses/note-controller.ts
 ```
 
-Перед мержем пройдіть повний Definition of Done з [AGENTS.md](https://github.com/Blazheiko/itvibe-template/blob/main/AGENTS.md): `pnpm typecheck`, `pnpm lint`, `pnpm test` і ручну перевірку golden path. Тобто застосуйте міграцію (`db:migrate`), запустіть `pnpm dev`, увійдіть і викличте `POST /api/notes`, а потім `GET /api/notes`.
+### Ручна перевірка: запити й відповіді
+
+Застосуйте міграцію і запустіть проєкт:
+
+```bash
+pnpm --filter backend db:migrate
+pnpm dev
+```
+
+Маршрути захищені сесією, тому спершу треба увійти. Як і в [першому сценарії](/guide/getting-started#те-саме-через-curl), cookie зберігаються в `cookies.txt`, а CSRF-токен береться з `GET /api/main/init`. Використайте demo-користувача з `SEED_USER_*`:
+
+```bash
+B=http://127.0.0.1:3000/api
+csrf() { curl -s -b cookies.txt -c cookies.txt $B/main/init | sed -E 's/.*"csrfToken":"([^"]+)".*/\1/'; }
+
+# вхід
+curl -s -o /dev/null -b cookies.txt -c cookies.txt -H 'content-type: application/json' \
+  -H "x-csrf-token: $(csrf)" \
+  -d '{"email":"user@example.com","password":"<user-password>","token":""}' $B/auth/login
+
+CSRF=$(csrf)   # після входу токен новий
+```
+
+**Створити нотатку:**
+
+```bash
+curl -s -b cookies.txt -H 'content-type: application/json' -H "x-csrf-token: $CSRF" \
+  -d '{"title":"Купити молоко","body":"2 літри"}' $B/notes
+```
+
+```json
+{
+    "status": "success",
+    "note": {
+        "id": "1",
+        "title": "Купити молоко",
+        "body": "2 літри",
+        "created_at": "2026-10-25T17:23:05.794+02:00"
+    }
+}
+```
+
+Статус `200`. Відповідь знято на сервері з часовим поясом `Europe/Kiev` і PostgreSQL у UTC, тому `created_at` має офсет `+02:00`. Без поля `body` нотатка теж створюється, і в відповіді буде `"body": null`.
+
+**Отримати список** (найновіші першими):
+
+```bash
+curl -s -b cookies.txt $B/notes
+```
+
+```json
+{
+    "status": "success",
+    "notes": [
+        {
+            "id": "2",
+            "title": "Подзвонити",
+            "body": null,
+            "created_at": "2026-10-25T17:23:05.810+02:00"
+        },
+        {
+            "id": "1",
+            "title": "Купити молоко",
+            "body": "2 літри",
+            "created_at": "2026-10-25T17:23:05.794+02:00"
+        }
+    ]
+}
+```
+
+**Помилкові запити.** Кожен рядок нижче перевірено на запущеному сервері:
+
+| Запит                                             | Статус | Відповідь (скорочено)                                                                                   | Хто зупинив                     |
+| ------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `GET /notes` без cookie                           | `401`  | `{"status":"error","code":"unauthorized","message":"Session expired or not found",...}`                 | `auth_guard`                    |
+| `POST` з `{"title":""}`                           | `422`  | `"code":"validation_failed"`, `"messages":["title must be non-empty"]`                                  | схема `CreateNoteInputSchema`   |
+| `POST` з `{"title":"x","done":true}`              | `422`  | `"messages":["done must be removed"]`                                                                   | `'+': 'reject'` у схемі         |
+| `POST` з `content-type: text/plain`               | `415`  | `"code":"unsupported_media_type"`, `"allowedKinds":["json"]`                                            | ядро: маршрут приймає лише JSON |
+| `POST` без `x-csrf-token` при `CSRF_ENFORCE=true` | `403`  | `{"status":"error","code":"csrf_invalid","message":"Invalid CSRF token","reason":"token_mismatch",...}` | `csrf_guard`                    |
+
+За замовчуванням `CSRF_ENFORCE=false`: запит без токена пройде, а в лозі бекенду з'явиться `CSRF validation failed`. Щоб побачити `403`, увімкніть `CSRF_ENFORCE=true` у `.env` і перезапустіть бекенд. У продакшені його варто вмикати завжди ([CSRF](/backend/auth-security#csrf)).
+
+Те саме можна перевірити без curl в [API Playground](/playground/): він показує маршрути `notes` разом зі схемою тіла.
+
+Перед мержем пройдіть повний Definition of Done з [AGENTS.md](https://github.com/Blazheiko/itvibe-template/blob/main/AGENTS.md): `pnpm typecheck`, `pnpm lint`, `pnpm test` і ручну перевірку вище.
 
 ## Типові помилки
 
@@ -472,3 +566,7 @@ npx eslint packages/backend/src/app/services/note packages/backend/src/app/contr
 - **Імпорт repository напряму з файлу**, а не з `#app/repositories/index.js`. Тоді `vi.mock` у тесті його не перехопить.
 - **Повернення `bigint` або `Date` з контролера.** Завжди пропускайте рядки через transformer.
 - **Кидання винятків із сервісу.** Повертайте `Result.err(...)`, а HTTP-статус виставить `mapControllerError`.
+
+::: tip Наступний крок
+[Свій проєкт на шаблоні](/guide/your-project): перейменування, інтерфейс і вибір інтеграцій для вашого продукту.
+:::

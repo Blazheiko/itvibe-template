@@ -2,6 +2,34 @@
 
 Ця сторінка описує, як бекенд автентифікує користувачів і захищає HTTP- та WebSocket-трафік: сесії в Redis з HMAC-підписаною cookie, способи входу (email/пароль, телефон/SMS, OAuth), обмеження частоти запитів, CSRF, CORS, заголовки безпеки, визначення IP за проксі та авторизацію WebSocket. Усе нижче описано за поточним кодом у `packages/backend/src`. Загальний порядок обробки запиту описано на сторінці [Життєвий цикл запиту](/backend/request-lifecycle), а підключення middleware до маршрутів — на сторінці [Маршрутизація та middleware](/backend/routing-middlewares).
 
+## Коротко на прикладі: що відбувається після входу
+
+Цей ланцюжок можна пройти в браузері (DevTools → Network) або через curl, див. [Перший сценарій](/guide/getting-started#_6-першии-сценаріи-від-входу-до-виходу).
+
+1. **`GET /api/main/init`** без cookie. Сервер створює гостьову сесію в Redis, ставить cookie `uapi` і повертає `401` з `csrfToken`.
+2. **`POST /api/auth/login`** з email, паролем і заголовком `x-csrf-token`. Сервер перевіряє пароль, прив'язує сесію до користувача і оновлює cookie:
+
+    ```text
+    Set-Cookie: uapi=<…>; Path=/; Expires=…; HttpOnly; Max-Age=86400; SameSite=Lax
+    ```
+
+    Неправильний пароль дає `401 {"message":"Invalid email or password","code":"unauthorized"}`, а після 10 невдалих спроб поспіль з однієї адреси сервер відповідає `429` із заголовком `Retry-After: 60` (перевірено з налаштуваннями за замовчуванням; ліміти описано нижче).
+
+3. **Кожен наступний запит** несе cookie автоматично. Middleware `session_web` знаходить сесію в Redis і знає, хто ви. `GET /api/main/init` тепер повертає `200` з даними користувача, `wsToken` і новим `csrfToken`.
+4. **Захищені маршрути.** `auth_guard` пропускає лише сесію з користувачем (інакше `401`), `admin_guard` — лише роль `admin` (інакше `403 Admin access required`).
+5. **`POST /api/auth/logout`** видаляє сесію з Redis. Стара cookie більше нічого не відкриває, `init` знову дає `401`. `logout-all` видаляє всі сесії користувача, тобто виходить на всіх пристроях.
+
+Що лежить у Redis після такого сценарію (ключі з префіксом `REDIS_PREFIX`):
+
+```text
+uwebsocket:session:<userId>:<sessionId>          сесія залогіненого користувача
+uwebsocket:session:anon_session:<sessionId>      гостьова сесія (до входу)
+uwebsocket:auth:throttle:login_ip:127.0.0.1      лічильник спроб входу з IP
+uwebsocket:auth:ws:<token>                       одноразовий WebSocket-токен (60 с)
+```
+
+Нижче описано формат cookie, підпис, ротацію і решту механізмів.
+
 ## Сесії
 
 ### Формат cookie

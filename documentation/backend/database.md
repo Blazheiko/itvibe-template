@@ -2,6 +2,33 @@
 
 Бекенд працює з PostgreSQL через Drizzle ORM. Пакети `drizzle-orm` і `drizzle-kit` закріплені на релізі-кандидаті `1.0.0-rc.4` у [`packages/backend/package.json`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/package.json); оновлювати їх слід разом і на ту саму точну версію. Драйвер — `pg` (`node-postgres`). Redis використовується окремо — як сховище сесій та для тротлінгу.
 
+## Коротко на прикладі: додати колонку
+
+**Задача:** нотатки з туторіалу [Як додати фічу](/backend/adding-a-feature) треба вміти закріплювати.
+
+1. Додайте поле в таблицю в `packages/backend/src/database/schema.ts`:
+
+    ```ts
+    pinned: boolean('pinned').notNull().default(false),
+    ```
+
+2. Згенеруйте міграцію (база для цього не потрібна):
+
+    ```bash
+    pnpm --filter backend db:generate --name add_notes_pinned
+    ```
+
+    ```sql
+    -- src/drizzle/migrations/<timestamp>_add_notes_pinned/migration.sql
+    ALTER TABLE "notes" ADD COLUMN "pinned" boolean DEFAULT false NOT NULL;
+    ```
+
+3. Застосуйте її: `pnpm --filter backend db:migrate`.
+
+**Результат:** колонка є в базі, а тип `NoteRow` у репозиторії сам отримав поле `pinned: boolean`, бо виводиться зі схеми. `pnpm typecheck` покаже місця, де нове поле треба врахувати, наприклад у transformer, якщо віддаєте його клієнту.
+
+`DEFAULT false` тут важливий: без default і з `notNull()` міграція впаде на таблиці, де вже є рядки. Міграції комітьте разом зі зміною `schema.ts`. Нижче описано підключення, схему, міграції і seed детально.
+
 ## Підключення
 
 Параметри беруться з env-змінних `PGSQL_*` (див. [`.env.example`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/.env.example) та [Конфігурацію](/backend/configuration)):
