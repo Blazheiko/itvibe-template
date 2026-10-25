@@ -35,3 +35,32 @@ describe('parseSize via APP_MAX_JSON_BODY_SIZE', () => {
         },
     )
 })
+
+describe('APP_UNIX_PATH', () => {
+    const originalUnixPath = process.env['APP_UNIX_PATH']
+
+    const loadUnixPath = async (value: string | undefined): Promise<string | undefined> => {
+        if (value === undefined) delete process.env['APP_UNIX_PATH']
+        else process.env['APP_UNIX_PATH'] = value
+        vi.resetModules()
+        const { default: config } = await import('./app.js')
+        return config.unixPath
+    }
+
+    afterEach(() => {
+        if (originalUnixPath === undefined) delete process.env['APP_UNIX_PATH']
+        else process.env['APP_UNIX_PATH'] = originalUnixPath
+    })
+
+    it('is undefined when unset, so the server listens on HOST:PORT', async () => {
+        expect(await loadUnixPath(undefined)).toBeUndefined()
+    })
+
+    it('is undefined for an empty value copied from .env.example', async () => {
+        expect(await loadUnixPath('')).toBeUndefined()
+    })
+
+    it('keeps a configured socket path', async () => {
+        expect(await loadUnixPath('/tmp/app.sock')).toBe('/tmp/app.sock')
+    })
+})
