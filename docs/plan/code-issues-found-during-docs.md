@@ -734,3 +734,23 @@
 
 - **Що:** перевірено перейменуванням полів у `packages/shared/src/responses` і `pnpm typecheck`. `AdminUserListItem.name` → помилки і в backend, і у frontend. `InitResponseSchema.wsUrl` → помилок немає: тип `InitResponse` написано вручну окремо від схеми і він `extends Record<string, unknown>`. Перейменування поля в інтерфейсі `InitResponse` дає одну помилку у frontend (`App.vue`), backend не помічає, бо зайві ключі дозволені. `PushSubscriptionSchema.isActive` → помилок немає: frontend має власні типи підписок, backend не прив'язує повернення до цього типу. `ResponseSchema` маршрутів використовується лише для серіалізації опису API (`serialize-routes.ts`), відповідь під час виконання не перевіряється.
 - **Пропозиція:** виводити типи відповідей лише зі схем (`.infer`) і прибрати ручні інтерфейси з `Record<string, unknown>`; у frontend `utils/api.ts` використовувати типи зі `shared/responses` замість локальних; розглянути перевірку відповіді за `ResponseSchema` у dev/test-режимі.
+
+### 75. OAuth без налаштувань веде на провайдера з порожнім `client_id`
+
+- **Що:** з `.env.example` (порожні `GOOGLE_CLIENT_ID` тощо) `GET /api/auth/oauth/google/redirect` відповідає `302` на `accounts.google.com/...&client_id=&redirect_uri=`. Користувач бачить помилку Google замість зрозумілої відповіді застосунку, а кнопки соцвходу показуються, хоча провайдер не налаштований.
+- **Пропозиція:** повертати `404`/`503 provider_not_configured` для провайдера без `client_id`/`secret` і віддавати фронтенду список налаштованих провайдерів, щоб ховати зайві кнопки.
+
+### 76. Дати користувача зсунуті на часовий пояс сервера
+
+- **Що:** demo-акаунт, створений seed-ом одним викликом, у `GET /api/main/init` має `emailVerifiedAt: 2026-10-25T15:05:42Z` і `createdAt: 2026-10-25T17:05:42Z` (сервер у UTC+2). Одне з полів інтерпретується як локальний час замість UTC. Крім того, відповідь `POST /api/auth/login` віддає `created_at`/`updated_at` (snake_case, з офсетом), а `init` — `createdAt`/`updatedAt` (camelCase, `Z`).
+- **Пропозиція:** перевірити типи колонок (`timestamp` vs `timestamptz`) і mode у Drizzle для `created_at`/`email_verified_at`; привести відповідь login до того ж DTO, що й init (через `userTransformer`).
+
+### 77. Поле `token` у схемі входу обов'язкове, але не використовується
+
+- **Що:** `LoginInputSchema` вимагає `token: 'string <= 60'`, фронтенд завжди передає `props.token` (зазвичай порожній), а сервіс входу його не читає. Без поля вхід дає `422`, що збиває з пантелику при ручних запитах.
+- **Пропозиція:** зробити `token?` опційним або прибрати, якщо він ніде не потрібен; задокументувати призначення, якщо потрібен.
+
+### 78. Вхід без CSRF-токена відхиляється при `CSRF_ENFORCE=true`
+
+- **Що:** `POST /api/auth/login` без попереднього `GET /api/main/init` дає `CSRF validation failed, reason: token_mismatch` (при `CSRF_ENFORCE=false` лише WARN). Для браузера це коректно, бо фронтенд спершу викликає `init`, але для API-клієнтів (мобільний застосунок, інтеграційні тести) поведінка неочевидна.
+- **Пропозиція:** описати в `auth-security.md` (зроблено в гайді «Швидкий старт»); за потреби — окремий режим для не-браузерних клієнтів.
