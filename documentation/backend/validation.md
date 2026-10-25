@@ -2,6 +2,38 @@
 
 Вхідні дані (тіло HTTP-запиту, query, payload WS-повідомлення та сам конверт WS-повідомлення) перевіряються схемами ArkType (`@arktype/type`). Ядро сервера (`vendor/`) працює не з ArkType, а з нейтральним контрактом `Validator<T>`; конкретну бібліотеку підключає адаптер в `app/validate`. Загальний порядок обробки запиту описано в [Життєвому циклі запиту](/backend/request-lifecycle), поля маршруту — в [Маршрутизації та middleware](/backend/routing-middlewares).
 
+## Коротко на прикладі
+
+**Задача:** маршрут `POST /api/notes` має приймати лише непорожній `title` до 200 символів і необов'язковий `body`, а все інше відхиляти.
+
+1. Опишіть схему в `shared` (з туторіалу [Як додати фічу](/backend/adding-a-feature#крок-1-схема-вхідних-даних-у-shared)):
+
+    ```ts
+    export const CreateNoteInputSchema = type({
+        title: '1 <= string <= 200',
+        'body?': 'string <= 5000',
+        '+': 'reject', // зайві поля — помилка
+    })
+    ```
+
+2. Передайте її маршруту як `validator` (для query — `queryValidator`):
+
+    ```ts
+    defineRoute({ url: '/', method: 'post', handler: ..., validator: CreateNoteInputSchema })
+    ```
+
+3. У контролері візьміть уже перевірені дані: `getTypedPayload(context)` повертає `CreateNoteInput`.
+
+**Результат:** некоректний запит не доходить до контролера.
+
+| Тіло запиту                 | Відповідь                                       |
+| --------------------------- | ----------------------------------------------- |
+| `{"title":"Купити молоко"}` | `200`, нотатку створено                         |
+| `{"title":""}`              | `422`, `"messages":["title must be non-empty"]` |
+| `{"title":"x","done":true}` | `422`, `"messages":["done must be removed"]`    |
+
+Перевірка форми даних (тип, довжина, зайві поля) — у схемі. Перевірка змісту (чи існує запис, чи можна користувачу) — у сервісі, див. [Перший маршрут](/guide/first-endpoint#крок-2-service). Нижче описано, як це влаштовано всередині.
+
 ## Контракт `Validator<T>`
 
 [vendor/contracts/validator.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/contracts/validator.ts):
