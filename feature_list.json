@@ -371,8 +371,8 @@
             "owner": "Blazheiko",
             "branch": "feat/review-fixes",
             "dependencies": ["feat-035"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #96 (merge 818a45c): 2 high, 5 medium and the low review findings fixed with negative controls; backend 850, frontend 61, playground 14, redis 31, pg 22, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/review-fixes"
         }
     ]
 }
