@@ -36,6 +36,7 @@ const KEY_PAGES = [
     { page: 'guide/introduction.md', h1: 'Вступ' },
     { page: 'guide/getting-started.md', h1: 'Швидкий старт' },
     { page: 'guide/how-backend-works.md', h1: 'Як влаштований бекенд' },
+    { page: 'guide/first-endpoint.md', h1: 'Перший маршрут' },
     { page: 'guide/project-structure.md', h1: 'Структура проєкту' },
     { page: 'backend/index.md', h1: 'Огляд бекенду' },
     { page: 'backend/architecture.md', h1: 'Архітектура бекенду' },

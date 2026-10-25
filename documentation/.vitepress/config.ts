@@ -43,6 +43,7 @@ export default withMermaid(
                             { text: 'Вступ', link: '/guide/introduction' },
                             { text: 'Швидкий старт', link: '/guide/getting-started' },
                             { text: 'Як влаштований бекенд', link: '/guide/how-backend-works' },
+                            { text: 'Перший маршрут', link: '/guide/first-endpoint' },
                             { text: 'Структура проєкту', link: '/guide/project-structure' },
                             { text: 'Процес роботи', link: '/guide/workflow' },
                         ],
