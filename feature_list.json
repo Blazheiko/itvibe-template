@@ -373,6 +373,16 @@
             "dependencies": ["feat-035"],
             "status": "done",
             "evidence": "PR #96 (merge 818a45c): 2 high, 5 medium and the low review findings fixed with negative controls; backend 850, frontend 61, playground 14, redis 31, pg 22, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/review-fixes"
+        },
+        {
+            "id": "feat-038",
+            "name": "Format, Push Events, HTTP Prefix",
+            "description": "code-issues items 71 (format:check covers vue/js/mjs/css, one formatting commit in .git-blame-ignore-revs), 72 (push on business events: new sign-in, password changed / reset / logout-all as system; support reply as mention with skipIfOnline), 73 (frontend HTTP paths and Vite proxy from VITE_API_PATH_PREFIX)",
+            "owner": "Blazheiko",
+            "branch": "feat/format-push-prefix",
+            "dependencies": ["feat-037"],
+            "status": "in_progress",
+            "evidence": ""
         }
     ]
 }
