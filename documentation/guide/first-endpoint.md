@@ -1,6 +1,6 @@
 # Перший маршрут
 
-За 15 хвилин ви додасте до бекенду маршрут `GET /api/hello`, який вітає користувача на ім'я. Тут немає бази даних, міграцій і авторизації: лише чотири шари, через які проходить будь-який запит. Після цієї вправи повний туторіал [Як додати фічу](/backend/adding-a-feature) читатиметься значно легше.
+За 15 хвилин ви додасте до бекенду маршрут `GET /api/hello`, який вітає користувача на ім'я. Тут немає бази даних, [міграцій](/reference/glossary#міграція) і [авторизації](/reference/glossary#автентифікація-і-авторизація): лише чотири шари, через які проходить будь-який запит. Після цієї вправи повний туторіал [Як додати фічу](/backend/adding-a-feature) читатиметься значно легше.
 
 ::: info Перед читанням
 
@@ -19,13 +19,13 @@ curl 'http://127.0.0.1:3000/api/hello?name=Olena'
 { "status": "ok", "message": "Hello, Olena!" }
 ```
 
-| Шар        | Файл                                                                  | Що робить                                     |
-| ---------- | --------------------------------------------------------------------- | --------------------------------------------- |
-| Контракт   | `packages/shared/src/schemas/hello/hello-query.ts`                    | Які query-параметри приймає маршрут           |
-| Контракт   | `packages/shared/src/responses/hello-controller.ts`                   | Як виглядає відповідь                         |
-| Service    | `packages/backend/src/app/services/hello/hello-service.ts`            | Бізнес-правило: як вітати                     |
-| Controller | `packages/backend/src/app/controllers/http/hello/hello-controller.ts` | Бере query, викликає сервіс, формує відповідь |
-| Route      | `packages/backend/src/app/routes/http-routes.ts`                      | Зв'язує URL з контролером і схемою            |
+| Шар        | Файл                                                                  | Що робить                                                                  |
+| ---------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Контракт   | `packages/shared/src/schemas/hello/hello-query.ts`                    | Які [query-параметри](/reference/glossary#query-параметри) приймає маршрут |
+| Контракт   | `packages/shared/src/responses/hello-controller.ts`                   | Як виглядає відповідь                                                      |
+| Service    | `packages/backend/src/app/services/hello/hello-service.ts`            | Бізнес-правило: як вітати                                                  |
+| Controller | `packages/backend/src/app/controllers/http/hello/hello-controller.ts` | Бере query, викликає сервіс, формує відповідь                              |
+| Route      | `packages/backend/src/app/routes/http-routes.ts`                      | Зв'язує URL з контролером і схемою                                         |
 
 Увесь код нижче реально додано в чисту копію шаблону і перевірено `pnpm typecheck`, тестом і запитами `curl`.
 
