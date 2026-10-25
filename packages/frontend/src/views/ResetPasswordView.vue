@@ -93,10 +93,9 @@ async function submitResetPassword(): Promise<void> {
         }
 
         status.value = hasErrorCode(data, ErrorCode.BadRequest) ? 'error' : 'ready'
-        message.value =
-            hasErrorCode(data, ErrorCode.BadRequest)
-                ? responseMessage || t('auth.invalidResetToken')
-                : responseMessage || t('auth.errorServer')
+        message.value = hasErrorCode(data, ErrorCode.BadRequest)
+            ? responseMessage || t('auth.invalidResetToken')
+            : responseMessage || t('auth.errorServer')
         return
     }
 
@@ -303,7 +302,9 @@ onMounted(() => {
     padding: 12px 18px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .reset-password-primary {

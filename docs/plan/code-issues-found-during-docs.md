@@ -34,8 +34,9 @@
 | feat-033 | 59, 61, 62–64  |
 | feat-034 | 66             |
 | feat-035 | 68             |
+| feat-038 | 71, 72, 73     |
 
-Усі 49 пунктів плану закрито. П. 55 — **відкладено** (рішення Р3: тестовий застосунок, промпти поки не очищаються). Пункти 71–73 знайдено під час виконання плану; вони відкриті й поза ним. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
+Усі 49 пунктів плану закрито. П. 55 — **відкладено** (рішення Р3: тестовий застосунок, промпти поки не очищаються). Пункти 71–73, знайдені під час виконання плану, закрито у feat-038. План закриття: [`open-issues-roadmap.md`](./open-issues-roadmap.md), task list: [`open-issues-tasks.md`](./open-issues-tasks.md).
 
 Шляхи відносно `packages/backend/`, якщо не вказано інше.
 
@@ -113,7 +114,7 @@
 | 68  | ~~ESLint `strictTypeChecked` фактично вимкнено для backend/frontend/playground~~ ✅                               | Низька       | Toolchain                    |
 | 69  | ~~`AGENTS.md`: застаріле «checkout does not include .git history»~~ ✅                                            | Інформаційна | Документація                 |
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
-| 71  | `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`                                                         | Низька       | Стиль                        |
+| 71  | ~~`format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`~~ ✅                                                  | Низька       | Стиль                        |
 | 72  | ~~Push не надсилається жодною бізнес-подією~~ ✅                                                                  | Низька       | Push                         |
 | 73  | ~~HTTP-виклики фронтенду вшивають `/api/`~~ ✅                                                                    | Низька       | Frontend                     |
 
@@ -701,6 +702,8 @@
 ## Знайдено під час feat-010
 
 ### 71. `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`
+
+> **Виправлено** у feat-038 (гілка `feat/format-push-prefix`): glob кореневих `format` / `format:check` — `**/*.{ts,tsx,js,mjs,vue,json,md,css}`; 60 файлів відформатовано окремим комітом `dd9db8b`, доданим у `.git-blame-ignore-revs`.
 
 - **Що:** кореневі скрипти `format` / `format:check` мають glob `**/*.{ts,tsx,json,md}`. Vue-компоненти frontend і api-playground, `.js`/`.mjs` (зокрема `documentation/scripts`, `packages/shared/test`) і CSS у CI не перевіряються; пакетні скрипти `format` у frontend/playground форматують лише `src/` і тепер беруть кореневий конфіг (4 пробіли), тож для playground перший запуск переформатує `.vue` з 2 на 4 пробіли.
 - **Пропозиція:** розширити glob до `{ts,tsx,js,mjs,vue,json,md,css}` окремим комітом форматування (і додати його в `.git-blame-ignore-revs`).

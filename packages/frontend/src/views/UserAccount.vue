@@ -45,7 +45,9 @@ const isLinkingEmail = ref(false)
 const darkMode = ref(stateStore.darkMode)
 const fontSize = computed({
     get: () => stateStore.fontSize,
-    set: (value: number) => { stateStore.setFontSize(value); },
+    set: (value: number) => {
+        stateStore.setFontSize(value)
+    },
 })
 const colorThemes = [
     { value: 'ocean', label: 'Ocean', accent: '#4E7FA8' },
@@ -424,7 +426,11 @@ watch(
             <p v-if="linkPhoneMessage" class="form-message">{{ linkPhoneMessage }}</p>
 
             <div class="form-grid form-grid--spaced">
-                <input v-model="linkEmail" type="email" :placeholder="t('account.contactMethods.email')" />
+                <input
+                    v-model="linkEmail"
+                    type="email"
+                    :placeholder="t('account.contactMethods.email')"
+                />
                 <input
                     v-model="linkEmailCurrentPassword"
                     type="password"

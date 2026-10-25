@@ -2,7 +2,10 @@
     <main class="static-view">
         <section class="static-section">
             <h1>AI and Content Policy</h1>
-            <p>Support AI answers product-support questions using retained support prompts, usage logging, and knowledge-base context.</p>
+            <p>
+                Support AI answers product-support questions using retained support prompts, usage
+                logging, and knowledge-base context.
+            </p>
         </section>
     </main>
 </template>

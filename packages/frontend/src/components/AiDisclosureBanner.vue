@@ -38,9 +38,7 @@ const dismiss = () => {
                     </router-link>
                 </p>
             </div>
-            <button class="banner-dismiss" @click="dismiss" aria-label="Dismiss">
-                Got it
-            </button>
+            <button class="banner-dismiss" @click="dismiss" aria-label="Dismiss">Got it</button>
         </div>
     </Transition>
 </template>
@@ -115,7 +113,9 @@ const dismiss = () => {
 /* Slide-up enter/leave */
 .banner-enter-active,
 .banner-leave-active {
-    transition: transform 0.25s ease, opacity 0.25s ease;
+    transition:
+        transform 0.25s ease,
+        opacity 0.25s ease;
 }
 
 .banner-enter-from,

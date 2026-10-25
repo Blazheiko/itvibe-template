@@ -23,8 +23,8 @@
         "prod:local": "./scripts/prod-local.sh",
         "lint": "eslint . && pnpm -r --if-present lint:check",
         "lint:fix": "eslint . --fix",
-        "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-        "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+        "format": "prettier --write \"**/*.{ts,tsx,js,mjs,vue,json,md,css}\"",
+        "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,vue,json,md,css}\"",
         "typecheck": "pnpm -r typecheck",
         "test": "pnpm -r test",
         "clean": "pnpm -r clean && rm -rf node_modules"

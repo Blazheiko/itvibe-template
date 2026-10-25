@@ -171,7 +171,6 @@ const initializeApp = async () => {
         userStore.markReady()
     }
 }
-
 </script>
 
 <template>
