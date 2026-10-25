@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSupportStore } from '@/stores/support'
 import { useEventBus } from '@/utils/event-bus'
+import { apiPath } from '@/utils/api-path'
 import { useWebSocketConnection } from '@/composables/useWebSocketConnection'
 import { getResponseMessage } from '@/utils/response-normalizer'
 
@@ -209,7 +210,7 @@ onUnmounted(() => {
                                     <img
                                         v-for="articleId in msg.screenshots"
                                         :key="articleId"
-                                        :src="`/api/support/screenshot/${encodeURIComponent(articleId)}`"
+                                        :src="apiPath(`support/screenshot/${encodeURIComponent(articleId)}`)"
                                         class="message-screenshot"
                                         alt="Screenshot"
                                         @error="hideOnError"

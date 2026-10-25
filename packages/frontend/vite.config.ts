@@ -1,10 +1,17 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 import { stripConsoleLogs } from './vite.console'
+
+// Dev proxy for the backend's API_PATH_PREFIX, not a hard-coded /api (code-issues item 73).
+// An object config (vitest.config.ts merges it), so the dev-mode env is read here.
+const env = loadEnv('development', process.cwd(), 'VITE_')
+const apiPrefix =
+    ((env.VITE_API_PATH_PREFIX as string | undefined) ?? '').trim().replace(/^\/+|\/+$/g, '') ||
+    'api'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -33,12 +40,10 @@ export default defineConfig({
     server: {
         port: 5173,
         proxy: {
-            '/api': {
+            // Covers HTTP and the WS endpoint `/<prefix>/websocket`.
+            [`/${apiPrefix}`]: {
                 target: 'http://127.0.0.1:3000',
                 changeOrigin: true,
-            },
-            '/ws': {
-                target: 'ws://127.0.0.1:3000',
                 ws: true,
             },
         },

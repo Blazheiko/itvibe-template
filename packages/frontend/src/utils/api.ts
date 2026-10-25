@@ -1,4 +1,5 @@
 import baseApi from './base-api'
+import { apiPath } from './api-path'
 import type {
     UploadAvatarResponse,
     DeleteAvatarResponse,
@@ -63,13 +64,13 @@ const isSuccessfulResponse = <T extends Record<string, unknown>>(
 
 export const authApi = {
     login: async (body: LoginInput): Promise<ApiResponse<LoginResponse>> => {
-        return baseApi.http<LoginResponse>('POST', '/api/auth/login', body)
+        return baseApi.http<LoginResponse>('POST', apiPath('auth/login'), body)
     },
 
     registerEmail: async (
         body: RegisterEmailInput,
     ): Promise<ApiResponse<RegisterEmailResponse>> => {
-        return baseApi.http<RegisterEmailResponse>('POST', '/api/auth/register/email', body)
+        return baseApi.http<RegisterEmailResponse>('POST', apiPath('auth/register/email'), body)
     },
 
     registerPhoneStart: async (
@@ -77,7 +78,7 @@ export const authApi = {
     ): Promise<ApiResponse<RegisterPhoneStartResponse>> => {
         return baseApi.http<RegisterPhoneStartResponse>(
             'POST',
-            '/api/auth/register/phone/start',
+            apiPath('auth/register/phone/start'),
             body,
         )
     },
@@ -87,7 +88,7 @@ export const authApi = {
     ): Promise<ApiResponse<RegisterPhoneConfirmResponse>> => {
         return baseApi.http<RegisterPhoneConfirmResponse>(
             'POST',
-            '/api/auth/register/phone/confirm',
+            apiPath('auth/register/phone/confirm'),
             body,
         )
     },
@@ -97,7 +98,7 @@ export const authApi = {
     ): Promise<ApiResponse<RegisterPhoneCompleteResponse>> => {
         return baseApi.http<RegisterPhoneCompleteResponse>(
             'POST',
-            '/api/auth/register/phone/complete-profile',
+            apiPath('auth/register/phone/complete-profile'),
             body,
         )
     },
@@ -107,29 +108,33 @@ export const authApi = {
     },
 
     logout: async (): Promise<ApiResponse<LogoutResponse>> => {
-        return baseApi.http<LogoutResponse>('POST', '/api/auth/logout')
+        return baseApi.http<LogoutResponse>('POST', apiPath('auth/logout'))
     },
 
     logoutAll: async (): Promise<ApiResponse<LogoutAllResponse>> => {
-        return baseApi.http<LogoutAllResponse>('POST', '/api/auth/logout-all')
+        return baseApi.http<LogoutAllResponse>('POST', apiPath('auth/logout-all'))
     },
 
     changePassword: async (
         body: ChangePasswordInput,
     ): Promise<ApiResponse<ChangePasswordResponse>> => {
-        return baseApi.http<ChangePasswordResponse>('POST', '/api/auth/change-password', body)
+        return baseApi.http<ChangePasswordResponse>('POST', apiPath('auth/change-password'), body)
     },
 
     forgotPassword: async (
         body: ForgotPasswordInput,
     ): Promise<ApiResponse<ForgotPasswordResponse>> => {
-        return baseApi.http<ForgotPasswordResponse>('POST', '/api/auth/forgot-password', body)
+        return baseApi.http<ForgotPasswordResponse>('POST', apiPath('auth/forgot-password'), body)
     },
 
     startPhonePasswordReset: async (
         body: ResetPhoneStartInput,
     ): Promise<ApiResponse<ResetPhoneStartResponse>> => {
-        return baseApi.http<ResetPhoneStartResponse>('POST', '/api/auth/reset-phone/start', body)
+        return baseApi.http<ResetPhoneStartResponse>(
+            'POST',
+            apiPath('auth/reset-phone/start'),
+            body,
+        )
     },
 
     completePhonePasswordReset: async (
@@ -137,7 +142,7 @@ export const authApi = {
     ): Promise<ApiResponse<ResetPhoneCompleteResponse>> => {
         return baseApi.http<ResetPhoneCompleteResponse>(
             'POST',
-            '/api/auth/reset-phone/complete',
+            apiPath('auth/reset-phone/complete'),
             body,
         )
     },
@@ -145,46 +150,50 @@ export const authApi = {
     resetPassword: async (
         body: ResetPasswordInput,
     ): Promise<ApiResponse<ResetPasswordResponse>> => {
-        return baseApi.http<ResetPasswordResponse>('POST', '/api/auth/reset-password', body)
+        return baseApi.http<ResetPasswordResponse>('POST', apiPath('auth/reset-password'), body)
     },
 
     verifyEmail: async (body: VerifyEmailInput): Promise<ApiResponse<VerifyEmailResponse>> => {
-        return baseApi.http<VerifyEmailResponse>('POST', '/api/auth/verify-email', body)
+        return baseApi.http<VerifyEmailResponse>('POST', apiPath('auth/verify-email'), body)
     },
 
     resendVerificationEmail: async (): Promise<ApiResponse<ResendVerificationEmailResponse>> => {
         return baseApi.http<ResendVerificationEmailResponse>(
             'POST',
-            '/api/auth/resend-verification-email',
+            apiPath('auth/resend-verification-email'),
         )
     },
 
     startPhoneLink: async (
         body: LinkPhoneStartInput,
     ): Promise<ApiResponse<LinkPhoneStartResponse>> => {
-        return baseApi.http<LinkPhoneStartResponse>('POST', '/api/auth/link-phone/start', body)
+        return baseApi.http<LinkPhoneStartResponse>('POST', apiPath('auth/link-phone/start'), body)
     },
 
     confirmPhoneLink: async (
         body: LinkPhoneConfirmInput,
     ): Promise<ApiResponse<LinkPhoneConfirmResponse>> => {
-        return baseApi.http<LinkPhoneConfirmResponse>('POST', '/api/auth/link-phone/confirm', body)
+        return baseApi.http<LinkPhoneConfirmResponse>(
+            'POST',
+            apiPath('auth/link-phone/confirm'),
+            body,
+        )
     },
 
     startEmailLink: async (
         body: LinkEmailStartInput,
     ): Promise<ApiResponse<LinkEmailStartResponse>> => {
-        return baseApi.http<LinkEmailStartResponse>('POST', '/api/auth/link-email/start', body)
+        return baseApi.http<LinkEmailStartResponse>('POST', apiPath('auth/link-email/start'), body)
     },
 }
 
 export const mainApi = {
     init: async (): Promise<ApiResponse<InitResponse>> => {
-        return baseApi.http<InitResponse>('GET', '/api/main/init')
+        return baseApi.http<InitResponse>('GET', apiPath('main/init'))
     },
 
     updateWsToken: async (): Promise<ApiResponse<UpdateWsTokenResponse>> => {
-        return baseApi.http<UpdateWsTokenResponse>('GET', '/api/main/update-ws-token')
+        return baseApi.http<UpdateWsTokenResponse>('GET', apiPath('main/update-ws-token'))
     },
 }
 
@@ -226,7 +235,7 @@ interface PushSubscriptionStatistics {
 
 export const pushSubscriptionApi = {
     getSubscriptions: async (): Promise<ApiResponse<PushSubscriptionResponse[]>> => {
-        return baseApi.http<PushSubscriptionResponse[]>('GET', '/api/push-subscriptions')
+        return baseApi.http<PushSubscriptionResponse[]>('GET', apiPath('push-subscriptions'))
     },
 
     createSubscription: async (
@@ -234,7 +243,7 @@ export const pushSubscriptionApi = {
     ): Promise<ApiResponse<PushSubscriptionResponse>> => {
         return baseApi.http<PushSubscriptionResponse>(
             'POST',
-            '/api/push-subscriptions',
+            apiPath('push-subscriptions'),
             subscriptionData,
         )
     },
@@ -244,7 +253,7 @@ export const pushSubscriptionApi = {
     ): Promise<ApiResponse<PushSubscriptionResponse>> => {
         return baseApi.http<PushSubscriptionResponse>(
             'GET',
-            `/api/push-subscriptions/${subscriptionId}`,
+            apiPath(`push-subscriptions/${subscriptionId}`),
         )
     },
 
@@ -253,7 +262,7 @@ export const pushSubscriptionApi = {
     ): Promise<ApiResponse<{ success: boolean }>> => {
         return baseApi.http<{ success: boolean }>(
             'DELETE',
-            `/api/push-subscriptions/${subscriptionId}`,
+            apiPath(`push-subscriptions/${subscriptionId}`),
         )
     },
 
@@ -262,7 +271,7 @@ export const pushSubscriptionApi = {
     ): Promise<ApiResponse<PushSubscriptionStatistics>> => {
         return baseApi.http<PushSubscriptionStatistics>(
             'GET',
-            `/api/push-subscriptions/${subscriptionId}/statistics`,
+            apiPath(`push-subscriptions/${subscriptionId}/statistics`),
         )
     },
 
@@ -271,7 +280,7 @@ export const pushSubscriptionApi = {
     ): Promise<ApiResponse<PushSubscriptionResponse>> => {
         return baseApi.http<PushSubscriptionResponse>(
             'PUT',
-            `/api/push-subscriptions/${subscriptionId}/deactivate`,
+            apiPath(`push-subscriptions/${subscriptionId}/deactivate`),
             {},
         )
     },
@@ -279,7 +288,7 @@ export const pushSubscriptionApi = {
     getVapidPublicKey: async (): Promise<ApiResponse<{ vapidPublicKey: string }>> => {
         return baseApi.http<{ vapidPublicKey: string }>(
             'GET',
-            '/api/push-subscriptions/vapid-public-key',
+            apiPath('push-subscriptions/vapid-public-key'),
         )
     },
 
@@ -290,7 +299,7 @@ export const pushSubscriptionApi = {
     > => {
         return baseApi.http<{ status: string; message: string; sent?: number; failed?: number }>(
             'POST',
-            '/api/push-subscriptions/test-push',
+            apiPath('push-subscriptions/test-push'),
             payload,
         )
     },
@@ -300,11 +309,11 @@ export const avatarApi = {
     upload: async (file: Blob): Promise<ApiResponse<UploadAvatarResponse>> => {
         const formData = new FormData()
         formData.append('avatar', file, 'avatar.webp')
-        return baseApi.upload<UploadAvatarResponse>('POST', '/api/avatar/upload', formData)
+        return baseApi.upload<UploadAvatarResponse>('POST', apiPath('avatar/upload'), formData)
     },
 
     delete: async (): Promise<ApiResponse<DeleteAvatarResponse>> => {
-        return baseApi.http<DeleteAvatarResponse>('DELETE', '/api/avatar')
+        return baseApi.http<DeleteAvatarResponse>('DELETE', apiPath('avatar'))
     },
 }
 
@@ -337,7 +346,7 @@ export const supportApi = {
     ): Promise<SupportChatMessage[]> => {
         const response = await baseApi.http<{ status: string; data?: SupportChatMessage[] }>(
             'GET',
-            '/api/support/chat/history',
+            apiPath('support/chat/history'),
             {},
             options,
         )
@@ -348,13 +357,13 @@ export const supportApi = {
     deleteChatHistory: async (): Promise<boolean> => {
         const response = await baseApi.http<{ status: string }>(
             'DELETE',
-            '/api/support/chat/history',
+            apiPath('support/chat/history'),
         )
         return isSuccessfulResponse(response)
     },
 
     getScreenshotUrl: (articleId: string): string => {
-        return `/api/support/screenshot/${encodeURIComponent(articleId)}`
+        return apiPath(`support/screenshot/${encodeURIComponent(articleId)}`)
     },
 }
 
@@ -371,7 +380,7 @@ export const adminKnowledgeBaseApi = {
             status: string
             data?: KnowledgeBaseArticle[]
             total?: number
-        }>('GET', `/api/admin/knowledge-base${qs ? `?${qs}` : ''}`)
+        }>('GET', apiPath(`admin/knowledge-base${qs ? `?${qs}` : ''}`))
         if (!isSuccessfulResponse(response)) return { items: [], total: 0 }
         return { items: response.data.data ?? [], total: response.data.total ?? 0 }
     },
@@ -384,7 +393,7 @@ export const adminKnowledgeBaseApi = {
     }): Promise<KnowledgeBaseArticle | null> => {
         const response = await baseApi.http<{ status: string; data?: KnowledgeBaseArticle }>(
             'POST',
-            '/api/admin/knowledge-base',
+            apiPath('admin/knowledge-base'),
             payload,
         )
         if (!isSuccessfulResponse(response)) return null
@@ -397,7 +406,7 @@ export const adminKnowledgeBaseApi = {
     ): Promise<KnowledgeBaseArticle | null> => {
         const response = await baseApi.http<{ status: string; data?: KnowledgeBaseArticle }>(
             'PUT',
-            `/api/admin/knowledge-base/${encodeURIComponent(id)}`,
+            apiPath(`admin/knowledge-base/${encodeURIComponent(id)}`),
             payload,
         )
         if (!isSuccessfulResponse(response)) return null
@@ -407,7 +416,7 @@ export const adminKnowledgeBaseApi = {
     delete: async (id: string): Promise<boolean> => {
         const response = await baseApi.http<{ status: string }>(
             'DELETE',
-            `/api/admin/knowledge-base/${encodeURIComponent(id)}`,
+            apiPath(`admin/knowledge-base/${encodeURIComponent(id)}`),
         )
         return isSuccessfulResponse(response)
     },
@@ -417,7 +426,7 @@ export const adminKnowledgeBaseApi = {
         formData.append('screenshot', file)
         const response = await baseApi.upload<{ status: string; data?: KnowledgeBaseArticle }>(
             'POST',
-            `/api/admin/knowledge-base/${encodeURIComponent(id)}/screenshot`,
+            apiPath(`admin/knowledge-base/${encodeURIComponent(id)}/screenshot`),
             formData,
         )
         if (!isSuccessfulResponse(response)) return null
@@ -427,7 +436,7 @@ export const adminKnowledgeBaseApi = {
     deleteScreenshot: async (id: string): Promise<KnowledgeBaseArticle | null> => {
         const response = await baseApi.http<{ status: string; data?: KnowledgeBaseArticle }>(
             'DELETE',
-            `/api/admin/knowledge-base/${encodeURIComponent(id)}/screenshot`,
+            apiPath(`admin/knowledge-base/${encodeURIComponent(id)}/screenshot`),
         )
         if (!isSuccessfulResponse(response)) return null
         return response.data.data ?? null
@@ -436,7 +445,7 @@ export const adminKnowledgeBaseApi = {
     reindex: async (id: string): Promise<boolean> => {
         const response = await baseApi.http<{ status: string }>(
             'POST',
-            `/api/admin/knowledge-base/${encodeURIComponent(id)}/reindex`,
+            apiPath(`admin/knowledge-base/${encodeURIComponent(id)}/reindex`),
         )
         return isSuccessfulResponse(response)
     },
@@ -444,7 +453,7 @@ export const adminKnowledgeBaseApi = {
     reindexAll: async (): Promise<number> => {
         const response = await baseApi.http<{ status: string; indexed?: number }>(
             'POST',
-            '/api/admin/knowledge-base/reindex-all',
+            apiPath('admin/knowledge-base/reindex-all'),
         )
         if (!isSuccessfulResponse(response)) return 0
         return response.data.indexed ?? 0
@@ -459,7 +468,7 @@ export const adminKnowledgeBaseApi = {
             status: string
             data?: KnowledgeBaseInitStatus
             message?: string
-        }>('POST', '/api/admin/knowledge-base/init')
+        }>('POST', apiPath('admin/knowledge-base/init'))
         if (!isSuccessfulResponse(response)) {
             return {
                 ok: false,
@@ -480,7 +489,7 @@ export const adminKnowledgeBaseApi = {
     getInitStatus: async (): Promise<KnowledgeBaseInitStatus | null> => {
         const response = await baseApi.http<{ status: string; data?: KnowledgeBaseInitStatus }>(
             'GET',
-            '/api/admin/knowledge-base/init-status',
+            apiPath('admin/knowledge-base/init-status'),
         )
         if (!isSuccessfulResponse(response)) return null
         return response.data.data ?? null
@@ -500,17 +509,23 @@ export const adminUsersApi = {
         if (params?.dateTo !== undefined && params.dateTo !== '') query.set('dateTo', params.dateTo)
 
         const qs = query.toString()
-        return baseApi.http<AdminUserListResponse>('GET', `/api/admin/users${qs ? `?${qs}` : ''}`)
+        return baseApi.http<AdminUserListResponse>(
+            'GET',
+            apiPath(`admin/users${qs ? `?${qs}` : ''}`),
+        )
     },
 }
 
 export const adminOnlineUsersApi = {
     list: async (): Promise<ApiResponse<AdminOnlineUserListResponse>> => {
-        return baseApi.http<AdminOnlineUserListResponse>('GET', '/api/admin/users-online')
+        return baseApi.http<AdminOnlineUserListResponse>('GET', apiPath('admin/users-online'))
     },
 
     getById: async (id: string): Promise<ApiResponse<AdminOnlineUserDetailResponse>> => {
-        return baseApi.http<AdminOnlineUserDetailResponse>('GET', `/api/admin/users-online/${id}`)
+        return baseApi.http<AdminOnlineUserDetailResponse>(
+            'GET',
+            apiPath(`admin/users-online/${id}`),
+        )
     },
 }
 
@@ -532,7 +547,7 @@ export const adminOnlineHistoryApi = {
         const qs = query.toString()
         return baseApi.http<AdminOnlineHistoryListResponse>(
             'GET',
-            `/api/admin/history-online${qs ? `?${qs}` : ''}`,
+            apiPath(`admin/history-online${qs ? `?${qs}` : ''}`),
         )
     },
 }

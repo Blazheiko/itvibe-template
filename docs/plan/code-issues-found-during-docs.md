@@ -115,7 +115,7 @@
 | 70  | ~~Основний Redis-клієнт без таймауту: при недоступному Redis запити чекають ~45 с~~ ✅                            | Середня      | Надійність / Redis           |
 | 71  | `format:check` не перевіряє `.vue`, `.js`, `.mjs`, `.css`                                                         | Низька       | Стиль                        |
 | 72  | Push не надсилається жодною бізнес-подією                                                                         | Низька       | Push                         |
-| 73  | HTTP-виклики фронтенду вшивають `/api/`                                                                           | Низька       | Frontend                     |
+| 73  | ~~HTTP-виклики фронтенду вшивають `/api/`~~ ✅                                                                    | Низька       | Frontend                     |
 
 ## Безпека
 
@@ -717,6 +717,8 @@
 ## Знайдено під час feat-024
 
 ### 73. HTTP-виклики фронтенду вшивають `/api/`
+
+> **Виправлено** у feat-038 (гілка `feat/format-push-prefix`): HTTP-шляхи (`utils/api-path.ts`, `apiPath()`), OAuth-посилання, URL скриншотів і сховища, service worker і ключ Vite proxy беруть префікс з `VITE_API_PATH_PREFIX`; `WS_API_PREFIX` замінено на спільний `API_PREFIX`. Заодно прибрано залишковий fallback `https://itvibe-template.example` у `stores/state.ts` (п. 59).
 
 - **Що:** `packages/frontend/src/utils/api.ts` має 46 шляхів виду `'/api/...'`, а Vite proxy (`vite.config.ts`) теж налаштований лише на `/api`. Після feat-024 WS-події беруть префікс з `VITE_API_PATH_PREFIX`, а HTTP — ні, тож бекенд з іншим `API_PATH_PREFIX` працює з фронтендом лише через переписування шляхів на проксі.
 - **Пропозиція:** будувати HTTP-шляхи з того самого `WS_API_PREFIX` (перейменувати на `API_PREFIX`) і брати proxy-ключ з тієї ж змінної; суміжне з п. 62 (playground).

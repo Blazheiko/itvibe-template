@@ -1,6 +1,10 @@
 /// <reference lib="webworker" />
+import { apiPath } from './utils/api-path'
 
 declare const self: ServiceWorkerGlobalScope
+
+// API requests live under the backend's API_PATH_PREFIX (code-issues item 73).
+const API_URL_PART = apiPath('')
 
 const cacheName = typeof BUILD_TIMESTAMP !== 'undefined' ? BUILD_TIMESTAMP : `now: ${Date.now()}`
 
@@ -326,12 +330,12 @@ self.addEventListener('fetch', function (e: FetchEvent) {
 
         // Never intercept mutating API requests. They must always go directly to the network
         // to avoid stale or hanging SW-controlled POST/PUT/PATCH/DELETE flows such as logout.
-        if (e.request.url.includes('/api/') && e.request.method !== 'GET') {
+        if (e.request.url.includes(API_URL_PART) && e.request.method !== 'GET') {
             return
         }
 
         // Network First для API GET запросов
-        if (e.request.url.includes('/api/')) {
+        if (e.request.url.includes(API_URL_PART)) {
             e.respondWith(
                 fetch(e.request)
                     .then(function (response) {

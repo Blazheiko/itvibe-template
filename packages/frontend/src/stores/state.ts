@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { pushSubscriptionApi } from '@/utils/api'
+import { apiPath } from '@/utils/api-path'
 import { createResource, isAbortError } from '@/utils/resource-state'
 import { isPwaMode } from '@/utils/app-type'
 import { getResponseMessage } from '@/utils/response-normalizer'
@@ -90,10 +91,9 @@ export const useStateStore = defineStore('state', () => {
             return `${base}/${fullPath}`
         }
 
-        const apiBase = normalizeUrl(
-            import.meta.env.VITE_BASE_URL || 'https://itvibe-template.example',
-        )
-        return `${apiBase}/api/storage/${fullPath}`
+        // Same origin without VITE_BASE_URL, as in base-api.ts (code-issues item 59).
+        const apiBase = normalizeUrl(import.meta.env.VITE_BASE_URL ?? '')
+        return `${apiBase}${apiPath(`storage/${fullPath}`)}`
     }
 
     // Функция для определения режима PWA
@@ -169,7 +169,7 @@ export const useStateStore = defineStore('state', () => {
                     '2. Добавьте публичный ключ в переменную окружения VITE_VAPID_PUBLIC_KEY',
                 )
                 console.info(
-                    '3. Или настройте эндпоинт /api/push-subscriptions/vapid-public-key на сервере',
+                    `3. Или настройте эндпоинт ${apiPath('push-subscriptions/vapid-public-key')} на сервере`,
                 )
                 throw new Error('VAPID ключ не настроен')
             }
