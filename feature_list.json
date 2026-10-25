@@ -18,21 +18,11 @@
             "id": "feat-001",
             "name": "Project Setup",
             "description": "Confirm the project can install dependencies, run verification, and start from a clean checkout",
-            "owner": "",
+            "owner": "Blazheiko",
             "branch": "main",
             "dependencies": [],
-            "status": "not-started",
-            "evidence": ""
-        },
-        {
-            "id": "feat-002",
-            "name": "First User-Facing Feature",
-            "description": "Replace this placeholder with the first concrete behavior the team should implement",
-            "owner": "",
-            "branch": "",
-            "dependencies": ["feat-001"],
-            "status": "not-started",
-            "evidence": ""
+            "status": "done",
+            "evidence": "./init.sh (pnpm install, typecheck, lint, test, build) passes on main at f8e2d16 (2026-10-25); the same checks run on every PR in .github/workflows (quality, e2e, build, test-pg, test-redis)"
         },
         {
             "id": "feat-003",
