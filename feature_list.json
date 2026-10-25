@@ -411,8 +411,8 @@
             "owner": "Blazheiko",
             "branch": "feat/neutral-route-doc-schemas",
             "dependencies": ["feat-040"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #113: describeSchema() accepts ArkType, a ready descriptor or a JSON Schema object for validator/queryValidator; 6 new serialize-routes cases; typecheck, lint, format:check, test (backend 914), docs:build + docs:verify; evidence in progress.md on feat/neutral-route-doc-schemas"
         }
     ]
 }
