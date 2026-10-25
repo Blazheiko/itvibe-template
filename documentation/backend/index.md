@@ -1,5 +1,9 @@
 # Огляд бекенду
 
+::: tip Вперше тут?
+Ця сторінка — технічний огляд. Якщо ви тільки знайомитеся з шаблоном, почніть з [Як влаштований бекенд](/guide/how-backend-works): там простими словами пояснено шлях запиту і навіщо потрібні шари.
+:::
+
 Пакет `backend` ([packages/backend](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend)) — HTTP- та WebSocket-сервер на TypeScript (ES modules), побудований на uWebSockets.js. Точка входу — [src/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts); у розробці він запускається через `tsx watch`, у продакшені — як `node dist/index.js` (див. [Скрипти](/reference/scripts)).
 
 ## Стек

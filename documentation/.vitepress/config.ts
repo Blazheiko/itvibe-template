@@ -23,7 +23,7 @@ export default withMermaid(
         themeConfig: {
             logo: '/logo.svg',
             nav: [
-                { text: 'Гайд', link: '/guide/introduction' },
+                { text: 'Почати навчання', link: '/guide/introduction' },
                 { text: 'Бекенд', link: '/backend/' },
                 {
                     text: 'Пакети',
@@ -38,13 +38,19 @@ export default withMermaid(
             sidebar: {
                 '/guide/': [
                     {
+                        text: 'Перший день',
+                        items: [
+                            { text: '1. Вступ', link: '/guide/introduction' },
+                            { text: '2. Швидкий старт', link: '/guide/getting-started' },
+                            { text: '3. Як влаштований бекенд', link: '/guide/how-backend-works' },
+                            { text: '4. Перший маршрут', link: '/guide/first-endpoint' },
+                            { text: '5. Як додати фічу', link: '/backend/adding-a-feature' },
+                            { text: '6. Свій проєкт на шаблоні', link: '/guide/your-project' },
+                        ],
+                    },
+                    {
                         text: 'Гайд',
                         items: [
-                            { text: 'Вступ', link: '/guide/introduction' },
-                            { text: 'Швидкий старт', link: '/guide/getting-started' },
-                            { text: 'Як влаштований бекенд', link: '/guide/how-backend-works' },
-                            { text: 'Перший маршрут', link: '/guide/first-endpoint' },
-                            { text: 'Свій проєкт на шаблоні', link: '/guide/your-project' },
                             { text: 'Структура проєкту', link: '/guide/project-structure' },
                             { text: 'Процес роботи', link: '/guide/workflow' },
                         ],
@@ -54,6 +60,10 @@ export default withMermaid(
                     {
                         text: 'Бекенд',
                         items: [
+                            {
+                                text: 'Як влаштований (для новачків)',
+                                link: '/guide/how-backend-works',
+                            },
                             { text: 'Огляд', link: '/backend/' },
                             { text: 'Архітектура', link: '/backend/architecture' },
                             { text: 'Життєвий цикл запиту', link: '/backend/request-lifecycle' },
