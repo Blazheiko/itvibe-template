@@ -393,6 +393,16 @@
             "dependencies": ["feat-038"],
             "status": "done",
             "evidence": "PR #106 (merge 10f5b51): sessionToken stripped by userTransformer, unused findBySessionToken removed, auth-security.md explains users.session_token; unit test fails without the fix; manual login on a fresh DB; backend 858, e2e 12, typecheck, lint, build, docs:build + docs:verify"
+        },
+        {
+            "id": "feat-040",
+            "name": "Security Regression Tests",
+            "description": "regression tests for findings marked 'closed, no test' in docs/security/security-analysis-status.md: C-1 (CORS origin outside allowlist), H-1 (error details only in local), H-3 (static extension allowlist and unsafe URL status), H-4 (default cookie sameSite Lax), M-2 (validation of urlencoded/multipart), M-3 (415 for content type not allowed by route), M-4 (non-digit Content-Length), L-1 (DELETE registered), L-2 (doc routes absent outside manual-test), L-3 (no 'Get Http Data' log); update the status table",
+            "owner": "Blazheiko",
+            "branch": "feat/security-regression-tests",
+            "dependencies": ["feat-039"],
+            "status": "in_progress",
+            "evidence": ""
         }
     ]
 }
