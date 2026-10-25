@@ -1,4 +1,5 @@
-import { promises as fs } from 'node:fs'
+import { mkdtempSync, promises as fs } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
@@ -16,10 +17,15 @@ vi.mock('#config/app.js', () => ({
     },
 }))
 
+// The static root is resolved from cwd at import. Point it at a private temp dir, so
+// walking it does not race with other specs that write into the shared public-test.
+const ROOT = mkdtempSync(path.join(os.tmpdir(), 'h3-static-'))
+const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(ROOT)
 const { cacheStaticSource, staticHandler } = await import('./static-server.js')
+cwdSpy.mockRestore()
 
 const FIXTURE_DIR = 'h3-static-fixture'
-const FIXTURE_PATH = path.join(process.cwd(), './public-test', FIXTURE_DIR)
+const FIXTURE_PATH = path.join(ROOT, './public-test', FIXTURE_DIR)
 
 const ALLOWED = ['app.js', 'style.css', 'logo.svg']
 const REFUSED = ['secrets.env', 'server.ts', 'dump.sql', 'app.js.map', 'backup.tar.gz', 'noext']
@@ -58,7 +64,7 @@ describe('H-3: static extension allowlist', () => {
     })
 
     afterAll(async () => {
-        await fs.rm(FIXTURE_PATH, { recursive: true, force: true })
+        await fs.rm(ROOT, { recursive: true, force: true })
     })
 
     it.each(ALLOWED)('caches %s', (name) => {
