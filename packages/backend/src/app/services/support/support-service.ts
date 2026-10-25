@@ -12,6 +12,7 @@ import { Result } from 'better-result'
 import logger from '#logger'
 import { type AppResult } from '#app/services/shared/errors.js'
 import { tryInternal } from '#app/services/shared/result-helpers.js'
+import { userNotificationService } from '#app/services/notifications/user-notification-service.js'
 
 export interface SupportChatHistoryItem {
     id: string
@@ -204,6 +205,7 @@ export const supportService = {
             const screenshotIds = extractScreenshotIds(fullReply)
 
             await supportRepository.addChatMessage(userId, 'assistant', fullReply, screenshotIds)
+            userNotificationService.supportReply(userId)
 
             broadcastToConnection(userIdStr, targetUuid, 'support_chat_complete', {
                 content: fullReply,

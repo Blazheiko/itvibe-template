@@ -121,7 +121,17 @@ cd packages/backend && npx web-push generate-vapid-keys
 
 **Прострочені підписки:** відповідь push-сервісу `410` або `404` деактивує підписку (`pushSubscriptionRepository.deactivate`). Окремої фонової очистки чи видалення неактивних записів немає.
 
-Наразі єдиний виклик `sendToUser` у коді — ендпоінт `test-push`; бізнес-подій, що надсилають push, немає (п. 72 у [code-issues](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)).
+**Бізнес-події** ([`user-notification-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/user-notification-service.ts)). Push надсилається без очікування: збій або повільний push-сервіс не змінює й не затримує відповідь, помилка — лише `warn`.
+
+| Подія                                 | Де                                                      | `notificationType` | `skipIfOnline` |
+| ------------------------------------- | ------------------------------------------------------- | ------------------ | -------------- |
+| Новий вхід (`new_sign_in`)            | успішний `login` (email/телефон) і OAuth-callback       | `system`           | ні             |
+| Зміна пароля (`password_changed`)     | `POST /auth/change-password`                            | `system`           | ні             |
+| Скидання пароля (`password_reset`)    | скидання за email-токеном і за SMS                      | `system`           | ні             |
+| Вихід з усіх пристроїв (`logout_all`) | `POST /auth/logout-all`                                 | `system`           | ні             |
+| Відповідь підтримки                   | збережена відповідь Support AI (`support/support_chat`) | `mention`          | так            |
+
+Сповіщення безпеки йдуть на всі активні підписки, зокрема й на пристрій, з якого виконано дію: підписки не прив'язані до сесії. Відповідь підтримки доходить лише тоді, коли в користувача немає відкритого WS-з'єднання; оскільки закриття з'єднання зупиняє генерацію, на практиці це випадок, коли вкладка закрилася вже після збереження відповіді. Підписка, у якої `notificationTypes` не містить відповідного типу, push не отримує. Окремо є ендпоінт `test-push`.
 
 ### Статистика
 

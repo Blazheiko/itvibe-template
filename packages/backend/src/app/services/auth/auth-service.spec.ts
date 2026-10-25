@@ -15,7 +15,13 @@ const authMock = {
     login: vi.fn(),
     logout: vi.fn(),
     logoutAll: vi.fn(),
+    getUserId: vi.fn(() => '7'),
 }
+
+const securityNotice = vi.fn()
+vi.mock('#app/services/notifications/user-notification-service.js', () => ({
+    userNotificationService: { security: securityNotice, supportReply: vi.fn() },
+}))
 
 const sessionMock = {
     sessionInfo: {
@@ -258,6 +264,32 @@ describe('authService', () => {
             })
         }
         expect(generateWsTokenMock).not.toHaveBeenCalled()
+        // No sign-in push when the session was not established (code-issues item 72).
+        expect(securityNotice).not.toHaveBeenCalled()
+    })
+
+    it('sends a new sign-in push after a successful login', async () => {
+        consumeAuthThrottleMock.mockResolvedValue({ allowed: true, count: 1 })
+        userRepositoryMock.findByEmail.mockResolvedValue({
+            id: 7n,
+            email: 'user@example.com',
+            emailVerifiedAt: new Date('2026-05-30T00:00:00.000Z'),
+            password: 'hashed-password',
+            sessionToken: 'session-token',
+        })
+        validatePasswordMock.mockResolvedValue(true)
+        authMock.login.mockResolvedValue(true)
+
+        const { authService } = await loadAuthService()
+        const result = await authService.login(
+            { email: 'user@example.com', password: 'secret', token: '' },
+            authMock as any,
+            sessionMock as any,
+            { ipAddress: '127.0.0.1' },
+        )
+
+        expect(Result.isOk(result)).toBe(true)
+        expect(securityNotice).toHaveBeenCalledWith(7n, 'new_sign_in')
     })
 
     it('starts email linking for a phone-only account after re-authentication', async () => {
@@ -529,6 +561,8 @@ describe('authService', () => {
                 csrfToken: ROTATED_LOGOUT_ALL_CSRF_TOKEN,
             })
         }
+        // Security push after a successful logout-all (code-issues item 72).
+        expect(securityNotice).toHaveBeenCalledWith(7n, 'logout_all')
     })
 
     it('returns not found when changePassword user is missing', async () => {

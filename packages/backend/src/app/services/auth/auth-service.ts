@@ -49,6 +49,7 @@ import type {
 } from 'shared/schemas'
 import type { Logger } from 'pino'
 import { getSessionCsrfToken } from '#vendor/utils/session/csrf-token.js'
+import { userNotificationService } from '#app/services/notifications/user-notification-service.js'
 
 const REGISTER_PHONE_FLOW: SmsVerificationFlow = 'register_phone'
 const LINK_PHONE_FLOW: SmsVerificationFlow = 'link_phone'
@@ -1172,7 +1173,9 @@ export const authService = {
             return Result.err(badRequest('Email verification required'))
         }
 
-        return await buildAuthSuccess(user, auth, session)
+        const success = await buildAuthSuccess(user, auth, session)
+        if (Result.isOk(success)) userNotificationService.security(user.id, 'new_sign_in')
+        return success
     },
 
     async logout(
@@ -1203,10 +1206,12 @@ export const authService = {
         auth: Auth,
         session: Session,
     ): Promise<AppResult<{ status: 'success'; deletedCount: number; csrfToken: string }>> {
+        const userId = auth.getUserId()
         const result = await tryInternal(() => auth.logoutAll(), 'Failed to log out all sessions')
         if (Result.isError(result)) {
             return Result.err(result.error)
         }
+        if (userId !== null) userNotificationService.security(BigInt(userId), 'logout_all')
 
         const csrfToken = getSessionCsrfToken(session.sessionInfo)
         if (csrfToken === undefined) {
@@ -1303,6 +1308,7 @@ export const authService = {
             logger.warn({ err: resetResult.error }, 'Change password throttle reset failed')
         }
 
+        userNotificationService.security(userId, 'password_changed')
         return Result.ok({ status: 'success' })
     },
 }
