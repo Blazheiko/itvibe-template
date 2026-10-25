@@ -403,6 +403,16 @@
             "dependencies": ["feat-039"],
             "status": "done",
             "evidence": "PR #109: regression tests for C-1, H-1, H-3, H-4, M-2, M-3, M-4, L-1, L-2, L-3, each checked by mutation; typecheck, lint, format:check, test (backend 908), docs:build + docs:verify; evidence in progress.md on feat/security-regression-tests"
+        },
+        {
+            "id": "feat-041",
+            "name": "Engine-Neutral Route Doc Schemas",
+            "description": "serialize-routes.ts TODO(validation-docs): route docs accept non-ArkType validator.describe() payloads (a ready { expression, fields, jsonSchema } descriptor or a plain JSON Schema object), so a custom adapter shows its body/query schema in the playground; validators without a usable describe() still serialize without a schema; update documentation/backend/validation.md",
+            "owner": "Blazheiko",
+            "branch": "feat/neutral-route-doc-schemas",
+            "dependencies": ["feat-040"],
+            "status": "in_progress",
+            "evidence": ""
         }
     ]
 }
