@@ -235,6 +235,10 @@ expect(Result.isOk(result)).toBe(true)
 | API Playground  | Окремий dev-застосунок для ручного виклику HTTP і WS-маршрутів без Postman               | [API Playground](/playground/)             |
 | Деплой          | Збірка в `dist`, graceful shutdown, робота за проксі, роздача фронтенду з того ж процесу | [Деплой](/backend/deployment)              |
 
+## Автор
+
+Шаблон розробив **Олександр Блажейко** ([GitHub](https://github.com/Blazheiko), [blazheiko@gmail.com](mailto:blazheiko@gmail.com)). Детальніше — на сторінці [Про автора](/reference/author).
+
 ## З чого почати
 
 1. [Вступ](/guide/introduction) — для чого шаблон і кому він підходить.
