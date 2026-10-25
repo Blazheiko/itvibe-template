@@ -2,7 +2,10 @@
     <main class="static-view">
         <section class="static-section">
             <h1>Privacy Policy</h1>
-            <p>We process account, authentication, support chat, and service metadata needed to operate retained features.</p>
+            <p>
+                We process account, authentication, support chat, and service metadata needed to
+                operate retained features.
+            </p>
         </section>
     </main>
 </template>

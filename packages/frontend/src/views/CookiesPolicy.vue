@@ -2,7 +2,10 @@
     <main class="static-view">
         <section class="static-section">
             <h1>Cookies Policy</h1>
-            <p>Cookies and local storage are used for authentication, preferences, PWA behavior, and session continuity.</p>
+            <p>
+                Cookies and local storage are used for authentication, preferences, PWA behavior,
+                and session continuity.
+            </p>
         </section>
     </main>
 </template>

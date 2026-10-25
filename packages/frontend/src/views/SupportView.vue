@@ -29,12 +29,12 @@ function messageText(content: string): string {
 }
 
 function hideOnError(e: Event): void {
-    (e.target as HTMLImageElement).style.display = 'none'
+    ;(e.target as HTMLImageElement).style.display = 'none'
 }
 const streamingText = computed(() => store.streamingContent)
 const isStreaming = computed(() => store.isStreaming)
-const isEmptyState = computed(() =>
-    displayMessages.value.length === 0 && !isStreaming.value && !store.isLoadingHistory,
+const isEmptyState = computed(
+    () => displayMessages.value.length === 0 && !isStreaming.value && !store.isLoadingHistory,
 )
 
 function scrollToBottom(): void {
@@ -158,7 +158,9 @@ onUnmounted(() => {
                     @click="clearHistory"
                 >
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                        <path
+                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                        />
                     </svg>
                 </button>
             </div>
@@ -174,8 +176,16 @@ onUnmounted(() => {
                     <div v-else-if="isEmptyState" class="support-state support-state--empty">
                         <div class="support-empty-card">
                             <div class="support-empty-icon">
-                                <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
-                                    <path d="M12 2C6.48 2 2 5.58 2 10c0 2.38 1.27 4.54 3.3 6.02L4 21l4.45-2.09c1.12.35 2.31.54 3.55.54 5.52 0 10-3.58 10-8S17.52 2 12 2zm1 12h-2v-2h2v2zm0-4h-2V6h2v4z" />
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    width="28"
+                                    height="28"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M12 2C6.48 2 2 5.58 2 10c0 2.38 1.27 4.54 3.3 6.02L4 21l4.45-2.09c1.12.35 2.31.54 3.55.54 5.52 0 10-3.58 10-8S17.52 2 12 2zm1 12h-2v-2h2v2zm0-4h-2V6h2v4z"
+                                    />
                                 </svg>
                             </div>
                             <h3>{{ t('support.emptyTitle') }}</h3>
@@ -185,11 +195,23 @@ onUnmounted(() => {
                                 :disabled="isOpeningChat"
                                 @click="openChat"
                             >
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-                                    <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z" />
-                                    <path d="M19 11h-2a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z" />
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    width="18"
+                                    height="18"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z"
+                                    />
+                                    <path
+                                        d="M19 11h-2a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"
+                                    />
                                 </svg>
-                                <span>{{ isOpeningChat ? t('support.opening') : t('support.start') }}</span>
+                                <span>{{
+                                    isOpeningChat ? t('support.opening') : t('support.start')
+                                }}</span>
                             </button>
                         </div>
                     </div>
@@ -210,7 +232,11 @@ onUnmounted(() => {
                                     <img
                                         v-for="articleId in msg.screenshots"
                                         :key="articleId"
-                                        :src="apiPath(`support/screenshot/${encodeURIComponent(articleId)}`)"
+                                        :src="
+                                            apiPath(
+                                                `support/screenshot/${encodeURIComponent(articleId)}`,
+                                            )
+                                        "
                                         class="message-screenshot"
                                         alt="Screenshot"
                                         @error="hideOnError"
@@ -221,7 +247,9 @@ onUnmounted(() => {
 
                         <div v-if="isStreaming" class="support-message assistant">
                             <div class="message-bubble">
-                                <p class="message-text">{{ streamingText }}<span class="cursor">|</span></p>
+                                <p class="message-text">
+                                    {{ streamingText }}<span class="cursor">|</span>
+                                </p>
                             </div>
                         </div>
 
@@ -320,7 +348,10 @@ onUnmounted(() => {
     background: var(--bg-primary);
     color: var(--text-secondary);
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .toolbar-btn:hover {
@@ -357,7 +388,11 @@ onUnmounted(() => {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-primary) 92%, white) 0%, var(--bg-primary) 100%);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg-primary) 92%, white) 0%,
+        var(--bg-primary) 100%
+    );
 }
 
 .support-messages {
@@ -553,7 +588,11 @@ onUnmounted(() => {
     border: none;
     cursor: pointer;
     color: #fff;
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 88%, white), var(--accent-color));
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--accent-color) 88%, white),
+        var(--accent-color)
+    );
 }
 
 .support-send-btn {
@@ -583,7 +622,9 @@ onUnmounted(() => {
 }
 
 @keyframes supportTyping {
-    0%, 80%, 100% {
+    0%,
+    80%,
+    100% {
         transform: scale(0.8);
         opacity: 0.4;
     }
@@ -608,7 +649,6 @@ onUnmounted(() => {
     .support-input-area {
         padding: 16px 20px 12px;
     }
-
 }
 
 @media (max-width: 768px) {
@@ -642,6 +682,5 @@ onUnmounted(() => {
         height: 48px;
         border-radius: 14px;
     }
-
 }
 </style>

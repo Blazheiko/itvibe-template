@@ -57,7 +57,13 @@ onUnmounted(() => {
             <span class="admin-header__title">Admin Panel</span>
             <button class="admin-header__back" @click="goBack">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path
+                        d="M10 3L5 8l5 5"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
                 </svg>
                 Back to App
             </button>
@@ -72,24 +78,78 @@ onUnmounted(() => {
                     class="admin-sidebar__item"
                     :class="{ 'admin-sidebar__item--active': route.path.startsWith(item.path) }"
                 >
-                    <svg v-if="item.icon === 'kb'" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
-                        <path d="M8 7v5M8 5v1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                    <svg
+                        v-if="item.icon === 'kb'"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4" />
+                        <path
+                            d="M8 7v5M8 5v1"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                        />
                     </svg>
-                    <svg v-if="item.icon === 'users'" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <circle cx="5.5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/>
-                        <circle cx="11.2" cy="6" r="1.8" stroke="currentColor" stroke-width="1.4"/>
-                        <path d="M1.5 13c0-2.1 1.8-3.5 4-3.5s4 1.4 4 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                        <path d="M9.2 12.8c.2-1.5 1.4-2.6 3.1-2.6 1 0 1.8.2 2.2.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                    <svg
+                        v-if="item.icon === 'users'"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <circle cx="5.5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4" />
+                        <circle cx="11.2" cy="6" r="1.8" stroke="currentColor" stroke-width="1.4" />
+                        <path
+                            d="M1.5 13c0-2.1 1.8-3.5 4-3.5s4 1.4 4 3.5"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                        />
+                        <path
+                            d="M9.2 12.8c.2-1.5 1.4-2.6 3.1-2.6 1 0 1.8.2 2.2.7"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                        />
                     </svg>
-                    <svg v-if="item.icon === 'online-users'" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <circle cx="6" cy="5" r="2.4" stroke="currentColor" stroke-width="1.4"/>
-                        <path d="M2 13c0-2.2 1.8-3.6 4-3.6s4 1.4 4 3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                        <circle cx="12.5" cy="12.5" r="2.3" fill="currentColor"/>
+                    <svg
+                        v-if="item.icon === 'online-users'"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <circle cx="6" cy="5" r="2.4" stroke="currentColor" stroke-width="1.4" />
+                        <path
+                            d="M2 13c0-2.2 1.8-3.6 4-3.6s4 1.4 4 3.6"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                        />
+                        <circle cx="12.5" cy="12.5" r="2.3" fill="currentColor" />
                     </svg>
-                    <svg v-if="item.icon === 'history-online'" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.4"/>
-                        <path d="M8 4.5v3.8l2.5 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <svg
+                        v-if="item.icon === 'history-online'"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.4" />
+                        <path
+                            d="M8 4.5v3.8l2.5 1.5"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
                     </svg>
                     {{ item.label }}
                 </router-link>
@@ -142,7 +202,9 @@ onUnmounted(() => {
     color: var(--text-secondary);
     font-size: 0.8125rem;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+        color 0.15s,
+        border-color 0.15s;
 }
 
 .admin-header__back:hover {
@@ -178,7 +240,9 @@ onUnmounted(() => {
     color: var(--text-primary);
     font-size: 0.875rem;
     text-decoration: none;
-    transition: background-color 0.15s, color 0.15s;
+    transition:
+        background-color 0.15s,
+        color 0.15s;
 }
 
 .admin-sidebar__item:hover {

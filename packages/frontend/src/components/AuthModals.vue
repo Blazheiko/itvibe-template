@@ -228,10 +228,7 @@ async function handleLogin(): Promise<void> {
             error !== null && (error.code === ErrorCode.Unauthorized || error.transportCode === 401)
 
         if (error || hasResponseError(data)) {
-            loginError.value = getResponseMessage(
-                data,
-                error?.message ?? t('auth.errorServer'),
-            )
+            loginError.value = getResponseMessage(data, error?.message ?? t('auth.errorServer'))
             if (unauthorized) {
                 loginError.value = t('auth.errorInvalidLogin')
             }
@@ -319,7 +316,10 @@ async function handleForgotPassword(): Promise<void> {
             }
 
             if (error || hasResponseError(data) || data?.status !== 'success') {
-                forgotError.value = getResponseMessage(data, error?.message ?? t('auth.errorServer'))
+                forgotError.value = getResponseMessage(
+                    data,
+                    error?.message ?? t('auth.errorServer'),
+                )
                 return
             }
 
@@ -732,7 +732,11 @@ watch(
                                 : t('auth.resetPasswordTitle')
                     }}
                 </h3>
-                <button class="close-modal" @click="closeLoginModal" :aria-label="t('auth.closeModal')">
+                <button
+                    class="close-modal"
+                    @click="closeLoginModal"
+                    :aria-label="t('auth.closeModal')"
+                >
                     ×
                 </button>
             </div>
@@ -803,24 +807,32 @@ watch(
                     </div>
 
                     <div class="social-buttons">
-                        <a
-                            :href="oauthGoogleUrl"
-                            class="social-btn social-btn-google"
-                        >
+                        <a :href="oauthGoogleUrl" class="social-btn social-btn-google">
                             <svg viewBox="0 0 24 24" width="18" height="18">
-                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                <path
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                                    fill="#4285F4"
+                                />
+                                <path
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    fill="#34A853"
+                                />
+                                <path
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                    fill="#FBBC05"
+                                />
+                                <path
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    fill="#EA4335"
+                                />
                             </svg>
                             <span>Google</span>
                         </a>
-                        <a
-                            :href="oauthFacebookUrl"
-                            class="social-btn social-btn-facebook"
-                        >
+                        <a :href="oauthFacebookUrl" class="social-btn social-btn-facebook">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="#1877F2">
-                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+                                />
                             </svg>
                             <span>Facebook</span>
                         </a>
@@ -903,7 +915,9 @@ watch(
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="forgot-phone-password-confirm">{{ t('auth.confirmNewPassword') }}</label>
+                        <label for="forgot-phone-password-confirm">{{
+                            t('auth.confirmNewPassword')
+                        }}</label>
                         <input
                             id="forgot-phone-password-confirm"
                             v-model="forgotPhonePasswordConfirm"
@@ -990,7 +1004,9 @@ watch(
                             autocomplete="name"
                             :class="{ 'has-error': registerNameError }"
                         />
-                        <div v-if="registerNameError" class="error-message">{{ registerNameError }}</div>
+                        <div v-if="registerNameError" class="error-message">
+                            {{ registerNameError }}
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="register-email">{{ t('auth.email') }}</label>
@@ -1002,7 +1018,9 @@ watch(
                             autocomplete="email"
                             :class="{ 'has-error': registerEmailError }"
                         />
-                        <div v-if="registerEmailError" class="error-message">{{ registerEmailError }}</div>
+                        <div v-if="registerEmailError" class="error-message">
+                            {{ registerEmailError }}
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="register-password">{{ t('auth.password') }}</label>
@@ -1019,7 +1037,9 @@ watch(
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="register-password-confirm">{{ t('auth.confirmPassword') }}</label>
+                        <label for="register-password-confirm">{{
+                            t('auth.confirmPassword')
+                        }}</label>
                         <input
                             id="register-password-confirm"
                             v-model="registerPasswordConfirm"
@@ -1032,7 +1052,10 @@ watch(
                             {{ registerPasswordConfirmError }}
                         </div>
                     </div>
-                    <div class="form-group terms-agreement" :class="{ 'has-error': showAgreementError }">
+                    <div
+                        class="form-group terms-agreement"
+                        :class="{ 'has-error': showAgreementError }"
+                    >
                         <label class="checkbox-container">
                             <input type="checkbox" v-model="agreeToManifesto" />
                             <span class="checkmark"></span>
@@ -1042,7 +1065,11 @@ watch(
                             {{ t('auth.errorTerms') }}
                         </p>
                     </div>
-                    <button class="auth-button" @click="handleEmailRegister" :disabled="isRegisterLoading">
+                    <button
+                        class="auth-button"
+                        @click="handleEmailRegister"
+                        :disabled="isRegisterLoading"
+                    >
                         <span v-if="isRegisterLoading">{{ t('auth.createAccount') }}</span>
                         <span v-else>{{ t('auth.createAccount') }}</span>
                     </button>
@@ -1056,10 +1083,22 @@ watch(
                             class="social-btn social-btn-google"
                         >
                             <svg viewBox="0 0 24 24" width="18" height="18">
-                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                <path
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                                    fill="#4285F4"
+                                />
+                                <path
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                    fill="#34A853"
+                                />
+                                <path
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                                    fill="#FBBC05"
+                                />
+                                <path
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                    fill="#EA4335"
+                                />
                             </svg>
                             <span>Google</span>
                         </a>
@@ -1069,7 +1108,9 @@ watch(
                             class="social-btn social-btn-facebook"
                         >
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="#1877F2">
-                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                <path
+                                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+                                />
                             </svg>
                             <span>Facebook</span>
                         </a>
@@ -1095,10 +1136,14 @@ watch(
                             autocomplete="tel"
                             :class="{ 'has-error': registerPhoneError }"
                         />
-                        <div v-if="registerPhoneError" class="error-message">{{ registerPhoneError }}</div>
+                        <div v-if="registerPhoneError" class="error-message">
+                            {{ registerPhoneError }}
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="register-phone-country">{{ t('auth.phoneCountryOptional') }}</label>
+                        <label for="register-phone-country">{{
+                            t('auth.phoneCountryOptional')
+                        }}</label>
                         <input
                             id="register-phone-country"
                             v-model="registerPhoneCountry"
@@ -1108,12 +1153,18 @@ watch(
                             autocomplete="country"
                         />
                     </div>
-                    <button class="auth-button" @click="handlePhoneStart" :disabled="isRegisterLoading">
+                    <button
+                        class="auth-button"
+                        @click="handlePhoneStart"
+                        :disabled="isRegisterLoading"
+                    >
                         <span v-if="isRegisterLoading">{{ t('auth.sendingResetLink') }}</span>
                         <span v-else>{{ t('auth.sendVerificationCode') }}</span>
                     </button>
                     <p class="auth-switch">
-                        <a href="#" @click.prevent="registerStep = 'choice'">{{ t('auth.back') }}</a>
+                        <a href="#" @click.prevent="registerStep = 'choice'">{{
+                            t('auth.back')
+                        }}</a>
                     </p>
                 </template>
 
@@ -1138,14 +1189,22 @@ watch(
                             :placeholder="t('auth.verificationCodePlaceholder')"
                             :class="{ 'has-error': registerCodeError }"
                         />
-                        <div v-if="registerCodeError" class="error-message">{{ registerCodeError }}</div>
+                        <div v-if="registerCodeError" class="error-message">
+                            {{ registerCodeError }}
+                        </div>
                     </div>
-                    <button class="auth-button" @click="handlePhoneConfirm" :disabled="isRegisterLoading">
+                    <button
+                        class="auth-button"
+                        @click="handlePhoneConfirm"
+                        :disabled="isRegisterLoading"
+                    >
                         <span v-if="isRegisterLoading">{{ t('auth.verifyingCode') }}</span>
                         <span v-else>{{ t('auth.verifyCode') }}</span>
                     </button>
                     <p class="auth-switch">
-                        <a href="#" @click.prevent="registerStep = 'phone-start'">{{ t('auth.back') }}</a>
+                        <a href="#" @click.prevent="registerStep = 'phone-start'">{{
+                            t('auth.back')
+                        }}</a>
                     </p>
                     <p v-if="phoneResendAvailableAt" class="auth-description">
                         {{ t('auth.resendAvailableAt') }}: {{ phoneResendAvailableAt }}
@@ -1167,7 +1226,9 @@ watch(
                             autocomplete="name"
                             :class="{ 'has-error': registerNameError }"
                         />
-                        <div v-if="registerNameError" class="error-message">{{ registerNameError }}</div>
+                        <div v-if="registerNameError" class="error-message">
+                            {{ registerNameError }}
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="register-phone-password">{{ t('auth.password') }}</label>
@@ -1184,7 +1245,9 @@ watch(
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="register-phone-password-confirm">{{ t('auth.confirmPassword') }}</label>
+                        <label for="register-phone-password-confirm">{{
+                            t('auth.confirmPassword')
+                        }}</label>
                         <input
                             id="register-phone-password-confirm"
                             v-model="registerPasswordConfirm"
@@ -1197,7 +1260,10 @@ watch(
                             {{ registerPasswordConfirmError }}
                         </div>
                     </div>
-                    <div class="form-group terms-agreement" :class="{ 'has-error': showAgreementError }">
+                    <div
+                        class="form-group terms-agreement"
+                        :class="{ 'has-error': showAgreementError }"
+                    >
                         <label class="checkbox-container">
                             <input type="checkbox" v-model="agreeToManifesto" />
                             <span class="checkmark"></span>
@@ -1207,12 +1273,18 @@ watch(
                             {{ t('auth.errorTerms') }}
                         </p>
                     </div>
-                    <button class="auth-button" @click="handlePhoneComplete" :disabled="isRegisterLoading">
+                    <button
+                        class="auth-button"
+                        @click="handlePhoneComplete"
+                        :disabled="isRegisterLoading"
+                    >
                         <span v-if="isRegisterLoading">{{ t('auth.createAccount') }}</span>
                         <span v-else>{{ t('auth.createAccount') }}</span>
                     </button>
                     <p class="auth-switch">
-                        <a href="#" @click.prevent="registerStep = 'phone-confirm'">{{ t('auth.back') }}</a>
+                        <a href="#" @click.prevent="registerStep = 'phone-confirm'">{{
+                            t('auth.back')
+                        }}</a>
                     </p>
                 </template>
             </div>

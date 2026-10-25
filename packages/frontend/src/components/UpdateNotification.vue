@@ -56,7 +56,8 @@ const emit = defineEmits<(e: 'refresh' | 'dismiss') => void>()
     justify-content: flex-end;
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary,
+.btn-secondary {
     padding: 6px 14px;
     border-radius: var(--radius-sm);
     font-weight: 500;

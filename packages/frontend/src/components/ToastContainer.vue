@@ -85,10 +85,18 @@ const roleMap: Record<string, string> = {
     word-break: break-word;
 }
 
-.toast--success { border-left: 3px solid var(--success-color); }
-.toast--error   { border-left: 3px solid var(--danger-color); }
-.toast--warning { border-left: 3px solid var(--warning-color); }
-.toast--info    { border-left: 3px solid var(--info-color); }
+.toast--success {
+    border-left: 3px solid var(--success-color);
+}
+.toast--error {
+    border-left: 3px solid var(--danger-color);
+}
+.toast--warning {
+    border-left: 3px solid var(--warning-color);
+}
+.toast--info {
+    border-left: 3px solid var(--info-color);
+}
 
 .toast__icon {
     font-size: 14px;
@@ -165,13 +173,25 @@ const roleMap: Record<string, string> = {
 }
 
 @keyframes toast-slide-in {
-    from { transform: translateX(110%); opacity: 0; }
-    to   { transform: translateX(0);    opacity: 1; }
+    from {
+        transform: translateX(110%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes toast-slide-out {
-    from { transform: translateX(0);    opacity: 1; }
-    to   { transform: translateX(110%); opacity: 0; }
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(110%);
+        opacity: 0;
+    }
 }
 
 @media (max-width: 480px) {

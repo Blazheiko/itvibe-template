@@ -32,14 +32,9 @@ const isInitStarting = ref(false)
 let initPollTimer: number | null = null
 
 const isInitRunning = computed(() => initStatus.value?.state === 'running')
-const showInitButton = computed(() =>
-    !isLoading.value
-    && total.value === 0
-    && !isInitRunning.value
-)
-const showInitProgress = computed(() =>
-    initStatus.value !== null
-    && initStatus.value.state !== 'idle'
+const showInitButton = computed(() => !isLoading.value && total.value === 0 && !isInitRunning.value)
+const showInitProgress = computed(
+    () => initStatus.value !== null && initStatus.value.state !== 'idle',
 )
 
 function stopInitPolling(): void {
@@ -247,20 +242,31 @@ onUnmounted(() => {
                 <div>
                     <h3 class="kb-init-title">Initialization</h3>
                     <p class="kb-init-subtitle">
-                        {{ initStatus?.message ?? 'Importing knowledge base articles from docs/support-knowledge-base' }}
+                        {{
+                            initStatus?.message ??
+                            'Importing knowledge base articles from docs/support-knowledge-base'
+                        }}
                     </p>
                 </div>
                 <span class="kb-init-state">{{ initStatus?.state }}</span>
             </div>
 
             <div class="kb-progress-bar">
-                <div class="kb-progress-fill" :style="{ width: `${initStatus?.progressPercent ?? 0}%` }" />
+                <div
+                    class="kb-progress-fill"
+                    :style="{ width: `${initStatus?.progressPercent ?? 0}%` }"
+                />
             </div>
 
             <div class="kb-init-stats">
-                <span>{{ initStatus?.processedFiles ?? 0 }} / {{ initStatus?.totalFiles ?? 0 }} files</span>
+                <span
+                    >{{ initStatus?.processedFiles ?? 0 }} /
+                    {{ initStatus?.totalFiles ?? 0 }} files</span
+                >
                 <span>{{ initStatus?.createdArticles ?? 0 }} created</span>
-                <span v-if="(initStatus?.failedFiles ?? 0) > 0">{{ initStatus?.failedFiles ?? 0 }} failed</span>
+                <span v-if="(initStatus?.failedFiles ?? 0) > 0"
+                    >{{ initStatus?.failedFiles ?? 0 }} failed</span
+                >
                 <span>{{ initStatus?.progressPercent ?? 0 }}%</span>
             </div>
 
@@ -292,8 +298,12 @@ onUnmounted(() => {
                         <td>{{ article.embeddingIndexed ? 'Yes' : 'No' }}</td>
                         <td>{{ article.hasScreenshot ? 'Yes' : 'No' }}</td>
                         <td class="kb-actions-cell">
-                            <button class="btn-xs btn-secondary" @click="openEdit(article)">Edit</button>
-                            <button class="btn-xs btn-secondary" @click="reindexArticle(article)">Reindex</button>
+                            <button class="btn-xs btn-secondary" @click="openEdit(article)">
+                                Edit
+                            </button>
+                            <button class="btn-xs btn-secondary" @click="reindexArticle(article)">
+                                Reindex
+                            </button>
                             <button
                                 v-if="article.hasScreenshot"
                                 class="btn-xs btn-danger"
@@ -301,7 +311,9 @@ onUnmounted(() => {
                             >
                                 Del Screenshot
                             </button>
-                            <button class="btn-xs btn-danger" @click="deleteArticle(article)">Delete</button>
+                            <button class="btn-xs btn-danger" @click="deleteArticle(article)">
+                                Delete
+                            </button>
                         </td>
                     </tr>
                     <tr v-if="articles.length === 0">
@@ -318,15 +330,30 @@ onUnmounted(() => {
                 <h3 class="kb-modal-title">{{ isEditing ? 'Edit Article' : 'New Article' }}</h3>
                 <label class="kb-label">
                     Title *
-                    <input v-model="formTitle" class="kb-input" type="text" placeholder="Article title" />
+                    <input
+                        v-model="formTitle"
+                        class="kb-input"
+                        type="text"
+                        placeholder="Article title"
+                    />
                 </label>
                 <label class="kb-label">
                     Category
-                    <input v-model="formCategory" class="kb-input" type="text" placeholder="e.g. billing, setup" />
+                    <input
+                        v-model="formCategory"
+                        class="kb-input"
+                        type="text"
+                        placeholder="e.g. billing, setup"
+                    />
                 </label>
                 <label class="kb-label">
                     Content *
-                    <textarea v-model="formContent" class="kb-textarea" rows="8" placeholder="Article content (Markdown supported)" />
+                    <textarea
+                        v-model="formContent"
+                        class="kb-textarea"
+                        rows="8"
+                        placeholder="Article content (Markdown supported)"
+                    />
                 </label>
                 <label class="kb-label kb-label--row">
                     <input v-model="formIsActive" type="checkbox" />
@@ -382,7 +409,7 @@ onUnmounted(() => {
 
 .kb-reindex-result {
     font-size: 13px;
-    color: var(--color-success, #2E7D52);
+    color: var(--color-success, #2e7d52);
     margin-bottom: 12px;
 }
 
@@ -399,11 +426,11 @@ onUnmounted(() => {
 }
 
 .kb-init-card.is-completed {
-    border-color: var(--color-success, #2E7D52);
+    border-color: var(--color-success, #2e7d52);
 }
 
 .kb-init-card.is-failed {
-    border-color: var(--color-danger, #B83232);
+    border-color: var(--color-danger, #b83232);
 }
 
 .kb-init-head {
@@ -530,7 +557,11 @@ onUnmounted(() => {
     font-size: 13px;
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+    transition:
+        background-color 0.15s,
+        border-color 0.15s,
+        color 0.15s,
+        opacity 0.15s;
 }
 
 .btn:disabled {
@@ -577,8 +608,8 @@ onUnmounted(() => {
 
 .btn-xs.btn-danger {
     background-color: transparent;
-    color: var(--color-danger, #B83232);
-    border: 1px solid var(--color-danger, #B83232);
+    color: var(--color-danger, #b83232);
+    border: 1px solid var(--color-danger, #b83232);
 }
 
 /* Modal */
