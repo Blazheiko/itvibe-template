@@ -28,13 +28,6 @@
 | L-3 | info-лог «Get Http Data»             | рядка в `src` немає                                                                                                | уже відсутній у `8f3479f`                                                          | `security-regressions.spec.ts` › «L-3: no info log of the whole request data»: рядка немає в жодному `.ts` у `src`                                                                                                                            | закрито |
 | L-4 | channel-injection у broadcast        | `if (!isWsChannel(channel))` (`src/vendor/start/server.ts:106`)                                                    | `fd15150`, PR #29                                                                  | `server-broadcast.spec.ts` › «drops a message for an undeclared channel %j that bypassed the type» (негативний контроль: без guard падає 4); `packages/shared/test/ws-channels.test.js` › «isWsChannel rejects unknown and non-string values» | закрито |
 
-## Без тесту
+## Без тесту (історичне)
 
-Виправлення є, але регресію не впіймає жоден тест: **C-1, H-1, H-3, H-4, M-2, M-3, M-4, L-1, L-2, L-3**. Це вхід для окремої фічі з тестами безпеки (поза feat-009). Найцінніші:
-
-- C-1: preflight і запит з origin поза whitelist не отримують `Access-Control-Allow-Origin`;
-- H-1: при `APP_ENV` ≠ `local` 500 не містить тексту винятку;
-- H-3: `/../etc/passwd` → 400, недозволене розширення → не віддається;
-- M-3: `Content-Type: application/octet-stream` на JSON-маршрут → 415, handler не викликано;
-- M-4: `Content-Length: 1e3` / `0x10` не дає раннього відказу;
-- L-2: поза `manual-test` `/api/doc/routes` → 404.
+На момент перевірки 2026-10-24 виправлення **C-1, H-1, H-3, H-4, M-2, M-3, M-4, L-1, L-2, L-3** не покривав жоден тест. feat-040 (PR #109) закрила цю прогалину: кожне з них тепер має регресійний тест (див. таблицю вище), і кожен тест перевірено мутацією. Знахідок без тесту не лишилося.
