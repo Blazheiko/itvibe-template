@@ -391,8 +391,8 @@
             "owner": "Blazheiko",
             "branch": "feat/hide-session-token",
             "dependencies": ["feat-038"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #106 (merge 10f5b51): sessionToken stripped by userTransformer, unused findBySessionToken removed, auth-security.md explains users.session_token; unit test fails without the fix; manual login on a fresh DB; backend 858, e2e 12, typecheck, lint, build, docs:build + docs:verify"
         }
     ]
 }
