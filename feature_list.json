@@ -258,8 +258,8 @@
             "id": "feat-026",
             "name": "Validation Cleanup",
             "description": "ArkType errors as messages[{path,message}], remove dead validation/controller code, ADR 0001 leftovers decided (code-issues items 26, 27). Roadmap F09: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "",
-            "branch": "",
+            "owner": "Blazheiko",
+            "branch": "feat/validation-cleanup",
             "dependencies": ["feat-010"],
             "status": "done",
             "evidence": "PR #65 (merge 18af90b): per-field issues in 422/WS details, dead validation code removed, ADR 0001 leftovers decided; flip missed in chore PR #66, recorded in the final chore PR"
@@ -363,6 +363,16 @@
             "dependencies": ["feat-010"],
             "status": "done",
             "evidence": "PR #57: *.pg.test.ts + test:pg with a throwaway database (pgvector, migrations, dropped in teardown), smoke test, pg-tests.yml green (3 passed, not skipped); local negative control still drops the database; pnpm test 671 without pg tests; typecheck, lint, format:check, docs:build + docs:verify; evidence in progress.md on feat/pg-test-harness"
+        },
+        {
+            "id": "feat-037",
+            "name": "Review Fixes",
+            "description": "fixes from the post-plan review (range 0655aca..main): WS responses under a non-api prefix, xAI abort/timeout swallowed (high); push log loss on deactivate failure, static stream hang on shrunk file, 304 without Vary, adapter timeout tests, strict VITE_* typing (medium); low findings and AC text sync in open-issues-tasks.md",
+            "owner": "Blazheiko",
+            "branch": "feat/review-fixes",
+            "dependencies": ["feat-035"],
+            "status": "in_progress",
+            "evidence": ""
         }
     ]
 }
