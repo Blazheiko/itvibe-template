@@ -25,7 +25,12 @@ export type InferPayload<V> = V extends Validator<infer T> ? T : unknown
 ```
 
 - `validate` синхронний і не кидає винятків — повертає результат-об'єднання.
-- `describe` необов'язковий: повертає «сиру» схему для генерації документації маршрутів.
+- `describe` необов'язковий: повертає схему для документації маршрутів (`GET /<prefix>/doc/routes` і api-playground). [serialize-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/serialize-routes.ts) розуміє три форми результату:
+    - тип ArkType — перетворює [serialize-ark-schema.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/tooling/serialize-ark-schema.ts);
+    - готовий опис `{ expression: string, fields?: { name, type, required }[], jsonSchema? }` — передається як є, некоректні елементи `fields` відкидаються;
+    - об'єкт JSON Schema (має `type`, `properties`, `anyOf`, `oneOf`, `allOf`, `$ref`, `enum` або `const`) — `fields` береться з `properties` верхнього рівня і `required`, `expression` — з `type`, сама схема йде в `jsonSchema`.
+
+    Інший результат або відсутній `describe` — маршрут серіалізується без `inputSchema` / `querySchema`.
 
 ### ArkType-адаптер
 
@@ -159,7 +164,7 @@ HTTP-відповідь (обробник помилок у [server.ts](https://
 
 - `ResponseSchema?: BaseType` у `vendor/types/types.d.ts`;
 - `defineRoute`/`defineWsRoute` і `InferQuery` типізовані через `Type` з `@arktype/type`;
-- doc-серіалізація: `serialize-routes.ts` бере `validator.describe()` і приймає лише ArkType (`isArkType`, з `TODO(validation-docs)` для інших), перетворення робить [serialize-ark-schema.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/tooling/serialize-ark-schema.ts);
+- doc-серіалізація `ResponseSchema` (`outputSchema`) — лише ArkType; схеми `validator` / `queryValidator` приймаються й від інших движків через `describe()` (див. [контракт](#контракт-validator-t));
 - схема WS-конверта в `ws-message-validator.ts`.
 
 ::: warning План
