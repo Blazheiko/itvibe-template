@@ -2,6 +2,51 @@
 
 Бекенд тримає один WebSocket-ендпоінт `/<pathPrefix>/websocket` (за замовчуванням `/api/websocket`) на тому ж сервері uWebSockets.js, що й HTTP. Через нього клієнт викликає WS-маршрути у стилі «запит — відповідь», а сервер надсилає push-події (`broadcast:*`). Загальний шлях upgrade і повідомлення описано на сторінці [Життєвий цикл запиту](/backend/request-lifecycle), схему токенів — у розділі [Авторизація WebSocket](/backend/auth-security), а синтаксис `defineWsRoute` — на сторінці [Маршрутизація та middleware](/backend/routing-middlewares). Тут зібрано все, що стосується саме WS: структура на сервері, протокол, push-події, heartbeat, клієнт і обмеження.
 
+## Коротко на прикладі: надіслати подію з сервера
+
+**Задача:** коли користувач створює нотатку, усі його відкриті вкладки мають дізнатися про це без оновлення сторінки.
+
+1. У сервісі після успішного створення викличте `broadcastService`:
+
+    ```ts
+    import { broadcastService } from '#app/services/communication/broadcast-service.js'
+
+    const note = noteTransformer.serialize(createdResult.value)
+    broadcastService.broadcastMessageToUser(String(userId), 'note_created', { note })
+    ```
+
+2. Кожне WebSocket-з'єднання цього користувача отримає повідомлення (знято з реального з'єднання):
+
+    ```json
+    {
+        "event": "broadcast:note_created",
+        "status": 200,
+        "payload": {
+            "note": {
+                "id": "4",
+                "title": "Нова",
+                "body": null,
+                "created_at": "2026-10-25T17:26:14.928+02:00"
+            }
+        }
+    }
+    ```
+
+3. На фронтенді події з префіксом `broadcast:` розбирає [useBroadcastHandler.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/composables/useBroadcastHandler.ts): додайте обробник `note_created` у `handlers` за зразком `support_chat_token`, перевірте форму `payload` і передайте подію далі через event bus.
+
+::: warning Тести сервісу
+`broadcast-service.ts` імпортує сервер, а той на старті вимагає `APP_KEY`. Без мока unit-тест сервісу впаде з `APP_KEY must be set...`. Додайте в тест:
+
+```ts
+vi.mock('#app/services/communication/broadcast-service.js', () => ({
+    broadcastService: { broadcastMessageToUser: vi.fn() },
+}))
+```
+
+:::
+
+Окрім адресних подій є канали (`broadcastMessageToChannel`), як-от адмін-канал зі списком онлайн-користувачів. Запити від клієнта до сервера йдуть через WS-маршрути. Усе це описано нижче.
+
 ## Підключення
 
 ### Отримання токена по HTTP

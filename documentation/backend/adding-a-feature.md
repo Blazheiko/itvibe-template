@@ -9,7 +9,7 @@
 Загальну картину шарів описано в [Архітектурі](/backend/architecture), роутинг і middleware — у [Роутингу та middleware](/backend/routing-middlewares), роботу з БД — у [Базі даних](/backend/database), а шлях запиту — у [Життєвому циклі запиту](/backend/request-lifecycle).
 
 ::: tip Перевірено на практиці
-Весь код нижче було реально додано в чисту копію репозиторію, після чого пройшли `pnpm --filter shared build`, `pnpm typecheck`, `pnpm --filter backend test` (52 файли, 271 тест, разом із новим `note-service.spec.ts`) та `npx eslint` для змінених файлів. Як зразок узято наявну фічу push-підписок.
+Весь код нижче було реально додано в чисту копію репозиторію, після чого пройшли `pnpm --filter shared build`, `pnpm typecheck`, повний `pnpm --filter backend test` (разом із новим `note-service.spec.ts` і перевіркою шарів `layering.spec.ts`) та `npx eslint` для змінених файлів, а запити з кроку 10 виконано на запущеному сервері. Як зразок узято наявну фічу push-підписок.
 :::
 
 ## Що буде створено
@@ -196,7 +196,7 @@ Transformer перетворює рядок БД на публічний DTO: `b
 // packages/backend/src/app/transformers/note-transformer.ts
 import { DateTime } from 'luxon'
 import type { Note } from 'shared'
-import type { NoteRow } from '#app/repositories/note/note-repository.js'
+import type { NoteRow } from '#app/repositories/index.js'
 
 export const noteTransformer = {
     serialize(note: NoteRow): Note {
@@ -213,6 +213,8 @@ export const noteTransformer = {
     },
 }
 ```
+
+Тип `NoteRow` імпортується з barrel `#app/repositories/index.js`, а не з файлу репозиторію: прямий імпорт поза `app/repositories` заборонено, і [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts) на ньому впаде.
 
 Експорт у [transformers/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/index.ts):
 

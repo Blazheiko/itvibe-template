@@ -755,3 +755,13 @@
 
 - **Що:** `POST /api/auth/login` без попереднього `GET /api/main/init` дає `CSRF validation failed, reason: token_mismatch` (при `CSRF_ENFORCE=false` лише WARN). Для браузера це коректно, бо фронтенд спершу викликає `init`, але для API-клієнтів (мобільний застосунок, інтеграційні тести) поведінка неочевидна.
 - **Пропозиція:** описати в `auth-security.md` (зроблено в гайді «Швидкий старт»); за потреби — окремий режим для не-браузерних клієнтів.
+
+### 79. `admin_guard` відповідає не в канонічному форматі помилки
+
+- **Що:** звичайний користувач на `GET /api/admin/users` отримує `403 {"status":"forbidden","message":"Admin access required","csrfToken":"..."}`. Решта помилок мають `{"status":"error","code":"<code>","message":...}` (`CanonicalErrorResponseSchema`), тож клієнт, що перевіряє `status === 'error'` або `code`, цю відмову не розпізнає.
+- **Пропозиція:** формувати відповідь `admin_guard` (і `ws-admin-guard`) через `forbidden()` з `errors.ts`, щоб отримати `status: 'error'`, `code: 'forbidden'`.
+
+### 80. Туторіал «Як додати фічу» порушував правило шарів
+
+- **Що:** крок 5 імпортував `NoteRow` з `#app/repositories/note/note-repository.js`, а `layering.spec.ts` дозволяє поза `app/repositories` лише barrel. Код туторіалу, перенесений дослівно, давав червоний `pnpm test`.
+- **Виправлено** в документації: імпорт з `#app/repositories/index.js`, повний `pnpm --filter backend test` зелений (124 файли, 920 тестів на момент перевірки).
