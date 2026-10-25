@@ -1,0 +1,29 @@
+import { describe, expect, it } from 'vitest'
+
+import { userTransformer } from './user-transformer.js'
+
+// Internal fields never leave the server: the password hash and the per-user
+// session namespace (users.session_token, also part of the signed cookie).
+const row = {
+    id: 7n,
+    name: 'Jane',
+    email: 'jane@example.test',
+    phone: null,
+    password: 'hashed-password',
+    sessionToken: 'abcdefghijklmnopqrstuvwx',
+    avatar: null,
+    role: 'user' as const,
+    emailVerifiedAt: null,
+    createdAt: new Date('2026-10-25T10:00:00.000Z'),
+    updatedAt: new Date('2026-10-25T10:01:00.000Z'),
+}
+
+describe('userTransformer', () => {
+    it('drops password and sessionToken', () => {
+        const serialized = userTransformer.serialize(row)
+        expect(serialized).not.toHaveProperty('password')
+        expect(serialized).not.toHaveProperty('sessionToken')
+        expect(JSON.stringify(serialized)).not.toContain('abcdefghijklmnopqrstuvwx')
+        expect(serialized).toMatchObject({ id: '7', name: 'Jane', emailVerified: false })
+    })
+})

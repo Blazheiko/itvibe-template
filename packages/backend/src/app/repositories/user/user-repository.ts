@@ -46,7 +46,6 @@ export interface IUserRepository {
     findById(id: bigint): Promise<UserRow | undefined>
     findByEmail(email: string): Promise<UserRow | undefined>
     findByPhone(phone: string): Promise<UserRow | undefined>
-    findBySessionToken(token: string): Promise<UserRow | undefined>
     listAdminUsers(
         filters?: AdminUserListFilters,
     ): Promise<{ items: AdminUserListRow[]; total: number }>
@@ -98,15 +97,6 @@ export const userRepository: IUserRepository = {
             .select()
             .from(users)
             .where(eq(users.phone, phone))
-            .limit(1)
-            .then((rows) => rows.at(0))
-    },
-
-    async findBySessionToken(token) {
-        return await db
-            .select()
-            .from(users)
-            .where(eq(users.sessionToken, token))
             .limit(1)
             .then((rows) => rows.at(0))
     },
