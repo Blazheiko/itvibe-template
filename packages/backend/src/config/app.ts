@@ -1,4 +1,5 @@
 import { env } from 'node:process'
+import { nonEmpty } from '#vendor/utils/env/non-empty.js'
 import { parseBoolean } from '#vendor/utils/env/parse-boolean.js'
 
 function stripTrailingSlash(value: string): string {
@@ -61,7 +62,8 @@ const config = Object.freeze({
     host: env['HOST'] ?? '0.0.0.0',
     port: parsePort(env['PORT'], 3000),
     pathPrefix: normalizePath(env['API_PATH_PREFIX'] ?? 'api'),
-    unixPath: env['APP_UNIX_PATH'],
+    // `APP_UNIX_PATH=` from .env.example must mean "listen on HOST:PORT", not listen_unix('')
+    unixPath: nonEmpty(env['APP_UNIX_PATH']),
     // Примеры использования логических значений:
     // SERVE_STATIC=true, SERVE_STATIC=1, SERVE_STATIC=yes, SERVE_STATIC=on
     serveStatic: parseBoolean(env['SERVE_STATIC'], false),
