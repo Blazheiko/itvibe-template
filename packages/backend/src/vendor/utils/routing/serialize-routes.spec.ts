@@ -176,6 +176,117 @@ describe('serializeRoutes', () => {
         expect(result).toBeDefined()
         expect(result?.['inputSchema']).toBeUndefined()
     })
+
+    it('omits inputSchema when describe() returns nothing usable', () => {
+        const routes = [null, 'schema', ['a'], { fields: [] }].map((described) => ({
+            url: '/native',
+            method: 'post',
+            handler: () => ({ ok: true }),
+            validator: {
+                validate: () => ({ ok: true, value: {} }),
+                describe: () => described,
+            },
+        }))
+
+        for (const result of serializeRoutes(routes) as Record<string, unknown>[]) {
+            expect(result['inputSchema']).toBeUndefined()
+        }
+    })
+})
+
+const nativeRoute = (key: 'validator' | 'queryValidator', described: unknown) => ({
+    url: '/native',
+    method: 'post',
+    handler: () => ({ ok: true }),
+    [key]: {
+        validate: () => ({ ok: true, value: {} }),
+        describe: () => described,
+    },
+})
+
+describe('serializeRoutes with non-ArkType describe()', () => {
+    it('passes a ready descriptor through, dropping malformed fields', () => {
+        const jsonSchema = { type: 'object' }
+        const [result] = serializeRoutes([
+            nativeRoute('validator', {
+                expression: '{ name: string }',
+                fields: [
+                    { name: 'name', type: 'string', required: true },
+                    { name: 'broken', type: 1 },
+                    'junk',
+                ],
+                jsonSchema,
+            }),
+        ]) as Record<string, unknown>[]
+
+        expect(result?.['inputSchema']).toEqual({
+            expression: '{ name: string }',
+            fields: [{ name: 'name', type: 'string', required: true }],
+            jsonSchema,
+        })
+    })
+
+    it('gives a descriptor without fields an empty list', () => {
+        const [result] = serializeRoutes([
+            nativeRoute('validator', { expression: 'custom' }),
+        ]) as Record<string, unknown>[]
+
+        expect(result?.['inputSchema']).toEqual({ expression: 'custom', fields: [] })
+    })
+
+    it('reads a plain JSON Schema object', () => {
+        const jsonSchema = {
+            type: 'object',
+            properties: {
+                email: { type: 'string', format: 'email' },
+                age: { type: ['integer', 'null'] },
+                role: { enum: ['admin', 'user'] },
+                kind: { const: 'person' },
+                meta: {},
+            },
+            required: ['email', 'kind'],
+        }
+        const [result] = serializeRoutes([nativeRoute('validator', jsonSchema)]) as Record<
+            string,
+            unknown
+        >[]
+
+        expect(result?.['inputSchema']).toEqual({
+            expression: 'object',
+            fields: [
+                { name: 'email', type: 'string', required: true },
+                { name: 'age', type: 'integer | null', required: false },
+                { name: 'role', type: '"admin" | "user"', required: false },
+                { name: 'kind', type: '"person"', required: true },
+                { name: 'meta', type: 'unknown', required: false },
+            ],
+            jsonSchema,
+        })
+    })
+
+    it('keeps a JSON Schema union in jsonSchema with no top-level fields', () => {
+        const jsonSchema = { anyOf: [{ type: 'string' }, { type: 'number' }] }
+        const [result] = serializeRoutes([nativeRoute('validator', jsonSchema)]) as Record<
+            string,
+            unknown
+        >[]
+
+        expect(result?.['inputSchema']).toEqual({ expression: 'unknown', fields: [], jsonSchema })
+    })
+
+    it('serializes a non-ArkType query validator into querySchema', () => {
+        const [result] = serializeRoutes([
+            nativeRoute('queryValidator', {
+                type: 'object',
+                properties: { page: { type: 'integer' } },
+            }),
+        ]) as Record<string, unknown>[]
+
+        expect(result?.['querySchema']).toMatchObject({
+            fields: [{ name: 'page', type: 'integer', required: false }],
+        })
+        expect(result?.['queryValidator']).toBeUndefined()
+    })
 })
 
 describe('serializeRoutes bodyLimits', () => {

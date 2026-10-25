@@ -2,6 +2,7 @@ import type { Type } from '@arktype/type'
 import {
     serializeArkSchema,
     type SerializedArkSchema,
+    type SerializedSchemaField,
 } from '#vendor/utils/tooling/serialize-ark-schema.js'
 import { resolveMaxBodySize, type BodyKind } from '#vendor/utils/network/http-request-handlers.js'
 import { isBodyMethod } from '#vendor/utils/routing/body-methods.js'
@@ -13,22 +14,85 @@ function isArkType(value: unknown): value is Type {
     return 'expression' in value && 'json' in value && typeof value.expression === 'string'
 }
 
-function getArkTypeDescription(value: unknown): Type | undefined {
-    const described = (
-        value as
-            | {
-                  describe?: () => unknown
-              }
-            | undefined
-    )?.describe?.()
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
-    if (!isArkType(described)) {
-        // TODO(validation-docs): support non-ArkType describe() payloads such as
-        // predicate/native validators without losing route-doc serialization.
-        return undefined
+function isSchemaField(value: unknown): value is SerializedSchemaField {
+    return (
+        isRecord(value) &&
+        typeof value['name'] === 'string' &&
+        typeof value['type'] === 'string' &&
+        typeof value['required'] === 'boolean'
+    )
+}
+
+const JSON_SCHEMA_KEYS = ['type', 'properties', 'anyOf', 'oneOf', 'allOf', '$ref', 'enum', 'const']
+
+function isJsonSchema(value: unknown): value is Record<string, unknown> {
+    return isRecord(value) && JSON_SCHEMA_KEYS.some((key) => key in value)
+}
+
+function jsonSchemaType(schema: unknown): string {
+    if (!isRecord(schema)) return 'unknown'
+    const { type } = schema
+    if (typeof type === 'string') return type
+    if (Array.isArray(type)) return type.filter((item) => typeof item === 'string').join(' | ')
+    if ('const' in schema) return JSON.stringify(schema['const'])
+    if (Array.isArray(schema['enum'])) {
+        return schema['enum'].map((item) => JSON.stringify(item)).join(' | ')
+    }
+    return 'unknown'
+}
+
+// Top-level object properties only, like the `fields` summary of serializeArkSchema.
+function jsonSchemaFields(schema: Record<string, unknown>): SerializedSchemaField[] {
+    const { properties } = schema
+    if (!isRecord(properties)) return []
+    const required = Array.isArray(schema['required']) ? schema['required'] : []
+    return Object.entries(properties).map(([name, property]) => ({
+        name,
+        type: jsonSchemaType(property),
+        required: required.includes(name),
+    }))
+}
+
+/**
+ * Turns what `validator.describe()` returns into the doc schema shape. Accepted:
+ * - an ArkType Type (the default adapter);
+ * - a ready descriptor `{ expression: string, fields?, jsonSchema? }`, for an
+ *   adapter that serializes its own schemas;
+ * - a plain JSON Schema object (what most validation libraries can export).
+ * Anything else (no describe(), a predicate validator) gives no schema; the route
+ * itself is still serialized.
+ */
+function describeSchema(validator: unknown): SerializedArkSchema | undefined {
+    const described = (validator as { describe?: () => unknown } | undefined)?.describe?.()
+
+    if (isArkType(described)) return serializeArkSchema(described)
+
+    if (isRecord(described) && typeof described['expression'] === 'string') {
+        const fields = Array.isArray(described['fields'])
+            ? described['fields'].filter(isSchemaField)
+            : []
+        return {
+            expression: described['expression'],
+            fields,
+            ...(described['jsonSchema'] !== undefined
+                ? { jsonSchema: described['jsonSchema'] }
+                : {}),
+        }
     }
 
-    return described
+    if (isJsonSchema(described)) {
+        return {
+            expression: jsonSchemaType(described),
+            fields: jsonSchemaFields(described),
+            jsonSchema: described,
+        }
+    }
+
+    return undefined
 }
 
 type SerializedRouteItem = Record<string, unknown> & {
@@ -54,7 +118,7 @@ type SerializedRouteItem = Record<string, unknown> & {
 /**
  * Serializes routes for the doc endpoint:
  * - Removes handler function references
- * - Extracts ArkType validator → inputSchema { expression, fields[] }
+ * - Extracts validator.describe() → inputSchema / querySchema { expression, fields[] }
  * - Extracts ArkType ResponseSchema → outputSchema { expression, fields[] }
  * - Adds bodyLimits for post/put/patch routes
  * - Supports unlimited nesting of groups
@@ -84,16 +148,12 @@ export function serializeRoutes(routes: unknown[]): unknown[] {
             ResponseSchema: undefined,
         }
 
-        // Validators are engine-neutral; the playground shows the ArkType schema behind them.
-        const bodySchema = getArkTypeDescription(obj['validator'])
-        if (isArkType(bodySchema)) {
-            result.inputSchema = serializeArkSchema(bodySchema)
-        }
+        // Validators are engine-neutral; describe() supplies the schema shown in the playground.
+        const inputSchema = describeSchema(obj['validator'])
+        if (inputSchema !== undefined) result.inputSchema = inputSchema
 
-        const querySchema = getArkTypeDescription(obj['queryValidator'])
-        if (isArkType(querySchema)) {
-            result.querySchema = serializeArkSchema(querySchema)
-        }
+        const querySchema = describeSchema(obj['queryValidator'])
+        if (querySchema !== undefined) result.querySchema = querySchema
 
         if (typeof obj['method'] === 'string' && isBodyMethod(obj['method'] as Method)) {
             // Same default as readAndParseBody.
