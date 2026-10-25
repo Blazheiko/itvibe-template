@@ -313,7 +313,7 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 
 ## Аудит безпеки
 
-Початковий аудит бекенду (15 findings) закрито: стан кожного finding — виправлення, коміт або PR, тест — у [docs/security/security-analysis-status.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/security/security-analysis-status.md). Там же перелічено findings, виправлення яких не покриває жоден тест.
+Початковий аудит бекенду (15 findings) закрито: стан кожного finding — виправлення, коміт або PR, тест — у [docs/security/security-analysis-status.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/security/security-analysis-status.md). Кожне виправлення перевіряє регресійний тест (feat-040).
 
 ## Чекліст для production
 
