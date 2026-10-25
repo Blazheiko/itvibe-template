@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useEventBus } from '@/utils/event-bus'
 import { authApi } from '@/utils/api'
+import { apiPath } from '@/utils/api-path'
 import { useUserStore } from '@/stores/user'
 import { getResponseMessage, hasResponseError } from '@/utils/response-normalizer'
 import { ErrorCode } from 'shared/errors'
@@ -685,6 +686,9 @@ async function handlePhoneComplete(): Promise<void> {
     }
 }
 
+const oauthGoogleUrl = apiPath('auth/oauth/google/redirect')
+const oauthFacebookUrl = apiPath('auth/oauth/facebook/redirect')
+
 function handleSocialAuth(url: string): void {
     if (!agreeToManifesto.value) {
         showAgreementError.value = true
@@ -800,7 +804,7 @@ watch(
 
                     <div class="social-buttons">
                         <a
-                            href="/api/auth/oauth/google/redirect"
+                            :href="oauthGoogleUrl"
                             class="social-btn social-btn-google"
                         >
                             <svg viewBox="0 0 24 24" width="18" height="18">
@@ -812,7 +816,7 @@ watch(
                             <span>Google</span>
                         </a>
                         <a
-                            href="/api/auth/oauth/facebook/redirect"
+                            :href="oauthFacebookUrl"
                             class="social-btn social-btn-facebook"
                         >
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="#1877F2">
@@ -1047,8 +1051,8 @@ watch(
                     </div>
                     <div class="social-buttons">
                         <a
-                            href="/api/auth/oauth/google/redirect"
-                            @click.prevent="handleSocialAuth('/api/auth/oauth/google/redirect')"
+                            :href="oauthGoogleUrl"
+                            @click.prevent="handleSocialAuth(oauthGoogleUrl)"
                             class="social-btn social-btn-google"
                         >
                             <svg viewBox="0 0 24 24" width="18" height="18">
@@ -1060,8 +1064,8 @@ watch(
                             <span>Google</span>
                         </a>
                         <a
-                            href="/api/auth/oauth/facebook/redirect"
-                            @click.prevent="handleSocialAuth('/api/auth/oauth/facebook/redirect')"
+                            :href="oauthFacebookUrl"
+                            @click.prevent="handleSocialAuth(oauthFacebookUrl)"
                             class="social-btn social-btn-facebook"
                         >
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="#1877F2">

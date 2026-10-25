@@ -80,7 +80,7 @@
 
 ## WebSocket і push
 
-- Після успішного `init` `App.vue` відкриває WebSocket з `data.wsUrl` і `data.wsToken`. Клієнт (`useWebSocketConnection`, `ws-event.ts`, heartbeat, broadcast-обробник) описано в [/backend/websocket](/backend/websocket). Префікс WS-подій задає `VITE_API_PATH_PREFIX` (за замовчуванням `api`), він має збігатися з бекендовим `API_PATH_PREFIX`.
+- Після успішного `init` `App.vue` відкриває WebSocket з `data.wsUrl` і `data.wsToken`. Клієнт (`useWebSocketConnection`, `ws-event.ts`, heartbeat, broadcast-обробник) описано в [/backend/websocket](/backend/websocket). Префікс задає `VITE_API_PATH_PREFIX` (за замовчуванням `api`), він має збігатися з бекендовим `API_PATH_PREFIX`. З нього будуються і WS-події, і всі HTTP-шляхи ([`utils/api-path.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/api-path.ts): `apiPath('auth/login')` → `/<prefix>/auth/login`), OAuth-посилання, URL скриншотів і сховища, фільтр API-запитів у service worker і ключ Vite proxy (`/<prefix>` з `ws: true` покриває і WS-ендпоінт `/<prefix>/websocket`).
 - Підписка на Web Push працює через `/api/push-subscriptions*` (VAPID-ключ, CRUD). Як SW обробляє push, описано в [/backend/mail-push](/backend/mail-push).
 
 ## PWA
