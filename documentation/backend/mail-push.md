@@ -146,10 +146,6 @@ cd packages/backend && npx web-push generate-vapid-keys
 
 [`push-subscription-statistics-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/statistics/push-subscription-statistics-service.ts) рахує `totalNotifications`, `sentNotifications`, `failedNotifications`, `pendingNotifications`, `successRate` (%), `last7DaysCount`, `lastUsed`, `isActive`. Лічильники дає один SQL-запит `countsBySubscription` (`count(case …)`), межу 7 днів обчислює застосунок і передає параметром.
 
-::: warning Відомі проблеми
-Сервіси відправки та статистики звертаються до `db` напряму, оминаючи репозиторії (проблема №20), а статистика завантажує всі логи і рахує їх у JS (№21) — див. `docs/plan/code-issues-found-during-docs.md`.
-:::
-
 ### Фронтенд
 
 - Підписка — у [`stores/state.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/stores/state.ts): перевіряє `registration.pushManager.getSubscription()`, отримує VAPID-ключ з `/api/push-subscriptions/vapid-public-key`, викликає `pushManager.subscribe({ applicationServerKey })` і відправляє дані на `POST /api/push-subscriptions`.
