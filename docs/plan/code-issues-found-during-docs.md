@@ -727,3 +727,10 @@
 
 - **Що:** `packages/frontend/src/utils/api.ts` має 46 шляхів виду `'/api/...'`, а Vite proxy (`vite.config.ts`) теж налаштований лише на `/api`. Після feat-024 WS-події беруть префікс з `VITE_API_PATH_PREFIX`, а HTTP — ні, тож бекенд з іншим `API_PATH_PREFIX` працює з фронтендом лише через переписування шляхів на проксі.
 - **Пропозиція:** будувати HTTP-шляхи з того самого `WS_API_PREFIX` (перейменувати на `API_PREFIX`) і брати proxy-ключ з тієї ж змінної; суміжне з п. 62 (playground).
+
+## Знайдено під час роботи над документацією для початківців
+
+### 74. Спільні контракти ловлять розбіжності лише частково
+
+- **Що:** перевірено перейменуванням полів у `packages/shared/src/responses` і `pnpm typecheck`. `AdminUserListItem.name` → помилки і в backend, і у frontend. `InitResponseSchema.wsUrl` → помилок немає: тип `InitResponse` написано вручну окремо від схеми і він `extends Record<string, unknown>`. Перейменування поля в інтерфейсі `InitResponse` дає одну помилку у frontend (`App.vue`), backend не помічає, бо зайві ключі дозволені. `PushSubscriptionSchema.isActive` → помилок немає: frontend має власні типи підписок, backend не прив'язує повернення до цього типу. `ResponseSchema` маршрутів використовується лише для серіалізації опису API (`serialize-routes.ts`), відповідь під час виконання не перевіряється.
+- **Пропозиція:** виводити типи відповідей лише зі схем (`.infer`) і прибрати ручні інтерфейси з `Record<string, unknown>`; у frontend `utils/api.ts` використовувати типи зі `shared/responses` замість локальних; розглянути перевірку відповіді за `ResponseSchema` у dev/test-режимі.

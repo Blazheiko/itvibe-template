@@ -38,7 +38,7 @@ features:
       link: /backend/websocket
     - icon: 🤝
       title: Спільні контракти
-      details: Пакет shared з arktype-схемами, enum-ами і типами відповідей. Фронтенд і бекенд не розійдуться в тому, як виглядає API.
+      details: Пакет shared з arktype-схемами, enum-ами і типами відповідей. Якщо змінити спільний тип, TypeScript покаже, де фронтенд і бекенд з ним розійшлися.
       link: /shared/
     - icon: 🤖
       title: AI-чат підтримки
@@ -65,12 +65,78 @@ features:
 ## Чому саме цей шаблон
 
 - **Не треба писати фундамент.** Автентифікація, безпека, пошта, файли, push, адмінка й AI вже працюють. Це тисячі рядків коду, які ви не пишете й не дебажите.
-- **Продуктивність.** uWebSockets.js — один з найшвидших HTTP/WebSocket-серверів для Node.js. Real-time не потребує окремого сервісу.
-- **Типобезпека від БД до кнопки.** Drizzle ORM типізує запити до PostgreSQL, arktype перевіряє вхідні дані під час виконання, а пакет `shared` дає один тип відповіді для сервера і клієнта.
+- **Продуктивність.** uWebSockets.js — один з найшвидших HTTP/WebSocket-серверів для Node.js за [публічними бенчмарками](https://github.com/uNetworking/uWebSockets/tree/master/benchmarks) (власних вимірювань для шаблону немає). Real-time не потребує окремого сервісу.
+- **Типобезпека від БД до кнопки.** Drizzle ORM типізує запити до PostgreSQL, arktype перевіряє вхідні дані під час виконання, а пакет `shared` дає спільні типи для сервера і клієнта.
 - **Передбачувана структура.** Кожна фіча складається з однакових шарів. Знаючи одну, ви орієнтуєтесь у всіх. Правила шарів перевіряються тестом, тому архітектура не «розпливається» з часом.
-- **Безпечні значення за замовчуванням.** Більшість захистів увімкнені одразу, а сервер не стартує з небезпечною конфігурацією (перевірка `validateRuntimeConfig`).
+- **Безпечні значення за замовчуванням.** Більшість захистів (CSP, security-заголовки, rate limiting, HttpOnly-cookie) увімкнені одразу, а сервер не стартує з частиною небезпечних налаштувань (перевірка `validateRuntimeConfig`). Виняток — CSRF: за замовчуванням він лише логує порушення, для продакшену треба увімкнути `CSRF_ENFORCE=true`.
 - **Готово до продакшену.** Логи Pino, Sentry, health-check `/ready`, graceful shutdown, Dockerfile з healthcheck, конфігурація через env.
 - **Зручно для роботи з AI-агентами.** У репозиторії є `AGENTS.md`, `feature_list.json` і готові skills, тож Claude Code чи інший агент працює за тими ж правилами, що й люди.
+
+## Як це виглядає на практиці
+
+Три приклади з коду шаблону, що показують, що дають ці переваги, коли ви змінюєте продукт.
+
+### Змінили контракт — TypeScript показав, що зламалось
+
+Список користувачів в адмінці описано одним типом у `shared` ([admin-user-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)):
+
+```ts
+export interface AdminUserListItem {
+    id: string
+    name: string // перейменуємо на fullName
+    email: string
+    registeredAt: string
+}
+```
+
+Після перейменування `name` → `fullName` команда `pnpm typecheck` показує обидві сторони:
+
+```text
+packages/backend typecheck: src/app/controllers/http/admin/admin-user-controller.ts(29,37):
+  error TS2322: Type '...admin-user-service...AdminUserListItem[]' is not assignable
+  to type '...shared/dist/responses/admin-user-controller...AdminUserListItem[]'.
+packages/frontend typecheck: src/views/admin/AdminUsersView.vue(165,37):
+  error TS2339: Property 'name' does not exist on type
+  '{ id: string; fullName: string; email: string; registeredAt: string; }'.
+```
+
+Без спільного типу бекенд почав би віддавати нове поле, а таблиця в адмінці мовчки показувала б порожню колонку.
+
+::: warning Обмеження
+Захист працює лише там, де обидві сторони справді імпортують тип з `shared`. Фронтенд поки використовує спільні типи вибірково, а `ResponseSchema` у маршрутах служить для опису API і не перевіряє відповідь під час виконання. Деякі типи (наприклад, `InitResponse`) написані вручну поруч зі схемою й допускають зайві поля, тож зміну схеми TypeScript там не помітить. Новий код варто писати так, як у прикладі вище: тип зі `shared` у сервісі, контролері й компоненті.
+:::
+
+### Один сервіс для HTTP і WebSocket
+
+Чат підтримки працює через два транспорти: повідомлення йдуть по WebSocket ([ws/support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/ws/support-controller.ts)), а історія чату завантажується по HTTP ([http/support/support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Обидва контролери тонкі й викликають той самий `supportService`:
+
+```ts
+// WebSocket: нове повідомлення в чат
+void supportService.chat(BigInt(userData.userId), payload.message, userData.uuid, context.signal)
+
+// HTTP: історія чату
+const result = await supportService.getChatHistory(userId)
+```
+
+Правила чату (ліміти, збереження історії, звернення до AI) живуть в одному місці. Якщо їх змінити, зміниться поведінка обох транспортів.
+
+### Тест бізнес-логіки без бази даних
+
+Сервіс отримує дані тільки через репозиторій, тому в тесті репозиторій легко підмінити. Фрагмент з [avatar-service.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.spec.ts):
+
+```ts
+const userRepositoryMock = { findById: vi.fn(), update: vi.fn() }
+
+vi.mock('#app/repositories/index.js', () => ({
+    userRepository: userRepositoryMock,
+}))
+
+userRepositoryMock.findById.mockResolvedValue({ id: 7n, name: 'Alice', avatar: null })
+const result = await avatarService.uploadAvatar(7n, file)
+expect(Result.isOk(result)).toBe(true)
+```
+
+Тест перевіряє логіку завантаження аватара за мілісекунди, без PostgreSQL, Redis і S3.
 
 ## Що вже реалізовано
 
