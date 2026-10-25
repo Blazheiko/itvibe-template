@@ -6,6 +6,7 @@ import { badRequest, notFound, type AppResult } from '#app/services/shared/error
 import { tryInternal } from '#app/services/shared/result-helpers.js'
 import type { Auth } from '#vendor/types/types.js'
 import logger from '#vendor/utils/logger.js'
+import { userNotificationService } from '#app/services/notifications/user-notification-service.js'
 
 async function fetchJson(
     url: string,
@@ -401,6 +402,7 @@ export const oauthService = {
             return Result.err(loginResult.error)
         }
 
+        userNotificationService.security(userId, 'new_sign_in')
         return Result.ok({ redirectUrl: oauthConfig.frontendSuccessUrl })
     },
 }

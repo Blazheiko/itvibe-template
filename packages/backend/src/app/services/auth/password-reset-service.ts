@@ -39,6 +39,7 @@ import { tryInternal } from '#app/services/shared/result-helpers.js'
 import { destroyAllSessions } from '#vendor/utils/session/redis-session-storage.js'
 import { maskEmailForLogs, maskPhoneForLogs } from '#vendor/utils/helpers/mask-sensitive.js'
 import { normalizePhoneNumber } from 'shared/utils'
+import { userNotificationService } from '#app/services/notifications/user-notification-service.js'
 
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000
 export const GENERIC_RESET_MESSAGE =
@@ -653,6 +654,7 @@ export const passwordResetService = {
             )
         }
 
+        userNotificationService.security(user.id, 'password_reset')
         return Result.ok({ status: 'success' })
     },
 
@@ -791,6 +793,7 @@ export const passwordResetService = {
             return Result.err(destroySessionsResult.error)
         }
 
+        userNotificationService.security(updatedUser.id, 'password_reset')
         return Result.ok({ status: 'success' })
     },
 
