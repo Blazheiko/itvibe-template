@@ -42,6 +42,7 @@ export default withMermaid(
                         items: [
                             { text: 'Вступ', link: '/guide/introduction' },
                             { text: 'Швидкий старт', link: '/guide/getting-started' },
+                            { text: 'Як влаштований бекенд', link: '/guide/how-backend-works' },
                             { text: 'Структура проєкту', link: '/guide/project-structure' },
                             { text: 'Процес роботи', link: '/guide/workflow' },
                         ],
