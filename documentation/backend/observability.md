@@ -18,7 +18,7 @@
 
 ### Логер запиту
 
-Для кожного HTTP-запиту і WS-повідомлення створюється дочірній логер `logger.child({ requestId })`, де `requestId` — `randomUUID()`. HTTP-`requestId` генерується на першому кроці обробки (`server.ts`), ще до читання тіла, тож його мають і помилки 413/415/422. Коли `session_web` відновив сесію з користувачем, логер запиту замінюється на `child({ userId })`; WS-логер отримує `userId` з даних з'єднання. Він доступний у контролерах як `ctx.logger` ([http-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts), [ws-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts)). `userId` у child-логер **не** додається.
+Для кожного HTTP-запиту і WS-повідомлення створюється дочірній логер `logger.child({ requestId })`, де `requestId` — `randomUUID()`. HTTP-`requestId` генерується на першому кроці обробки (`server.ts`), ще до читання тіла, тож його мають і помилки 413/415/422. Коли `session_web` відновив сесію з користувачем, логер запиту замінюється на `child({ userId })`; WS-логер отримує `userId` з даних з'єднання. Він доступний у контролерах як `ctx.logger` ([http-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts), [ws-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts)).
 
 ### Що логується при помилці
 

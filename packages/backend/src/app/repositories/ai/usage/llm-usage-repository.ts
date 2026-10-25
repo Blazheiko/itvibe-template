@@ -66,7 +66,8 @@ export const llmUsageRepository: ILlmUsageRepository = {
                 model: llmTextUsage.model,
                 feature: llmTextUsage.feature,
                 totalCalls: sql<number>`count(*)::int`,
-                totalTokens: sql<number | null>`sum(${llmTextUsage.totalTokens})::int`,
+                // bigint: the sum per model × feature can pass 2^31 tokens.
+                totalTokens: sql<string | null>`sum(${llmTextUsage.totalTokens})::bigint`,
                 callsWithoutUsage: sql<number>`count(*) filter (where ${llmTextUsage.totalTokens} is null)::int`,
             })
             .from(llmTextUsage)
@@ -76,7 +77,7 @@ export const llmUsageRepository: ILlmUsageRepository = {
             model: r.model,
             feature: r.feature,
             totalCalls: r.totalCalls,
-            totalTokens: r.totalTokens ?? 0,
+            totalTokens: r.totalTokens === null ? 0 : Number(r.totalTokens),
             callsWithoutUsage: r.callsWithoutUsage,
         }))
     },

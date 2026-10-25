@@ -66,7 +66,13 @@ export const openaiEmbeddingAdapter = {
             { model: cfg.model, input: texts, dimensions: cfg.dimensions },
             { signal: aiRequestSignal(options.signal) },
         )
-        reportUsage(response.usage, texts.join('\n\n'), options.onComplete)
+        // final_prompt gets a summary, not up to SUPPORT_EMBEDDING_BATCH_SIZE full articles.
+        const totalChars = texts.reduce((sum, text) => sum + text.length, 0)
+        reportUsage(
+            response.usage,
+            `[batch: ${String(texts.length)} texts, ${String(totalChars)} chars]`,
+            options.onComplete,
+        )
 
         const sorted = [...response.data].sort((a, b) => a.index - b.index)
         return sorted.map((d) => d.embedding)

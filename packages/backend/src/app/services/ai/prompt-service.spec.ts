@@ -86,4 +86,24 @@ describe('promptService cache TTL', () => {
 
         expect(promptService.getContent('SUPPORT_SYSTEM')).toBe('edited')
     })
+
+    it('a background refresh that started before update() does not bring back the old row', async () => {
+        const promptService = await load()
+        let finishRefresh: (rows: unknown[]) => void = () => {}
+        findAll.mockReturnValueOnce(
+            new Promise((resolve) => {
+                finishRefresh = resolve
+            }),
+        )
+        vi.advanceTimersByTime(60_000)
+        promptService.getContent('SUPPORT_SYSTEM') // starts the refresh, which reads 'v1'
+
+        update.mockResolvedValue(true)
+        findByType.mockResolvedValue(row('edited'))
+        await promptService.update('SUPPORT_SYSTEM', { content: 'edited' })
+        finishRefresh([row('v1')])
+        await vi.runAllTimersAsync()
+
+        expect(promptService.getContent('SUPPORT_SYSTEM')).toBe('edited')
+    })
 })

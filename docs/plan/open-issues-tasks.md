@@ -119,6 +119,7 @@
       **AC:** `GET` → 404/405; фронтенд-кнопка працює (ручна перевірка).
 - [x] **F04.2** Група `push-subscriptions` з `auth_guard`; `vapid-public-key` — у групі без guard; перевірки `getUserId()` у контролері лишаються як defense-in-depth (п. 67).
       **AC:** тест: анонімно кожен маршрут групи → 401 від guard; `vapid-public-key` → 200.
+      **Фактично:** `auth_guard` стоїть на кожному маршруті, а не на групі (група містить і публічний `vapid-public-key`).
 - [x] **F04.3** WS `admin/subscribe_online_users`: guard ролі на маршруті (п. 67).
       **AC:** тест: не-адмін → помилка від guard, сервіс не викликано.
 - [x] **F04.4** `createSubscription`: перенос на іншого користувача лише при збігу `p256dh` і `auth`, інакше `409 conflict` (Р2, п. 47).
@@ -132,6 +133,7 @@
       **AC:** unit: відносний ключ → `<prefix>/key`; `grep buildFullS3Key` порожній.
 - [x] **F06.2** Утиліта `detectFileType(buffer)` за magic bytes (JPEG, PNG, WebP, GIF + типи бази знань).
       **AC:** unit на кожну сигнатуру і на невідомий вміст.
+      **Фактично:** GIF не підтримується; невідомий вміст дає 400, а не 415/422.
 - [x] **F06.3** → F06.2. Аватари і база знань перевіряють вміст, розширення — з виявленого типу (п. 46).
       **AC:** тести: `image/png` з не-PNG вмістом → 415/422; `x.exe` з PNG → ключ `.png`.
 - [x] **F06.4** Аватари з `publicRead` (Р1, п. 45).
@@ -174,6 +176,7 @@
       **AC:** розділ «Дозволені винятки» в `architecture.md`.
 - [x] **F08.6** `clearEmbedding` у `db.transaction`, колонки через об'єкти схеми (п. 25).
       **AC:** pg-тест: помилка другого запиту відкочує перший.
+      **Фактично:** один `UPDATE` замість транзакції — атомарність дає сам запит.
 - [x] **F08.D** Шаблон D: `architecture.md`, `repositories-transformers.md`. **F08.E** ✅, **F08.X** ✅.
 
 ### F09 Validation Cleanup (п. 26, 27)
@@ -181,6 +184,7 @@
 - [x] **F09.S** Шаблон S.
 - [x] **F09.1** ArkType-адаптер: `ArkErrors` → `messages: [{ path, message }]`, `summary` у `message`; shared-схема відповіді 422 (п. 26).
       **AC:** тест: два невалідні поля → два елементи з правильними `path`.
+      **Фактично:** `summary` не потрапляє в `message`; деталі — у `details.issues`.
 - [x] **F09.2** Видалити `validate/schemas/schemas.ts` і закоментовані імпорти в `src/index.ts`, `vendor/start/server.ts`; `testSentryError` (п. 27).
       **AC:** `grep` порожній; тести зелені.
 - [x] **F09.3** Docstring `validation-error.ts`; `nativeValidator` → назва за змістом у `serialize-routes.ts`; README `400` → `422` (п. 27).
@@ -202,6 +206,7 @@
       **AC:** `useWebSocketConnection` компілюється; e2e зелені.
 - [x] **F07.5** Ручна перевірка: backend `API_PATH_PREFIX=v1` + frontend `VITE_API_PATH_PREFIX=v1`.
       **AC:** WS-виклики відповідають, не `not_found`; кроки в evidence.
+      **Ревʼю після плану:** WS-відповіді з префіксом, відмінним від `api`, фронтенд і playground відкидали (диспетчер перевіряв `startsWith('api')`) — виправлено в feat-037 (відповідь розпізнається за очікуваним запитом, unit з префіксом `v1`).
 - [x] **F07.D** Шаблон D: `websocket.md`, frontend README. **F07.E** ✅, **F07.X** ✅.
 
 ## Хвиля 5 — AI (F10 → F11; F12 паралельно)
@@ -215,6 +220,7 @@
       **AC:** тест конфігу.
 - [x] **F10.3** → F10.2. Кожен адаптер приймає `signal`, комбінує з таймаутом (`AbortSignal.any`) (п. 51).
       **AC:** unit для кожного адаптера: fake fetch без відповіді → abort після таймауту.
+      **Ревʼю після плану:** xAI-адаптер ковтав `abort`-частину AI SDK і повертав часткову відповідь як успіх; тести xai/mistral/embeddings перевіряли лише передачу сигналу — виправлено в feat-037 (реальні тести таймауту й abort для всіх чотирьох адаптерів).
 - [x] **F10.4** → F10.3. Передача сигналу запиту: HTTP `onAborted`, закриття WS (п. 51).
       **AC:** тести: abort HTTP-запиту (`onAborted`) → сигнал адаптера `aborted`; закриття WS-з'єднання під час AI-виклику → сигнал `aborted`, відповідь у закрите з'єднання не надсилається.
 - [x] **F10.5** → F10.3. `prompt-controller` → метод AI-сервісу через `textAdapter`; помилки провайдера → `AppError` `502 upstream_error`, таймаут → `504` (п. 23).
@@ -243,6 +249,7 @@
 - [x] **F12.S** Шаблон S (M).
 - [x] **F12.1** Мова Support AI: профіль → `Accept-Language`/параметр → default з конфігу; прибрати `'ru'` (п. 52).
       **AC:** unit на кожен рівень fallback; `grep "'ru'"` у `support-service.ts` порожній.
+      **Фактично:** без рівня «профіль» (у профілі немає мови): параметр запиту → `SUPPORT_DEFAULT_LANGUAGE`.
 - [x] **F12.2** Перевірка на старті: `OPENAI_EMBEDDING_DIMENSIONS` = 1536 (розмірність колонки) (п. 54).
       **AC:** тест: інше значення → помилка старту.
 - [x] **F12.3** `reindexAll` батчами `SUPPORT_EMBEDDING_BATCH_SIZE` (default 50) (п. 54).
@@ -268,6 +275,7 @@
       **AC:** тест: лог автентифікованого запиту містить `userId`, анонімного — ні.
 - [x] **F13.4** `GET /<prefix>/ready`: `SELECT 1` + Redis `PING` з таймаутом `READINESS_CHECK_TIMEOUT_MS` (1 000); `200 ok` / `503 unavailable` без деталей; без L1-ліміту і сесії (п. 35).
       **AC:** тести: обидва живі → 200; Redis або БД недоступні (мок) → 503 за ≤ таймаут + 200 мс.
+      **Фактично:** `/ready` лишається під глобальним L1-лімітом за IP (частота healthcheck на порядки нижча за поріг).
 - [x] **F13.5** → F13.4. `HEALTHCHECK` у `Dockerfile` → `/api/ready` (після F02).
       **AC:** контейнер без БД — `unhealthy`; з БД — `healthy`.
 - [x] **F13.D** Шаблон D: `observability.md`, `deployment.md`, `routes.md`, `configuration.md`. **F13.E** ✅, **F13.X** ✅.
@@ -283,6 +291,7 @@
       **AC:** тест: файл 5 MiB не в Map, відповідь побайтно ідентична; лог розміру кешу ≤ ліміту.
 - [x] **F14.4** Збірка фронтенду генерує `.br`/`.gz`; сервер віддає їх за `Accept-Encoding` з `Vary` (п. 41).
       **AC:** тести: `Accept-Encoding: br` → `.br` з `Content-Encoding: br`; `gzip` → `.gz` з `Content-Encoding: gzip`; без заголовка — оригінал без `Content-Encoding`; у всіх трьох — `Vary: Accept-Encoding`; файл без `.br`/`.gz` поруч — оригінал.
+      **Фактично:** `br`/`gzip` стискає сервер на старті для файлів у памʼяті; precompressed `.br`/`.gz` з диска немає, тож файли > `STATIC_MAX_MEMORY_FILE_SIZE` віддаються нестиснутими. `Vary` на 304 додано в feat-037.
 - [x] **F14.D** Шаблон D: `caching.md`, `configuration.md`. **F14.E** ✅, **F14.X** ✅.
 
 ## Хвиля 7 — пакети і фронтенд (паралельно, після F00)
@@ -305,6 +314,7 @@
       **AC:** dev без змінної — запити через proxy (DevTools, evidence).
 - [x] **F16.2** Типізація всіх `VITE_*` в `env.d.ts`; чистка `main.ts` (п. 61).
       **AC:** звертання до неіснуючої `VITE_*` — помилка typecheck.
+      **Ревʼю після плану:** AC не виконувався (`vite/client` пропускав будь-яку `VITE_*`) — виправлено в feat-037 через `ViteTypeOptions.strictImportMetaEnv`.
 - [x] **F16.3** Playground: шлях doc-маршрутів з `baseUrl`/`API_PATH_PREFIX`, proxy з тієї ж змінної (п. 62).
       **AC:** з `API_PATH_PREFIX=v1` список маршрутів завантажується.
 - [x] **F16.4** `https`→`wss`, `http`→`ws` (п. 63).
@@ -313,6 +323,7 @@
       **AC:** unit.
 - [x] **F16.6** Follow-up feat-009: `/health` у playground.
       **AC:** маршрут видно і викликається.
+      **Фактично:** Test Connection викликає `/<prefix>/ping` (маршруту `/health` у бекенді немає).
 - [x] **F16.D** Шаблон D: `documentation/frontend`, `documentation/playground` (`VITE_*`, префікс, `/health`). **F16.E** (з e2e), **F16.X**.
 
 ## Хвиля 8 — схема і суворі правила

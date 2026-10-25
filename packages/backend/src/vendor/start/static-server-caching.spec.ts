@@ -186,6 +186,17 @@ describe('memory budget and streaming (item 41)', () => {
         expect(response.headers['etag']).toMatch(/^W\/"/)
     })
 
+    it('closes the response when the file on disk got shorter than at startup', async () => {
+        const entry = at('big.mp4')
+        if (entry.kind !== 'disk') throw new Error('expected a disk entry')
+        // Same file, but Content-Length from a larger version seen at startup.
+        const stale = { ...entry, size: BIG.length + 4096 }
+
+        const response = await request('/big.mp4', stale, {}, 16 * 1024)
+
+        expect(response.body.length).toBe(BIG.length)
+    })
+
     it('streams the files that no longer fit the total budget', () => {
         const kinds = ['chunk-1.wav', 'chunk-2.wav', 'chunk-3.wav', 'chunk-4.wav'].map(
             (name) => at(name).kind,
@@ -210,6 +221,13 @@ describe('br / gzip (item 41)', () => {
         expect(response.headers['content-encoding']).toBe('br')
         expect(response.headers['vary']).toBe('Accept-Encoding')
         expect(brotliDecompressSync(response.body).toString()).toBe(JS)
+    })
+
+    it('sends Vary: Accept-Encoding on a 304 too', async () => {
+        const entry = at('assets/app-abc123.js')
+        const response = await request(url, entry, { 'if-none-match': entry.etag })
+        expect(response.status).toBe('304 Not Modified')
+        expect(response.headers['vary']).toBe('Accept-Encoding')
     })
 
     it('serves gzip when br is not accepted', async () => {

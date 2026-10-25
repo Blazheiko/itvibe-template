@@ -129,6 +129,27 @@ describe('pushNotificationSenderService.sendToUser (code-issues item 49)', () =>
         })
     })
 
+    it('still writes the logs when deactivating an expired subscription fails', async () => {
+        pushSubscriptionRepository.findByUserId.mockResolvedValue([
+            subscription(1),
+            subscription(2),
+        ])
+        sendNotification.mockImplementation((target: { endpoint: string }) =>
+            target.endpoint.endsWith('2')
+                ? Promise.reject(Object.assign(new Error('gone'), { statusCode: 410 }))
+                : Promise.resolve({ statusCode: 201 }),
+        )
+        pushSubscriptionRepository.deactivate.mockRejectedValue(new Error('db down'))
+
+        await expect(pushNotificationSenderService.sendToUser(7n, payload)).resolves.toEqual({
+            sent: 1,
+            failed: 1,
+        })
+        expect(pushNotificationLogRepository.insertMany).toHaveBeenCalledOnce()
+        expect(pushSubscriptionRepository.touchLastUsed).toHaveBeenCalledOnce()
+        expect(pushSubscriptionRepository.deactivate).toHaveBeenCalledWith(2n, 7n)
+    })
+
     it('filters by notificationType as before', async () => {
         pushSubscriptionRepository.findByUserId.mockResolvedValue([
             subscription(1, { notificationTypes: ['system'] }),
