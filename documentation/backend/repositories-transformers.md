@@ -94,11 +94,11 @@ Redis-репозиторіїв немає: у `app/repositories/` усі мод�
 
 - приводять `bigint` id до `string`;
 - переводять `Date` у ISO-рядок через `luxon` (`DateTime.fromJSDate(...).toISO()`), з перейменуванням `createdAt`/`updatedAt` → `created_at`/`updated_at`;
-- прибирають чутливі поля: [user-transformer.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) відкидає `password` і додає похідне `emailVerified: boolean`.
+- прибирають чутливі поля: [user-transformer.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) відкидає `password` і `sessionToken` (простір імен сесій у Redis, див. [Автентифікація й безпека](/backend/auth-security)) і додає похідне `emailVerified: boolean`.
 
 ```ts
 serialize(user: UserRow): SerializedUser {
-    const { id, password: _password, createdAt, updatedAt, emailVerifiedAt, ...rest } = user
+    const { id, password: _password, sessionToken: _sessionToken, createdAt, updatedAt, emailVerifiedAt, ...rest } = user
     return { ...rest, id: String(id), created_at: DateTime.fromJSDate(createdAt).toISO(), /* ... */ }
 }
 ```

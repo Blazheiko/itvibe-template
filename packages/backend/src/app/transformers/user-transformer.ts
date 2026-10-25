@@ -3,7 +3,7 @@ import type { UserRow } from '#app/repositories/index.js'
 
 export type SerializedUser = Omit<
     UserRow,
-    'id' | 'password' | 'createdAt' | 'updatedAt' | 'emailVerifiedAt'
+    'id' | 'password' | 'sessionToken' | 'createdAt' | 'updatedAt' | 'emailVerifiedAt'
 > & {
     id: string
     created_at: string | null
@@ -14,7 +14,17 @@ export type SerializedUser = Omit<
 
 export const userTransformer = {
     serialize(user: UserRow): SerializedUser {
-        const { id, password: _password, createdAt, updatedAt, emailVerifiedAt, ...rest } = user
+        // sessionToken is the user's Redis session namespace and part of the signed cookie:
+        // the client never needs it, and readable from JS it would only help an XSS.
+        const {
+            id,
+            password: _password,
+            sessionToken: _sessionToken,
+            createdAt,
+            updatedAt,
+            emailVerifiedAt,
+            ...rest
+        } = user
         return {
             ...rest,
             id: String(id),
