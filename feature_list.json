@@ -381,8 +381,8 @@
             "owner": "Blazheiko",
             "branch": "feat/format-push-prefix",
             "dependencies": ["feat-037"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PRs #99 (item 73: HTTP paths and proxy from VITE_API_PATH_PREFIX), #100 (item 72: push on sign-in, password change/reset, logout-all, support reply), #101 (item 71: format glob, formatting commit dd9db8b in .git-blame-ignore-revs); typecheck, lint, format:check, test, build, e2e, docs:build + docs:verify; evidence in progress.md on feat/format-push-prefix"
         }
     ]
 }
