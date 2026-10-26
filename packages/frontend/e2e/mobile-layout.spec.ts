@@ -88,7 +88,7 @@ test.describe('mobile layout regression', () => {
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
-                    status: 'success',
+                    status: 'ok',
                     data: [
                         {
                             id: '1',
