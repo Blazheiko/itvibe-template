@@ -1,5 +1,5 @@
 import { type } from '@arktype/type'
-import { CanonicalErrorResponseSchema } from './error-response.js'
+import { CanonicalErrorResponseSchema, type WithCanonicalError } from './error-response.js'
 
 export const AdminOnlineUserListItemSchema = type({
     id: 'string',
@@ -37,16 +37,22 @@ export const AdminOnlineUserListResponseSchema = type.or(
     { status: "'success'", items: AdminOnlineUserListItemSchema.array(), total: 'number' },
     CanonicalErrorResponseSchema,
 )
-export type AdminOnlineUserListResponse = typeof AdminOnlineUserListResponseSchema.infer
+export type AdminOnlineUserListResponse = WithCanonicalError<
+    typeof AdminOnlineUserListResponseSchema.infer
+>
 
 export const AdminOnlineUserDetailResponseSchema = type.or(
     { status: "'success'", user: AdminOnlineUserDetailSchema },
     CanonicalErrorResponseSchema,
 )
-export type AdminOnlineUserDetailResponse = typeof AdminOnlineUserDetailResponseSchema.infer
+export type AdminOnlineUserDetailResponse = WithCanonicalError<
+    typeof AdminOnlineUserDetailResponseSchema.infer
+>
 
 export const AdminOnlineUsersWsResponseSchema = type.or(
     { status: "'success'" },
     CanonicalErrorResponseSchema,
 )
-export type AdminOnlineUsersWsResponse = typeof AdminOnlineUsersWsResponseSchema.infer
+export type AdminOnlineUsersWsResponse = WithCanonicalError<
+    typeof AdminOnlineUsersWsResponseSchema.infer
+>

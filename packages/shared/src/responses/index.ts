@@ -11,6 +11,7 @@ export type {
     CanonicalErrorResponse,
     ErrorResponse,
     SuccessResponse,
+    WithCanonicalError,
 } from './error-response.js'
 
 export * from './main-controller.js'

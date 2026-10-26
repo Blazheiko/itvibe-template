@@ -23,6 +23,12 @@ export type CanonicalErrorResponse = Omit<typeof CanonicalErrorResponseSchema.in
     details?: ErrorDetails
 }
 
+/**
+ * Swaps the error branch of a type inferred from `type.or(..., CanonicalErrorResponseSchema)`
+ * for `CanonicalErrorResponse`, so `details` keeps its `ErrorDetails` union instead of `unknown`.
+ */
+export type WithCanonicalError<T> = Exclude<T, { status: 'error' }> | CanonicalErrorResponse
+
 export const ErrorResponseSchema = CanonicalErrorResponseSchema
 export type ErrorResponse = typeof ErrorResponseSchema.infer
 export type AppErrorResponse = CanonicalErrorResponse

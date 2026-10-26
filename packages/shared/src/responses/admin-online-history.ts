@@ -1,5 +1,5 @@
 import { type } from '@arktype/type'
-import { CanonicalErrorResponseSchema } from './error-response.js'
+import { CanonicalErrorResponseSchema, type WithCanonicalError } from './error-response.js'
 
 export const AdminOnlineHistoryListItemSchema = type({
     id: 'string',
@@ -29,4 +29,6 @@ export const AdminOnlineHistoryListResponseSchema = type.or(
     },
     CanonicalErrorResponseSchema,
 )
-export type AdminOnlineHistoryListResponse = typeof AdminOnlineHistoryListResponseSchema.infer
+export type AdminOnlineHistoryListResponse = WithCanonicalError<
+    typeof AdminOnlineHistoryListResponseSchema.infer
+>

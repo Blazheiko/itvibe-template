@@ -1,5 +1,5 @@
 import { type } from '@arktype/type'
-import { CanonicalErrorResponseSchema } from './error-response.js'
+import { CanonicalErrorResponseSchema, type WithCanonicalError } from './error-response.js'
 
 export const PingResponseSchema = type({
     status: 'string',
@@ -44,7 +44,7 @@ export const InitResponseSchema = type.or(
     },
     CanonicalErrorResponseSchema,
 )
-export type InitResponse = typeof InitResponseSchema.infer
+export type InitResponse = WithCanonicalError<typeof InitResponseSchema.infer>
 
 export const TestHeadersResponseSchema = type({
     status: 'string',
@@ -105,4 +105,4 @@ export const UpdateWsTokenResponseSchema = type.or(
     },
     CanonicalErrorResponseSchema,
 )
-export type UpdateWsTokenResponse = typeof UpdateWsTokenResponseSchema.infer
+export type UpdateWsTokenResponse = WithCanonicalError<typeof UpdateWsTokenResponseSchema.infer>
