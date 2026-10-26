@@ -144,7 +144,13 @@ const unauthorized = async () => {
                 void unauthorized()
             }, 5000)
         }
-    } else if (data !== null && !hasResponseError(data) && data.wsUrl && data.wsToken) {
+    } else if (
+        data !== null &&
+        !hasResponseError(data) &&
+        data.status === 'ok' &&
+        data.wsUrl &&
+        data.wsToken
+    ) {
         console.log('WebSocket token updated')
         websocketOpen(data.wsUrl, data.wsToken)
     } else {

@@ -78,32 +78,34 @@ features:
 
 ### Змінили контракт — TypeScript показав, що зламалось
 
-Список користувачів в адмінці описано одним типом у `shared` ([admin-user-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)):
+Список користувачів в адмінці описано однією схемою в `shared` ([admin-user-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)). Тип виводиться з неї, а не пишеться окремо:
 
 ```ts
-export interface AdminUserListItem {
-    id: string
-    name: string // перейменуємо на fullName
-    email: string
-    registeredAt: string
-}
+export const AdminUserListItemSchema = type({
+    id: 'string',
+    name: 'string', // перейменуємо на fullName
+    email: 'string',
+    registeredAt: 'string',
+})
+export type AdminUserListItem = typeof AdminUserListItemSchema.infer
 ```
 
-Після перейменування `name` → `fullName` команда `pnpm typecheck` показує обидві сторони:
+Після перейменування `name` → `fullName` TypeScript показує обидві сторони:
 
 ```text
 packages/backend typecheck: src/app/controllers/http/admin/admin-user-controller.ts(29,37):
-  error TS2322: Type '...admin-user-service...AdminUserListItem[]' is not assignable
-  to type '...shared/dist/responses/admin-user-controller...AdminUserListItem[]'.
-packages/frontend typecheck: src/views/admin/AdminUsersView.vue(165,37):
-  error TS2339: Property 'name' does not exist on type
+  error TS2322: Type 'AdminUserListItem[]' is not assignable to type
+  '{ id: string; fullName: string; email: string; registeredAt: string; }[]'.
+src/views/admin/AdminUsersView.vue(165,37): error TS2339: Property 'name' does not exist on type
   '{ id: string; fullName: string; email: string; registeredAt: string; }'.
 ```
 
-Без спільного типу бекенд почав би віддавати нове поле, а таблиця в адмінці мовчки показувала б порожню колонку.
+`pnpm typecheck` зупиняється на першому пакеті з помилкою, тому помилку фронтенду видно після виправлення бекенду або в `pnpm --filter frontend typecheck`.
+
+Без спільного типу бекенд почав би віддавати нове поле, а таблиця в адмінці мовчки показувала б порожню колонку. Та сама схема описує відповідь маршруту `GET /api/admin/users` в [API Playground](/playground/), тож документація API теж не розійдеться з типом.
 
 ::: warning Обмеження
-Захист працює лише там, де обидві сторони справді імпортують тип з `shared`. Фронтенд поки використовує спільні типи вибірково, а `ResponseSchema` у маршрутах служить для опису API і не перевіряє відповідь під час виконання. Деякі типи (наприклад, `InitResponse`) написані вручну поруч зі схемою й допускають зайві поля, тож зміну схеми TypeScript там не помітить. Новий код варто писати так, як у прикладі вище: тип зі `shared` у сервісі, контролері й компоненті.
+Захист працює лише там, де обидві сторони справді імпортують тип з `shared`. `ResponseSchema` у маршрутах служить для опису API і не перевіряє відповідь під час виконання: захист відповіді дає TypeScript під час компіляції. Новий код варто писати так, як у прикладі вище: схема в `shared`, тип через `.infer`, і цей тип у сервісі, контролері й компоненті.
 :::
 
 ### Один сервіс для HTTP і WebSocket

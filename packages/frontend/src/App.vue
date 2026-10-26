@@ -142,7 +142,14 @@ const initializeApp = async () => {
                 await redirectToLogin()
             }
             return null
-        } else if (data && !hasResponseError(data) && data.user && data.wsUrl && data.wsToken) {
+        } else if (
+            data &&
+            !hasResponseError(data) &&
+            data.status === 'ok' &&
+            data.user &&
+            data.wsUrl &&
+            data.wsToken
+        ) {
             userStore.setUser(data.user)
             stateStore.setStorageConfig({
                 cdnUrl: data.storage?.cdnUrl ?? '',

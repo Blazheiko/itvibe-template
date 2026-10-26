@@ -10,11 +10,13 @@ export default [
             defineWsRoute({
                 url: 'subscribe_online_users',
                 handler: AdminWsController.subscribeOnlineUsers.bind(AdminWsController),
+                ResponseSchema: ResponseSchemas.AdminOnlineUsersWsResponseSchema,
                 description: 'Subscribe current admin websocket to admin online updates',
             }),
             defineWsRoute({
                 url: 'unsubscribe_online_users',
                 handler: AdminWsController.unsubscribeOnlineUsers.bind(AdminWsController),
+                ResponseSchema: ResponseSchemas.AdminOnlineUsersWsResponseSchema,
                 description: 'Unsubscribe current admin websocket from admin online updates',
             }),
         ],

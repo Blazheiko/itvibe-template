@@ -50,7 +50,7 @@ async function verifyEmail(): Promise<void> {
 
     if (userStore.user) {
         const { data: initData, error: initError } = await mainApi.init()
-        if (!initError && initData?.user) {
+        if (!initError && initData?.status === 'ok' && initData.user) {
             userStore.setUser(initData.user)
         }
     }
