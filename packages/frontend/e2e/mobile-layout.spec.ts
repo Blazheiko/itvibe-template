@@ -55,7 +55,7 @@ test.describe('mobile layout regression', () => {
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
-                    status: 'success',
+                    status: 'ok',
                     user: { id: '1', name: 'E2E User', email: 'e2e@example.com', role: 'user' },
                     // App.vue signs the user in only with a non-empty wsUrl and wsToken;
                     // the socket itself fails to connect, which this test does not need.
@@ -76,7 +76,7 @@ test.describe('mobile layout regression', () => {
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
-                    status: 'success',
+                    status: 'ok',
                     wsUrl: 'ws://127.0.0.1:65535',
                     wsToken: 'e2eWsToken000001',
                 }),
