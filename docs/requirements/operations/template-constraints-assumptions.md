@@ -6,7 +6,7 @@ Last updated: 2026-05-30
 
 | Dependency            | Requirement                | Notes                                                                   |
 | --------------------- | -------------------------- | ----------------------------------------------------------------------- |
-| Node.js               | Required                   | Workspace requires Node `^24.15.0`.                                     |
+| Node.js               | Required                   | Workspace requires Node `^24.22.1`.                                     |
 | pnpm                  | Required                   | Workspace uses pnpm 9.x through `packageManager`.                       |
 | PostgreSQL            | Required                   | Primary persistence through Drizzle ORM.                                |
 | Redis                 | Required for full behavior | Sessions, rate limits, presence, and coordination.                      |
