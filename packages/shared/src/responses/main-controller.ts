@@ -1,5 +1,5 @@
 import { type } from '@arktype/type'
-import { CanonicalErrorResponseSchema } from './error-response.js'
+import { CanonicalErrorResponseSchema, type WithCanonicalError } from './error-response.js'
 
 export const PingResponseSchema = type({
     status: 'string',
@@ -44,34 +44,7 @@ export const InitResponseSchema = type.or(
     },
     CanonicalErrorResponseSchema,
 )
-export interface InitResponse extends Record<string, unknown> {
-    status: 'ok' | 'error'
-    code?: string
-    reason?: string
-    details?: unknown
-    message?: string
-    csrfToken?: string
-    user?: {
-        id: string
-        name: string
-        email: string
-        phone?: string | null
-        emailVerified: boolean
-        emailVerifiedAt?: string | null
-        avatar?: string | null
-        role?: 'user' | 'admin'
-        createdAt: string
-        updatedAt: string
-    }
-    wsUrl?: string
-    wsToken?: string
-    storage?: {
-        cdnUrl?: string
-        s3Prefix?: string
-        s3StaticDataPrefix?: string
-        s3DynamicDataPrefix?: string
-    }
-}
+export type InitResponse = WithCanonicalError<typeof InitResponseSchema.infer>
 
 export const TestHeadersResponseSchema = type({
     status: 'string',
@@ -132,12 +105,4 @@ export const UpdateWsTokenResponseSchema = type.or(
     },
     CanonicalErrorResponseSchema,
 )
-export interface UpdateWsTokenResponse extends Record<string, unknown> {
-    status: 'ok' | 'error'
-    code?: string
-    reason?: string
-    details?: unknown
-    message?: string
-    wsUrl?: string
-    wsToken?: string
-}
+export type UpdateWsTokenResponse = WithCanonicalError<typeof UpdateWsTokenResponseSchema.infer>

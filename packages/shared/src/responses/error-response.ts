@@ -1,6 +1,6 @@
 import { type } from '@arktype/type'
 import { ErrorCodeSchema } from './error-code-schema.js'
-import type { ErrorCode, ErrorDetails } from '../errors/error-codes.js'
+import type { ErrorDetails } from '../errors/error-codes.js'
 
 export const BaseResponseSchema = type({
     status: 'string',
@@ -17,15 +17,17 @@ export const CanonicalErrorResponseSchema = type({
     'csrfToken?': 'string',
 })
 
-export interface CanonicalErrorResponse extends Record<string, unknown> {
-    status: 'error'
-    code: ErrorCode
-    message: string
-    reason?: string
+// The schema checks `code`; `details` keeps its precise TypeScript union, which a runtime
+// schema cannot express without duplicating every details shape.
+export type CanonicalErrorResponse = Omit<typeof CanonicalErrorResponseSchema.infer, 'details'> & {
     details?: ErrorDetails
-    /** Session CSRF token, attached to responses of cookie-backed routes. */
-    csrfToken?: string
 }
+
+/**
+ * Swaps the error branch of a type inferred from `type.or(..., CanonicalErrorResponseSchema)`
+ * for `CanonicalErrorResponse`, so `details` keeps its `ErrorDetails` union instead of `unknown`.
+ */
+export type WithCanonicalError<T> = Exclude<T, { status: 'error' }> | CanonicalErrorResponse
 
 export const ErrorResponseSchema = CanonicalErrorResponseSchema
 export type ErrorResponse = typeof ErrorResponseSchema.infer

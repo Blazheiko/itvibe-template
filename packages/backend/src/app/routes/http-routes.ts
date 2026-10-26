@@ -580,6 +580,7 @@ export default [
                 url: '/users-online',
                 method: 'get',
                 handler: AdminOnlineUserController.list.bind(AdminOnlineUserController),
+                ResponseSchema: ResponseSchemas.AdminOnlineUserListResponseSchema,
                 description: 'List online users (admin)',
             }),
             defineRoute({
@@ -587,12 +588,14 @@ export default [
                 method: 'get',
                 handler: AdminOnlineHistoryController.list.bind(AdminOnlineHistoryController),
                 queryValidator: AdminOnlineHistoryListQuerySchema,
+                ResponseSchema: ResponseSchemas.AdminOnlineHistoryListResponseSchema,
                 description: 'List online history records (admin)',
             }),
             defineRoute({
                 url: '/users-online/:id',
                 method: 'get',
                 handler: AdminOnlineUserController.getById.bind(AdminOnlineUserController),
+                ResponseSchema: ResponseSchemas.AdminOnlineUserDetailResponseSchema,
                 description: 'Get online user detail (admin)',
             }),
             defineRoute({
@@ -600,6 +603,7 @@ export default [
                 method: 'get',
                 handler: AdminUserController.list.bind(AdminUserController),
                 queryValidator: AdminUserListQuerySchema,
+                ResponseSchema: ResponseSchemas.AdminUserListResponseSchema,
                 description: 'List users with filters (admin)',
             }),
         ],

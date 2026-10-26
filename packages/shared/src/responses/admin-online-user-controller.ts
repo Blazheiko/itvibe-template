@@ -1,42 +1,58 @@
-import type { CanonicalErrorResponse } from './error-response.js'
+import { type } from '@arktype/type'
+import { CanonicalErrorResponseSchema, type WithCanonicalError } from './error-response.js'
 
-export interface AdminOnlineUserListItem {
-    id: string
-    name: string
-    email: string
-    appType: 'web' | 'pwa'
-    userAgent: string
-    connectionsCount: number
-}
+export const AdminOnlineUserListItemSchema = type({
+    id: 'string',
+    name: 'string',
+    email: 'string',
+    appType: "'web' | 'pwa'",
+    userAgent: 'string',
+    connectionsCount: 'number',
+})
+export type AdminOnlineUserListItem = typeof AdminOnlineUserListItemSchema.infer
 
-export interface AdminOnlineUserConnection {
-    uuid: string
-    ip: string
-    userAgent: string
-    appType: 'web' | 'pwa'
-}
+export const AdminOnlineUserConnectionSchema = type({
+    uuid: 'string',
+    ip: 'string',
+    userAgent: 'string',
+    appType: "'web' | 'pwa'",
+})
+export type AdminOnlineUserConnection = typeof AdminOnlineUserConnectionSchema.infer
 
-export interface AdminOnlineUserDetail {
-    id: string
-    name: string
-    email: string
-    phone: string | null
-    role: string
-    createdAt: string
-    isOnline: boolean
-    appType: 'web' | 'pwa' | null
-    userAgent: string | null
-    connections: AdminOnlineUserConnection[]
-}
+export const AdminOnlineUserDetailSchema = type({
+    id: 'string',
+    name: 'string',
+    email: 'string',
+    phone: 'string | null',
+    role: 'string',
+    createdAt: 'string',
+    isOnline: 'boolean',
+    appType: "'web' | 'pwa' | null",
+    userAgent: 'string | null',
+    connections: AdminOnlineUserConnectionSchema.array(),
+})
+export type AdminOnlineUserDetail = typeof AdminOnlineUserDetailSchema.infer
 
-export type AdminOnlineUserListResponse =
-    { status: 'success'; items: AdminOnlineUserListItem[]; total: number } | CanonicalErrorResponse
+export const AdminOnlineUserListResponseSchema = type.or(
+    { status: "'success'", items: AdminOnlineUserListItemSchema.array(), total: 'number' },
+    CanonicalErrorResponseSchema,
+)
+export type AdminOnlineUserListResponse = WithCanonicalError<
+    typeof AdminOnlineUserListResponseSchema.infer
+>
 
-export type AdminOnlineUserDetailResponse =
-    | {
-          status: 'success'
-          user: AdminOnlineUserDetail
-      }
-    | CanonicalErrorResponse
+export const AdminOnlineUserDetailResponseSchema = type.or(
+    { status: "'success'", user: AdminOnlineUserDetailSchema },
+    CanonicalErrorResponseSchema,
+)
+export type AdminOnlineUserDetailResponse = WithCanonicalError<
+    typeof AdminOnlineUserDetailResponseSchema.infer
+>
 
-export type AdminOnlineUsersWsResponse = { status: 'success' } | CanonicalErrorResponse
+export const AdminOnlineUsersWsResponseSchema = type.or(
+    { status: "'success'" },
+    CanonicalErrorResponseSchema,
+)
+export type AdminOnlineUsersWsResponse = WithCanonicalError<
+    typeof AdminOnlineUsersWsResponseSchema.infer
+>

@@ -11,6 +11,7 @@ export type {
     CanonicalErrorResponse,
     ErrorResponse,
     SuccessResponse,
+    WithCanonicalError,
 } from './error-response.js'
 
 export * from './main-controller.js'
@@ -21,6 +22,6 @@ export * from './oauth-controller.js'
 export * from './prompt-controller.js'
 export * from './llm-usage-controller.js'
 export * from './support-controller.js'
-export type * from './admin-user-controller.js'
-export type * from './admin-online-user-controller.js'
-export type * from './admin-online-history.js'
+export * from './admin-user-controller.js'
+export * from './admin-online-user-controller.js'
+export * from './admin-online-history.js'

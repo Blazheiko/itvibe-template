@@ -166,7 +166,7 @@ export type UserInsert = InferInsertModel<typeof users> // те, що можна
 ### Чого цей підхід не робить
 
 - **API і БД — різні контракти, і це навмисно.** Тип відповіді не виводиться з таблиці автоматично: між ними стоїть transformer, який прибирає секрети і перетворює дати та `bigint` на рядки.
-- **Захист працює там, де тип справді імпортовано.** Частина типів відповідей у `shared/responses` написана вручну через `interface`, а не виведена зі схеми (наприклад, [`admin-user-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)). Вони теж спільні для бекенду й фронтенду, але схема і тип там можуть розійтися.
+- **Захист працює там, де тип справді імпортовано.** Якщо компонент оголосить власний тип замість імпорту зі `shared`, зміну схеми TypeScript у ньому не помітить. Виняток у самому `shared` один: у `CanonicalErrorResponse` поле `details` має точніший TypeScript-тип, ніж може описати схема ([error-response.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/error-response.ts)).
 - **Відповідь під час виконання не перевіряється.** `ResponseSchema` у маршруті описує API для [API Playground](/playground/); захист відповіді — лише TypeScript під час компіляції.
 
 Детальніше — [Валідація](/backend/validation), [Пакет shared](/shared/), [База даних](/backend/database).
