@@ -87,9 +87,89 @@ return Result.ok({ user })
 
 Контролер перевіряє результат і перетворює помилку на правильний HTTP-статус через `mapControllerError`. Так помилки видно в типах: TypeScript не дасть забути, що виклик може не вдатися. Детальніше — [Контролери та сервіси](/backend/controllers-services).
 
-## Контракти в `shared`
+## Звідки беруться типи: єдине джерело істини
 
-Схеми вхідних даних і відповідей описані один раз у пакеті `shared` на [arktype](https://arktype.io/). Бекенд використовує їх для валідації, фронтенд — для типів. Якщо ви змінили поле у відповіді, TypeScript підсвітить усі місця на фронтенді, які треба оновити. Детальніше — [Валідація](/backend/validation) і [Пакет shared](/shared/).
+У шаблоні типи майже не пишуть вручну. Їх **виводять** з двох описів, кожен з яких — [єдине джерело істини](/reference/glossary#єдине-джерело-істини) для свого контракту:
+
+| Контракт                            | Джерело                                                 | Що з нього виходить                                               |
+| ----------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------- |
+| API: що клієнт надсилає й отримує   | arktype-схема в `packages/shared`                       | валідатор запиту на бекенді, тип у контролері, тип у фронтенді    |
+| База даних: які є таблиці й колонки | Drizzle-схема `packages/backend/src/database/schema.ts` | SQL-міграції, типи рядків `UserRow` / `UserInsert` у репозиторіях |
+
+```mermaid
+flowchart LR
+  S[arktype-схема в shared] --> V[валідатор маршруту: 422]
+  S --> BT[тип у контролері бекенду]
+  S --> FT[тип у фронтенді: api.ts, компоненти]
+  D[Drizzle schema.ts] --> M[міграції]
+  D --> R[UserRow у репозиторії]
+  R --> T[transformer]
+  T --> BT
+```
+
+### API: одна схема — і перевірка, і тип
+
+Ось частина схеми логіну з [`shared/src/schemas/auth/login.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/auth/login.ts):
+
+```ts
+const IdentifierLoginInputSchema = type({
+    identifier: 'string >= 3 & string <= 255',
+    password: 'string >= 8 & string <= 32',
+    token: 'string <= 60',
+    '+': 'reject', // невідомі поля відхиляються
+})
+
+export const LoginInputSchema = type.or(LegacyLoginInputSchema, IdentifierLoginInputSchema)
+export type LoginInput = typeof LoginInputSchema.infer // тип виведено зі схеми
+```
+
+Цей один файл використовують три місця:
+
+- **маршрут** `POST /api/auth/login` перевіряє тіло запиту: `validator: LoginInputSchema` у [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts);
+- **контролер** отримує вже типізовані дані: `login(context: HttpContext<LoginInput>)`;
+- **фронтенд** надсилає запит того самого типу: `login: async (body: LoginInput)` у [`api.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/api.ts).
+
+Що це дає: перейменуйте в схемі `identifier` на `login`, перезберіть `shared` і запустіть `pnpm typecheck`. Помилки з'являться з обох боків одразу (вивід скорочено):
+
+```text
+packages/frontend typecheck: src/components/AuthModals.vue(222,13): error TS2353:
+  Object literal may only specify known properties, and 'identifier' does not exist in type ...
+packages/backend typecheck: src/app/services/auth/auth-service.ts(88,67): error TS2339:
+  Property 'email' does not exist on type ...
+```
+
+Без спільної схеми фронтенд і далі надсилав би `identifier`, сервер відповідав би `422`, і помилку знайшли б лише вручну.
+
+### База даних: типи рядків зі схеми Drizzle
+
+Таблиця описана один раз у TypeScript:
+
+```ts
+// packages/backend/src/database/schema.ts
+export const users = pgTable('users', {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    email: varchar('email', { length: 255 }),
+    // ...
+})
+```
+
+З неї `db:generate` генерує SQL-міграцію, а репозиторій виводить типи рядка ([`user-repository.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/user/user-repository.ts)):
+
+```ts
+export type UserRow = InferSelectModel<typeof users> // те, що повертає SELECT
+export type UserInsert = InferInsertModel<typeof users> // те, що можна передати в INSERT
+```
+
+Далі тип іде ланцюжком: [`user-transformer.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) описує публічну форму як `Omit<UserRow, 'password' | 'sessionToken' | ...>`. Додали колонку в `schema.ts` — вона з'явиться в `UserRow` і в серіалізованому користувачі без жодного ручного типу. А пароль туди не потрапить, бо його явно виключено.
+
+### Чого цей підхід не робить
+
+- **API і БД — різні контракти, і це навмисно.** Тип відповіді не виводиться з таблиці автоматично: між ними стоїть transformer, який прибирає секрети і перетворює дати та `bigint` на рядки.
+- **Захист працює там, де тип справді імпортовано.** Частина типів відповідей у `shared/responses` написана вручну через `interface`, а не виведена зі схеми (наприклад, [`admin-user-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)). Вони теж спільні для бекенду й фронтенду, але схема і тип там можуть розійтися.
+- **Відповідь під час виконання не перевіряється.** `ResponseSchema` у маршруті описує API для [API Playground](/playground/); захист відповіді — лише TypeScript під час компіляції.
+
+Детальніше — [Валідація](/backend/validation), [Пакет shared](/shared/), [База даних](/backend/database).
 
 ## Де зберігаються дані
 
