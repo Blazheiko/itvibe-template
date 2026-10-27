@@ -403,6 +403,16 @@
             "dependencies": ["feat-040"],
             "status": "done",
             "evidence": "PR #113: describeSchema() accepts ArkType, a ready descriptor or a JSON Schema object for validator/queryValidator; 6 new serialize-routes cases; typecheck, lint, format:check, test (backend 914), docs:build + docs:verify; evidence in progress.md on feat/neutral-route-doc-schemas"
+        },
+        {
+            "id": "feat-042",
+            "name": "CSRF Hardening",
+            "description": "docs/plan/csrf-hardening-plan.md: CSRF_ENFORCE and CSRF_STRICT_ORIGIN default to true, CSRF_ALLOWED_ORIGINS required in production-like envs, Sec-Fetch-Site check, login CSRF closed (fail-closed guard), anonymous session deleted on login + audit of auth transitions, frontend session/token model with one verified retry, Service Worker never caches API, e2e with enforcement on; task list in docs/plan/csrf-hardening-tasks.md",
+            "owner": "Blazheiko",
+            "branch": "feat/csrf-hardening",
+            "dependencies": ["feat-041"],
+            "status": "in_progress",
+            "evidence": ""
         }
     ]
 }
