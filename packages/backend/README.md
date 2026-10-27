@@ -223,7 +223,7 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 
 - every Redis session has a `csrfToken`
 - legacy sessions without a token are backfilled lazily on the next session load
-- login, logout, and logout-all rotate the session and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request
+- login, logout, logout-all, and change-password rotate the session (the previous one — anonymous or signed in — is deleted) and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request
 - the `main/init` bootstrap response also returns the current `csrfToken`
 - `session_web` attaches the session `csrfToken` to any response written by the middleware chain itself (the 401 from `auth_guard`, the 403 from `csrf_guard`), so an anonymous visitor — whose `main/init` is rejected before it reaches the handler — still receives the token it needs to sign the login request
 - unsafe HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) must send the token in `X-CSRF-Token`

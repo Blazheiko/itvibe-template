@@ -93,6 +93,7 @@ const request = async ({ method, middlewares, headers = [], cookie }: RequestInp
     )
     const passed = await executeMiddlewares(middlewares, context)
     return {
+        context,
         passed,
         status: responseData.status,
         payload: responseData.payload as Record<string, unknown> | null,
@@ -196,5 +197,84 @@ describe.skipIf(!hasRedis)('login CSRF bootstrap', () => {
 
         expect(response.status).toBe(403)
         expect(response.payload).toMatchObject({ reason: 'origin_mismatch' })
+    })
+})
+
+/** A mutation through session_web → csrf_guard with the given cookie and token. */
+const mutate = (cookie: string | undefined, token: string) =>
+    login(
+        [
+            ['origin', ORIGIN],
+            ['x-csrf-token', token],
+        ],
+        cookie,
+    )
+
+describe.skipIf(!hasRedis)('session rotation on login', () => {
+    it('deletes the anonymous session; its cookie and token stop working', async () => {
+        const bootstrap = await init()
+        const anonToken = String(bootstrap.payload?.['csrfToken'])
+        const anonKey = `session:anon_session:${String(bootstrap.context.session.sessionInfo?.id)}`
+        expect(await admin.exists(anonKey)).toBe(1)
+
+        const signIn = await mutate(bootstrap.cookie, anonToken)
+        expect(signIn.passed).toBe(true)
+        await signIn.context.auth.login('42', 'rotationUserToken01')
+        const userToken = String(signIn.context.session.sessionInfo?.data.csrfToken)
+        const userCookie = signIn.context.responseData.cookies.get(sessionConfig.cookieName)?.value
+
+        expect(await admin.exists(anonKey)).toBe(0)
+        expect(userToken).not.toBe(anonToken)
+        expect(userCookie).not.toBe(bootstrap.cookie)
+
+        // The old cookie now opens a fresh anonymous session with another token,
+        // so a mutation signed with the old token is rejected.
+        const replay = await mutate(bootstrap.cookie, anonToken)
+        expect(replay.status).toBe(403)
+        expect(replay.payload).toMatchObject({ reason: 'token_mismatch' })
+        expect(replay.payload?.['csrfToken']).not.toBe(anonToken)
+
+        // The new cookie and token work.
+        const next = await mutate(userCookie, userToken)
+        expect(next.passed).toBe(true)
+        expect(next.context.auth.getUserId()).toBe('42')
+    })
+
+    it('renewing a signed-in session (password change) replaces ID and token', async () => {
+        const bootstrap = await init()
+        const signIn = await mutate(bootstrap.cookie, String(bootstrap.payload?.['csrfToken']))
+        await signIn.context.auth.login('43', 'renewUserToken0001')
+        const firstCookie = signIn.context.responseData.cookies.get(sessionConfig.cookieName)?.value
+        const firstToken = String(signIn.context.session.sessionInfo?.data.csrfToken)
+        const firstId = String(signIn.context.session.sessionInfo?.id)
+
+        // What authService.renewSession does after a password change.
+        const change = await mutate(firstCookie, firstToken)
+        expect(change.passed).toBe(true)
+        await change.context.auth.login('43', 'renewUserToken0001')
+        const renewedCookie = change.context.responseData.cookies.get(
+            sessionConfig.cookieName,
+        )?.value
+        const renewedToken = String(change.context.session.sessionInfo?.data.csrfToken)
+
+        expect(change.context.session.sessionInfo?.id).not.toBe(firstId)
+        expect(renewedToken).not.toBe(firstToken)
+        expect(await admin.exists(`session:renewUserToken0001:${firstId}`)).toBe(0)
+
+        expect((await mutate(renewedCookie, renewedToken)).passed).toBe(true)
+        const stale = await mutate(firstCookie, firstToken)
+        expect(stale.status).toBe(403)
+        expect(stale.payload).toMatchObject({ reason: 'token_mismatch' })
+    })
+
+    it('session helpers called after login address the new session', async () => {
+        const bootstrap = await init()
+        const signIn = await mutate(bootstrap.cookie, String(bootstrap.payload?.['csrfToken']))
+        await signIn.context.auth.login('44', 'helperUserToken001')
+
+        const updated = await signIn.context.session.updateSessionData({ marker: 'after-login' })
+
+        expect(updated?.id).toBe(signIn.context.session.sessionInfo?.id)
+        expect(updated?.data['marker']).toBe('after-login')
     })
 })

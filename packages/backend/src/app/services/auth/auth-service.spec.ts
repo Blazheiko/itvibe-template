@@ -520,6 +520,38 @@ describe('authService', () => {
         expect(authMock.login).toHaveBeenCalledWith('7', 'session-token')
     })
 
+    it('renewSession logs the same user into a new session and returns its token', async () => {
+        sessionMock.sessionInfo = {
+            id: 'signed-in-session-id',
+            data: { userId: '7', userToken: 'user-session-token', csrfToken: 'x'.repeat(43) },
+        }
+        authMock.login.mockImplementation(async () => {
+            sessionMock.sessionInfo = {
+                id: 'renewed-session-id',
+                data: { csrfToken: ROTATED_LOGOUT_CSRF_TOKEN },
+            }
+            return true
+        })
+
+        const { authService } = await loadAuthService()
+        const result = await authService.renewSession(authMock as any, sessionMock as any)
+
+        expect(authMock.login).toHaveBeenCalledWith('7', 'user-session-token')
+        expect(Result.isOk(result) && result.value).toEqual({
+            csrfToken: ROTATED_LOGOUT_CSRF_TOKEN,
+        })
+    })
+
+    it('renewSession refuses an anonymous session', async () => {
+        sessionMock.sessionInfo = { id: 'anonymous-session-id', data: {} }
+
+        const { authService } = await loadAuthService()
+        const result = await authService.renewSession(authMock as any, sessionMock as any)
+
+        expect(Result.isError(result)).toBe(true)
+        expect(authMock.login).not.toHaveBeenCalled()
+    })
+
     it('returns the rotated CSRF token after logout mutates the session', async () => {
         authMock.logout.mockImplementation(async () => {
             sessionMock.sessionInfo = {

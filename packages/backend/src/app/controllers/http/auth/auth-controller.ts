@@ -220,7 +220,12 @@ export default {
             return mapControllerError(context, result.error)
         }
 
-        return { status: 'success' }
+        const renewed = await authService.renewSession(context.auth, context.session)
+        if (Result.isError(renewed)) {
+            return mapControllerError(context, renewed.error)
+        }
+
+        return { status: 'success', csrfToken: renewed.value.csrfToken }
     },
 
     async forgotPassword(

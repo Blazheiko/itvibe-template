@@ -164,7 +164,9 @@ export const sessionHandler = async (
         expires: new Date(Date.now() + sessionConfig.age * 1000),
     })
 
-    const contextUserToken = sessionUserToken ?? ANON_TOKEN
+    // Storage namespace of the current session. Reassigned when login/logout swap the
+    // session, so session helpers called later in the same request address the new one.
+    let contextUserToken = sessionUserToken ?? ANON_TOKEN
 
     context.session.sessionInfo = sessionInfo
     context.session.updateSessionData = async (newData: SessionData): Promise<SessionInfo | null> =>
@@ -187,14 +189,11 @@ export const sessionHandler = async (
     ): Promise<boolean> => {
         if (userId === undefined || userToken === undefined) return false
         try {
+            // The previous session goes away whether it was signed in or anonymous:
+            // its cookie and CSRF token must not stay usable after the login.
             const oldSessionId = sessionInfo?.id
-            const oldUserToken =
-                typeof sessionInfo?.data.userToken === 'string'
-                    ? sessionInfo.data.userToken
-                    : undefined
-
-            if (oldSessionId !== undefined && oldUserToken !== undefined) {
-                await destroySession(oldSessionId, oldUserToken)
+            if (oldSessionId !== undefined) {
+                await destroySession(oldSessionId, contextUserToken)
             }
 
             const newSessionInfo = await createSessionInfo({
@@ -208,6 +207,7 @@ export const sessionHandler = async (
                 userToken,
                 responseData,
             )
+            contextUserToken = userToken
 
             logger.info({ userId, sessionId: newSessionInfo.id }, `User logged in`)
 
@@ -244,6 +244,7 @@ export const sessionHandler = async (
                 undefined,
                 responseData,
             )
+            contextUserToken = ANON_TOKEN
 
             return true
         } catch (err) {
@@ -279,6 +280,7 @@ export const sessionHandler = async (
                 undefined,
                 responseData,
             )
+            contextUserToken = ANON_TOKEN
 
             return deletedCount
         } catch (err) {
