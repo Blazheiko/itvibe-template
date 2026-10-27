@@ -15,7 +15,8 @@ const normalizeOrigin = (value: string): string | null => {
 }
 
 const isAllowedOrigin = (origin: string): boolean =>
-    csrfConfig.allowedOrigins.length === 0 || csrfConfig.allowedOrigins.includes(origin)
+    csrfConfig.effectiveAllowedOrigins.length === 0 ||
+    csrfConfig.effectiveAllowedOrigins.includes(origin)
 
 const hasOriginViolation = (context: HttpContext): boolean => {
     const origin = context.httpData.headers.get('origin')

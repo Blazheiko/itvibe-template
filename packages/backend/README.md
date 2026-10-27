@@ -237,17 +237,17 @@ The token never leaves the session over HTML. The SPA shell is served as a plain
 
 Relevant environment variables:
 
-- `CSRF_ENFORCE` — defaults to `false`. In report-only mode the guard logs failures but allows requests. Set to `true` after rollout validation.
-- `CSRF_ALLOWED_ORIGINS` — comma-separated exact origins for the optional Origin/Referer defense-in-depth check, for example `https://app.example.com,https://admin.example.com`.
-- `CSRF_STRICT_ORIGIN` — defaults to `false`. When `true`, unsafe requests without both `Origin` and `Referer` are rejected. This can break older webviews or embedded contexts, so keep it disabled until those clients are tested.
+- `CSRF_ENFORCE` — defaults to `true`: violations get `403 csrf_invalid`. `false` is report-only (failures are logged, requests pass) — a diagnostic and rollback switch; a production-like start warns about it. Read at startup, so a change needs a restart.
+- `CSRF_ALLOWED_ORIGINS` — comma-separated exact origins (no path, no trailing slash) for the Origin/Referer check, for example `https://app.example.com,https://admin.example.com`. Required in production-like environments: the server refuses to start without it. Elsewhere an empty list falls back to the origins of `APP_URL` and `FRONTEND_URL`.
+- `CSRF_STRICT_ORIGIN` — defaults to `true`: unsafe requests without both `Origin` and `Referer` are rejected. Browsers always send `Origin` on fetch POST/PUT/PATCH/DELETE; set `false` only for tested legacy clients.
 
 Rollout recommendation:
 
-1. Deploy token generation, the bootstrap response token, frontend header sending, and `csrf_guard` with `CSRF_ENFORCE=false`.
-2. Review report-only logs for missing tokens, origin mismatches, and stale clients.
+1. Set `CSRF_ALLOWED_ORIGINS` before deploying; for a cautious rollout start with an explicit `CSRF_ENFORCE=false`.
+2. Review report-only logs (`CSRF validation failed`, with `reason`) for missing tokens, origin mismatches, and stale clients.
 3. Fix any client paths that do not refresh or send the token.
-4. Enable `CSRF_ENFORCE=true` gradually, starting with low-risk route groups.
-5. Roll back enforcement by setting `CSRF_ENFORCE=false`; keep token generation/header sending enabled while investigating.
+4. Remove the explicit `false` (or set `true`) and restart.
+5. Roll back enforcement by setting `CSRF_ENFORCE=false` and restarting; keep token generation/header sending enabled while investigating.
 
 ### Error Monitoring
 

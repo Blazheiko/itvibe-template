@@ -5,6 +5,7 @@ import healthConfig from '#config/health.js'
 import appConfig from '#config/app.js'
 import { authConfig } from '#config/auth.js'
 import cspConfig from '#config/csp.js'
+import csrfConfig from '#config/csrf.js'
 import { networkConfig } from '#config/network.js'
 import rateLimitConfig from '#config/rate-limit.js'
 import redisConfig from '#config/redis.js'
@@ -56,6 +57,14 @@ export function validateRuntimeConfig(): void {
 
     if (throttlePolicyConfigError !== null) {
         throw new Error(`Invalid throttle policy configuration: ${throttlePolicyConfigError}`)
+    }
+
+    if (csrfConfig.configError !== null) {
+        throw new Error(`Invalid CSRF configuration: ${csrfConfig.configError}`)
+    }
+
+    for (const warning of csrfConfig.warnings) {
+        logger.warn(warning)
     }
 
     const proxyWarning = getProxyWarning()

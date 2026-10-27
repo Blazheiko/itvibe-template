@@ -245,8 +245,9 @@ const throttle = await tryInternal(
 
 - Кожна сесія має `csrfToken`: 32 випадкові байти в кодуванні base64url. Якщо в старій сесії токена немає, він дописується під час наступного завантаження сесії.
 - `csrf_guard` перевіряє лише методи `post`, `put`, `patch`, `delete`/`del`, і лише коли сесія існує. Токен передається в заголовку `x-csrf-token` і порівнюється через `timingSafeEqual`.
-- Додатково звіряються `Origin`/`Referer` зі списком `CSRF_ALLOWED_ORIGINS`. Якщо список порожній, перевірку origin пройде будь-яке значення. `CSRF_STRICT_ORIGIN=true` відхиляє небезпечні запити, у яких немає обох заголовків.
-- `CSRF_ENFORCE` за замовчуванням дорівнює `false`. У цьому режимі порушення лише логуються (`CSRF validation failed`), а запит проходить далі. Якщо `true`, сервер відповідає `403` з кодом `csrf_invalid` і полем `reason` (`origin_mismatch` або `token_mismatch`).
+- Додатково звіряються `Origin`/`Referer` зі списком `CSRF_ALLOWED_ORIGINS` (точні origin: схема, хост, порт — без шляху і `/` в кінці; некоректний елемент зупиняє старт). У production-like середовищах (`APP_ENV`/`NODE_ENV` = `production`/`prod` або `APP_IS_PRODUCTION=true`) список обов'язковий — без нього сервер не стартує. Поза production порожній список замінюється origin з `APP_URL` і `FRONTEND_URL`; якщо й вони не задані, перевірку списку пройде будь-який коректний origin. Про обидва випадки сервер попереджає під час старту.
+- `CSRF_STRICT_ORIGIN` за замовчуванням `true`: небезпечні запити без `Origin` і без `Referer` відхиляються. Браузери завжди надсилають `Origin` для `fetch` з POST/PUT/PATCH/DELETE.
+- `CSRF_ENFORCE` за замовчуванням `true`: порушення отримують `403` з кодом `csrf_invalid` і полем `reason` (`origin_mismatch` або `token_mismatch`). `CSRF_ENFORCE=false` — режим звітування для діагностики й відкату: порушення лише логуються (`CSRF validation failed`), запит проходить далі; у production-like середовищі сервер попереджає про це під час старту. Змінна читається при старті, тож перемикання потребує перезапуску.
 - `session_web` додає `csrfToken` до відповідей, які сформував ланцюжок middleware (401 від `auth_guard`, 403 від `csrf_guard`). Завдяки цьому анонімний клієнт отримує токен для запиту входу.
 
 ## CORS
@@ -350,7 +351,7 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 - `APP_KEY`: випадковий рядок довжиною щонайменше 32 символи, наприклад `APP_KEY=<openssl rand -hex 32>`. Без нього сервер не стартує.
 - `APP_ENV` не має дорівнювати `local`, бо інакше cookie втрачають `Secure`, а в тексті 500-помилок з'являються деталі.
 - `APP_URL=https://...`. Залиште `SESSION_COOKIE_HOST_PREFIX` увімкненим (за замовчуванням так і є при `APP_ENV=production`/`prod` або `APP_IS_PRODUCTION=true`).
-- `CSRF_ENFORCE=true` (за замовчуванням `false`, тобто лише режим звітування) і `CSRF_ALLOWED_ORIGINS=https://app.example.com`.
+- `CSRF_ALLOWED_ORIGINS=https://app.example.com` — обов'язково, інакше сервер не стартує. `CSRF_ENFORCE` і `CSRF_STRICT_ORIGIN` залиште за замовчуванням (`true`).
 - CORS: або `ENABLED_CORS=false`, або явний `CORS_ALLOWED_ORIGINS`. `CREDENTIONALS_CORS=true` вмикайте лише за потреби.
 - За реверс-проксі: `TRUST_PROXY=true` і точний `TRUSTED_PROXY_CIDRS`.
 - Телефонний вхід: справжній `AUTH_SMS_PROVIDER` і `AUTH_OTP_HMAC_KEY` довжиною щонайменше 32 символи. `fake` у production заборонено кодом.

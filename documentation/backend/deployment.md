@@ -203,6 +203,7 @@ Workflow для збірки, тестів або деплою самого за
 - [ ] Redis доступний.
 - [ ] `pnpm db:create:prod` і `pnpm db:migrate` виконано one-shot запуском образу перед rollout.
 - [ ] Healthcheck відповідає вашим `PORT` / `API_PATH_PREFIX`.
+- [ ] `CSRF_ALLOWED_ORIGINS` з origin фронтенду: образ задає `APP_ENV=production`, і без цієї змінної сервер не стартує ([CSRF](/backend/auth-security#csrf)).
 - [ ] `APP_ENV=production`, `APP_KEY` і решта пунктів із [чекліста безпеки](/backend/auth-security#чекліст-для-production).
 - [ ] TLS на проксі, `TRUST_PROXY` і `TRUSTED_PROXY_CIDRS` налаштовано.
 - [ ] Визначено, хто віддає фронтенд: `SERVE_STATIC=true` або окремий хостинг/CDN.

@@ -11,6 +11,7 @@ vi.mock('#config/csrf.js', () => ({
         enforce: true,
         strictOrigin: false,
         allowedOrigins: ['https://app.example.com'],
+        effectiveAllowedOrigins: ['https://app.example.com'],
         headerName: 'x-csrf-token',
     },
 }))
