@@ -64,10 +64,7 @@ const safeTokenEqual = (expected: string | undefined, submitted: string | undefi
     return timingSafeEqual(expectedBuffer, submittedBuffer)
 }
 
-const shouldContinueAfterViolation = (
-    context: HttpContext,
-    reason: CsrfRejectReason,
-): boolean => {
+const shouldContinueAfterViolation = (context: HttpContext, reason: CsrfRejectReason): boolean => {
     context.logger.warn(
         {
             reason,
