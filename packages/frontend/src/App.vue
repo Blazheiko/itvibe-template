@@ -6,6 +6,7 @@ import { useStateStore } from '@/stores/state'
 import { useUserStore } from '@/stores/user'
 import { useRouter, useRoute } from 'vue-router'
 import { mainApi } from '@/utils/api'
+import { setCurrentUserIdProvider } from '@/utils/base-api'
 import { useEventBus } from '@/utils/event-bus'
 import AppHeader from '@/components/AppHeader.vue'
 import UpdateNotification from '@/components/UpdateNotification.vue'
@@ -19,6 +20,8 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+// CSRF recovery checks a refreshed session against the user the UI shows.
+setCurrentUserIdProvider(() => userStore.user?.id ?? null)
 const isLoading = ref(true)
 
 const stateStore = useStateStore()

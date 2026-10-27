@@ -10,40 +10,62 @@ describe('csrf-token', () => {
         vi.resetModules()
     })
 
-    it('starts empty because the HTML shell carries no token', async () => {
-        const { getCsrfToken } = await loadModule()
+    it('starts empty and synced because the HTML shell carries no token', async () => {
+        const { getCsrfToken, getConfirmedUserId, getSessionState } = await loadModule()
 
         expect(getCsrfToken()).toBeNull()
+        expect(getConfirmedUserId()).toBeNull()
+        expect(getSessionState()).toBe('synced')
     })
 
-    it('stores valid tokens', async () => {
-        const { getCsrfToken, setCsrfToken } = await loadModule()
+    it('confirms a valid token together with its owner', async () => {
+        const { confirmCsrfToken, getCsrfToken, getConfirmedUserId } = await loadModule()
 
-        setCsrfToken(VALID_CSRF_TOKEN)
+        expect(confirmCsrfToken(VALID_CSRF_TOKEN, '7')).toBe(true)
 
         expect(getCsrfToken()).toBe(VALID_CSRF_TOKEN)
+        expect(getConfirmedUserId()).toBe('7')
     })
 
-    it('ignores invalid token alphabet', async () => {
-        const { getCsrfToken, setCsrfToken } = await loadModule()
+    it.each([['abc+123'], ['short'], [undefined], [42]])('ignores %j', async (token) => {
+        const { confirmCsrfToken, getCsrfToken } = await loadModule()
 
-        setCsrfToken('abc+123')
-
+        expect(confirmCsrfToken(token, null)).toBe(false)
         expect(getCsrfToken()).toBeNull()
     })
 
-    it('updates token from API responses', async () => {
-        const { getCsrfToken, setCsrfToken, updateCsrfTokenFromResponse } = await loadModule()
+    it('never sends an unconfirmed token', async () => {
+        const { confirmCsrfToken, getCsrfToken, getUnconfirmedCsrfToken, setUnconfirmedCsrfToken } =
+            await loadModule()
+        confirmCsrfToken(VALID_CSRF_TOKEN, '7')
 
-        setCsrfToken(VALID_CSRF_TOKEN)
-        expect(updateCsrfTokenFromResponse({ csrfToken: SECOND_CSRF_TOKEN })).toBe(true)
+        setUnconfirmedCsrfToken(SECOND_CSRF_TOKEN)
 
-        expect(getCsrfToken()).toBe(SECOND_CSRF_TOKEN)
+        expect(getCsrfToken()).toBe(VALID_CSRF_TOKEN)
+        expect(getUnconfirmedCsrfToken()).toBe(SECOND_CSRF_TOKEN)
     })
 
-    it('reports no update when the response carries no token', async () => {
-        const { updateCsrfTokenFromResponse } = await loadModule()
+    it('a confirmation clears the unconfirmed token', async () => {
+        const { confirmCsrfToken, getUnconfirmedCsrfToken, setUnconfirmedCsrfToken } =
+            await loadModule()
+        setUnconfirmedCsrfToken(SECOND_CSRF_TOKEN)
 
-        expect(updateCsrfTokenFromResponse({ status: 'success' })).toBe(false)
+        confirmCsrfToken(VALID_CSRF_TOKEN, '7')
+
+        expect(getUnconfirmedCsrfToken()).toBeNull()
+    })
+
+    it('reloading is terminal: it drops the token and refuses new ones', async () => {
+        const { confirmCsrfToken, enterReloading, getCsrfToken, getSessionState, setSessionState } =
+            await loadModule()
+        confirmCsrfToken(VALID_CSRF_TOKEN, '7')
+
+        enterReloading()
+        setSessionState('synced')
+
+        expect(getSessionState()).toBe('reloading')
+        expect(getCsrfToken()).toBeNull()
+        expect(confirmCsrfToken(SECOND_CSRF_TOKEN, '7')).toBe(false)
+        expect(getCsrfToken()).toBeNull()
     })
 })

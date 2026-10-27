@@ -233,7 +233,7 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 - frontend and API must share a site (same origin or subdomains of one site): with `SameSite=Lax` the session cookie is not sent on cross-site requests
 - `OPTIONS` and other safe methods skip token validation
 - OAuth redirect/callback is treated as a separate flow protected by OAuth `state`
-- on `csrf_invalid` the frontend triggers a single `init_app` refresh; subsequent unsafe requests succeed once the rotated token is in memory
+- on `403 csrf_invalid` with `reason: token_mismatch` the frontend re-reads `main/init` and repeats the request once, only if the session still belongs to the same user (see the frontend README)
 
 The token never leaves the session over HTML. The SPA shell is served as a plain cacheable static file (`Cache-Control: public, max-age=0, must-revalidate` plus an `ETag`, so repeat visits get a `304`), and no session is created while serving it. The SPA holds the token in memory only: it receives it from the `main/init` bootstrap response and refreshes it from every response that rotates it.
 

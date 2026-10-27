@@ -84,6 +84,17 @@ Copy `.env.example` to `.env` and set the `VITE_*` variables as needed:
   `VITE_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` /
   `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` — sampling rates
 
+## CSRF and the session
+
+`src/utils/csrf-token.ts` and `src/utils/base-api.ts` keep the CSRF token in memory and never send a token unless it is known whose session it belongs to:
+
+- A token is **confirmed** together with its owner by `main/init` (200 → its user, 401 → anonymous), by a response that carries `user` (login, register), by logout/logout-all (`sessionAfter: 'anonymous'`), and by a 2xx to a request signed with the confirmed token. Only a confirmed token goes into `X-CSRF-Token`. A token in a 403/401 from the middleware chain stays unconfirmed and is never sent.
+- On `403 csrf_invalid` with `reason: token_mismatch` the request asks `main/init` (silently: no events, no redirect) whose session the cookie holds, and repeats **once** with the token from that answer — only if the session still belongs to the user the UI showed when the request was made. `origin_mismatch` and `fetch_site_*` are never repeated.
+- Public auth calls pass `csrfRecovery: 'public'` (login, register, password reset, verify-email): they are repeated in an anonymous session. Everything else is `protected`: an anonymous session means `unauthorized` (redirect to login), no repeat.
+- If the session belongs to another user (another tab logged in), nothing is sent and the page reloads, so no state of the previous user survives. The error carries `clientCode: 'account_changed'`.
+- If `main/init` fails (network, 5xx, no token), the request is not repeated and later mutations are held until a new `main/init` succeeds; meanwhile they fail locally with `clientCode: 'session_unverified'`, no `code`, `transportCode: 0`.
+- Concurrent requests share one `main/init`.
+
 ## Error monitoring
 
 - `src/utils/sentry-service.ts` is the only module that should import the Sentry
