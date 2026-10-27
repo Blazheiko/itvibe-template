@@ -115,7 +115,7 @@ export const helloService = {
 
 ## Крок 3. Controller
 
-Контролер перекладає HTTP на виклик сервісу і назад.
+Контролер перекладає HTTP на виклик сервісу і назад. Що є в `context` і як з ним працювати — див. [HttpContext докладно](/backend/controllers-services#httpcontext-докладно).
 
 ```ts
 // packages/backend/src/app/controllers/http/hello/hello-controller.ts
