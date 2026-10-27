@@ -228,7 +228,9 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 - `session_web` attaches the session `csrfToken` to any response written by the middleware chain itself (the 401 from `auth_guard`, the 403 from `csrf_guard`), so an anonymous visitor — whose `main/init` is rejected before it reaches the handler — still receives the token it needs to sign the login request
 - unsafe HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) must send the token in `X-CSRF-Token`
 - `csrf_guard` is registered after `session_web` and before auth/role guards on cookie-backed route groups
-- requests without a session bypass `csrf_guard` and are left to `auth_guard` to reject with 401
+- checks run in order and each can only reject: `Sec-Fetch-Site` (`cross-site` → `fetch_site_cross_site`, unknown value → `fetch_site_invalid`), then `Origin`/`Referer` (`Origin: null` or a malformed origin → `origin_mismatch`), then the token
+- `session_web` creates an anonymous session with its own token before `csrf_guard`, so a request without a cookie still has to send that token: an anonymous `POST /auth/login` without it gets `403 token_mismatch` (login CSRF). A request that reaches the guard without any session is rejected
+- frontend and API must share a site (same origin or subdomains of one site): with `SameSite=Lax` the session cookie is not sent on cross-site requests
 - `OPTIONS` and other safe methods skip token validation
 - OAuth redirect/callback is treated as a separate flow protected by OAuth `state`
 - on `csrf_invalid` the frontend triggers a single `init_app` refresh; subsequent unsafe requests succeed once the rotated token is in memory

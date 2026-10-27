@@ -6,7 +6,8 @@ import csrfConfig from '#config/csrf.js'
 
 const VALID_CSRF_TOKEN = 'a'.repeat(43)
 
-vi.mock('#config/csrf.js', () => ({
+vi.mock('#config/csrf.js', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     default: {
         enforce: true,
         strictOrigin: false,
@@ -15,6 +16,13 @@ vi.mock('#config/csrf.js', () => ({
         headerName: 'x-csrf-token',
     },
 }))
+
+interface MutableCsrfConfig {
+    enforce: boolean
+    strictOrigin: boolean
+    effectiveAllowedOrigins: string[]
+}
+const config = csrfConfig as unknown as MutableCsrfConfig
 
 const createContext = (overrides: Partial<HttpContext> = {}): HttpContext => {
     const context = {
@@ -80,7 +88,9 @@ const createContext = (overrides: Partial<HttpContext> = {}): HttpContext => {
 describe('csrfGuard', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        ;(csrfConfig as { enforce: boolean }).enforce = true
+        config.enforce = true
+        config.strictOrigin = false
+        config.effectiveAllowedOrigins = ['https://app.example.com']
     })
 
     it('allows safe methods without a token', async () => {
@@ -158,7 +168,7 @@ describe('csrfGuard', () => {
         expect(context.responseData.status).toBe(200)
     })
 
-    it('lets downstream auth handling decide when session is absent', async () => {
+    it('fails closed when the session layer attached no session', async () => {
         const context = createContext({
             session: {
                 ...createContext().session,
@@ -169,8 +179,9 @@ describe('csrfGuard', () => {
 
         await csrfGuard(context, next)
 
-        expect(next).toHaveBeenCalledOnce()
-        expect(context.responseData.status).toBe(200)
+        expect(next).not.toHaveBeenCalled()
+        expect(context.responseData.status).toBe(403)
+        expect(context.responseData.payload).toMatchObject({ reason: 'token_mismatch' })
     })
 
     it('rejects origin mismatches', async () => {
@@ -188,7 +199,7 @@ describe('csrfGuard', () => {
     })
 
     it('reports and allows mismatches when enforcement is disabled', async () => {
-        ;(csrfConfig as { enforce: boolean }).enforce = false
+        config.enforce = false
         const context = createContext()
         context.httpData.headers.delete('x-csrf-token')
         const next = vi.fn()
@@ -203,6 +214,171 @@ describe('csrfGuard', () => {
                 csrfEnforce: false,
             }),
             'CSRF validation failed',
+        )
+    })
+
+    describe('Fetch Metadata', () => {
+        it.each([['same-origin'], ['same-site'], ['none']])(
+            'passes %s on to the next checks',
+            async (fetchSite) => {
+                const context = createContext()
+                context.httpData.headers.set('sec-fetch-site', fetchSite)
+                const next = vi.fn()
+
+                await csrfGuard(context, next)
+
+                expect(next).toHaveBeenCalledOnce()
+            },
+        )
+
+        it('leaves a missing header to the Origin check', async () => {
+            const context = createContext()
+            context.httpData.headers.set('origin', 'https://evil.example.com')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+            expect(context.responseData.payload).toMatchObject({ reason: 'origin_mismatch' })
+        })
+
+        it.each([
+            ['cross-site', 'fetch_site_cross_site'],
+            ['cross-origin', 'fetch_site_invalid'],
+            ['garbage', 'fetch_site_invalid'],
+        ])('rejects %s as %s', async (fetchSite, reason) => {
+            const context = createContext()
+            context.httpData.headers.set('sec-fetch-site', fetchSite)
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+            expect(context.responseData.status).toBe(403)
+            expect(context.responseData.payload).toMatchObject({ code: 'csrf_invalid', reason })
+            expect(context.logger.warn).toHaveBeenCalledWith(
+                expect.objectContaining({ reason, secFetchSite: fetchSite }),
+                'CSRF validation failed',
+            )
+        })
+
+        it('rejects cross-site even from an allowed origin', async () => {
+            const context = createContext()
+            context.httpData.headers.set('sec-fetch-site', 'cross-site')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+        })
+
+        it('does not let same-origin skip the token check', async () => {
+            const context = createContext()
+            context.httpData.headers.set('sec-fetch-site', 'same-origin')
+            context.httpData.headers.set('x-csrf-token', 'b'.repeat(43))
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+            expect(context.responseData.payload).toMatchObject({ reason: 'token_mismatch' })
+        })
+
+        it('only logs and continues when enforcement is disabled', async () => {
+            config.enforce = false
+            const context = createContext()
+            context.httpData.headers.set('sec-fetch-site', 'cross-site')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).toHaveBeenCalledOnce()
+            expect(context.responseData.status).toBe(200)
+            expect(context.logger.warn).toHaveBeenCalledWith(
+                expect.objectContaining({ reason: 'fetch_site_cross_site', csrfEnforce: false }),
+                'CSRF validation failed',
+            )
+        })
+    })
+
+    describe('Origin and Referer', () => {
+        it.each([
+            ['null'],
+            ['not a url'],
+            ['https://app.example.com/'],
+            ['https://app.example.com/x'],
+        ])('rejects Origin %j without falling back to Referer', async (origin) => {
+            const context = createContext()
+            context.httpData.headers.set('origin', origin)
+            context.httpData.headers.set('referer', 'https://app.example.com/page')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+            expect(context.responseData.payload).toMatchObject({ reason: 'origin_mismatch' })
+        })
+
+        it('rejects Origin null even with an empty allowlist', async () => {
+            config.effectiveAllowedOrigins = []
+            const context = createContext()
+            context.httpData.headers.set('origin', 'null')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+        })
+
+        it('accepts any well-formed origin with an empty allowlist', async () => {
+            config.effectiveAllowedOrigins = []
+            const context = createContext()
+            context.httpData.headers.set('origin', 'https://other.example.com')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).toHaveBeenCalledOnce()
+        })
+
+        it('falls back to an allowed Referer when Origin is absent', async () => {
+            const context = createContext()
+            context.httpData.headers.delete('origin')
+            context.httpData.headers.set('referer', 'https://app.example.com/account')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).toHaveBeenCalledOnce()
+        })
+
+        it('rejects an unparsable Referer', async () => {
+            const context = createContext()
+            context.httpData.headers.delete('origin')
+            context.httpData.headers.set('referer', 'nonsense')
+            const next = vi.fn()
+
+            await csrfGuard(context, next)
+
+            expect(next).not.toHaveBeenCalled()
+            expect(context.responseData.payload).toMatchObject({ reason: 'origin_mismatch' })
+        })
+
+        it.each([
+            [true, false],
+            [false, true],
+        ])(
+            'with strictOrigin=%s a request without Origin and Referer passes: %s',
+            async (strict, passes) => {
+                config.strictOrigin = strict
+                const context = createContext()
+                context.httpData.headers.delete('origin')
+                const next = vi.fn()
+
+                await csrfGuard(context, next)
+
+                expect(next).toHaveBeenCalledTimes(passes ? 1 : 0)
+            },
         )
     })
 })
