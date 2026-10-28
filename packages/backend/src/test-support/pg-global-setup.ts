@@ -15,7 +15,7 @@ export default async function setup(): Promise<(() => Promise<void>) | undefined
     if (!hasPg || PG_TEST_URL === undefined) return undefined
 
     const url = new URL(PG_TEST_URL)
-    const database = `itvibe_test_${randomUUID().replaceAll('-', '').slice(0, 12)}`
+    const database = `vibe_test_${randomUUID().replaceAll('-', '').slice(0, 12)}`
     const admin = new pg.Client({ connectionString: PG_TEST_URL })
     await admin.connect()
     await admin.query(`CREATE DATABASE ${quoteIdent(database)}`)

@@ -195,7 +195,7 @@ const logout = async () => {
             v-if="shouldMountPwaInstall"
             ref="pwaInstall"
             manifest-url="/manifest.json"
-            name="ITVibe Template"
+            name="Vibe Template"
             description="Educational Vue 3 and TypeScript template with frontend, backend, shared packages, tests, and build tooling."
             icon="/icons/icon_192x192.png"
             disable-android-fallback

@@ -109,7 +109,7 @@ export const helloService = {
 Зверніть увагу:
 
 - сервіс нічого не знає про HTTP: ні запиту, ні статус-кодів. Його можна викликати з HTTP-контролера, з WebSocket або з тесту;
-- помилка не кидається через `throw`, а повертається як `Result.err(...)`. Тип `AppResult` змушує того, хто викликає, перевірити результат. Хелпер `badRequest` з [errors.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts) пізніше перетвориться на HTTP `400`.
+- помилка не кидається через `throw`, а повертається як `Result.err(...)`. Тип `AppResult` змушує того, хто викликає, перевірити результат. Хелпер `badRequest` з [errors.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts) пізніше перетвориться на HTTP `400`.
 
 Чому порожній рядок не дійде сюди, а рядок з пробілів дійде? Схема з кроку 1 відсікає `name=` (довжина 0), а `name=%20%20` має довжину 2 і проходить. Перевірка форми даних — у схемі, перевірка змісту — у сервісі.
 
@@ -144,7 +144,7 @@ export default {
 
 ## Крок 4. Route
 
-Залишилось сказати серверу, що `GET /api/hello` обробляє наш контролер. Відкрийте [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) і додайте імпорти до наявних:
+Залишилось сказати серверу, що `GET /api/hello` обробляє наш контролер. Відкрийте [http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) і додайте імпорти до наявних:
 
 ```ts
 import HelloController from '#app/controllers/http/hello/hello-controller.js'
@@ -268,13 +268,13 @@ cd packages/backend && npx vitest run src/app/services/hello
 
 ## Що ви щойно використали
 
-| Поняття                  | Де в цій вправі                             | Детальніше                                                  |
-| ------------------------ | ------------------------------------------- | ----------------------------------------------------------- |
-| Контракт у `shared`      | `HelloQuerySchema`, `HelloResponseSchema`   | [Пакет shared](/shared/), [Валідація](/backend/validation)  |
-| Runtime-валідація        | `queryValidator` → `422`                    | [Валідація](/backend/validation)                            |
-| `Result` замість `throw` | `Result.ok` / `Result.err(badRequest(...))` | [Контролери та сервіси](/backend/controllers-services)      |
-| Мапінг помилок           | `mapControllerError` → `400`                | [Контролери та сервіси](/backend/controllers-services)      |
-| Оголошення маршруту      | `defineRoute` у групі з `prefix`            | [Маршрутизація та middleware](/backend/routing-middlewares) |
+| Поняття                  | Де в цій вправі                             | Детальніше                                                             |
+| ------------------------ | ------------------------------------------- | ---------------------------------------------------------------------- |
+| Контракт у `shared`      | `HelloQuerySchema`, `HelloResponseSchema`   | [Пакет shared](/shared/), [Валідація](/backend/validation)             |
+| Runtime-валідація        | `queryValidator` → `422`                    | [Валідація](/backend/validation)                                       |
+| `Result` замість `throw` | `Result.ok` / `Result.err(badRequest(...))` | [Контролери та сервіси](/backend/controllers-services)                 |
+| Мапінг помилок           | `mapControllerError` → `400`                | [Контролери та сервіси](/backend/controllers-services)                 |
+| Оголошення маршруту      | `defineRoute` у групі з `prefix`            | [Маршрутизація](/backend/routing) і [Middleware](/backend/middlewares) |
 
 Чого тут ще немає: бази даних, сесії і захисту маршруту. Усе це додає наступний крок.
 

@@ -1,21 +1,21 @@
 # Деплой
 
-Ця сторінка описує, як зібрати застосунок для production, що міститься в [`Dockerfile`](https://github.com/Blazheiko/itvibe-template/blob/main/Dockerfile) і які умови потрібні під час запуску. Змінні оточення детально описано на сторінці [Конфігурація](/backend/configuration), а безпеку — на сторінці [Автентифікація та безпека](/backend/auth-security). Тут вони лише згадуються.
+Ця сторінка описує, як зібрати застосунок для production, що міститься в [`Dockerfile`](https://github.com/Blazheiko/vibe-template/blob/main/Dockerfile) і які умови потрібні під час запуску. Змінні оточення детально описано на сторінці [Конфігурація](/backend/configuration), а безпеку — на сторінці [Автентифікація та безпека](/backend/auth-security). Тут вони лише згадуються.
 
 ## Збірка
 
-Кореневий скрипт `pnpm build` виконує `pnpm -r build` ([`package.json`](https://github.com/Blazheiko/itvibe-template/blob/main/package.json)). pnpm упорядковує пакети за залежностями workspace, тож `shared` збирається першим. `Dockerfile` задає порядок явно: `shared` → `frontend` → `backend`.
+Кореневий скрипт `pnpm build` виконує `pnpm -r build` ([`package.json`](https://github.com/Blazheiko/vibe-template/blob/main/package.json)). pnpm упорядковує пакети за залежностями workspace, тож `shared` збирається першим. `Dockerfile` задає порядок явно: `shared` → `frontend` → `backend`.
 
-- **backend**: `tsc --build` ([`packages/backend/package.json`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/package.json)) компілює `src/` у `dist/` (`outDir`/`rootDir` у [`tsconfig.json`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/tsconfig.json)). Під час виконання аліаси `#app/*`, `#config/*`, `#vendor/*`, `#database/*`, `#drizzle/*` і `#logger` резолвляться через поле `imports` у `package.json` і вказують на `./dist/...`, тому `node dist/index.js` (`pnpm start`) працює без `tsx`.
-- **frontend**: `build` запускає type-check, `vite build` і окрему збірку service worker (`vite.sw.config.ts`), див. [`packages/frontend/package.json`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/package.json). Результат потрапляє в `packages/frontend/dist`.
+- **backend**: `tsc --build` ([`packages/backend/package.json`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/package.json)) компілює `src/` у `dist/` (`outDir`/`rootDir` у [`tsconfig.json`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/tsconfig.json)). Під час виконання аліаси `#app/*`, `#config/*`, `#vendor/*`, `#database/*`, `#drizzle/*` і `#logger` резолвляться через поле `imports` у `package.json` і вказують на `./dist/...`, тому `node dist/index.js` (`pnpm start`) працює без `tsx`.
+- **frontend**: `build` запускає type-check, `vite build` і окрему збірку service worker (`vite.sw.config.ts`), див. [`packages/frontend/package.json`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/package.json). Результат потрапляє в `packages/frontend/dist`.
 - Окремого скрипта copy-static немає. Фронтенд у `packages/backend/public` копіює сам `Dockerfile` (`cp -r packages/frontend/dist packages/backend/public`).
 
 ### Як віддається фронтенд
 
-Бекенд віддає статику лише при `SERVE_STATIC=true` ([`config/app.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts), default `false`). Тоді [`static-server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts) на старті кешує в пам'ять каталог `./public` відносно `process.cwd()` (при `APP_ENV=manual-test` замість нього береться `./public-test`). `/` віддає `index.html`. Інший варіант — віддавати `frontend/dist` окремим хостингом або CDN (`CDN_URL`, див. [Маршрутизація і CDN](/backend/configuration#маршрутизація-і-cdn)).
+Бекенд віддає статику лише при `SERVE_STATIC=true` ([`config/app.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/app.ts), default `false`). Тоді [`static-server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts) на старті кешує в пам'ять каталог `./public` відносно `process.cwd()` (при `APP_ENV=manual-test` замість нього береться `./public-test`). `/` віддає `index.html`. Інший варіант — віддавати `frontend/dist` окремим хостингом або CDN (`CDN_URL`, див. [Маршрутизація і CDN](/backend/configuration#маршрутизація-і-cdn)).
 
 ::: warning
-`Dockerfile` копіює фронтенд у `public` і задає `SERVE_STATIC=true` та `APP_ENV=production`, тож контейнер віддає фронтенд без додаткових змінних. Якщо фронтенд віддає проксі або CDN, перевизначте `-e SERVE_STATIC=false`. Коли `SERVE_STATIC=true`, а каталогу `public` немає, сервер пише попередження і стартує без статики ([`static-server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts)). У `.env.example` стоїть `SERVE_STATIC=false`, бо в dev фронтенд віддає Vite.
+`Dockerfile` копіює фронтенд у `public` і задає `SERVE_STATIC=true` та `APP_ENV=production`, тож контейнер віддає фронтенд без додаткових змінних. Якщо фронтенд віддає проксі або CDN, перевизначте `-e SERVE_STATIC=false`. Коли `SERVE_STATIC=true`, а каталогу `public` немає, сервер пише попередження і стартує без статики ([`static-server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts)). У `.env.example` стоїть `SERVE_STATIC=false`, бо в dev фронтенд віддає Vite.
 :::
 
 ### CSP, коли фронтенд віддає проксі
@@ -38,7 +38,7 @@ location / {
 
 ### Локальний production-like запуск
 
-`pnpm prod:local` ([`scripts/prod-local.sh`](https://github.com/Blazheiko/itvibe-template/blob/main/scripts/prod-local.sh)) збирає `shared`, frontend (з `VITE_BASE_URL=http://localhost:<PORT>`, без Sentry) і backend, копіює `frontend/dist` у `backend/public`, як `Dockerfile`, і стартує бекенд з `SERVE_STATIC=true`. Потрібні PostgreSQL і Redis з `packages/backend/.env`. Оскільки це plain http, скрипт задає `APP_ENV=local` і `APP_IS_PRODUCTION=false` (інакше `getWsUrl()` видав би `wss://`, а `upgrade-insecure-requests` зламав би всі запити). `PROD_LOCAL_SKIP_BUILD=true` пропускає збірку.
+`pnpm prod:local` ([`scripts/prod-local.sh`](https://github.com/Blazheiko/vibe-template/blob/main/scripts/prod-local.sh)) збирає `shared`, frontend (з `VITE_BASE_URL=http://localhost:<PORT>`, без Sentry) і backend, копіює `frontend/dist` у `backend/public`, як `Dockerfile`, і стартує бекенд з `SERVE_STATIC=true`. Потрібні PostgreSQL і Redis з `packages/backend/.env`. Оскільки це plain http, скрипт задає `APP_ENV=local` і `APP_IS_PRODUCTION=false` (інакше `getWsUrl()` видав би `wss://`, а `upgrade-insecure-requests` зламав би всі запити). `PROD_LOCAL_SKIP_BUILD=true` пропускає збірку.
 
 ## Dockerfile
 
@@ -53,7 +53,7 @@ flowchart LR
 
 1. Образ `ubuntu:24.04`. Node.js 24 ставиться з NodeSource, pnpm `9.15.0` вмикається через corepack.
 2. Спочатку копіюються лише `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` і `package.json` трьох пакетів, далі виконується `pnpm install --frozen-lockfile`. Так шар із залежностями кешується.
-3. `COPY . .` копіює проєкт без того, що виключає [`.dockerignore`](https://github.com/Blazheiko/itvibe-template/blob/main/.dockerignore): `.git`, `node_modules`, `dist`, `coverage`, звіти тестів, кеш VitePress і всі `.env`/`.env.*`, крім `.env.example`. Тому локальні секрети не потрапляють ні в build context, ні в шари builder-етапу, а локальний `packages/frontend/.env` не вшивається у фронтенд-бандл — Vite бачить лише `VITE_SENTRY_*` з build-аргументів.
+3. `COPY . .` копіює проєкт без того, що виключає [`.dockerignore`](https://github.com/Blazheiko/vibe-template/blob/main/.dockerignore): `.git`, `node_modules`, `dist`, `coverage`, звіти тестів, кеш VitePress і всі `.env`/`.env.*`, крім `.env.example`. Тому локальні секрети не потрапляють ні в build context, ні в шари builder-етапу, а локальний `packages/frontend/.env` не вшивається у фронтенд-бандл — Vite бачить лише `VITE_SENTRY_*` з build-аргументів.
 4. Build-аргументи `VITE_SENTRY_*` (DSN, ENABLED, ENVIRONMENT, RELEASE, sample rates) стають `ENV`, бо Vite вшиває їх у бандл під час збірки.
 5. Збираються `shared`, `frontend` і `backend`, після цього `frontend/dist` копіюється в `backend/public`.
 
@@ -62,28 +62,28 @@ flowchart LR
 1. Знову `ubuntu:24.04` + Node 24 + pnpm. `COREPACK_HOME=/opt/corepack` (доступний на читання всім), щоб користувач `app` запускав уже підготовлений pnpm без мережі. Створюється системний користувач `app` (uid < 1000) з домашнім каталогом `/home/app` — його потребує pnpm при one-shot запусках.
 2. `pnpm install --frozen-lockfile --prod --filter backend...` ставить лише production-залежності бекенду та його workspace-залежностей. `drizzle-kit` міститься в `dependencies` бекенду, тому потрапляє в образ.
 3. `ENV NODE_ENV=production`.
-4. З `builder` копіюються `packages/backend/dist`, `packages/shared/dist`, `packages/backend/public`, `packages/backend/public-test`, `drizzle.config.ts` разом з `src/config/database.ts`, `src/drizzle/migrations` і `docs/support-knowledge-base` (його читає [`knowledge-base-init-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-init-service.ts)).
+4. З `builder` копіюються `packages/backend/dist`, `packages/shared/dist`, `packages/backend/public`, `packages/backend/public-test`, `drizzle.config.ts` разом з `src/config/database.ts`, `src/drizzle/migrations` і `docs/support-knowledge-base` (його читає [`knowledge-base-init-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-init-service.ts)).
 5. `EXPOSE 3000`, `WORKDIR /app/packages/backend`, `USER app`. Файли застосунку належать root і лише читаються: у рантаймі застосунок нічого не пише на диск.
 6. `HEALTHCHECK` (interval 30 с, timeout 5 с, start-period 20 с, retries 3): `curl -fsS http://127.0.0.1:${PORT:-3000}/api/ready | grep -q '"status":"ok"'` — readiness: контейнер `healthy`, лише коли відповідають PostgreSQL і Redis (див. [Observability](/backend/observability#health-check)). Перевіряється тіло, а не лише код: із `SERVE_STATIC=true` будь-який невідомий шлях повертає `index.html` зі статусом 200 (SPA fallback), тож перевірка лише статусу проходила б і при неправильному шляху.
 7. `CMD ["node", "dist/index.js"]` — PID 1 є Node, тож `SIGTERM` від `docker stop` доходить до `stopGracefully`. Міграції на старті **не** запускаються.
 
 Чого в образі немає:
 
-- `.env` у production-етап не копіюється. Конфігурація передається через `-e`/`--env-file`. `dotenv/config` у [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) просто не знайде файл.
+- `.env` у production-етап не копіюється. Конфігурація передається через `-e`/`--env-file`. `dotenv/config` у [`index.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/index.ts) просто не знайде файл.
 - Вихідних кодів `src/` (окрім міграцій), devDependencies і `tsx` теж немає.
 
 ### Команди
 
 ```sh
-docker build -t itvibe-template .
+docker build -t vibe-template .
 # з Sentry для фронтенду:
-docker build -t itvibe-template --build-arg VITE_SENTRY_DSN=<dsn> --build-arg VITE_SENTRY_ENABLED=true .
+docker build -t vibe-template --build-arg VITE_SENTRY_DSN=<dsn> --build-arg VITE_SENTRY_ENABLED=true .
 
 # один раз перед rollout нової версії (той самий образ, без -p):
-docker run --rm --env-file ./production.env itvibe-template pnpm db:create:prod
-docker run --rm --env-file ./production.env itvibe-template pnpm db:migrate
+docker run --rm --env-file ./production.env vibe-template pnpm db:create:prod
+docker run --rm --env-file ./production.env vibe-template pnpm db:migrate
 
-docker run -d -p 3000:3000 --env-file ./production.env itvibe-template
+docker run -d -p 3000:3000 --env-file ./production.env vibe-template
 ```
 
 ::: warning Зміна запуску (feat-019)
@@ -95,7 +95,7 @@ docker run -d -p 3000:3000 --env-file ./production.env itvibe-template
 ```sh
 docker run -d -e API_PATH_PREFIX=v1 \
   --health-cmd "curl -fsS http://127.0.0.1:3000/v1/ready | grep -q '\"status\":\"ok\"' || exit 1" \
-  --env-file ./production.env itvibe-template
+  --env-file ./production.env vibe-template
 ```
 
 Healthcheck б'є в `/api/ready` (readiness): при недоступній БД чи Redis контейнер стає `unhealthy`. Docker сам контейнер не перезапускає; оркестратор, що зважає на health, виведе його з балансування. Liveness без залежностей — `/api/ping`.
@@ -120,10 +120,10 @@ macOS, Docker Desktop, `docker build --no-cache`:
 ## Runtime
 
 - **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Образ задає `NODE_ENV=production` і `APP_ENV=production`: `secure` у cookie і конфіг CSP (`config/csp.ts`, зокрема `wss:` у `getWsUrl()`) читають саме `APP_ENV`. Для staging-оточення перевизначте `APP_ENV` при запуску.
-- **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip).
+- **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip).
 - **Unix socket**: якщо `APP_UNIX_PATH` задано й не порожнє, сервер викликає `listen_unix` замість TCP, і `HOST`/`PORT` тоді ігноруються. Порожнє `APP_UNIX_PATH=` (як у `.env.example`) означає TCP на `HOST:PORT`.
-- **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. У контейнері PID 1 — Node (`CMD` у exec-формі), тож `docker stop` закінчується через `stopGracefully` з кодом 0.
-- **Sentry**: бекенд читає `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` тощо під час виконання ([`config/sentry.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/sentry.ts)). Фронтенду потрібні `VITE_SENTRY_*` як `--build-arg` під час збірки.
+- **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. У контейнері PID 1 — Node (`CMD` у exec-формі), тож `docker stop` закінчується через `stopGracefully` з кодом 0.
+- **Sentry**: бекенд читає `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` тощо під час виконання ([`config/sentry.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/sentry.ts)). Фронтенду потрібні `VITE_SENTRY_*` як `--build-arg` під час збірки.
 
 ### Rate limit на edge
 
@@ -187,11 +187,11 @@ done
 ## Redis і S3
 
 - Redis обов'язковий: у ньому зберігаються сесії, і під час shutdown застосунок закриває з'єднання з ним. Див. [Redis](/backend/database#redis) і [Конфігурація → Redis](/backend/configuration#redis).
-- [`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml) у корені — CORS-конфігурація бакета S3/MinIO: лише `GET`/`HEAD` з origin застосунку (placeholder `https://app.example.com`). Файли вантажить і видаляє бекенд, тож браузеру запис у бакет не потрібен. Застосовується вручну до бакета, код її не читає. Для кількох оточень див. [`corsS3.prod.example.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.prod.example.xml).
+- [`corsS3.xml`](https://github.com/Blazheiko/vibe-template/blob/main/corsS3.xml) у корені — CORS-конфігурація бакета S3/MinIO: лише `GET`/`HEAD` з origin застосунку (placeholder `https://app.example.com`). Файли вантажить і видаляє бекенд, тож браузеру запис у бакет не потрібен. Застосовується вручну до бакета, код її не читає. Для кількох оточень див. [`corsS3.prod.example.xml`](https://github.com/Blazheiko/vibe-template/blob/main/corsS3.prod.example.xml).
 
 ## CI/CD
 
-У `.github/workflows` є лише [`docs.yml`](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/docs.yml), який збирає і деплоїть цей сайт документації.
+У `.github/workflows` є лише [`docs.yml`](https://github.com/Blazheiko/vibe-template/blob/main/.github/workflows/docs.yml), який збирає і деплоїть цей сайт документації.
 
 ::: warning
 Workflow для збірки, тестів або деплою самого застосунку немає. Docker-образ збирається і публікується вручну.
@@ -208,4 +208,4 @@ Workflow для збірки, тестів або деплою самого за
 - [ ] TLS на проксі, `TRUST_PROXY` і `TRUSTED_PROXY_CIDRS` налаштовано.
 - [ ] Визначено, хто віддає фронтенд: `SERVE_STATIC=true` або окремий хостинг/CDN.
 - [ ] `VITE_SENTRY_*` передано як build-args, `SENTRY_*` — як runtime env.
-- [ ] CORS бакета ([`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml)) обмежено вашим доменом.
+- [ ] CORS бакета ([`corsS3.xml`](https://github.com/Blazheiko/vibe-template/blob/main/corsS3.xml)) обмежено вашим доменом.

@@ -19,7 +19,7 @@ const eventBus = useEventBus()
 const isLoginModalVisible = ref(false)
 const oauthError = ref('')
 const isRegisterModalVisible = ref(false)
-const logoText = ref('ITVIBE')
+const logoText = ref('VIBE')
 const typingComplete = ref(false)
 // const showAuthModals = ref(false)
 const showLoginModal = () => {
@@ -97,7 +97,7 @@ onMounted(() => {
         void router.replace({ query: {} })
     }
 
-    const text = 'ITVIBE'
+    const text = 'VIBE'
     let i = 0
     logoText.value = ' '
 

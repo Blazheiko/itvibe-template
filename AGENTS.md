@@ -31,7 +31,7 @@ A feature is `done` only when all of the following are recorded in `progress.md`
 
 ## Documentation
 
-The VitePress site in `documentation/` is published to GitHub Pages (https://blazheiko.github.io/itvibe-template/) from `main` by `.github/workflows/docs.yml`.
+The VitePress site in `documentation/` is published to GitHub Pages (https://blazheiko.github.io/vibe-template/) from `main` by `.github/workflows/docs.yml`.
 
 - A change to public backend behaviour (a route, an env variable, a middleware, a migration or the DB schema) must update the matching page in `documentation/backend/` in the same PR.
 - Write pages from the code and link sources on GitHub. Mark unimplemented things with `::: warning План`. Use placeholders for secrets.

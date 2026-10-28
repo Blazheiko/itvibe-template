@@ -1,4 +1,4 @@
-# Acceptance Criteria: itvibe-template
+# Acceptance Criteria: vibe-template
 
 Last updated: 2026-05-30
 

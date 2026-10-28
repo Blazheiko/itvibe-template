@@ -1,7 +1,7 @@
 # frontend
 
 The `frontend` package is the Vue 3 + Vite single-page application of the
-`itvibe-template` monorepo. It talks to the [`backend`](../backend) over HTTP and
+`vibe-template` monorepo. It talks to the [`backend`](../backend) over HTTP and
 WebSocket and shares request/response contracts via the [`shared`](../shared)
 workspace package.
 

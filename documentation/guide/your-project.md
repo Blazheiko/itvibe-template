@@ -41,20 +41,20 @@
 
 ## 1. Перейменувати
 
-Назва шаблону зашита в кількох місцях. Нижче список, зібраний пошуком `itvibe` по `packages/` (без тестів і `node_modules`):
+Назва шаблону зашита в кількох місцях. Нижче список, зібраний пошуком `Vibe Template`, `VIBE` і `vibe-template` по `packages/` (без тестів і `node_modules`):
 
 | Що                                           | Де                                                                                                  |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Назва workspace                              | `package.json` (`"name": "itvibe-template"`)                                                        |
+| Назва workspace                              | `package.json` (`"name": "vibe-template"`)                                                          |
 | Заголовок і опис сторінки                    | `packages/frontend/index.html` (`<title>`, `meta`)                                                  |
 | PWA: назва, іконки, кольори                  | `packages/frontend/public/manifest.json`, `public/icons/`, `public/splash/`, `public/favicon.svg`   |
-| Логотип на сторінці входу                    | `packages/frontend/src/views/Login.vue` (`'ITVIBE'`), `src/assets/logo.svg`                         |
+| Логотип на сторінці входу                    | `packages/frontend/src/views/Login.vue` (`'VIBE'`), `src/assets/logo.svg`                           |
 | Назва в PWA-кнопці встановлення              | `packages/frontend/src/components/MenuButton.vue`                                                   |
 | Тексти головної сторінки                     | `packages/frontend/src/locales/*.ts` (`heroTitle`, `mobileTitle` та ін.)                            |
-| Кеш service worker                           | `packages/frontend/src/service-worker.ts` (`__itvibe_template_sw_error_queue__`)                    |
+| Кеш service worker                           | `packages/frontend/src/service-worker.ts` (`__vibe_template_sw_error_queue__`)                      |
 | Листи (скидання пароля, підтвердження email) | `packages/backend/src/app/services/auth/password-reset-service.ts`, `email-verification-service.ts` |
 | Промпти AI-підтримки                         | `packages/backend/src/config/support.ts`; у базу їх кладе `db:seed`                                 |
-| Назва БД за замовчуванням                    | `packages/backend/src/config/database.ts` (`itvibe_template`)                                       |
+| Назва БД за замовчуванням                    | `packages/backend/src/config/database.ts` (`vibe_template`)                                         |
 | `robots.txt`                                 | `packages/frontend/public/robots.txt`                                                               |
 
 У `.env` змініть:
@@ -63,7 +63,7 @@
 | ----------------------------------- | -------------------------- | ----------------------------------------------------------------- |
 | `APP_NAME`                          | `uwebsockets-api`          | Назва застосунку в логах і конфігурації                           |
 | `REDIS_PREFIX`                      | `uwebsocket:`              | Префікс ключів Redis; різні проєкти на одному Redis не змішаються |
-| `PGSQL_DB_NAME`                     | `itvibe_template`          | Своя база даних                                                   |
+| `PGSQL_DB_NAME`                     | `vibe_template`            | Своя база даних                                                   |
 | `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` | —                          | Від кого приходять листи                                          |
 | `VAPID_SUBJECT`                     | `mailto:example@gmail.com` | Контакт для push-сервісів браузерів                               |
 

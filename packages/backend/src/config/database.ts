@@ -18,7 +18,7 @@ export const DATABASE_DEFAULTS = Object.freeze({
     port: 5432,
     user: 'postgres',
     password: '',
-    database: 'itvibe_template',
+    database: 'vibe_template',
 })
 
 const nonEmpty = (value: string | undefined): string | undefined =>

@@ -1,6 +1,6 @@
 # Процес роботи
 
-Цей розділ описує, як у репозиторії організовано роботу людей і агентів: як обрати фічу, де зберігається її стан, коли вона вважається завершеною і що оновити в документації. Правила взято з [`AGENTS.md`](https://github.com/Blazheiko/itvibe-template/blob/main/AGENTS.md).
+Цей розділ описує, як у репозиторії організовано роботу людей і агентів: як обрати фічу, де зберігається її стан, коли вона вважається завершеною і що оновити в документації. Правила взято з [`AGENTS.md`](https://github.com/Blazheiko/vibe-template/blob/main/AGENTS.md).
 
 ::: info Шукаєте, як зробити з шаблону свій продукт?
 Ця сторінка описує процес роботи в репозиторії шаблону. Як перейменувати шаблон, змінити інтерфейс і обрати інтеграції для власного проєкту, описано в розділі [Свій проєкт на шаблоні](/guide/your-project).
@@ -8,10 +8,10 @@
 
 ## Старт сесії
 
-1. Відкрити [`feature_list.json`](https://github.com/Blazheiko/itvibe-template/blob/main/feature_list.json) і знайти фічу, у якої `owner` збігається з вами, а `status` дорівнює `in_progress`. Це ваша активна фіча.
+1. Відкрити [`feature_list.json`](https://github.com/Blazheiko/vibe-template/blob/main/feature_list.json) і знайти фічу, у якої `owner` збігається з вами, а `status` дорівнює `in_progress`. Це ваша активна фіча.
 2. Перейти на гілку з поля `branch`. Файли `progress.md` і `session-handoff.md` цієї фічі лежать **на її гілці**, а не в `main`.
 3. Прочитати `progress.md`: стан минулої сесії, блокери, «Notes for Next Session». Якщо сесія продовжується, прочитати також `session-handoff.md`.
-4. Запустити [`./init.sh`](https://github.com/Blazheiko/itvibe-template/blob/main/init.sh). Скрипт по черзі виконує `pnpm install`, `pnpm run typecheck`, `pnpm run lint`, `pnpm test` і `pnpm run build` (`set -e`, тож зупиняється на першій помилці). Якщо він падає, далі не працюємо.
+4. Запустити [`./init.sh`](https://github.com/Blazheiko/vibe-template/blob/main/init.sh). Скрипт по черзі виконує `pnpm install`, `pnpm run typecheck`, `pnpm run lint`, `pnpm test` і `pnpm run build` (`set -e`, тож зупиняється на першій помилці). Якщо він падає, далі не працюємо.
 5. Кожен owner веде одну фічу за раз. Нова робота оформлюється новим записом у `feature_list.json` через PR у `main`, а не розширенням поточної фічі.
 
 ## `feature_list.json`
@@ -79,14 +79,14 @@ stateDiagram-v2
 
 ## Документація
 
-Сайт у `documentation/` публікується на GitHub Pages з `main` через [`.github/workflows/docs.yml`](https://github.com/Blazheiko/itvibe-template/blob/main/.github/workflows/docs.yml).
+Сайт у `documentation/` публікується на GitHub Pages з `main` через [`.github/workflows/docs.yml`](https://github.com/Blazheiko/vibe-template/blob/main/.github/workflows/docs.yml).
 
-- Якщо змінюється публічна поведінка бекенду (маршрут, змінна оточення, middleware, міграція або схема БД), відповідну сторінку в `documentation/backend/` оновлюють у тому ж PR. Наприклад: [Маршрутизація](/backend/routing-middlewares), [Конфігурація](/backend/configuration), [База даних](/backend/database).
+- Якщо змінюється публічна поведінка бекенду (маршрут, змінна оточення, middleware, міграція або схема БД), відповідну сторінку в `documentation/backend/` оновлюють у тому ж PR. Наприклад: [Маршрутизація](/backend/routing), [Конфігурація](/backend/configuration), [База даних](/backend/database).
 - Сторінки пишуться з коду, з посиланнями на джерела на GitHub. Те, що ще не реалізовано, позначають `::: warning План`. Для секретів використовують плейсхолдери.
-- Нову сторінку додають у sidebar у [`documentation/.vitepress/config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/.vitepress/config.ts) і в `KEY_PAGES` у [`documentation/scripts/verify-dist.mjs`](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/scripts/verify-dist.mjs).
+- Нову сторінку додають у sidebar у [`documentation/.vitepress/config.ts`](https://github.com/Blazheiko/vibe-template/blob/main/documentation/.vitepress/config.ts) і в `KEY_PAGES` у [`documentation/scripts/verify-dist.mjs`](https://github.com/Blazheiko/vibe-template/blob/main/documentation/scripts/verify-dist.mjs).
 - Якщо сторінка використовує `<!--@include-->`, шлях до джерела має бути в `paths` у `docs.yml`.
 - Перед merge запускають `pnpm docs:build && pnpm docs:verify`.
 
 ## Беклог наступних фіч
 
-Проблеми в коді, знайдені під час написання документації, зібрано в [`docs/plan/code-issues-found-during-docs.md`](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md). Це джерело для майбутніх записів `feat-XXX`: кожен пункт, який вирішили виправляти, оформлюють новим рядком у `feature_list.json` через PR у `main`.
+Проблеми в коді, знайдені під час написання документації, зібрано в [`docs/plan/code-issues-found-during-docs.md`](https://github.com/Blazheiko/vibe-template/blob/main/docs/plan/code-issues-found-during-docs.md). Це джерело для майбутніх записів `feat-XXX`: кожен пункт, який вирішили виправляти, оформлюють новим рядком у `feature_list.json` через PR у `main`.

@@ -22,7 +22,7 @@ describe.skipIf(!hasPg)('pg test harness', async () => {
             sql`SELECT 1 AS one, current_database() AS name`,
         )
         expect(result.rows[0]?.one).toBe(1)
-        expect(result.rows[0]?.name).toMatch(/^itvibe_test_[0-9a-f]{12}$/)
+        expect(result.rows[0]?.name).toMatch(/^vibe_test_[0-9a-f]{12}$/)
     })
 
     it('has the vector extension', async () => {

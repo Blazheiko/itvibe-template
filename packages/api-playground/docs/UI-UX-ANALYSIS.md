@@ -1,6 +1,6 @@
 # UI/UX Analysis — API Playground
 
-> **Internal note** — ideas and analysis, not a description of current behaviour. Current behaviour: [documentation/playground](https://blazheiko.github.io/itvibe-template/playground/).
+> **Internal note** — ideas and analysis, not a description of current behaviour. Current behaviour: [documentation/playground](https://blazheiko.github.io/vibe-template/playground/).
 
 ## General Assessment
 

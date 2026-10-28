@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-    name: itvibe-template
+    name: vibe-template
     text: Full-stack TypeScript шаблон
     tagline: Готовий фундамент для SPA/PWA з акаунтами, real-time і AI. Документація з фокусом на бекенд.
     image:
         src: /logo.svg
-        alt: itvibe-template
+        alt: vibe-template
     actions:
         - theme: brand
           text: Почати
@@ -17,7 +17,7 @@ hero:
           link: /guide/how-backend-works
         - theme: alt
           text: GitHub
-          link: https://github.com/Blazheiko/itvibe-template
+          link: https://github.com/Blazheiko/vibe-template
 
 features:
     - icon: 🔐
@@ -36,10 +36,34 @@ features:
       title: Real-time
       details: WebSocket-канал з авторизацією, хто онлайн, історія онлайну, push від сервера до клієнта.
       link: /backend/websocket
+    - icon: 🔔
+      title: Web Push повідомлення
+      details: Підписка на push у браузері, збереження підписок і відправка через VAPID вже вбудовані. Досить згенерувати ключі й додати їх у .env.
+      link: /backend/mail-push#web-push
+    - icon: 📱
+      title: Інсталяція PWA
+      details: Застосунок встановлюється на телефон і комп'ютер як нативний. Є маніфест, іконки, splash-екран, Service Worker з офлайн-кешем і повідомлення про нову версію.
+      link: /frontend/#pwa
     - icon: 🤝
       title: Спільні контракти
       details: Пакет shared з arktype-схемами, enum-ами і типами відповідей. Якщо змінити спільний тип, TypeScript покаже, де фронтенд і бекенд з ним розійшлися.
       link: /shared/
+    - icon: 🛠️
+      title: Адмін-панель
+      details: Список користувачів, хто зараз онлайн, історія онлайну і редактор бази знань для AI-чату. Окремий layout і доступ тільки для адміністраторів.
+      link: /frontend/
+    - icon: 🌍
+      title: 18 мов і теми оформлення
+      details: Інтерфейс перекладено vue-i18n на 18 мов. Світла й темна тема та кольорові палітри Ocean, Mint, Lavender, Rose, Sunset і Monochrome.
+      link: /frontend/#i18n
+    - icon: 📁
+      title: Файли й пошта
+      details: Завантаження файлів у будь-яке S3-сумісне сховище (AWS, MinIO, DigitalOcean Spaces). SMTP-листи для підтвердження пошти й скидання пароля.
+      link: /backend/storage
+    - icon: 🧪
+      title: API Playground
+      details: Окремий застосунок для локальної розробки, який показує всі HTTP- і WebSocket-маршрути бекенду і дає викликати їх вручну.
+      link: /playground/
     - icon: 🤖
       title: AI-чат підтримки
       details: Чат, який відповідає з бази знань (pgvector), адмінка промптів, облік токенів, провайдери OpenAI, xAI і Mistral.
@@ -48,7 +72,7 @@ features:
 
 ## Що таке цей шаблон
 
-**itvibe-template** — це не порожній «скелет», а **робочий застосунок**, з якого ви починаєте свій продукт. Зазвичай перші тижні нового проєкту йдуть на одне й те саме: реєстрація, логін, скидання пароля, сесії, CSRF, завантаження файлів, листи, push, адмінка, деплой. У цьому шаблоні все це вже написано, покрито тестами та задокументовано. Ви клонуєте репозиторій, налаштовуєте `.env` і одразу пишете **свою** бізнес-логіку.
+**vibe-template** — це не порожній «скелет», а **робочий застосунок**, з якого ви починаєте свій продукт. Зазвичай перші тижні нового проєкту йдуть на одне й те саме: реєстрація, логін, скидання пароля, сесії, CSRF, завантаження файлів, листи, push, адмінка, деплой. У цьому шаблоні все це вже написано, покрито тестами та задокументовано. Ви клонуєте репозиторій, налаштовуєте `.env` і одразу пишете **свою** бізнес-логіку.
 
 Шаблон складається з трьох пакетів в одному репозиторії (pnpm workspace):
 
@@ -69,7 +93,10 @@ features:
 - **Єдине джерело істини замість дубльованих типів.** Контракт API описано один раз arktype-схемою в пакеті `shared`: з неї бекенд перевіряє запит під час виконання, а тип виводиться (`typeof Schema.infer`) і імпортується і бекендом, і фронтендом. Структуру БД описано один раз Drizzle-схемою: з неї генеруються міграції й виводяться типи рядків (`InferSelectModel`). Змінили схему — `pnpm typecheck` показує всі місця на сервері й клієнті, які треба оновити. Як це влаштовано — [Звідки беруться типи](/guide/how-backend-works#звідки-беруться-типи-єдине-джерело-істини).
 - **Передбачувана структура.** Кожна фіча складається з однакових шарів. Знаючи одну, ви орієнтуєтесь у всіх. Правила шарів перевіряються тестом, тому архітектура не «розпливається» з часом.
 - **Безпечні значення за замовчуванням.** Більшість захистів (CSP, security-заголовки, rate limiting, HttpOnly-cookie) увімкнені одразу, а сервер не стартує з частиною небезпечних налаштувань (перевірка `validateRuntimeConfig`). Виняток — CSRF: за замовчуванням він лише логує порушення, для продакшену треба увімкнути `CSRF_ENFORCE=true`.
-- **Готово до продакшену.** Логи Pino, Sentry, health-check `/ready`, graceful shutdown, Dockerfile з healthcheck, конфігурація через env.
+- **PWA і push одразу.** Застосунок можна встановити на пристрій з меню, а сервер уміє надсилати Web Push навіть коли вкладку закрито. Для push треба лише VAPID-ключі в `.env`.
+- **Готово до продакшену.** Логи Pino, Sentry, health-check `/ready`, graceful shutdown, Dockerfile з healthcheck, конфігурація через env. Як зібрати й запустити — [Деплой](/backend/deployment).
+- **Тести з коробки.** Понад тисячу unit- та інтеграційних тестів на Vitest. Тести з PostgreSQL створюють для себе окрему тимчасову базу, а Playwright перевіряє фронтенд у браузері. Детальніше — [Тестування](/backend/testing).
+- **Приклади юридичних сторінок.** Privacy Policy, Terms, Cookies Policy і AI Policy вже мають маршрути й сторінки у фронтенді. Це **приклад-заготовка**, а не готовий юридичний текст: замініть зміст на свій і погодьте з юристом перед запуском.
 - **Зручно для роботи з AI-агентами.** У репозиторії є `AGENTS.md` з правилами роботи і `feature_list.json` зі списком фіч, тож Claude Code чи інший агент працює за тими ж правилами, що й люди.
 
 ## Як це виглядає на практиці
@@ -78,7 +105,7 @@ features:
 
 ### Змінили контракт — TypeScript показав, що зламалось
 
-Список користувачів в адмінці описано однією схемою в `shared` ([admin-user-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)). Тип виводиться з неї, а не пишеться окремо:
+Список користувачів в адмінці описано однією схемою в `shared` ([admin-user-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/responses/admin-user-controller.ts)). Тип виводиться з неї, а не пишеться окремо:
 
 ```ts
 export const AdminUserListItemSchema = type({
@@ -110,7 +137,7 @@ src/views/admin/AdminUsersView.vue(165,37): error TS2339: Property 'name' does n
 
 ### Один сервіс для HTTP і WebSocket
 
-Чат підтримки працює через два транспорти: повідомлення йдуть по WebSocket ([ws/support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/ws/support-controller.ts)), а історія чату завантажується по HTTP ([http/support/support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Обидва контролери тонкі й викликають той самий `supportService`:
+Чат підтримки працює через два транспорти: повідомлення йдуть по WebSocket ([ws/support-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/ws/support-controller.ts)), а історія чату завантажується по HTTP ([http/support/support-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Обидва контролери тонкі й викликають той самий `supportService`:
 
 ```ts
 // WebSocket: нове повідомлення в чат
@@ -124,7 +151,7 @@ const result = await supportService.getChatHistory(userId)
 
 ### Тест бізнес-логіки без бази даних
 
-Сервіс отримує дані тільки через репозиторій, тому в тесті репозиторій легко підмінити. Фрагмент з [avatar-service.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.spec.ts):
+Сервіс отримує дані тільки через репозиторій, тому в тесті репозиторій легко підмінити. Фрагмент з [avatar-service.spec.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.spec.ts):
 
 ```ts
 const userRepositoryMock = { findById: vi.fn(), update: vi.fn() }

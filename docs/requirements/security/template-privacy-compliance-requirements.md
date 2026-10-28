@@ -1,4 +1,4 @@
-# Privacy and Compliance Requirements: itvibe-template
+# Privacy and Compliance Requirements: vibe-template
 
 Last updated: 2026-05-30
 

@@ -4,7 +4,7 @@
 
 ## Корінь
 
-Джерело: [package.json](https://github.com/Blazheiko/itvibe-template/blob/main/package.json).
+Джерело: [package.json](https://github.com/Blazheiko/vibe-template/blob/main/package.json).
 
 | Скрипт            | Команда                                                                                                          | Що робить                                                                               |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -29,53 +29,53 @@
 
 ## backend
 
-Джерело: [packages/backend/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/package.json).
+Джерело: [packages/backend/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/package.json).
 
-| Скрипт           | Команда                                                                           | Що робить                                                                                                                                             |
-| ---------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `build`          | `tsc --build`                                                                     | Компілює TypeScript у `dist/`                                                                                                                         |
-| `dev`            | `tsx watch src/index.ts`                                                          | Запускає сервер з перезапуском при змінах                                                                                                             |
-| `start`          | `node dist/index.js`                                                              | Запускає зібраний сервер                                                                                                                              |
-| `clean`          | `rm -rf dist .tsbuildinfo`                                                        | Видаляє артефакти збірки                                                                                                                              |
-| `typecheck`      | `tsc --noEmit`                                                                    | Перевірка типів                                                                                                                                       |
-| `db:create`      | `tsx src/db/create-database.ts`                                                   | Створює базу даних ([create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts))          |
-| `db:create:prod` | `node dist/db/create-database.js`                                                 | Те саме зі зібраного коду                                                                                                                             |
-| `db:generate`    | `drizzle-kit generate`                                                            | Генерує міграцію зі схеми ([drizzle.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts))            |
-| `db:migrate`     | `drizzle-kit migrate`                                                             | Застосовує міграції                                                                                                                                   |
-| `db:studio`      | `drizzle-kit studio`                                                              | Відкриває Drizzle Studio                                                                                                                              |
-| `db:seed`        | `tsx src/db/seed.ts`                                                              | Початкові промпти; з `--demo` — demo-акаунти ([seed.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/seed.ts))      |
-| `db:seed:prod`   | `node dist/db/seed.js`                                                            | Те саме зі зібраного коду                                                                                                                             |
-| `mail:test`      | `tsx src/scripts/send-test-email.ts`                                              | Надсилає тестовий лист ([send-test-email.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/scripts/send-test-email.ts)) |
-| `test`           | `vitest run`                                                                      | Одноразовий прогін Vitest                                                                                                                             |
-| `test:coverage`  | `vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=html` | Прогін з coverage (`@vitest/coverage-v8`), звіт у `coverage/`                                                                                         |
-| `test:watch`     | `vitest`                                                                          | Vitest у watch-режимі                                                                                                                                 |
-| `test:redis`     | `vitest run --config vitest.redis.config.ts`                                      | Інтеграційні `*.redis.test.ts` з реальним Redis (`REDIS_TEST_URL`); без змінної пропускаються                                                         |
-| `test:pg`        | `vitest run --config vitest.pg.config.ts`                                         | Інтеграційні `*.pg.test.ts` на тимчасовій базі з міграціями (`PG_TEST_URL`); без змінної пропускаються                                                |
+| Скрипт           | Команда                                                                           | Що робить                                                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build`          | `tsc --build`                                                                     | Компілює TypeScript у `dist/`                                                                                                                       |
+| `dev`            | `tsx watch src/index.ts`                                                          | Запускає сервер з перезапуском при змінах                                                                                                           |
+| `start`          | `node dist/index.js`                                                              | Запускає зібраний сервер                                                                                                                            |
+| `clean`          | `rm -rf dist .tsbuildinfo`                                                        | Видаляє артефакти збірки                                                                                                                            |
+| `typecheck`      | `tsc --noEmit`                                                                    | Перевірка типів                                                                                                                                     |
+| `db:create`      | `tsx src/db/create-database.ts`                                                   | Створює базу даних ([create-database.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/db/create-database.ts))          |
+| `db:create:prod` | `node dist/db/create-database.js`                                                 | Те саме зі зібраного коду                                                                                                                           |
+| `db:generate`    | `drizzle-kit generate`                                                            | Генерує міграцію зі схеми ([drizzle.config.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/drizzle.config.ts))            |
+| `db:migrate`     | `drizzle-kit migrate`                                                             | Застосовує міграції                                                                                                                                 |
+| `db:studio`      | `drizzle-kit studio`                                                              | Відкриває Drizzle Studio                                                                                                                            |
+| `db:seed`        | `tsx src/db/seed.ts`                                                              | Початкові промпти; з `--demo` — demo-акаунти ([seed.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/db/seed.ts))      |
+| `db:seed:prod`   | `node dist/db/seed.js`                                                            | Те саме зі зібраного коду                                                                                                                           |
+| `mail:test`      | `tsx src/scripts/send-test-email.ts`                                              | Надсилає тестовий лист ([send-test-email.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/scripts/send-test-email.ts)) |
+| `test`           | `vitest run`                                                                      | Одноразовий прогін Vitest                                                                                                                           |
+| `test:coverage`  | `vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=html` | Прогін з coverage (`@vitest/coverage-v8`), звіт у `coverage/`                                                                                       |
+| `test:watch`     | `vitest`                                                                          | Vitest у watch-режимі                                                                                                                               |
+| `test:redis`     | `vitest run --config vitest.redis.config.ts`                                      | Інтеграційні `*.redis.test.ts` з реальним Redis (`REDIS_TEST_URL`); без змінної пропускаються                                                       |
+| `test:pg`        | `vitest run --config vitest.pg.config.ts`                                         | Інтеграційні `*.pg.test.ts` на тимчасовій базі з міграціями (`PG_TEST_URL`); без змінної пропускаються                                              |
 
 ## frontend
 
-Джерело: [packages/frontend/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/package.json).
+Джерело: [packages/frontend/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/package.json).
 
-| Скрипт          | Команда                                                                           | Що робить                                                                                                                               |
-| --------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev`           | `vite`                                                                            | Dev-сервер Vite                                                                                                                         |
-| `build`         | `run-p type-check "build-only {@}" -- && pnpm run build-sw`                       | Паралельно typecheck і збірка, потім збірка service worker                                                                              |
-| `preview`       | `vite preview`                                                                    | Перегляд зібраного застосунку                                                                                                           |
-| `test:unit`     | `vitest`                                                                          | Vitest у watch-режимі                                                                                                                   |
-| `test:e2e`      | `playwright test`                                                                 | Playwright e2e-тести                                                                                                                    |
-| `build-only`    | `vite build`                                                                      | Лише збірка Vite                                                                                                                        |
-| `build-sw`      | `vite build --config vite.sw.config.ts`                                           | Збірка service worker ([vite.sw.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vite.sw.config.ts)) |
-| `type-check`    | `vue-tsc --build`                                                                 | Перевірка типів (інкрементальна)                                                                                                        |
-| `typecheck`     | `vue-tsc --build --force && tsc --noEmit -p e2e/tsconfig.json`                    | Повна перевірка типів, разом з e2e-тестами Playwright                                                                                   |
-| `lint`          | `eslint . --fix`                                                                  | ESLint з автовиправленням                                                                                                               |
-| `lint:check`    | `eslint .`                                                                        | ESLint без змін (викликається кореневим `lint`)                                                                                         |
-| `format`        | `prettier --write src/`                                                           | Форматує `src/`                                                                                                                         |
-| `test`          | `vitest run`                                                                      | Одноразовий прогін Vitest                                                                                                               |
-| `test:coverage` | `vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=html` | Прогін з coverage (`@vitest/coverage-v8`), звіт у `coverage/`                                                                           |
+| Скрипт          | Команда                                                                           | Що робить                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev`           | `vite`                                                                            | Dev-сервер Vite                                                                                                                       |
+| `build`         | `run-p type-check "build-only {@}" -- && pnpm run build-sw`                       | Паралельно typecheck і збірка, потім збірка service worker                                                                            |
+| `preview`       | `vite preview`                                                                    | Перегляд зібраного застосунку                                                                                                         |
+| `test:unit`     | `vitest`                                                                          | Vitest у watch-режимі                                                                                                                 |
+| `test:e2e`      | `playwright test`                                                                 | Playwright e2e-тести                                                                                                                  |
+| `build-only`    | `vite build`                                                                      | Лише збірка Vite                                                                                                                      |
+| `build-sw`      | `vite build --config vite.sw.config.ts`                                           | Збірка service worker ([vite.sw.config.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/vite.sw.config.ts)) |
+| `type-check`    | `vue-tsc --build`                                                                 | Перевірка типів (інкрементальна)                                                                                                      |
+| `typecheck`     | `vue-tsc --build --force && tsc --noEmit -p e2e/tsconfig.json`                    | Повна перевірка типів, разом з e2e-тестами Playwright                                                                                 |
+| `lint`          | `eslint . --fix`                                                                  | ESLint з автовиправленням                                                                                                             |
+| `lint:check`    | `eslint .`                                                                        | ESLint без змін (викликається кореневим `lint`)                                                                                       |
+| `format`        | `prettier --write src/`                                                           | Форматує `src/`                                                                                                                       |
+| `test`          | `vitest run`                                                                      | Одноразовий прогін Vitest                                                                                                             |
+| `test:coverage` | `vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=html` | Прогін з coverage (`@vitest/coverage-v8`), звіт у `coverage/`                                                                         |
 
 ## shared
 
-Джерело: [packages/shared/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/package.json).
+Джерело: [packages/shared/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/package.json).
 
 | Скрипт      | Команда                                    | Що робить                                                 |
 | ----------- | ------------------------------------------ | --------------------------------------------------------- |
@@ -87,7 +87,7 @@
 
 ## api-playground
 
-Джерело: [packages/api-playground/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/api-playground/package.json).
+Джерело: [packages/api-playground/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/api-playground/package.json).
 
 | Скрипт       | Команда                                | Що робить                        |
 | ------------ | -------------------------------------- | -------------------------------- |
@@ -105,13 +105,13 @@
 
 ## documentation
 
-Джерело: [documentation/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/package.json).
+Джерело: [documentation/package.json](https://github.com/Blazheiko/vibe-template/blob/main/documentation/package.json).
 
-| Скрипт         | Команда                                   | Що робить                                                                                                                                   |
-| -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docs:dev`     | `vitepress dev`                           | Dev-сервер VitePress                                                                                                                        |
-| `docs:build`   | `vitepress build`                         | Збірка сайту                                                                                                                                |
-| `docs:preview` | `vitepress preview`                       | Перегляд зібраного сайту                                                                                                                    |
-| `docs:verify`  | `node scripts/verify-dist.mjs`            | Перевірки зібраного сайту ([verify-dist.mjs](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/scripts/verify-dist.mjs)) |
-| `typecheck`    | `tsc --noEmit -p tsconfig.json`           | Перевірка типів                                                                                                                             |
-| `test`         | `node --test "scripts/verify/*.test.mjs"` | Тести скриптів перевірки                                                                                                                    |
+| Скрипт         | Команда                                   | Що робить                                                                                                                                 |
+| -------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs:dev`     | `vitepress dev`                           | Dev-сервер VitePress                                                                                                                      |
+| `docs:build`   | `vitepress build`                         | Збірка сайту                                                                                                                              |
+| `docs:preview` | `vitepress preview`                       | Перегляд зібраного сайту                                                                                                                  |
+| `docs:verify`  | `node scripts/verify-dist.mjs`            | Перевірки зібраного сайту ([verify-dist.mjs](https://github.com/Blazheiko/vibe-template/blob/main/documentation/scripts/verify-dist.mjs)) |
+| `typecheck`    | `tsc --noEmit -p tsconfig.json`           | Перевірка типів                                                                                                                           |
+| `test`         | `node --test "scripts/verify/*.test.mjs"` | Тести скриптів перевірки                                                                                                                  |

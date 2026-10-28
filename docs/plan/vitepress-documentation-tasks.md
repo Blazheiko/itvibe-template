@@ -28,7 +28,7 @@
 - [ ] **T1.2** Додати `- 'documentation'` у `pnpm-workspace.yaml`; кореневі скрипти
       `docs:dev`, `docs:build`, `docs:verify` (`pnpm --filter documentation …`).
       **AC:** `pnpm docs:dev` стартує з кореня.
-- [ ] **T1.3** `.vitepress/config.ts`: `base: '/itvibe-template/'`, `lang: 'uk-UA'`, `title`,
+- [ ] **T1.3** `.vitepress/config.ts`: `base: '/vibe-template/'`, `lang: 'uk-UA'`, `title`,
       `cleanUrls: true`, `lastUpdated: true`, `ignoreDeadLinks: false`, `search.provider: 'local'`,
       `editLink`, `socialLinks`, обгортка `withMermaid`; порожні `nav`/`sidebar` за розділами.
       **AC:** `docs:build` зелений.
@@ -67,7 +67,7 @@
       **AC:** видалення hero або бите посилання з hero → падіння.
 - [ ] **T2.4** Перевірка URL (`src`/`href`/`srcset`):
       виключити `http(s)://`, `//`, `mailto:`, `tel:`, `data:`, `javascript:`, чисті `#anchor`;
-      локальні ресурси — префікс `/itvibe-template/` + файл існує в `dist`;
+      локальні ресурси — префікс `/vibe-template/` + файл існує в `dist`;
       внутрішні сторінки — префікс + `x.html` або `x/index.html` (cleanUrls) + `#id` існує на цільовій сторінці.
       **AC:** юніт-кейси (або фікстура) для кожного класу URL; зламаний ресурс/якір → падіння.
 - [ ] **T2.5** Перевірка Mermaid: кількість mermaid-блоків у джерелі = кількість контейнерів плагіна в `.vp-doc`.
@@ -150,9 +150,9 @@
       не-`main` гілки — build проходить, upload і deploy пропущено.
       **AC:** посилання на запуск у `progress.md`.
 - [ ] **T5.4** Ручна перевірка на Pages (результати в `progress.md`):
-      пряме відкриття й перезавантаження `/itvibe-template/backend/configuration` (без 404);
+      пряме відкриття й перезавантаження `/vibe-template/backend/configuration` (без 404);
       пошук українською («міграції», «сесія»); Mermaid рендериться в SVG без помилок у консолі;
-      картинки під `/itvibe-template/`; dark/light теми.
+      картинки під `/vibe-template/`; dark/light теми.
 - [ ] **T5.5** Одразу після T5.4 — посилання та бейдж документації в `README.md` (окремий PR).
 - [ ] **T5.6** Правило в `AGENTS.md`: зміна route/env/middleware/міграцій → оновлення сторінки в `documentation/backend/`.
 - [ ] **T5.7** PR у `main`: `feature_list.json` → `done` з посиланням на evidence-коміт.

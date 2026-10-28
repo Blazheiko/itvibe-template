@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
-const repoUrl = 'https://github.com/Blazheiko/itvibe-template'
+const repoUrl = 'https://github.com/Blazheiko/vibe-template'
 const author = 'Олександр Блажейко'
 const authorEmail = 'blazheiko@gmail.com'
 
@@ -13,31 +13,37 @@ const packagesItems = [
 
 export default withMermaid(
     defineConfig({
-        base: '/itvibe-template/',
+        base: '/vibe-template/',
         lang: 'uk-UA',
-        title: 'itvibe-template',
+        title: 'vibe-template',
         description:
             'Документація full-stack TypeScript шаблону: Vue 3, uWebSockets.js, shared контракти',
         cleanUrls: true,
         lastUpdated: true,
         ignoreDeadLinks: false,
+        // mermaid тягне CJS-залежності (dayjs, fastdom...), які pnpm не піднімає; у dev бандлимо його цілком
+        vite: {
+            optimizeDeps: {
+                include: ['mermaid'],
+            },
+        },
         head: [
-            ['link', { rel: 'icon', href: '/itvibe-template/logo.svg' }],
+            ['link', { rel: 'icon', href: '/vibe-template/logo.svg' }],
             ['meta', { name: 'author', content: `${author} <${authorEmail}>` }],
             ['meta', { name: 'creator', content: author }],
             ['meta', { name: 'publisher', content: author }],
-            ['meta', { property: 'og:site_name', content: 'itvibe-template' }],
+            ['meta', { property: 'og:site_name', content: 'vibe-template' }],
             ['meta', { property: 'og:type', content: 'website' }],
             ['meta', { property: 'article:author', content: author }],
-            ['link', { rel: 'author', href: '/itvibe-template/reference/author' }],
+            ['link', { rel: 'author', href: '/vibe-template/reference/author' }],
             [
                 'script',
                 { type: 'application/ld+json' },
                 JSON.stringify({
                     '@context': 'https://schema.org',
                     '@type': 'WebSite',
-                    name: 'itvibe-template',
-                    url: 'https://blazheiko.github.io/itvibe-template/',
+                    name: 'vibe-template',
+                    url: 'https://blazheiko.github.io/vibe-template/',
                     author: {
                         '@type': 'Person',
                         name: author,
@@ -105,10 +111,8 @@ export default withMermaid(
                                 link: '/backend/repositories-transformers',
                             },
                             { text: 'Валідація', link: '/backend/validation' },
-                            {
-                                text: 'Маршрутизація та middleware',
-                                link: '/backend/routing-middlewares',
-                            },
+                            { text: 'Маршрутизація', link: '/backend/routing' },
+                            { text: 'Middleware', link: '/backend/middlewares' },
                             { text: 'База даних', link: '/backend/database' },
                             { text: 'Автентифікація та безпека', link: '/backend/auth-security' },
                             { text: 'WebSocket', link: '/backend/websocket' },

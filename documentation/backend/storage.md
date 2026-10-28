@@ -1,14 +1,14 @@
 # Сховище файлів (S3)
 
-Бекенд зберігає файли користувачів в S3-сумісному сховищі (AWS S3, MinIO, DigitalOcean Spaces тощо). Уся робота з ним іде через один модуль-обгортку над `@aws-sdk/client-s3`: [`s3.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/storage/s3.ts). Зараз сховище використовують дві фічі: аватари користувачів і скриншоти статей бази знань (support).
+Бекенд зберігає файли користувачів в S3-сумісному сховищі (AWS S3, MinIO, DigitalOcean Spaces тощо). Уся робота з ним іде через один модуль-обгортку над `@aws-sdk/client-s3`: [`s3.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/storage/s3.ts). Зараз сховище використовують дві фічі: аватари користувачів і скриншоти статей бази знань (support).
 
 Змінні оточення `S3_*` описано в розділі [Сховище S3](/backend/configuration#сховище-s3). Тут їх не повторюємо.
 
 ## Налаштування клієнта
 
-Конфіг читається з [`config/disk.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/disk.ts): `s3Region`, `s3AccessKeyId`, `s3SecretAccessKey`, `s3Endpoint`, `s3Bucket`, `s3Prefix`, `s3StaticDataPrefix`, `s3DynamicDataPrefix`.
+Конфіг читається з [`config/disk.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/disk.ts): `s3Region`, `s3AccessKeyId`, `s3SecretAccessKey`, `s3Endpoint`, `s3Bucket`, `s3Prefix`, `s3StaticDataPrefix`, `s3DynamicDataPrefix`.
 
-[`s3.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/storage/s3.ts) створює один `S3Client` під час імпорту модуля:
+[`s3.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/storage/s3.ts) створює один `S3Client` під час імпорту модуля:
 
 - **Endpoint.** Якщо `S3_ENDPOINT` порожній, SDK працює зі стандартним AWS. Якщо endpoint задано без схеми, до нього додається `https://`. Так поводився старий клієнт `minio`.
 - **Region.** `S3_REGION` або `us-east-1`. Порожній рядок теж замінюється на значення за замовчуванням (`||`, а не `??`), бо SDK не приймає порожній регіон.
@@ -16,16 +16,16 @@
 - **`requestChecksumCalculation` / `responseChecksumValidation` = `WHEN_REQUIRED`.** Нові версії SDK за замовчуванням додають CRC-контрольні суми, а частина S3-сумісних сховищ такі запити відхиляє.
 - Під час старту в лог пишуться `endpoint`, `bucket` і `region`. Ключі доступу в лог не потрапляють.
 
-Тест [`s3.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/storage/s3.spec.ts) перевіряє один сценарій: endpoint без схеми дає HTTPS і path-style адресацію.
+Тест [`s3.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/storage/s3.spec.ts) перевіряє один сценарій: endpoint без схеми дає HTTPS і path-style адресацію.
 
 ## Ключі об'єктів
 
 `buildObjectKey(key)` (експортується з `s3.ts`) формує повний ключ так: `${S3_PREFIX ?? 'app'}/${S3_DYNAMIC_DATA_PREFIX ?? 'uploads'}/${key}`. Слеші на краях префіксів обрізаються. У базі зберігається лише **відносний** ключ:
 
-| Дані               | Відносний ключ                            | Де формується                                                                                                                                           |
-| ------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Аватар             | `avatars/<userId>/<uuid>.<ext>`           | [avatar-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.ts)                    |
-| Скриншот статті KB | `knowledge-base/<articleId>/<uuid>.<ext>` | [knowledge-base-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts) |
+| Дані               | Відносний ключ                            | Де формується                                                                                                                                         |
+| ------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Аватар             | `avatars/<userId>/<uuid>.<ext>`           | [avatar-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/user/avatar-service.ts)                    |
+| Скриншот статті KB | `knowledge-base/<articleId>/<uuid>.<ext>` | [knowledge-base-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts) |
 
 Розширення (`jpg`, `png`, `webp`) і `ContentType` об'єкта беруться з типу, визначеного за вмістом файлу (див. нижче); ім'я файлу клієнта на ключ не впливає.
 
@@ -44,10 +44,10 @@ Presigned PUT і multipart-upload з браузера напряму в баке
 
 Обидва сценарії працюють однаково: браузер надсилає `multipart/form-data` **на бекенд**, бекенд перевіряє файл і сам кладе його в S3.
 
-- **Аватар:** `POST /avatar/upload`, поле `avatar`, middleware `session_web`, `csrf_guard`, `auth_guard`. Видалення: `DELETE /avatar/` ([http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts), [avatar-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/user/avatar-controller.ts)).
-- **Скриншот KB:** `POST /admin/knowledge-base/:id/screenshot`, поле `screenshot`, додатково `admin_guard` ([admin-knowledge-base-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/admin/admin-knowledge-base-controller.ts)).
+- **Аватар:** `POST /avatar/upload`, поле `avatar`, middleware `session_web`, `csrf_guard`, `auth_guard`. Видалення: `DELETE /avatar/` ([http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts), [avatar-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/user/avatar-controller.ts)).
+- **Скриншот KB:** `POST /admin/knowledge-base/:id/screenshot`, поле `screenshot`, додатково `admin_guard` ([admin-knowledge-base-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/admin/admin-knowledge-base-controller.ts)).
 
-Обидва маршрути мають `allowedContentTypes: ['multipart']` і `EmptyFormInputSchema`. Ліміт тіла для multipart задає `APP_MAX_MULTIPART_BODY_SIZE` (за замовчуванням 50 MB, [app.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts)). Тіло буферизується повністю, детальніше в розділі [Життєвий цикл запиту](/backend/request-lifecycle).
+Обидва маршрути мають `allowedContentTypes: ['multipart']` і `EmptyFormInputSchema`. Ліміт тіла для multipart задає `APP_MAX_MULTIPART_BODY_SIZE` (за замовчуванням 50 MB, [app.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/app.ts)). Тіло буферизується повністю, детальніше в розділі [Життєвий цикл запиту](/backend/request-lifecycle).
 
 Перевірки в сервісах:
 
@@ -56,7 +56,7 @@ Presigned PUT і multipart-upload з браузера напряму в баке
 | Аватар   | 10 MB        | `image/jpeg`, `image/png`, `image/webp` |
 | Скриншот | 5 MB         | `image/png`, `image/jpeg`, `image/webp` |
 
-Тип перевіряється **за вмістом**: [`detectImageType`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/storage/detect-image-type.ts) читає сигнатуру файлу (PNG `89 50 4E 47 0D 0A 1A 0A`, JPEG `FF D8 FF`, WebP `RIFF…WEBP`). Файл приймається, лише коли виявлений тип дозволений **і** збігається з заявленим у multipart `Content-Type`; інакше `400 bad_request` («Invalid file type»). GIF, SVG та інші формати не розпізнаються й відхиляються.
+Тип перевіряється **за вмістом**: [`detectImageType`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/storage/detect-image-type.ts) читає сигнатуру файлу (PNG `89 50 4E 47 0D 0A 1A 0A`, JPEG `FF D8 FF`, WebP `RIFF…WEBP`). Файл приймається, лише коли виявлений тип дозволений **і** збігається з заявленим у multipart `Content-Type`; інакше `400 bad_request` («Invalid file type»). GIF, SVG та інші формати не розпізнаються й відхиляються.
 
 Після успішного завантаження сервіс видаляє попередній об'єкт (best-effort: помилка лише пишеться в лог як `warn`) і записує новий відносний ключ у БД.
 
@@ -80,8 +80,8 @@ sequenceDiagram
 
 ## Як файли віддаються
 
-- **Аватари** завантажуються з `ACL: public-read` (рішення Р1) і читаються напряму з CDN. Бекенд віддає фронтенду `cdnUrl` (`CDN_URL`), `s3Prefix` і `s3DynamicDataPrefix` ([main-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts)). Фронтенд будує URL у `getStorageFileUrl` ([state.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/stores/state.ts), [avatar-url.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/avatar-url.ts)). Якщо `CDN_URL` порожній, аватар не показується.
-- **Скриншоти KB** публічні: це довідковий контент, не секрет. Адмін завантажує їх з `ACL: public-read` ([knowledge-base-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts)). `GET /support/screenshot/:articleId` (потрібен `auth_guard`) відповідає `302` з `Location: <CDN_URL>/<повний ключ>` ([support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Якщо `CDN_URL` порожній, маршрут повертає `404`.
+- **Аватари** завантажуються з `ACL: public-read` (рішення Р1) і читаються напряму з CDN. Бекенд віддає фронтенду `cdnUrl` (`CDN_URL`), `s3Prefix` і `s3DynamicDataPrefix` ([main-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/core/main-service.ts)). Фронтенд будує URL у `getStorageFileUrl` ([state.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/stores/state.ts), [avatar-url.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/avatar-url.ts)). Якщо `CDN_URL` порожній, аватар не показується.
+- **Скриншоти KB** публічні: це довідковий контент, не секрет. Адмін завантажує їх з `ACL: public-read` ([knowledge-base-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/support/knowledge-base-service.ts)). `GET /support/screenshot/:articleId` (потрібен `auth_guard`) відповідає `302` з `Location: <CDN_URL>/<повний ключ>` ([support-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/support/support-controller.ts)). Якщо `CDN_URL` порожній, маршрут повертає `404`.
 
 ::: warning Правило: медіа чату підтримки лише з нашого CDN
 Зображення й посилання, які бачить користувач у чаті підтримки, мають вести тільки на наш origin або на `CDN_URL`. Прямі посилання на S3-endpoint, presigned URL і сторонні хости заборонені: `img-src` у CSP дозволяє лише `'self'` і origin `CDN_URL`, і браузер перевіряє origin також після редиректу. Скриншоти, завантажені до цієї зміни без `public-read`, треба зробити публічними (ACL або політика бакета для префікса `knowledge-base/`), інакше CDN віддасть `403`.
@@ -117,7 +117,7 @@ CDN_URL=http://localhost:9000/<bucket>
 
 Для `localhost` path-style вмикається автоматично. Щоб аватари відображалися, дайте префіксу `app/uploads/avatars/` анонімний доступ на читання.
 
-CORS бакета описує [`corsS3.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.xml): лише `GET` і `HEAD` з origin застосунку (placeholder `https://app.example.com` — замініть своїм). Усі завантаження й видалення йдуть через бекенд із серверними ключами, тож браузеру `PUT`/`POST` не потрібні. Приклад для кількох оточень — [`corsS3.prod.example.xml`](https://github.com/Blazheiko/itvibe-template/blob/main/corsS3.prod.example.xml). Застосовується вручну до бакета, код ці файли не читає.
+CORS бакета описує [`corsS3.xml`](https://github.com/Blazheiko/vibe-template/blob/main/corsS3.xml): лише `GET` і `HEAD` з origin застосунку (placeholder `https://app.example.com` — замініть своїм). Усі завантаження й видалення йдуть через бекенд із серверними ключами, тож браузеру `PUT`/`POST` не потрібні. Приклад для кількох оточень — [`corsS3.prod.example.xml`](https://github.com/Blazheiko/vibe-template/blob/main/corsS3.prod.example.xml). Застосовується вручну до бакета, код ці файли не читає.
 
 ## Безпека
 

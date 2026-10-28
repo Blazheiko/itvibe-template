@@ -64,7 +64,7 @@ function buildLinkEmailContent(
     const text = [
         `Hello${safeName}.`,
         '',
-        'Please confirm this new email address for your ITVibe Template account by opening this link:',
+        'Please confirm this new email address for your Vibe Template account by opening this link:',
         verificationUrl,
         '',
         'This link will expire in 24 hours.',
@@ -80,7 +80,7 @@ function buildLinkEmailContent(
             <tr>
               <td style="padding-bottom:16px;">
                 <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:${EMAIL_BRAND.accentSoft};border:1px solid ${EMAIL_BRAND.accentLine};color:${EMAIL_BRAND.accent};font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
-                  ITVibe Template
+                  Vibe Template
                 </div>
               </td>
             </tr>
@@ -103,7 +103,7 @@ function buildLinkEmailContent(
                         Hello${escapedGreeting}.
                       </p>
                       <p style="margin:0 0 28px;font-size:17px;line-height:1.7;color:${EMAIL_BRAND.textSecondary};">
-                        Confirm this email to finish linking it to your ITVibe Template account.
+                        Confirm this email to finish linking it to your Vibe Template account.
                       </p>
                       <p style="margin:0 0 28px;font-size:15px;line-height:1.65;color:${EMAIL_BRAND.textSecondary};word-break:break-word;">
                         <a href="${escapedVerificationUrl}" style="color:${EMAIL_BRAND.accent};text-decoration:underline;">
@@ -164,7 +164,7 @@ function buildEmailContent(
 <html lang="en">
   <body style="margin:0;padding:0;background:${EMAIL_BRAND.canvas};font-family:Inter,Arial,sans-serif;color:${EMAIL_BRAND.textPrimary};">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      Confirm your ITVibe Template email address.
+      Confirm your Vibe Template email address.
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${EMAIL_BRAND.canvas};padding:32px 16px;">
       <tr>
@@ -173,7 +173,7 @@ function buildEmailContent(
             <tr>
               <td style="padding-bottom:16px;">
                 <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:${EMAIL_BRAND.accentSoft};border:1px solid ${EMAIL_BRAND.accentLine};color:${EMAIL_BRAND.accent};font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
-                  ITVibe Template
+                  Vibe Template
                 </div>
               </td>
             </tr>
@@ -196,7 +196,7 @@ function buildEmailContent(
                         Hello${escapedGreeting}.
                       </p>
                       <p style="margin:0 0 28px;font-size:17px;line-height:1.7;color:${EMAIL_BRAND.textSecondary};">
-                        Finish setting up your ITVibe Template account by confirming this email address. The button below will take you straight back into the app.
+                        Finish setting up your Vibe Template account by confirming this email address. The button below will take you straight back into the app.
                       </p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
                         <tr>

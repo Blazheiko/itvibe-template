@@ -1,11 +1,37 @@
+/* Шрифти: Inter — як у фронтенді, JetBrains Mono — для коду */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Палітра Ocean Breeze з packages/frontend/src/styles.css */
 :root {
-    --vp-c-brand-1: #4f46e5;
-    --vp-c-brand-2: #6366f1;
-    --vp-c-brand-3: #818cf8;
+    --vp-font-family-base: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --vp-font-family-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+    --vp-c-brand-1: #3d6e97;
+    --vp-c-brand-2: #4e7fa8;
+    --vp-c-brand-3: #6a9dc4;
+    --vp-c-brand-soft: rgba(78, 127, 168, 0.14);
+
+    --vp-c-bg-alt: #edf1f7;
+    --vp-home-hero-name-color: transparent;
+    --vp-home-hero-name-background: linear-gradient(120deg, #3d6e97 30%, #6a9dc4);
 }
 
 .dark {
-    --vp-c-brand-1: #a5b4fc;
-    --vp-c-brand-2: #818cf8;
-    --vp-c-brand-3: #6366f1;
+    --vp-c-brand-1: #7aade0;
+    --vp-c-brand-2: #6a9dc4;
+    --vp-c-brand-3: #4e7fa8;
+    --vp-c-brand-soft: rgba(106, 157, 196, 0.16);
+
+    --vp-c-bg-alt: #161b22;
+    --vp-home-hero-name-background: linear-gradient(120deg, #6a9dc4 30%, #9cc4e4);
+}
+
+.vp-doc {
+    font-feature-settings: 'cv11', 'ss01';
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+    letter-spacing: -0.02em;
 }

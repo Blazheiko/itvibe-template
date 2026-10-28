@@ -1,6 +1,6 @@
 {
-    "name": "ITVibe Template",
-    "short_name": "ITVibe",
+    "name": "Vibe Template",
+    "short_name": "Vibe",
     "id": "",
     "start_url": "/",
     "scope": "/",
@@ -18,7 +18,7 @@
         }
     ],
     "background_color": "#EDF1F7",
-    "theme_color": "#2563EB",
+    "theme_color": "#4E7FA8",
     "description": "Educational Vue 3 and TypeScript project template with frontend, backend, shared packages, tests, and build tooling.",
     "categories": ["education", "developer", "productivity"],
     "icons": [

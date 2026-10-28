@@ -1,4 +1,4 @@
-# Session and Token Lifecycle Requirements: itvibe-template
+# Session and Token Lifecycle Requirements: vibe-template
 
 Last updated: 2026-05-30
 

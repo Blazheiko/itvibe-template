@@ -1,4 +1,4 @@
-# Error Handling and Edge Case Requirements: itvibe-template
+# Error Handling and Edge Case Requirements: vibe-template
 
 Last updated: 2026-05-30
 
