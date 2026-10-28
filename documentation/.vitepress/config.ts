@@ -80,6 +80,7 @@ export default withMermaid(
                         items: [
                             { text: 'Структура проєкту', link: '/guide/project-structure' },
                             { text: 'Процес роботи', link: '/guide/workflow' },
+                            { text: 'CSRF простими словами', link: '/guide/csrf' },
                         ],
                     },
                 ],

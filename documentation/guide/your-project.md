@@ -129,7 +129,7 @@ pnpm typecheck && pnpm lint && pnpm test
 
 ## 5. Перед першим деплоєм
 
-- Пройдіть [чекліст для production](/backend/auth-security#чекліст-для-production): зокрема `CSRF_ENFORCE=true`, `CSRF_ALLOWED_ORIGINS`, сильний `APP_KEY`.
+- Пройдіть [чекліст для production](/backend/auth-security#чекліст-для-production): зокрема `CSRF_ALLOWED_ORIGINS` (без нього production-сервер не стартує) і сильний `APP_KEY`.
 - `DOMAIN` — ваш домен (без порту, якщо це 443), тоді `wsUrl` буде `wss://<домен>/api/websocket`.
 - Інструкції зі збірки й запуску: [Деплой](/backend/deployment).
 
