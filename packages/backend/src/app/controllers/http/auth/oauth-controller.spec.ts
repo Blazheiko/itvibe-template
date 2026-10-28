@@ -20,7 +20,7 @@ vi.mock('#config/oauth.js', () => ({
     },
 }))
 
-const { default: OAuthController } = await import('./oauth-controller.js')
+const { default: OAuthController, withReason } = await import('./oauth-controller.js')
 
 const createContext = (query: { code?: string; state?: string }, storedState = 'state-1') => {
     const headers = new Map<string, string>()
@@ -106,5 +106,27 @@ describe('OAuthController.providers', () => {
         const response = OAuthController.providers(createContext({}) as never)
 
         expect(response).toEqual({ status: 'ok', providers: ['google', 'github'] })
+    })
+})
+
+describe('withReason', () => {
+    it.each([
+        ['/?error=oauth_failed', '/?error=oauth_failed&reason=r'],
+        ['/login', '/login?reason=r'],
+        ['/login?error=oauth_failed#login', '/login?error=oauth_failed&reason=r#login'],
+        ['/login#login', '/login?reason=r#login'],
+        [
+            'https://app.example.com/login?error=oauth_failed#top',
+            'https://app.example.com/login?error=oauth_failed&reason=r#top',
+        ],
+    ])('puts the reason into the query of %s', (url, expected) => {
+        expect(withReason(url, 'r')).toBe(expected)
+        expect(new URL(expected, 'https://app.example.com').searchParams.get('reason')).toBe('r')
+    })
+
+    it('leaves the URL untouched without a reason', () => {
+        expect(withReason('/login?error=oauth_failed#login', null)).toBe(
+            '/login?error=oauth_failed#login',
+        )
     })
 })

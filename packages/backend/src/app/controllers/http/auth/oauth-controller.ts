@@ -21,11 +21,15 @@ const redirectToError = (
     return { status: 'error', message: appErrorMessage(error) }
 }
 
-// Adds `reason=<code>` to the configured error URL, which may be relative or absolute.
-const withReason = (url: string, reason: string | null): string => {
+// Adds `reason=<code>` to the query of the configured error URL, which may be relative
+// or absolute. The parameter goes before any `#fragment`, or the frontend would not see it.
+export const withReason = (url: string, reason: string | null): string => {
     if (reason === null) return url
-    const separator = url.includes('?') ? '&' : '?'
-    return `${url}${separator}reason=${encodeURIComponent(reason)}`
+    const hashIndex = url.indexOf('#')
+    const base = hashIndex === -1 ? url : url.slice(0, hashIndex)
+    const fragment = hashIndex === -1 ? '' : url.slice(hashIndex)
+    const separator = base.includes('?') ? '&' : '?'
+    return `${base}${separator}reason=${encodeURIComponent(reason)}${fragment}`
 }
 
 export default {

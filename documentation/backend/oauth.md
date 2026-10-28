@@ -81,6 +81,12 @@ sequenceDiagram
 
 GitLab підключено до `https://gitlab.com`. Для власного інстансу GitLab змініть адресу в `createGitLabClient()` і `fetchGitLabUserInfo()`.
 
+::: warning GitLab: увімкніть scopes `openid` і `email`
+Бекенд запитує в GitLab `openid`, `email` і `read_user`: ознаку підтвердження email (`email_verified`) GitLab віддає лише через OpenID Connect. У налаштуваннях OAuth-застосунку GitLab (**Preferences → Applications** → ваш застосунок) мають бути позначені всі три scopes.
+
+Якщо застосунок створено раніше лише з `read_user`, **оновіть його до деплою цієї версії**: інакше GitLab відхилить авторизацію з помилкою `invalid_scope`, і вхід через GitLab перестане працювати. Деталі — [GitLab як OpenID Connect provider](https://docs.gitlab.com/integration/openid_connect_provider/).
+:::
+
 ### 2. Вказати Redirect URI
 
 У налаштуваннях застосунку провайдера додайте **Authorized redirect URI**. Він має вести на callback бекенду і **точно** збігатися з тим, що в `.env`:
