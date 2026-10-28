@@ -411,6 +411,16 @@
             "owner": "Blazheiko",
             "branch": "feat/csrf-hardening",
             "dependencies": ["feat-041"],
+            "status": "done",
+            "evidence": "PR #132 (merge f511388): CSRF_ENFORCE/CSRF_STRICT_ORIGIN default true, fail-closed guard, session rotation, SW API bypass; pnpm typecheck/lint/test clean, backend 975 tests, test:redis 45, test:e2e 12, test:e2e:security 7; evidence block in progress.md on feat/csrf-hardening. Rollout tasks T0.4, R.1-R.6 are per-environment and tracked outside the feature"
+        },
+        {
+            "id": "feat-043",
+            "name": "OAuth Email Verification and Configured Providers",
+            "description": "docs/plan/oauth-email-verification-plan.md: link an OAuth account to an existing user by email only when the provider reports the email as verified (Google verified_email, GitHub primary+verified, GitLab OIDC email_verified, Facebook never); new users from a verified email get emailVerifiedAt; GET /api/auth/oauth/providers lists configured providers, redirect to an unconfigured provider returns 404; frontend shows buttons only for configured providers (adds GitHub, GitLab) and a message for oauth_email_unverified; update documentation/backend/oauth.md",
+            "owner": "Blazheiko",
+            "branch": "feat/oauth-email-verification",
+            "dependencies": ["feat-042"],
             "status": "in_progress",
             "evidence": ""
         }
