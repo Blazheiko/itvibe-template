@@ -19,6 +19,7 @@
         "docs:build": "pnpm --filter documentation docs:build",
         "docs:preview": "pnpm --filter documentation docs:preview",
         "docs:verify": "pnpm --filter documentation docs:verify",
+        "push:vapid": "pnpm --filter backend push:vapid",
         "start": "pnpm --filter backend start",
         "prod:local": "./scripts/prod-local.sh",
         "lint": "eslint . && pnpm -r --if-present lint:check",

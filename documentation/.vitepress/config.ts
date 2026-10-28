@@ -126,7 +126,8 @@ export default withMermaid(
                         text: 'Інтеграції',
                         items: [
                             { text: 'Сховище файлів (S3)', link: '/backend/storage' },
-                            { text: 'Пошта та push', link: '/backend/mail-push' },
+                            { text: 'Пошта', link: '/backend/mail' },
+                            { text: 'Web Push сповіщення', link: '/backend/web-push-notification' },
                             { text: 'AI-інтеграції', link: '/backend/ai' },
                         ],
                     },
