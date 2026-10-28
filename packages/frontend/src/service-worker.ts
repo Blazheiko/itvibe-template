@@ -1,10 +1,15 @@
 /// <reference lib="webworker" />
-import { apiPath } from './utils/api-path'
+import { API_PREFIX } from './utils/api-path'
+import {
+    classifyRequest,
+    isCacheableResponse,
+    removeCachedApiResponses,
+} from './utils/sw-request-policy'
 
 declare const self: ServiceWorkerGlobalScope
 
 // API requests live under the backend's API_PATH_PREFIX (code-issues item 73).
-const API_URL_PART = apiPath('')
+// The service worker never caches them: see utils/sw-request-policy.ts.
 
 const cacheName = typeof BUILD_TIMESTAMP !== 'undefined' ? BUILD_TIMESTAMP : `now: ${Date.now()}`
 
@@ -52,24 +57,28 @@ interface QueuedServiceWorkerErrorEntry {
     payload: ServiceWorkerErrorPayload
 }
 
-// Helper function to check if a request URL has a cacheable scheme
-function isCacheableRequest(request: Request): boolean {
-    const url = new URL(request.url)
-    // Only cache http and https requests
-    return url.protocol === 'http:' || url.protocol === 'https:'
+/** Every cache write goes through here: only responses the server allows to be stored. */
+async function putIfCacheable(
+    cache: Cache,
+    request: RequestInfo,
+    response: Response,
+): Promise<void> {
+    if (isCacheableResponse(response)) {
+        await cache.put(request, response)
+    }
 }
 
-function isStaticAsset(url: string): boolean {
-    return (
-        url.includes('/assets/') ||
-        url.includes('/icons/') ||
-        url.includes('/screenshots/') ||
-        url.includes('/splash/') ||
-        url.includes('/audio/') ||
-        url.includes('manifest.json') ||
-        url.includes('favicon.svg') ||
-        url.includes('.css')
-    )
+function cacheResponse(request: Request, response: Response): void {
+    if (!isCacheableResponse(response)) return
+    const responseClone = response.clone()
+    void caches
+        .open(cacheName)
+        .then(function (cache) {
+            return putIfCacheable(cache, request, responseClone)
+        })
+        .catch(function (cacheError: unknown) {
+            void reportServiceWorkerError(cacheError)
+        })
 }
 
 async function reportServiceWorkerError(error: unknown): Promise<void> {
@@ -220,7 +229,7 @@ self.addEventListener('install', function (e: ExtendableEvent) {
                 await Promise.allSettled(
                     filesToCache.map((url) =>
                         fetch(url)
-                            .then((r) => (r.ok ? cache.put(url, r) : undefined))
+                            .then((r) => putIfCacheable(cache, url, r))
                             .catch(() => undefined),
                     ),
                 )
@@ -252,6 +261,8 @@ self.addEventListener('activate', function (e: ExtendableEvent) {
                             return caches.delete(key)
                         }),
                 )
+                // An older worker may have cached API responses: drop them.
+                await removeCachedApiResponses(caches, cacheName, API_PREFIX)
                 await self.clients.claim()
                 if (hasOldCache) {
                     void sendMessageToAll({
@@ -269,15 +280,22 @@ self.addEventListener('activate', function (e: ExtendableEvent) {
 
 self.addEventListener('fetch', function (e: FetchEvent) {
     try {
-        console.log('[ServiceWorker] Fetch', e.request.url)
+        const strategy = classifyRequest({
+            url: e.request.url,
+            method: e.request.method,
+            destination: e.request.destination,
+            mode: e.request.mode,
+            swOrigin: self.location.origin,
+            apiPrefix: API_PREFIX,
+        })
 
-        // Skip requests with unsupported schemes (chrome-extension, data, blob, etc.)
-        if (!isCacheableRequest(e.request)) {
+        // Mutations, the API, other origins and network-only scripts: no respondWith,
+        // the browser goes to the network itself and nothing is cached.
+        if (strategy === 'bypass') {
             return
         }
 
-        // 1. Cache First for static assets (including /assets/ with JS/CSS bundles from Vite)
-        if (isStaticAsset(e.request.url)) {
+        if (strategy === 'cache-first') {
             e.respondWith(
                 caches
                     .match(e.request)
@@ -285,17 +303,7 @@ self.addEventListener('fetch', function (e: FetchEvent) {
                         return (
                             response ??
                             fetch(e.request).then(function (fetchResponse) {
-                                if (fetchResponse.status === 200 && isCacheableRequest(e.request)) {
-                                    const responseClone = fetchResponse.clone()
-                                    void caches
-                                        .open(cacheName)
-                                        .then(function (cache) {
-                                            return cache.put(e.request, responseClone)
-                                        })
-                                        .catch(function (cacheError: unknown) {
-                                            void reportServiceWorkerError(cacheError)
-                                        })
-                                }
+                                cacheResponse(e.request, fetchResponse)
                                 return fetchResponse
                             })
                         )
@@ -310,65 +318,11 @@ self.addEventListener('fetch', function (e: FetchEvent) {
             return
         }
 
-        // 2. Bypass cache for external scripts/styles/workers not served from /assets/
-        if (
-            e.request.destination === 'script' ||
-            e.request.destination === 'style' ||
-            e.request.destination === 'worker' ||
-            e.request.destination === 'sharedworker'
-        ) {
-            e.respondWith(
-                fetch(e.request).catch(function (error: unknown) {
-                    return reportServiceWorkerErrorAndFallback(
-                        error,
-                        new Response('', { status: 503, statusText: 'Service Unavailable' }),
-                    )
-                }),
-            )
-            return
-        }
-
-        // Never intercept mutating API requests. They must always go directly to the network
-        // to avoid stale or hanging SW-controlled POST/PUT/PATCH/DELETE flows such as logout.
-        if (e.request.url.includes(API_URL_PART) && e.request.method !== 'GET') {
-            return
-        }
-
-        // Network First для API GET запросов
-        if (e.request.url.includes(API_URL_PART)) {
+        if (strategy === 'network-first') {
             e.respondWith(
                 fetch(e.request)
                     .then(function (response) {
-                        return response
-                    })
-                    .catch(function (error: unknown) {
-                        return reportServiceWorkerErrorAndFallback(
-                            error,
-                            caches.match(e.request).then(function (cachedResponse) {
-                                return (
-                                    cachedResponse ?? new Response('Network error', { status: 503 })
-                                )
-                            }),
-                        )
-                    }),
-            )
-        }
-        // Network First для HTML страниц
-        else if (e.request.mode === 'navigate' || e.request.destination === 'document') {
-            e.respondWith(
-                fetch(e.request)
-                    .then(function (response) {
-                        if (response.status === 200 && isCacheableRequest(e.request)) {
-                            const responseClone = response.clone()
-                            void caches
-                                .open(cacheName)
-                                .then(function (cache) {
-                                    return cache.put(e.request, responseClone)
-                                })
-                                .catch(function (cacheError: unknown) {
-                                    void reportServiceWorkerError(cacheError)
-                                })
-                        }
+                        cacheResponse(e.request, response)
                         return response
                     })
                     .catch(function (error: unknown) {
@@ -383,40 +337,30 @@ self.addEventListener('fetch', function (e: FetchEvent) {
                         )
                     }),
             )
+            return
         }
-        // Stale While Revalidate для остальных ресурсов
-        else {
-            e.respondWith(
-                caches.match(e.request, { ignoreSearch: true }).then(function (response) {
-                    const fetchPromise = fetch(e.request)
-                        .then(function (networkResponse) {
-                            if (networkResponse.status === 200 && isCacheableRequest(e.request)) {
-                                const responseClone = networkResponse.clone()
-                                void caches
-                                    .open(cacheName)
-                                    .then(function (cache) {
-                                        return cache.put(e.request, responseClone)
-                                    })
-                                    .catch(function (cacheError: unknown) {
-                                        void reportServiceWorkerError(cacheError)
-                                    })
-                            }
-                            return networkResponse
-                        })
-                        .catch(function (error: unknown) {
-                            return reportServiceWorkerErrorAndFallback(
-                                error,
-                                new Response('', {
-                                    status: 503,
-                                    statusText: 'Service Unavailable',
-                                }),
-                            )
-                        })
 
-                    return response ?? fetchPromise
-                }),
-            )
-        }
+        // stale-while-revalidate
+        e.respondWith(
+            caches.match(e.request, { ignoreSearch: true }).then(function (response) {
+                const fetchPromise = fetch(e.request)
+                    .then(function (networkResponse) {
+                        cacheResponse(e.request, networkResponse)
+                        return networkResponse
+                    })
+                    .catch(function (error: unknown) {
+                        return reportServiceWorkerErrorAndFallback(
+                            error,
+                            new Response('', {
+                                status: 503,
+                                statusText: 'Service Unavailable',
+                            }),
+                        )
+                    })
+
+                return response ?? fetchPromise
+            }),
+        )
     } catch (error: unknown) {
         void reportServiceWorkerError(error)
     }
