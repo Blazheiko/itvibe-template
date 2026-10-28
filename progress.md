@@ -19,12 +19,13 @@
 - [x] PR D — Service Worker (`23e0b22`): `classifyRequest` bypasses non-GET, cross-origin and the API first; prefix matching; `isCacheableResponse` on every write; activation drops API entries
 - [x] PR E — e2e (`0951b42`): `pnpm --filter frontend test:e2e:security` against the real backend with enforcement on
 - [x] Review fixes (`973ac74`, `7f41076`): owner check in `synced`; refresh timeout + per-caller abort + no refresh in `reloading`; no stale session cookie from slow responses (hourly cookie refresh + `beforeSend` check); change-password partial success (`sessionRenewed`) and WS reconnect
+- [x] Review fixes 2: cookie refresh uses a separate `SET NX EX` marker (no session rewrite, no resurrection); `beforeSend` uses `EXISTS` and on a Redis failure drops the cookie instead of failing the response
 
 ## Evidence of Completion
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — clean
-- `pnpm test` — backend 970, frontend 121, shared 14, api-playground 14, documentation 26
-- `pnpm --filter backend test:redis` (REDIS_TEST_URL set) — 43
+- `pnpm test` — backend 975, frontend 121, shared 14, api-playground 14, documentation 26
+- `pnpm --filter backend test:redis` (REDIS_TEST_URL set) — 45
 - `pnpm --filter frontend test:e2e` — 12
 - `pnpm --filter frontend test:e2e:security` — 7: cold login, logout → login, stale token (one retry), session lost / account switched in another tab, rejected mutations without side effects, no API in Cache Storage
 - `pnpm docs:build && pnpm docs:verify` — passed
