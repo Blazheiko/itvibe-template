@@ -32,6 +32,7 @@ const {
 
 vi.mock('@/utils/api', () => ({
     authApi: {
+        getOAuthProviders: vi.fn().mockResolvedValue({ data: null, error: null }),
         login: loginMock,
         forgotPassword: forgotPasswordMock,
         startPhonePasswordReset: startPhonePasswordResetMock,
