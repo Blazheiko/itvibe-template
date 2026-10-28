@@ -15,6 +15,7 @@ import {
 const { PREFIX } = vi.hoisted(() => {
     process.env['APP_KEY'] ??= 'k'.repeat(16) + '3f9a1c7e5b2d4f60'
     process.env['CSRF_ENFORCE'] = 'true'
+    process.env['CSRF_ALLOWED_ORIGINS'] = 'https://app.test'
     return { PREFIX: `test:${crypto.randomUUID()}:` }
 })
 
@@ -92,7 +93,10 @@ const createRequest = () => {
             params: {},
             payload: {},
             query: null,
-            headers: new Map([['x-csrf-token', CSRF]]),
+            headers: new Map([
+                ['origin', 'https://app.test'],
+                ['x-csrf-token', CSRF],
+            ]),
             contentType: 'application/json',
             cookies: new Map([[sessionConfig.cookieName, cookie]]),
             isJson: true,

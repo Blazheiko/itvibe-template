@@ -3,7 +3,12 @@ import assert from 'node:assert/strict'
 
 import { type } from '@arktype/type'
 
-import { ErrorCode, ErrorCodeValues } from '../dist/errors/index.js'
+import {
+    CSRF_REJECT_REASONS,
+    CsrfRejectReason,
+    ErrorCode,
+    ErrorCodeValues,
+} from '../dist/errors/index.js'
 import { EntityIdSchema } from '../dist/brands/index.js'
 import { PushSubscriptionTestInputSchema, SupportChatInputSchema } from '../dist/schemas/index.js'
 import * as root from '../dist/index.js'
@@ -11,6 +16,11 @@ import * as root from '../dist/index.js'
 test('ErrorCode and ErrorCodeValues list the same codes', () => {
     assert.deepEqual([...ErrorCodeValues].sort(), Object.values(ErrorCode).sort())
     assert.equal(new Set(ErrorCodeValues).size, ErrorCodeValues.length)
+})
+
+test('CsrfRejectReason and CSRF_REJECT_REASONS list the same reasons', () => {
+    assert.deepEqual([...CSRF_REJECT_REASONS].sort(), Object.values(CsrfRejectReason).sort())
+    assert.equal(new Set(CSRF_REJECT_REASONS).size, CSRF_REJECT_REASONS.length)
 })
 
 test('EntityIdSchema accepts canonical positive integer ids only', () => {

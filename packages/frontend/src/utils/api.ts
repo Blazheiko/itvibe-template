@@ -1,4 +1,5 @@
 import baseApi from './base-api'
+import type { ApiResponse } from './api-error'
 import { apiPath } from './api-path'
 import type {
     UploadAvatarResponse,
@@ -28,7 +29,6 @@ import type {
     ResetPhoneStartResponse,
     ResetPhoneCompleteResponse,
 } from 'shared/responses'
-import type { ErrorCode } from 'shared/errors'
 import type {
     CreateSubscriptionInput,
     ChangePasswordInput,
@@ -52,11 +52,6 @@ import type {
 } from 'shared/schemas'
 import { getResponseMessage, hasResponseError } from './response-normalizer'
 
-interface ApiResponse<T> {
-    data: T | null
-    error: { message: string; code?: ErrorCode; transportCode: number } | null
-}
-
 const isSuccessfulResponse = <T extends Record<string, unknown>>(
     response: ApiResponse<T>,
 ): response is { data: T; error: null } =>
@@ -64,13 +59,17 @@ const isSuccessfulResponse = <T extends Record<string, unknown>>(
 
 export const authApi = {
     login: async (body: LoginInput): Promise<ApiResponse<LoginResponse>> => {
-        return baseApi.http<LoginResponse>('POST', apiPath('auth/login'), body)
+        return baseApi.http<LoginResponse>('POST', apiPath('auth/login'), body, {
+            csrfRecovery: 'public',
+        })
     },
 
     registerEmail: async (
         body: RegisterEmailInput,
     ): Promise<ApiResponse<RegisterEmailResponse>> => {
-        return baseApi.http<RegisterEmailResponse>('POST', apiPath('auth/register/email'), body)
+        return baseApi.http<RegisterEmailResponse>('POST', apiPath('auth/register/email'), body, {
+            csrfRecovery: 'public',
+        })
     },
 
     registerPhoneStart: async (
@@ -80,6 +79,7 @@ export const authApi = {
             'POST',
             apiPath('auth/register/phone/start'),
             body,
+            { csrfRecovery: 'public' },
         )
     },
 
@@ -90,6 +90,7 @@ export const authApi = {
             'POST',
             apiPath('auth/register/phone/confirm'),
             body,
+            { csrfRecovery: 'public' },
         )
     },
 
@@ -100,6 +101,7 @@ export const authApi = {
             'POST',
             apiPath('auth/register/phone/complete-profile'),
             body,
+            { csrfRecovery: 'public' },
         )
     },
 
@@ -108,11 +110,21 @@ export const authApi = {
     },
 
     logout: async (): Promise<ApiResponse<LogoutResponse>> => {
-        return baseApi.http<LogoutResponse>('POST', apiPath('auth/logout'))
+        return baseApi.http<LogoutResponse>(
+            'POST',
+            apiPath('auth/logout'),
+            {},
+            { sessionAfter: 'anonymous' },
+        )
     },
 
     logoutAll: async (): Promise<ApiResponse<LogoutAllResponse>> => {
-        return baseApi.http<LogoutAllResponse>('POST', apiPath('auth/logout-all'))
+        return baseApi.http<LogoutAllResponse>(
+            'POST',
+            apiPath('auth/logout-all'),
+            {},
+            { sessionAfter: 'anonymous' },
+        )
     },
 
     changePassword: async (
@@ -124,7 +136,9 @@ export const authApi = {
     forgotPassword: async (
         body: ForgotPasswordInput,
     ): Promise<ApiResponse<ForgotPasswordResponse>> => {
-        return baseApi.http<ForgotPasswordResponse>('POST', apiPath('auth/forgot-password'), body)
+        return baseApi.http<ForgotPasswordResponse>('POST', apiPath('auth/forgot-password'), body, {
+            csrfRecovery: 'public',
+        })
     },
 
     startPhonePasswordReset: async (
@@ -134,6 +148,7 @@ export const authApi = {
             'POST',
             apiPath('auth/reset-phone/start'),
             body,
+            { csrfRecovery: 'public' },
         )
     },
 
@@ -144,17 +159,22 @@ export const authApi = {
             'POST',
             apiPath('auth/reset-phone/complete'),
             body,
+            { csrfRecovery: 'public' },
         )
     },
 
     resetPassword: async (
         body: ResetPasswordInput,
     ): Promise<ApiResponse<ResetPasswordResponse>> => {
-        return baseApi.http<ResetPasswordResponse>('POST', apiPath('auth/reset-password'), body)
+        return baseApi.http<ResetPasswordResponse>('POST', apiPath('auth/reset-password'), body, {
+            csrfRecovery: 'public',
+        })
     },
 
     verifyEmail: async (body: VerifyEmailInput): Promise<ApiResponse<VerifyEmailResponse>> => {
-        return baseApi.http<VerifyEmailResponse>('POST', apiPath('auth/verify-email'), body)
+        return baseApi.http<VerifyEmailResponse>('POST', apiPath('auth/verify-email'), body, {
+            csrfRecovery: 'public',
+        })
     },
 
     resendVerificationEmail: async (): Promise<ApiResponse<ResendVerificationEmailResponse>> => {

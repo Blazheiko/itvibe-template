@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const ORIGINAL_ENV = { ...process.env }
 
@@ -12,8 +12,14 @@ function restoreEnv(): void {
     Object.assign(process.env, ORIGINAL_ENV)
 }
 
+// Production-like cases below need a CSRF allowlist to get past the CSRF check.
+beforeEach(() => {
+    process.env['CSRF_ALLOWED_ORIGINS'] = 'https://app.test'
+})
+
 afterEach(() => {
     vi.resetModules()
+    vi.restoreAllMocks()
     restoreEnv()
 })
 
@@ -245,5 +251,58 @@ describe('Redis main client configuration', () => {
         expect(() => {
             validateRuntimeConfig()
         }).toThrow(`Invalid Redis configuration: ${name} must be an integer >= 1`)
+    })
+})
+
+describe('CSRF startup checks', () => {
+    const run = async (): Promise<string[]> => {
+        const { default: logger } = await import('#logger')
+        const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined)
+        const { validateRuntimeConfig } = await import('./validate-runtime-config.js')
+        validateRuntimeConfig()
+        return warn.mock.calls.map((call) => String(call[0]))
+    }
+
+    it('rejects a production-like start without CSRF_ALLOWED_ORIGINS', async () => {
+        delete process.env['CSRF_ALLOWED_ORIGINS']
+        process.env['APP_IS_PRODUCTION'] = 'true'
+        process.env['SESSION_COOKIE_HOST_PREFIX'] = 'false'
+        await expect(run()).rejects.toThrow(
+            'Invalid CSRF configuration: CSRF_ALLOWED_ORIGINS must be set in production-like environments',
+        )
+    })
+
+    it('warns when production-like runs with CSRF_ENFORCE=false', async () => {
+        process.env['APP_IS_PRODUCTION'] = 'true'
+        process.env['SESSION_COOKIE_HOST_PREFIX'] = 'false'
+        process.env['CSRF_ENFORCE'] = 'false'
+        expect(await run()).toContain(
+            'CSRF_ENFORCE=false: CSRF violations are only logged, not rejected',
+        )
+    })
+
+    it('warns about an empty explicit list outside production even with a fallback', async () => {
+        delete process.env['CSRF_ALLOWED_ORIGINS']
+        process.env['APP_ENV'] = 'local'
+        process.env['APP_URL'] = 'http://localhost:5173'
+        expect(await run()).toContain(
+            'CSRF_ALLOWED_ORIGINS is empty: CSRF origin checks fall back to APP_URL/FRONTEND_URL (http://localhost:5173)',
+        )
+    })
+
+    it('warns when neither the list nor the fallback gives an origin', async () => {
+        delete process.env['CSRF_ALLOWED_ORIGINS']
+        delete process.env['APP_URL']
+        delete process.env['FRONTEND_URL']
+        process.env['APP_ENV'] = 'local'
+        expect(await run()).toContain(
+            'CSRF_ALLOWED_ORIGINS is empty and APP_URL/FRONTEND_URL give no origin: CSRF origin checks accept any well-formed origin',
+        )
+    })
+
+    it('stays quiet with an allowlist and enforcement on', async () => {
+        process.env['APP_ENV'] = 'local'
+        delete process.env['CSRF_ENFORCE']
+        expect((await run()).filter((message) => message.includes('CSRF'))).toEqual([])
     })
 })

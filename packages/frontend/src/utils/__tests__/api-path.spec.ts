@@ -23,6 +23,8 @@ describe('apiPath', () => {
 
         await authApi.login({ identifier: 'a@b.c', password: 'password1', token: '' })
 
-        expect(http).toHaveBeenCalledWith('POST', '/v1/auth/login', expect.anything())
+        expect(http).toHaveBeenCalledWith('POST', '/v1/auth/login', expect.anything(), {
+            csrfRecovery: 'public',
+        })
     })
 })

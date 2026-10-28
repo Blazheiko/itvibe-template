@@ -223,31 +223,34 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 
 - every Redis session has a `csrfToken`
 - legacy sessions without a token are backfilled lazily on the next session load
-- login, logout, and logout-all rotate the session and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request
+- login, logout, logout-all, and change-password rotate the session (the previous one — anonymous or signed in — is deleted) and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request. change-password also returns `wsUrl`/`wsToken` for the WebSocket reconnect and `sessionRenewed`: the password is written first, so a failed rotation still answers success with `sessionRenewed: false`
+- the cookie of an unchanged session is re-sent at most once an hour (marker key `session_cookie_refresh:<id>`, `SET NX EX`), and dropped from the response if the session was deleted meanwhile (`context.session.beforeSend`)
 - the `main/init` bootstrap response also returns the current `csrfToken`
 - `session_web` attaches the session `csrfToken` to any response written by the middleware chain itself (the 401 from `auth_guard`, the 403 from `csrf_guard`), so an anonymous visitor — whose `main/init` is rejected before it reaches the handler — still receives the token it needs to sign the login request
 - unsafe HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) must send the token in `X-CSRF-Token`
 - `csrf_guard` is registered after `session_web` and before auth/role guards on cookie-backed route groups
-- requests without a session bypass `csrf_guard` and are left to `auth_guard` to reject with 401
+- checks run in order and each can only reject: `Sec-Fetch-Site` (`cross-site` → `fetch_site_cross_site`, unknown value → `fetch_site_invalid`), then `Origin`/`Referer` (`Origin: null` or a malformed origin → `origin_mismatch`), then the token
+- `session_web` creates an anonymous session with its own token before `csrf_guard`, so a request without a cookie still has to send that token: an anonymous `POST /auth/login` without it gets `403 token_mismatch` (login CSRF). A request that reaches the guard without any session is rejected
+- frontend and API must share a site (same origin or subdomains of one site): with `SameSite=Lax` the session cookie is not sent on cross-site requests
 - `OPTIONS` and other safe methods skip token validation
 - OAuth redirect/callback is treated as a separate flow protected by OAuth `state`
-- on `csrf_invalid` the frontend triggers a single `init_app` refresh; subsequent unsafe requests succeed once the rotated token is in memory
+- on `403 csrf_invalid` with `reason: token_mismatch` the frontend re-reads `main/init` and repeats the request once, only if the session still belongs to the same user (see the frontend README)
 
 The token never leaves the session over HTML. The SPA shell is served as a plain cacheable static file (`Cache-Control: public, max-age=0, must-revalidate` plus an `ETag`, so repeat visits get a `304`), and no session is created while serving it. The SPA holds the token in memory only: it receives it from the `main/init` bootstrap response and refreshes it from every response that rotates it.
 
 Relevant environment variables:
 
-- `CSRF_ENFORCE` — defaults to `false`. In report-only mode the guard logs failures but allows requests. Set to `true` after rollout validation.
-- `CSRF_ALLOWED_ORIGINS` — comma-separated exact origins for the optional Origin/Referer defense-in-depth check, for example `https://app.example.com,https://admin.example.com`.
-- `CSRF_STRICT_ORIGIN` — defaults to `false`. When `true`, unsafe requests without both `Origin` and `Referer` are rejected. This can break older webviews or embedded contexts, so keep it disabled until those clients are tested.
+- `CSRF_ENFORCE` — defaults to `true`: violations get `403 csrf_invalid`. `false` is report-only (failures are logged, requests pass) — a diagnostic and rollback switch; a production-like start warns about it. Read at startup, so a change needs a restart.
+- `CSRF_ALLOWED_ORIGINS` — comma-separated exact origins (no path, no trailing slash) for the Origin/Referer check, for example `https://app.example.com,https://admin.example.com`. Required in production-like environments: the server refuses to start without it. Elsewhere an empty list falls back to the origins of `APP_URL` and `FRONTEND_URL`.
+- `CSRF_STRICT_ORIGIN` — defaults to `true`: unsafe requests without both `Origin` and `Referer` are rejected. Browsers always send `Origin` on fetch POST/PUT/PATCH/DELETE; set `false` only for tested legacy clients.
 
 Rollout recommendation:
 
-1. Deploy token generation, the bootstrap response token, frontend header sending, and `csrf_guard` with `CSRF_ENFORCE=false`.
-2. Review report-only logs for missing tokens, origin mismatches, and stale clients.
+1. Set `CSRF_ALLOWED_ORIGINS` before deploying; for a cautious rollout start with an explicit `CSRF_ENFORCE=false`.
+2. Review report-only logs (`CSRF validation failed`, with `reason`) for missing tokens, origin mismatches, and stale clients.
 3. Fix any client paths that do not refresh or send the token.
-4. Enable `CSRF_ENFORCE=true` gradually, starting with low-risk route groups.
-5. Roll back enforcement by setting `CSRF_ENFORCE=false`; keep token generation/header sending enabled while investigating.
+4. Remove the explicit `false` (or set `true`) and restart.
+5. Roll back enforcement by setting `CSRF_ENFORCE=false` and restarting; keep token generation/header sending enabled while investigating.
 
 ### Error Monitoring
 
@@ -937,7 +940,17 @@ export default {
             return mapControllerError(context, result.error)
         }
 
-        return { status: 'success' }
+        // The password is already changed: a failed renewal is not an error.
+        const renewed = await authService.renewSession(context.auth, context.session)
+        if (Result.isError(renewed)) {
+            context.logger.error(
+                { err: renewed.error },
+                'Session renewal after password change failed',
+            )
+            return { status: 'success', sessionRenewed: false }
+        }
+
+        return { status: 'success', sessionRenewed: true, ...renewed.value }
     },
 }
 ```

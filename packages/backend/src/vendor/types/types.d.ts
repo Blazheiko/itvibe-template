@@ -88,6 +88,8 @@ export interface Session {
     changeSessionData: (newData: SessionData) => Promise<SessionInfo | null>
     destroySession: (sessionId: string | undefined) => Promise<void>
     destroyAllSessions: (userId: string) => Promise<number>
+    /** Run by the server after the handler, right before the response is sent. */
+    beforeSend?: () => Promise<void>
 }
 
 export interface SessionData extends Record<string, unknown> {
