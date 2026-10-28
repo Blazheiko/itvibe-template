@@ -3,7 +3,7 @@
 Користувач може увійти через акаунт у соцмережі замість пароля. Бекенд підтримує чотири провайдери: **Google**, **Facebook**, **GitHub** і **GitLab**. Протокол OAuth 2.0 реалізує бібліотека [`arctic`](https://arcticjs.dev/). Код: [`config/oauth.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/oauth.ts), [`oauth-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/oauth-service.ts), [`oauth-controller.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/auth/oauth-controller.ts).
 
 ::: info Кнопки у фронтенді
-У вікні входу ([`AuthModals.vue`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/components/AuthModals.vue)) зараз є кнопки лише для **Google** і **Facebook**. GitHub і GitLab на бекенді готові: щоб показати їх користувачам, додайте кнопку з посиланням на `apiPath('auth/oauth/github/redirect')`.
+Фронтенд показує кнопки **лише налаштованих** провайдерів: компонент [`SocialAuthButtons.vue`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/components/SocialAuthButtons.vue) один раз завантажує список з `GET /api/auth/oauth/providers`. Якщо жоден провайдер не налаштовано, блоку «або увійдіть через» немає зовсім.
 :::
 
 ## Як це працює
@@ -12,6 +12,7 @@
 
 | Маршрут                                  | Що робить                                                                                          |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `GET /api/auth/oauth/providers`          | список налаштованих провайдерів: `{ status: 'ok', providers: ['google', …] }`; без входу           |
 | `GET /api/auth/oauth/:provider/redirect` | генерує `state` (і PKCE-`codeVerifier` для Google), кладе їх у сесію, `302` на сторінку провайдера |
 | `GET /api/auth/oauth/:provider/callback` | сюди провайдер повертає користувача з `code` і `state`; бекенд логінить і робить `302` на фронтенд |
 
@@ -37,19 +38,33 @@ sequenceDiagram
 
 1. **Перевірка `state`.** Значення з query порівнюється з тим, що збережено в сесії на кроці redirect. Розбіжність — `OAuth state mismatch`: так відсікається підроблений callback (CSRF на вході). Після callback `oauthState` і `oauthCodeVerifier` видаляються з сесії.
 2. **Обмін `code` на токени** через `arctic` і запит профілю до API провайдера.
-3. **Email обов'язковий.** Якщо провайдер не віддав email, вхід не відбувається (`Could not retrieve email from provider`). Email приводиться до нижнього регістру.
+3. **Email обов'язковий.** Якщо провайдер не віддав email, вхід не відбувається (`Could not retrieve email from provider`). Email приводиться до нижнього регістру. Разом з email бекенд визначає, чи провайдер **підтверджує**, що адреса належить користувачу (`emailVerified`, див. [нижче](#прив-язка-за-email)).
 4. **Пошук користувача** в такому порядку:
     - є запис у `oauth_accounts` з цим провайдером і id користувача в провайдера → це той самий користувач, оновлюються його токени;
-    - інакше є користувач з таким email → до нього **прив'язується** новий OAuth-акаунт;
-    - інакше створюється новий користувач без пароля (`password: null`) з ім'ям і аватаром із профілю.
+    - інакше є користувач з таким email → до нього **прив'язується** новий OAuth-акаунт, але **лише якщо email підтверджений провайдером**. Інакше вхід відхиляється з причиною `oauth_email_unverified`;
+    - інакше створюється новий користувач без пароля (`password: null`) з ім'ям і аватаром із профілю. Якщо email підтверджений провайдером, у користувача одразу заповнюється `emailVerifiedAt`.
 5. **Вхід.** Викликається `auth.login(...)` — та сама функція, що й при вході за паролем (див. [Автентифікація](/backend/auth#вхід-і-вихід-у-коді)): нова сесія, нова cookie. Користувач отримує push «новий вхід».
-6. **Редирект на фронтенд**: успіх — `OAUTH_FRONTEND_SUCCESS_URL` (`/?oauth=success`), будь-яка помилка — `OAUTH_FRONTEND_ERROR_URL` (`/?error=oauth_failed`). Сторінка входу показує повідомлення про помилку, коли бачить `error=oauth_failed`.
+6. **Редирект на фронтенд**: успіх — `OAUTH_FRONTEND_SUCCESS_URL` (`/?oauth=success`), будь-яка помилка — `OAUTH_FRONTEND_ERROR_URL` (`/?error=oauth_failed`), завжди зі статусом `302`. Для відмови в прив'язці до URL додається `reason=oauth_email_unverified`, і сторінка входу показує «An account with this email already exists. Sign in with your password.». Для решти помилок — загальне повідомлення.
 
 Токени провайдера (`access_token`, `refresh_token`) зберігаються в таблиці `oauth_accounts` разом з `provider`, `provider_user_id`, email, іменем і аватаром. Пара `provider` + `provider_user_id` унікальна. Шаблон самі токени далі не використовує: вони знадобляться, якщо ви захочете ходити в API провайдера від імені користувача.
 
-::: warning Прив'язка за email
-Якщо користувач з таким email уже є, OAuth-акаунт прив'язується до нього без додаткового підтвердження. Це зручно, але безпечно лише тоді, коли провайдер віддає **підтверджений** email. Google і GitHub (код бере лише `primary` і `verified` адресу з `/user/emails`, якщо публічної немає) це гарантують. Для провайдерів, де email може бути непідтвердженим, перевіряйте відповідне поле профілю (`email_verified`, `verified`) перед прив'язкою.
-:::
+## Прив'язка за email
+
+Якщо користувач з таким email уже є, а OAuth-акаунт ще не прив'язаний, бекенд прив'язує його **лише тоді, коли провайдер підтверджує email**. Інакше будь-хто міг би зареєструвати в провайдера чужу адресу і через неї увійти в чужий акаунт.
+
+| Провайдер | Звідки береться підтвердження                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Google    | поле `verified_email` з `/oauth2/v2/userinfo`                                                                                   |
+| GitHub    | адреса завжди береться з `/user/emails`: основна (`primary`) і підтверджена (`verified`); інших GitHub-адрес бекенд не бере     |
+| GitLab    | claim `email_verified` з OpenID Connect (`/oauth/userinfo`, scopes `openid email`) для тієї самої адреси, що й у `/api/v4/user` |
+| Facebook  | **ніколи**: Graph API не має ознаки «email підтверджено» (поле `verified` стосується акаунта, а не адреси)                      |
+
+Що з цього випливає:
+
+- Користувач, який зареєструвався паролем, не зможе **вперше** увійти через Facebook з тим самим email: він побачить повідомлення «увійдіть паролем». Прив'язки соцмереж з налаштувань акаунта поки немає.
+- Новий користувач через Facebook створюється, але з непідтвердженим email.
+- Уже прив'язані акаунти (запис у `oauth_accounts`) входять як раніше: перевірка стосується лише нової прив'язки.
+- Відмова видна в логах як `oauth link refused: email not verified by provider`.
 
 ## Що потрібно, щоб це запрацювало
 
@@ -62,7 +77,7 @@ sequenceDiagram
 | Google    | [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), тип «Web application» | `openid`, `profile`, `email` (+ PKCE) |
 | Facebook  | [Meta for Developers](https://developers.facebook.com/apps/), продукт «Facebook Login»                         | `email`, `public_profile`             |
 | GitHub    | [GitHub → Settings → Developer settings → OAuth Apps](https://github.com/settings/developers)                  | `user:email`                          |
-| GitLab    | [GitLab → Preferences → Applications](https://gitlab.com/-/user_settings/applications)                         | `read_user`                           |
+| GitLab    | [GitLab → Preferences → Applications](https://gitlab.com/-/user_settings/applications)                         | `openid`, `email`, `read_user`        |
 
 GitLab підключено до `https://gitlab.com`. Для власного інстансу GitLab змініть адресу в `createGitLabClient()` і `fetchGitLabUserInfo()`.
 
@@ -96,21 +111,23 @@ OAUTH_FRONTEND_ERROR_URL=/?error=oauth_failed
 
 Перезапустіть бекенд і відкрийте `http://localhost:5173/api/auth/oauth/google/redirect` — вас має перекинути на сторінку входу Google.
 
-::: warning Ненастроєний провайдер
-Окремої перевірки «провайдер не налаштовано» немає. Якщо `*_CLIENT_ID` порожній, redirect все одно відправить користувача до провайдера, і той покаже свою помилку (`invalid_client`, «Missing client_id»). Не показуйте кнопки провайдерів, для яких немає ключів.
+::: info Ненастроєний провайдер
+Провайдер вважається налаштованим, коли задано всі три змінні: `*_CLIENT_ID`, `*_CLIENT_SECRET` і `*_REDIRECT_URI`. Ненастроєного провайдера немає в `GET /api/auth/oauth/providers`, тож і кнопки для нього немає, а прямий перехід на `/api/auth/oauth/<provider>/redirect` повертає `404 Provider not configured`.
 :::
 
 ### Типові помилки
 
-Усі помилки callback ведуть на `OAUTH_FRONTEND_ERROR_URL`; причину видно в логах бекенду.
+Усі помилки callback ведуть на `OAUTH_FRONTEND_ERROR_URL` (статус `302`); причину видно в логах бекенду (`oauth callback failed`).
 
-| Повідомлення в логах                  | Причина                                                                                                                                       |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Missing OAuth parameters`            | у callback немає `code`/`state` або в сесії немає `oauthState` (інший домен, інший браузер, сесія протермінувалась, користувач скасував вхід) |
-| `OAuth state mismatch`                | `state` не збігся: старе посилання або callback з чужої сесії                                                                                 |
-| `OAuth code exchange failed`          | невірний Client Secret, Redirect URI не збігається з зареєстрованим, `code` уже використаний                                                  |
-| `oauth provider returned empty email` | користувач не дав доступу до email або в нього немає підтвердженої адреси                                                                     |
-| `Unsupported provider: <name>`        | у URL провайдер, якого немає в `SUPPORTED_PROVIDERS`                                                                                          |
+| Повідомлення в логах                                 | Причина                                                                                                                                                              |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Missing OAuth parameters`                           | у callback немає `code`/`state` або в сесії немає `oauthState` (інший домен, інший браузер, сесія протермінувалась, користувач скасував вхід)                        |
+| `OAuth state mismatch`                               | `state` не збігся: старе посилання або callback з чужої сесії                                                                                                        |
+| `OAuth code exchange failed`                         | невірний Client Secret, Redirect URI не збігається з зареєстрованим, `code` уже використаний                                                                         |
+| `oauth provider returned empty email`                | користувач не дав доступу до email або в нього немає підтвердженої адреси                                                                                            |
+| `oauth link refused: email not verified by provider` | користувач з таким email уже є, а провайдер не підтверджує адресу (див. [Прив'язка за email](#прив-язка-за-email)); фронтенд отримує `reason=oauth_email_unverified` |
+| `Provider not configured: <name>`                    | для провайдера не задано всі три змінні `*_CLIENT_ID`, `*_CLIENT_SECRET`, `*_REDIRECT_URI`                                                                           |
+| `Unsupported provider: <name>`                       | у URL провайдер, якого немає в `SUPPORTED_PROVIDERS`                                                                                                                 |
 
 ## Як додати нового провайдера
 
@@ -158,8 +175,7 @@ async function fetchDiscordUserInfo(accessToken: string): Promise<OAuthUserInfo>
     const avatarHash = typeof data['avatar'] === 'string' ? data['avatar'] : null
     return {
         id,
-        // прив'язка за email безпечна лише для підтвердженої адреси
-        email: data['verified'] === true && typeof data['email'] === 'string' ? data['email'] : '',
+        email: typeof data['email'] === 'string' ? data['email'] : '',
         name:
             typeof data['global_name'] === 'string'
                 ? data['global_name']
@@ -170,9 +186,13 @@ async function fetchDiscordUserInfo(accessToken: string): Promise<OAuthUserInfo>
             avatarHash !== null
                 ? `https://cdn.discordapp.com/avatars/${id}/${avatarHash}.png`
                 : null,
+        // Discord повертає `verified`: чи підтверджено email. Без цього поля ставте false.
+        emailVerified: data['verified'] === true,
     }
 }
 ```
+
+Поле `emailVerified` обов'язкове: воно вирішує, чи можна прив'язати вхід до наявного користувача з тим самим email (див. [Прив'язка за email](#прив-язка-за-email)). Якщо провайдер не дає надійної ознаки, ставте `false`, як для Facebook.
 
 У `getAuthorizationUrl` додайте гілку перед GitLab (вона йде останньою як «інакше»):
 
@@ -198,23 +218,25 @@ if (provider === 'discord') {
 
 Решту робить спільний код: пошук або створення користувача, запис у `oauth_accounts` з `provider = 'discord'`, `auth.login` і редирект. Колонка `provider` має довжину 50 символів, тож міграція БД не потрібна.
 
-### 3. Фронтенд
+### 3. Тип провайдера і фронтенд
 
-У [`AuthModals.vue`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/components/AuthModals.vue) додайте посилання поруч з Google і Facebook:
+Список провайдерів також є в спільному типі: додайте `'discord'` в `OAuthProviderSchema` у [`shared/src/responses/oauth-controller.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/responses/oauth-controller.ts). Тоді `GET /api/auth/oauth/providers` зможе його повернути.
+
+У [`SocialAuthButtons.vue`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/components/SocialAuthButtons.vue) додайте назву в `LABELS` (TypeScript підкаже, бо `LABELS` має тип `Record<OAuthProvider, string>`) і за бажанням іконку:
 
 ```ts
-const oauthDiscordUrl = apiPath('auth/oauth/discord/redirect')
+const LABELS: Record<OAuthProvider, string> = {
+    google: 'Google',
+    // ...
+    discord: 'Discord',
+}
 ```
 
-```vue
-<a :href="oauthDiscordUrl" class="social-btn">Discord</a>
-```
-
-Це звичайне посилання, а не `fetch`: браузер має сам перейти на сторінку провайдера.
+Окремо прописувати кнопку не треба: вона з'явиться сама, щойно на бекенді будуть задані змінні `DISCORD_*`. Посилання формує компонент (`/api/auth/oauth/discord/redirect`); це звичайне посилання, а не `fetch`, бо браузер має сам перейти на сторінку провайдера.
 
 ### 4. Перевірка
 
 1. Зареєструйте застосунок у [Discord Developer Portal](https://discord.com/developers/applications), Redirect URI — `http://localhost:5173/api/auth/oauth/discord/callback`.
 2. Заповніть `DISCORD_*` у `.env`, перезапустіть бекенд.
-3. Натисніть кнопку, дозвольте доступ — вас поверне на `/?oauth=success` уже залогіненим. У таблиці `oauth_accounts` з'явиться рядок з `provider = 'discord'`.
+3. Переконайтесь, що `GET /api/auth/oauth/providers` повертає `discord`, натисніть кнопку, дозвольте доступ — вас поверне на `/?oauth=success` уже залогіненим. У таблиці `oauth_accounts` з'явиться рядок з `provider = 'discord'`.
 4. Запустіть `pnpm --filter backend typecheck` і `pnpm --filter backend test`.
