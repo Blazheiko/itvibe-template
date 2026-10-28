@@ -11,7 +11,7 @@ const packagesItems = [
     { text: 'API Playground', link: '/playground/' },
 ]
 
-export default withMermaid(
+const config = withMermaid(
     defineConfig({
         base: '/vibe-template/',
         lang: 'uk-UA',
@@ -21,12 +21,6 @@ export default withMermaid(
         cleanUrls: true,
         lastUpdated: true,
         ignoreDeadLinks: false,
-        // mermaid тягне CJS-залежності (dayjs, fastdom...), які pnpm не піднімає; у dev бандлимо його цілком
-        vite: {
-            optimizeDeps: {
-                include: ['mermaid'],
-            },
-        },
         head: [
             ['link', { rel: 'icon', href: '/vibe-template/logo.svg' }],
             ['meta', { name: 'author', content: `${author} <${authorEmail}>` }],
@@ -168,3 +162,13 @@ export default withMermaid(
         },
     }),
 )
+
+// mermaid тягне CJS-залежності (dayjs, fastdom...), які pnpm не піднімає, тож у dev
+// бандлимо його цілком. withMermaid дописує ці залежності в include голими іменами,
+// а під pnpm Vite їх не знаходить і пише "Failed to resolve dependency" — прибираємо їх.
+config.vite = {
+    ...config.vite,
+    optimizeDeps: { ...config.vite?.optimizeDeps, include: ['mermaid'] },
+}
+
+export default config
