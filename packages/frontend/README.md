@@ -93,7 +93,8 @@ Copy `.env.example` to `.env` and set the `VITE_*` variables as needed:
 - Public auth calls pass `csrfRecovery: 'public'` (login, register, password reset, verify-email): they are repeated in an anonymous session. Everything else is `protected`: an anonymous session means `unauthorized` (redirect to login), no repeat.
 - If the session belongs to another user (another tab logged in), nothing is sent and the page reloads, so no state of the previous user survives. The error carries `clientCode: 'account_changed'`.
 - If `main/init` fails (network, 5xx, no token), the request is not repeated and later mutations are held until a new `main/init` succeeds; meanwhile they fail locally with `clientCode: 'session_unverified'`, no `code`, `transportCode: 0`.
-- Concurrent requests share one `main/init`.
+- Concurrent requests share one `main/init`. It times out after 10 s (the session then stays unverified), and a request's `signal` stops its own wait without cancelling the shared refresh.
+- A mutation is never signed with a token confirmed for a user other than the one the UI shows: that is an account change (reload), even in the `synced` state.
 
 The service worker (`src/service-worker.ts`, rules in `src/utils/sw-request-policy.ts`) never caches the API: non-GET requests, other origins and everything under `VITE_API_PATH_PREFIX` bypass it, every cache write requires a complete same-origin response without `no-store`/`private`, and activation drops API entries an older worker cached.
 

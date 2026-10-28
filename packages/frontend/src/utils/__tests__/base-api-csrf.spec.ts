@@ -43,19 +43,17 @@ const initAs = (userId: string, csrfToken: string): Response =>
 const initAnonymous = (csrfToken: string): Response =>
     jsonResponse({ status: 'error', code: 'unauthorized', message: 'No session', csrfToken }, 401)
 
-type Reply = Response | Error | (() => Promise<Response>)
+type Reply = Response | Error | ((init?: RequestInit) => Promise<Response>)
 
 /** fetch double: separate reply queues for main/init and for everything else. */
 const createServer = (replies: { init?: Reply[]; other?: Reply[] }) => {
     const initReplies = [...(replies.init ?? [])]
     const other = [...(replies.other ?? [])]
-    // The second parameter types mock.calls for the assertions on the request init.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const fetchMock = vi.fn(async (url: string, _init?: RequestInit): Promise<Response> => {
         const queue = url.endsWith(INIT) ? initReplies : other
         const reply = queue.shift() ?? jsonResponse({ status: 'success' })
         if (reply instanceof Error) throw reply
-        return typeof reply === 'function' ? reply() : reply
+        return typeof reply === 'function' ? reply(_init) : reply
     })
     globalThis.fetch = fetchMock as unknown as typeof fetch
     return fetchMock
@@ -82,6 +80,7 @@ const loadApi = async ({ token = TOKEN_U1, tokenUser = '1', uiUser = '1' }: Setu
     const csrf = await import('../csrf-token')
     if (token !== '') csrf.confirmCsrfToken(token, tokenUser)
     const module = await import('../base-api')
+    module.setRefreshTimeout(50)
     const reload = vi.fn()
     module.setReloadHandler(reload)
     module.setCurrentUserIdProvider(() => uiUser)
@@ -515,6 +514,88 @@ describe('base-api CSRF', () => {
             await api.http('POST', '/api/auth/login', {}, { csrfRecovery: 'public' })
 
             expect(emitMock).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('review fixes', () => {
+        const hanging = (init?: RequestInit) =>
+            new Promise<Response>((_, reject) => {
+                init?.signal?.addEventListener('abort', () => {
+                    reject(new DOMException('timed out', 'TimeoutError'))
+                })
+            })
+
+        it('synced: a token the app init confirmed for another user never signs a mutation', async () => {
+            const server = createServer({ init: [initAs('2', TOKEN_U2)] })
+            const { api, csrf, reload } = await loadApi()
+
+            await api.http('GET', INIT) // the app's own init sees the other tab's account
+            const result = await api.http('POST', '/api/test')
+
+            expect(mutations(server)).toHaveLength(0)
+            expect(reload).toHaveBeenCalledOnce()
+            expect(csrf.getSessionState()).toBe('reloading')
+            expect(result.error).toEqual({
+                clientCode: 'account_changed',
+                transportCode: 0,
+                message: expect.any(String),
+            })
+        })
+
+        it('a hanging init times out: no retry, session_unverified, the next action refreshes again', async () => {
+            const server = createServer({
+                init: [hanging, initAs('1', TOKEN_U1_FRESH)],
+                other: [tokenMismatch(), jsonResponse({ status: 'success' })],
+            })
+            const { api, csrf } = await loadApi()
+
+            const first = await api.http('POST', '/api/first')
+
+            expect(first.error?.clientCode).toBe('session_unverified')
+            expect(csrf.getSessionState()).toBe('diverged')
+            const second = await api.http('POST', '/api/second')
+            expect(second.error).toBeNull()
+            expect(callsTo(server, INIT)).toHaveLength(2)
+        })
+
+        it('the caller can stop waiting for the shared refresh', async () => {
+            createServer({ init: [hanging], other: [tokenMismatch()] })
+            const { api } = await loadApi()
+            const controller = new AbortController()
+
+            const pending = api.http('POST', '/api/test', {}, { signal: controller.signal })
+            await vi.waitFor(() => {
+                expect(
+                    vi.mocked(fetch).mock.calls.some(([url]) => (url as string).endsWith(INIT)),
+                ).toBe(true)
+            })
+            controller.abort()
+
+            expect((await pending).error).toEqual({ transportCode: 0, message: 'Request aborted' })
+        })
+
+        it('a late 403 in reloading starts no new refresh', async () => {
+            let releaseLate: (response: Response) => void = () => undefined
+            const late = new Promise<Response>((resolve) => {
+                releaseLate = resolve
+            })
+            const server = createServer({
+                init: [initAs('2', TOKEN_U2)],
+                other: [() => late, tokenMismatch()],
+            })
+            const { api, csrf } = await loadApi()
+
+            const slow = api.http('POST', '/api/slow')
+            await vi.waitFor(() => {
+                expect(callsTo(server, '/api/slow')).toHaveLength(1)
+            })
+            await api.http('POST', '/api/first') // → account change, reloading
+            expect(csrf.getSessionState()).toBe('reloading')
+            releaseLate(tokenMismatch())
+            const result = await slow
+
+            expect(callsTo(server, INIT)).toHaveLength(1)
+            expect(result.error?.clientCode).toBe('account_changed')
         })
     })
 })

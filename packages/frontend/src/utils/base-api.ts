@@ -118,6 +118,13 @@ type RefreshResult = { ok: true; token: string; userId: string | null } | { ok: 
 
 let refreshInFlight: Promise<RefreshResult> | null = null
 
+// A hanging main/init must not hold every later mutation: past this the refresh
+// counts as failed (the session stays unverified).
+let refreshTimeoutMs = 10_000
+export const setRefreshTimeout = (ms: number): void => {
+    refreshTimeoutMs = ms
+}
+
 /**
  * Asks main/init whose session the cookie holds. Silent: it emits no events and
  * redirects nowhere; the caller decides per request. Single-flight, and cleared
@@ -132,6 +139,7 @@ const refreshSession = (): Promise<RefreshResult> => {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
+                signal: AbortSignal.timeout(refreshTimeoutMs),
             })
             const payload = await parseResponseJson(response)
             const token = normalizeCsrfToken(isRecord(payload) ? payload.csrfToken : undefined)
@@ -201,13 +209,49 @@ const confirmAndSend = (result: { token: string; userId: string | null }): Decis
 const gate = async (
     expectedUserId: string | null,
     recovery: 'public' | 'protected',
-): Promise<Decision | { kind: 'send'; token: string | null }> => {
+    signal: AbortSignal | undefined,
+): Promise<Decision | { kind: 'send'; token: string | null } | { kind: 'aborted' }> => {
     const state = getSessionState()
     if (state === 'reloading') return { kind: 'reject', clientCode: 'account_changed' }
-    if (state === 'synced') return { kind: 'send', token: getCsrfToken() }
+    if (state === 'synced') {
+        const token = getCsrfToken()
+        // A token confirmed for someone else (e.g. the app's own main/init already
+        // saw the account another tab signed in) must not sign a request the UI made
+        // for its user.
+        if (token !== null && getConfirmedUserId() !== expectedUserId) {
+            onAccountChanged()
+            return { kind: 'reject', clientCode: 'account_changed' }
+        }
+        return { kind: 'send', token }
+    }
     // reconciling waits for the refresh in flight; diverged starts a new one.
-    return decide(await refreshSession(), expectedUserId, recovery)
+    const result = await waitUnlessAborted(refreshSession(), signal)
+    if (result === ABORTED) return { kind: 'aborted' }
+    return decide(result, expectedUserId, recovery)
 }
+
+const ABORTED = Symbol('aborted')
+
+/** The caller may stop waiting for the shared refresh; the refresh itself goes on. */
+const waitUnlessAborted = <T>(
+    promise: Promise<T>,
+    signal: AbortSignal | undefined,
+): Promise<T | typeof ABORTED> => {
+    if (signal === undefined) return promise
+    if (signal.aborted) return Promise.resolve(ABORTED)
+    return new Promise((resolve) => {
+        const onAbort = () => {
+            resolve(ABORTED)
+        }
+        signal.addEventListener('abort', onAbort, { once: true })
+        void promise.then((value) => {
+            signal.removeEventListener('abort', onAbort)
+            resolve(value)
+        })
+    })
+}
+
+const abortedError = (): HttpApiError => ({ transportCode: 0, message: 'Request aborted' })
 
 const localError = (clientCode: CsrfClientCode): HttpApiError => ({
     clientCode,
@@ -336,7 +380,8 @@ const request = async <T>(
     const recovery = options.csrfRecovery ?? 'protected'
     const expectedUserId = currentUserId()
 
-    const admission = await gate(expectedUserId, recovery)
+    const admission = await gate(expectedUserId, recovery, options.signal)
+    if (admission.kind === 'aborted') return { data: null, error: abortedError() }
     if (admission.kind === 'reject') {
         return { data: null, error: localError(admission.clientCode) }
     }
@@ -351,7 +396,16 @@ const request = async <T>(
     const first = await send<T>(method, route, buildInit, admission.token, options, networkMessage)
     if (!first.tokenMismatch) return first.response
 
-    const decision = decide(await refreshSession(), expectedUserId, recovery)
+    // The page is already reloading for another account: no new refresh.
+    if (getSessionState() === 'reloading') {
+        return {
+            data: first.response.data,
+            error: { ...first.response.error, clientCode: 'account_changed' },
+        }
+    }
+    const refreshed = await waitUnlessAborted(refreshSession(), options.signal)
+    if (refreshed === ABORTED) return { data: null, error: abortedError() }
+    const decision = decide(refreshed, expectedUserId, recovery)
     if (decision.kind === 'reject') {
         return {
             data: first.response.data,

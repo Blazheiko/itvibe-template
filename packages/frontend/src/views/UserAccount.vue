@@ -7,6 +7,8 @@ import { avatarApi, authApi, pushSubscriptionApi } from '@/utils/api'
 import { buildAvatarUrl } from '@/utils/avatar-url'
 import { getResponseMessage, hasResponseError } from '@/utils/response-normalizer'
 import AvatarEditorModal from '@/components/AvatarEditorModal.vue'
+import { useWebSocketConnection } from '@/composables/useWebSocketConnection'
+import { useEventBus } from '@/utils/event-bus'
 
 defineOptions({
     name: 'UserAccount',
@@ -15,6 +17,8 @@ defineOptions({
 const { t } = useI18n()
 const userStore = useUserStore()
 const stateStore = useStateStore()
+const { websocketOpen } = useWebSocketConnection()
+const eventBus = useEventBus()
 const user = computed(() => userStore.user)
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -157,6 +161,16 @@ async function changePassword(): Promise<void> {
                 error?.message ?? t('account.security.errorUpdate'),
             )
             return
+        }
+
+        // The password change renewed the session: the open WebSocket belonged to
+        // the deleted one, so reconnect with the new token before anything else uses it.
+        if (data.sessionRenewed && data.wsUrl && data.wsToken) {
+            websocketOpen(data.wsUrl, data.wsToken)
+        } else if (!data.sessionRenewed) {
+            // Password changed, session not renewed: re-read the session (it may be
+            // gone, then the app goes to the login page).
+            eventBus.emit('init_app')
         }
 
         passwordMessage.value = t('account.security.successUpdate')
