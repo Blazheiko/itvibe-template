@@ -39,6 +39,7 @@ const KEY_PAGES = [
     { page: 'guide/first-endpoint.md', h1: 'Перший маршрут' },
     { page: 'guide/your-project.md', h1: 'Свій проєкт на шаблоні' },
     { page: 'guide/project-structure.md', h1: 'Структура проєкту' },
+    { page: 'guide/csrf.md', h1: 'CSRF простими словами' },
     { page: 'backend/index.md', h1: 'Огляд бекенду' },
     { page: 'backend/architecture.md', h1: 'Архітектура бекенду' },
     { page: 'backend/request-lifecycle.md', h1: 'Життєвий цикл запиту' },

@@ -487,10 +487,11 @@ pnpm dev
 
 ```bash
 B=http://127.0.0.1:3000/api
+O='origin: http://localhost:5173'   # curl не додає Origin сам, а сервер його вимагає
 csrf() { curl -s -b cookies.txt -c cookies.txt $B/main/init | sed -E 's/.*"csrfToken":"([^"]+)".*/\1/'; }
 
 # вхід
-curl -s -o /dev/null -b cookies.txt -c cookies.txt -H 'content-type: application/json' \
+curl -s -o /dev/null -b cookies.txt -c cookies.txt -H "$O" -H 'content-type: application/json' \
   -H "x-csrf-token: $(csrf)" \
   -d '{"email":"user@example.com","password":"<user-password>","token":""}' $B/auth/login
 
@@ -500,7 +501,7 @@ CSRF=$(csrf)   # після входу токен новий
 **Створити нотатку:**
 
 ```bash
-curl -s -b cookies.txt -H 'content-type: application/json' -H "x-csrf-token: $CSRF" \
+curl -s -b cookies.txt -H "$O" -H 'content-type: application/json' -H "x-csrf-token: $CSRF" \
   -d '{"title":"Купити молоко","body":"2 літри"}' $B/notes
 ```
 
@@ -546,15 +547,15 @@ curl -s -b cookies.txt $B/notes
 
 **Помилкові запити.** Кожен рядок нижче перевірено на запущеному сервері:
 
-| Запит                                             | Статус | Відповідь (скорочено)                                                                                   | Хто зупинив                     |
-| ------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `GET /notes` без cookie                           | `401`  | `{"status":"error","code":"unauthorized","message":"Session expired or not found",...}`                 | `auth_guard`                    |
-| `POST` з `{"title":""}`                           | `422`  | `"code":"validation_failed"`, `"messages":["title must be non-empty"]`                                  | схема `CreateNoteInputSchema`   |
-| `POST` з `{"title":"x","done":true}`              | `422`  | `"messages":["done must be removed"]`                                                                   | `'+': 'reject'` у схемі         |
-| `POST` з `content-type: text/plain`               | `415`  | `"code":"unsupported_media_type"`, `"allowedKinds":["json"]`                                            | ядро: маршрут приймає лише JSON |
-| `POST` без `x-csrf-token` при `CSRF_ENFORCE=true` | `403`  | `{"status":"error","code":"csrf_invalid","message":"Invalid CSRF token","reason":"token_mismatch",...}` | `csrf_guard`                    |
+| Запит                                | Статус | Відповідь (скорочено)                                                                                   | Хто зупинив                     |
+| ------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `GET /notes` без cookie              | `401`  | `{"status":"error","code":"unauthorized","message":"Session expired or not found",...}`                 | `auth_guard`                    |
+| `POST` з `{"title":""}`              | `422`  | `"code":"validation_failed"`, `"messages":["title must be non-empty"]`                                  | схема `CreateNoteInputSchema`   |
+| `POST` з `{"title":"x","done":true}` | `422`  | `"messages":["done must be removed"]`                                                                   | `'+': 'reject'` у схемі         |
+| `POST` з `content-type: text/plain`  | `415`  | `"code":"unsupported_media_type"`, `"allowedKinds":["json"]`                                            | ядро: маршрут приймає лише JSON |
+| `POST` без `x-csrf-token`            | `403`  | `{"status":"error","code":"csrf_invalid","message":"Invalid CSRF token","reason":"token_mismatch",...}` | `csrf_guard`                    |
 
-За замовчуванням `CSRF_ENFORCE=false`: запит без токена пройде, а в лозі бекенду з'явиться `CSRF validation failed`. Щоб побачити `403`, увімкніть `CSRF_ENFORCE=true` у `.env` і перезапустіть бекенд. У продакшені його варто вмикати завжди ([CSRF](/backend/auth-security#csrf)).
+`CSRF_ENFORCE` за замовчуванням `true`, тож такий запит отримує `403`. Запит без заголовка `Origin` теж отримує `403`, але з `reason: "origin_mismatch"`. Як влаштований захист — [CSRF простими словами](/guide/csrf), деталі — [CSRF](/backend/auth-security#csrf).
 
 Те саме можна перевірити без curl в [API Playground](/playground/): він показує маршрути `notes` разом зі схемою тіла.
 

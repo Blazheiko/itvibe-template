@@ -256,6 +256,8 @@ const throttle = await tryInternal(
 
 ## CSRF
 
+Пояснення для початківців — [CSRF простими словами](/guide/csrf).
+
 Використовується модель synchronizer token ([`config/csrf.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csrf.ts), [`csrf-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/middlewares/csrf-guard.ts), [`csrf-token.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/csrf-token.ts)):
 
 - Кожна сесія має `csrfToken`: 32 випадкові байти в кодуванні base64url. Якщо в старій сесії токена немає, він дописується під час наступного завантаження сесії.
