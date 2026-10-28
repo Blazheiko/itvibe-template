@@ -17,6 +17,9 @@ import {
     changeSessionData,
     destroySession,
     destroyAllSessions,
+    claimCookieRefresh,
+    markCookieIssued,
+    sessionExists,
 } from '#vendor/utils/session/redis-session-storage.js'
 import logger from '#vendor/utils/logger.js'
 import { RedisUnavailableError } from '#vendor/utils/network/errors/redis-unavailable-error.js'
@@ -54,7 +57,7 @@ const withCsrfToken = (data: SessionData): SessionData => ({
  * Re-sending it on every request let a slow response restore a session cookie
  * that a concurrent request (password change, logout-all) had already replaced.
  */
-const COOKIE_REFRESH_MS = 60 * 60 * 1000
+const COOKIE_REFRESH_SECONDS = 60 * 60
 
 // Requests that re-send the cookie of the session they arrived with; checked again
 // before the response goes out (discardStaleSessionCookie).
@@ -63,12 +66,14 @@ const pendingCookieRefresh = new WeakMap<HttpContext, { sessionId: string; userT
 const createSessionInfo = async (data: SessionData = {}): Promise<SessionInfo> => {
     const session: SessionInfo = {
         id: generateSessionId(),
-        data: { ...withCsrfToken(data), cookieIssuedAt: Date.now() },
+        data: withCsrfToken(data),
         createdAt: new Date().toISOString(),
         // expiresAt: DateTime.now().plus({ seconds: sessionConfig.age }).toISO(),
     }
 
     await saveSession(session)
+    // Its cookie goes out with this response: no refresh for the next hour.
+    await markCookieIssued(session.id, COOKIE_REFRESH_SECONDS)
 
     return session
 }
@@ -166,18 +171,14 @@ export const sessionHandler = async (
         }
     }
     const presented = sessionInfo.id === sessionId
-    const issuedAt =
-        typeof sessionInfo.data['cookieIssuedAt'] === 'number'
-            ? sessionInfo.data['cookieIssuedAt']
-            : 0
-    if (!presented || forceCookie || Date.now() - issuedAt >= COOKIE_REFRESH_MS) {
+    // The refresh claims a separate marker (SET NX EX) and never rewrites the session:
+    // a read-then-write here could restore a session another request just deleted.
+    if (
+        !presented ||
+        forceCookie ||
+        (await claimCookieRefresh(sessionInfo.id, COOKIE_REFRESH_SECONDS))
+    ) {
         if (presented) {
-            const refreshed = await updateSessionData(
-                sessionInfo.id,
-                { cookieIssuedAt: Date.now() },
-                sessionUserToken ?? ANON_TOKEN,
-            )
-            if (refreshed !== null) sessionInfo = refreshed
             pendingCookieRefresh.set(context, {
                 sessionId: sessionInfo.id,
                 userToken: sessionUserToken ?? ANON_TOKEN,
@@ -391,7 +392,13 @@ export const discardStaleSessionCookie = async (context: HttpContext): Promise<v
     if (pending === undefined) return
     pendingCookieRefresh.delete(context)
     if (context.session.sessionInfo?.id !== pending.sessionId) return
-    if ((await getSession(pending.sessionId, pending.userToken)) === null) {
+    try {
+        if (!(await sessionExists(pending.sessionId, pending.userToken))) {
+            context.responseData.cookies.delete(sessionConfig.cookieName)
+        }
+    } catch (err) {
+        // The handler's result stands; only the unconfirmed cookie is held back.
+        logger.warn({ err }, 'Session cookie refresh skipped: session check failed')
         context.responseData.cookies.delete(sessionConfig.cookieName)
     }
 }

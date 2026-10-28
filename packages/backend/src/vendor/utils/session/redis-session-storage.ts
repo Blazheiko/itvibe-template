@@ -65,6 +65,31 @@ export const sanitizeRedisKey = (key: string | undefined | null): string => {
 // a stale SETEX snapshot cannot overwrite a newer session after a reconnect.
 // DEL is idempotent: a failed logout is simply repeated by the client.
 
+/**
+ * Cookie refresh marker of a session, kept apart from the session record: claiming
+ * it never writes the session, so it cannot bring back one that another request
+ * deleted meanwhile. True when this request should re-send the cookie.
+ */
+export const claimCookieRefresh = async (
+    sessionId: string,
+    ttlSeconds: number,
+): Promise<boolean> => {
+    const key = sanitizeRedisKey(`session_cookie_refresh:${sessionId}`)
+    return (await withRedis(() => redis.set(key, '1', 'EX', ttlSeconds, 'NX'))) === 'OK'
+}
+
+/** Marks the cookie of a new session as just issued. */
+export const markCookieIssued = async (sessionId: string, ttlSeconds: number): Promise<void> => {
+    const key = sanitizeRedisKey(`session_cookie_refresh:${sessionId}`)
+    await withRedis(() => redis.set(key, '1', 'EX', ttlSeconds))
+}
+
+/** Whether the session record still exists; unlike getSession it does not extend its TTL. */
+export const sessionExists = async (sessionId: string, userToken: string): Promise<boolean> => {
+    const key = sanitizeRedisKey(`session:${userToken}:${sessionId}`)
+    return (await withRedis(() => redis.exists(key))) === 1
+}
+
 export const saveSession = async (sessionInfo: SessionInfo): Promise<void> => {
     // Authenticated sessions use the user's nanoid token; anonymous sessions use shared prefix
     const userToken =

@@ -303,12 +303,7 @@ describe.skipIf(!hasRedis)('session cookie of a slow response', () => {
     it('a slow request does not restore the cookie of a session replaced meanwhile', async () => {
         const s1 = await signIn('slowCookieToken0002')
         // Make the cookie refresh due, so the slow request re-sends the S1 cookie.
-        const key = `session:slowCookieToken0002:${s1.id}`
-        const stored = JSON.parse(String(await admin.get(key))) as { data: object }
-        await admin.set(
-            key,
-            JSON.stringify({ ...stored, data: { ...stored.data, cookieIssuedAt: 0 } }),
-        )
+        await admin.del(`session_cookie_refresh:${s1.id}`)
 
         // R1 starts with S1 (its middleware chain prepares Set-Cookie: S1) ...
         const slow = await mutate(s1.cookie, s1.token)
@@ -330,5 +325,30 @@ describe.skipIf(!hasRedis)('session cookie of a slow response', () => {
         await response.context.session.beforeSend?.()
 
         expect(response.context.responseData.cookies.has(sessionConfig.cookieName)).toBe(true)
+    })
+
+    it('a cookie refresh never rewrites the session record', async () => {
+        const s1 = await signIn('slowCookieToken0004')
+        const key = `session:slowCookieToken0004:${s1.id}`
+        await admin.del(`session_cookie_refresh:${s1.id}`)
+        const before = await admin.get(key)
+
+        const refreshing = await mutate(s1.cookie, s1.token)
+
+        expect(refreshing.cookie).toEqual(expect.any(String)) // the refresh did happen
+        expect(await admin.get(key)).toBe(before) // ...without a write to the session
+        // A second request within the hour does not refresh again.
+        expect((await mutate(s1.cookie, s1.token)).cookie).toBeUndefined()
+    })
+
+    it('a refresh for a session deleted meanwhile does not bring it back', async () => {
+        const s1 = await signIn('slowCookieToken0005')
+        await admin.del(`session_cookie_refresh:${s1.id}`)
+        await admin.del(`session:slowCookieToken0005:${s1.id}`)
+
+        const response = await mutate(s1.cookie, s1.token)
+
+        expect(await admin.exists(`session:slowCookieToken0005:${s1.id}`)).toBe(0)
+        expect(response.status).toBe(403) // the old token belongs to no session
     })
 })
