@@ -27,7 +27,7 @@
 
 2. **Правило прив'язки** в `handleCallback`:
     - акаунт уже прив'язано (`provider` + `provider_user_id`) → вхід як зараз;
-    - є користувач з таким email → прив'язка лише при `emailVerified === true`; інакше помилка `oauth_email_unverified` і редирект на `?error=oauth_email_unverified`;
+    - є користувач з таким email → прив'язка лише при `emailVerified === true`; інакше помилка `409` з причиною `oauth_email_unverified` і редирект на `OAUTH_FRONTEND_ERROR_URL` з `reason=oauth_email_unverified` (реалізація: параметр `reason`, щоб не ламати налаштований `error`);
     - користувача немає → створити; при `emailVerified` одразу `emailVerifiedAt = now`.
 
 3. **Налаштованість провайдера.** `isProviderConfigured(provider)`: непорожні `clientId`, `clientSecret`, `redirectUri`. `getConfiguredProviders()`. `redirect` для ненастроєного провайдера → `404 Provider not configured`.

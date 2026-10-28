@@ -39,6 +39,8 @@ export default {
         mobileTitle: 'Welcome to Vibe Template',
         mobileSubtitle: 'Explore an educational full-stack application template',
         socialLoginFailed: 'Social login failed. Please try again.',
+        socialLoginEmailUnverified:
+            'An account with this email already exists. Sign in with your password.',
     },
 
     auth: {

@@ -93,7 +93,12 @@ onMounted(() => {
     }
 
     if (queryError === 'oauth_failed') {
-        oauthError.value = t('login.socialLoginFailed')
+        // The backend adds a reason when it refuses to link an existing account
+        // through an email the provider does not vouch for.
+        oauthError.value =
+            route.query.reason === 'oauth_email_unverified'
+                ? t('login.socialLoginEmailUnverified')
+                : t('login.socialLoginFailed')
         void router.replace({ query: {} })
     }
 

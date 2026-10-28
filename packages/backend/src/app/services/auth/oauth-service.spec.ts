@@ -99,21 +99,89 @@ async function loadOauthService() {
     return import('./oauth-service.js')
 }
 
-function stubGitHubUserInfoFetch(): void {
+// Answers each provider API URL with its own JSON body.
+function stubFetch(responses: Record<string, unknown>): void {
     vi.stubGlobal(
         'fetch',
-        vi.fn().mockResolvedValue({
-            json: vi.fn().mockResolvedValue({
-                id: 'provider-user-1',
-                email: 'user@example.com',
-                name: 'Jane',
-                avatar_url: 'https://cdn.example.com/avatar.png',
-            }),
+        vi.fn((url: string) => {
+            const key = Object.keys(responses).find((prefix) => url.startsWith(prefix))
+            if (key === undefined) throw new Error(`unexpected fetch ${url}`)
+            return Promise.resolve({ json: vi.fn().mockResolvedValue(responses[key]) })
         }),
     )
 }
 
+const GITHUB_USER = {
+    id: 'provider-user-1',
+    email: 'user@example.com',
+    name: 'Jane',
+    avatar_url: 'https://cdn.example.com/avatar.png',
+}
+
+function stubGitHubUserInfoFetch(
+    emails: unknown[] = [{ email: 'user@example.com', primary: true, verified: true }],
+): void {
+    stubFetch({
+        'https://api.github.com/user/emails': emails,
+        'https://api.github.com/user': GITHUB_USER,
+    })
+}
+
+const tokens = (accessToken: string) => ({
+    accessToken: () => accessToken,
+    hasRefreshToken: () => false,
+    refreshToken: () => null,
+})
+
+async function callback(provider: string) {
+    const { oauthService } = await loadOauthService()
+    return oauthService.handleCallback(
+        provider,
+        'oauth-code',
+        'oauth-state',
+        'oauth-state',
+        provider === 'google' ? 'code-verifier' : null,
+        authMock as any,
+    )
+}
+
+// No OAuth link yet, but a user with the same email already exists.
+function givenExistingUserByEmail(): void {
+    oauthAccountRepositoryMock.findByProviderAndProviderId.mockResolvedValue(undefined)
+    userRepositoryMock.findByEmail.mockResolvedValue({ id: 5n, sessionToken: 'existing-token' })
+    oauthAccountRepositoryMock.create.mockResolvedValue({ id: 30n, userId: 5n })
+    authMock.login.mockResolvedValue(true)
+}
+
+function expectLinkRefused(result: Awaited<ReturnType<typeof callback>>): void {
+    expect(Result.isError(result)).toBe(true)
+    if (Result.isError(result)) {
+        expect(result.error).toMatchObject({ _tag: 'Conflict', reason: 'oauth_email_unverified' })
+    }
+    expect(oauthAccountRepositoryMock.create).not.toHaveBeenCalled()
+    expect(userRepositoryMock.create).not.toHaveBeenCalled()
+    expect(authMock.login).not.toHaveBeenCalled()
+}
+
+// Blanks one credential of a provider for the current test; restored in afterEach.
+const restoreConfig: (() => void)[] = []
+async function unsetCredential(
+    provider: 'google' | 'facebook' | 'github' | 'gitlab',
+    field: 'clientId' | 'clientSecret' | 'redirectUri',
+): Promise<void> {
+    const { default: config } = await import('#config/oauth.js')
+    const credentials = config[provider] as Record<typeof field, string>
+    const original = credentials[field]
+    credentials[field] = ''
+    restoreConfig.push(() => {
+        credentials[field] = original
+    })
+}
+
 afterEach(() => {
+    restoreConfig.splice(0).forEach((restore) => {
+        restore()
+    })
     vi.resetModules()
     vi.clearAllMocks()
     vi.unstubAllGlobals()
@@ -209,6 +277,7 @@ describe('oauthService', () => {
             email: 'user@example.com',
             password: null,
             avatar: 'https://cdn.example.com/avatar.png',
+            emailVerifiedAt: expect.any(Date),
         })
         expect(oauthAccountRepositoryMock.create).toHaveBeenCalledWith({
             userId: 8n,
@@ -221,5 +290,177 @@ describe('oauthService', () => {
             refreshToken: null,
         })
         expect(authMock.login).toHaveBeenCalledWith('8', 'new-session-token')
+    })
+
+    describe('linking to an existing user by email', () => {
+        it('links when Google reports the email as verified', async () => {
+            googleValidateAuthorizationCodeMock.mockResolvedValue(tokens('google-token'))
+            stubFetch({
+                'https://www.googleapis.com/oauth2/v2/userinfo': {
+                    id: 'g-1',
+                    email: 'User@Example.com',
+                    name: 'Jane',
+                    verified_email: true,
+                },
+            })
+            givenExistingUserByEmail()
+
+            const result = await callback('google')
+
+            expect(Result.isOk(result)).toBe(true)
+            expect(userRepositoryMock.findByEmail).toHaveBeenCalledWith('user@example.com')
+            expect(oauthAccountRepositoryMock.create).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: 5n, provider: 'google', providerUserId: 'g-1' }),
+            )
+            expect(authMock.login).toHaveBeenCalledWith('5', 'existing-token')
+        })
+
+        it('refuses when Google reports the email as unverified', async () => {
+            googleValidateAuthorizationCodeMock.mockResolvedValue(tokens('google-token'))
+            stubFetch({
+                'https://www.googleapis.com/oauth2/v2/userinfo': {
+                    id: 'g-1',
+                    email: 'user@example.com',
+                    name: 'Jane',
+                    verified_email: false,
+                },
+            })
+            givenExistingUserByEmail()
+
+            expectLinkRefused(await callback('google'))
+        })
+
+        it('never links a Facebook login by email', async () => {
+            facebookValidateAuthorizationCodeMock.mockResolvedValue(tokens('fb-token'))
+            stubFetch({
+                'https://graph.facebook.com/me': {
+                    id: 'fb-1',
+                    email: 'user@example.com',
+                    name: 'Jane',
+                    verified: true,
+                },
+            })
+            givenExistingUserByEmail()
+
+            expectLinkRefused(await callback('facebook'))
+        })
+
+        it('links GitLab only when OIDC userinfo verifies the same email', async () => {
+            gitlabValidateAuthorizationCodeMock.mockResolvedValue(tokens('gl-token'))
+            stubFetch({
+                'https://gitlab.com/api/v4/user': {
+                    id: 9,
+                    email: 'user@example.com',
+                    name: 'Jane',
+                },
+                'https://gitlab.com/oauth/userinfo': {
+                    email: 'user@example.com',
+                    email_verified: true,
+                },
+            })
+            givenExistingUserByEmail()
+
+            const result = await callback('gitlab')
+
+            expect(Result.isOk(result)).toBe(true)
+            expect(authMock.login).toHaveBeenCalledWith('5', 'existing-token')
+        })
+
+        it.each([
+            ['unverified', { email: 'user@example.com', email_verified: false }],
+            ['verified for another address', { email: 'other@example.com', email_verified: true }],
+            ['missing (no openid scope)', {}],
+        ])('refuses GitLab when the userinfo email is %s', async (_label, userinfo) => {
+            gitlabValidateAuthorizationCodeMock.mockResolvedValue(tokens('gl-token'))
+            stubFetch({
+                'https://gitlab.com/api/v4/user': {
+                    id: 9,
+                    email: 'user@example.com',
+                    name: 'Jane',
+                },
+                'https://gitlab.com/oauth/userinfo': userinfo,
+            })
+            givenExistingUserByEmail()
+
+            expectLinkRefused(await callback('gitlab'))
+        })
+
+        it('creates an unverified user when the provider does not verify the email', async () => {
+            facebookValidateAuthorizationCodeMock.mockResolvedValue(tokens('fb-token'))
+            stubFetch({
+                'https://graph.facebook.com/me': {
+                    id: 'fb-1',
+                    email: 'new@example.com',
+                    name: 'Jane',
+                },
+            })
+            oauthAccountRepositoryMock.findByProviderAndProviderId.mockResolvedValue(undefined)
+            userRepositoryMock.findByEmail.mockResolvedValue(undefined)
+            userRepositoryMock.create.mockResolvedValue({ id: 8n, sessionToken: 'new-token' })
+            oauthAccountRepositoryMock.create.mockResolvedValue({ id: 22n, userId: 8n })
+            authMock.login.mockResolvedValue(true)
+
+            const result = await callback('facebook')
+
+            expect(Result.isOk(result)).toBe(true)
+            expect(userRepositoryMock.create).toHaveBeenCalledWith(
+                expect.not.objectContaining({ emailVerifiedAt: expect.anything() }),
+            )
+        })
+    })
+
+    it('ignores an unverified GitHub email and fails without a verified primary one', async () => {
+        githubValidateAuthorizationCodeMock.mockResolvedValue(tokens('github-access-token'))
+        stubGitHubUserInfoFetch([
+            { email: 'user@example.com', primary: true, verified: false },
+            { email: 'second@example.com', primary: false, verified: true },
+        ])
+        oauthAccountRepositoryMock.findByProviderAndProviderId.mockResolvedValue(undefined)
+
+        const result = await callback('github')
+
+        expect(Result.isError(result)).toBe(true)
+        if (Result.isError(result)) {
+            expect(result.error).toMatchObject({
+                _tag: 'BadRequest',
+                message: 'Could not retrieve email from provider',
+            })
+        }
+        expect(authMock.login).not.toHaveBeenCalled()
+    })
+
+    describe('configured providers', () => {
+        it('lists only providers with client id, secret and redirect URI', async () => {
+            await unsetCredential('facebook', 'clientSecret')
+            await unsetCredential('gitlab', 'redirectUri')
+
+            const { oauthService } = await loadOauthService()
+
+            expect(oauthService.getConfiguredProviders()).toEqual(['google', 'github'])
+        })
+
+        it('does not build a redirect URL for an unconfigured provider', async () => {
+            await unsetCredential('github', 'clientId')
+
+            const { oauthService } = await loadOauthService()
+            const result = oauthService.getAuthorizationUrl('github')
+
+            expect(Result.isError(result)).toBe(true)
+            if (Result.isError(result)) {
+                expect(result.error).toMatchObject({ _tag: 'NotFound' })
+            }
+            expect(githubCreateAuthorizationUrlMock).not.toHaveBeenCalled()
+        })
+
+        it('requests the OIDC scopes from GitLab', async () => {
+            const { oauthService } = await loadOauthService()
+            oauthService.getAuthorizationUrl('gitlab')
+
+            expect(gitlabCreateAuthorizationUrlMock).toHaveBeenCalledWith('oauth-state', [
+                'openid',
+                'email',
+                'read_user',
+            ])
+        })
     })
 })

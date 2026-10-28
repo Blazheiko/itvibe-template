@@ -2,7 +2,7 @@ import { Google, Facebook, GitHub, GitLab, generateState, generateCodeVerifier }
 import oauthConfig from '#config/oauth.js'
 import { userRepository, oauthAccountRepository } from '#app/repositories/index.js'
 import { Result } from 'better-result'
-import { badRequest, notFound, type AppResult } from '#app/services/shared/errors.js'
+import { badRequest, conflict, notFound, type AppResult } from '#app/services/shared/errors.js'
 import { tryInternal } from '#app/services/shared/result-helpers.js'
 import type { Auth } from '#vendor/types/types.js'
 import logger from '#vendor/utils/logger.js'
@@ -34,6 +34,21 @@ type OAuthProvider = (typeof SUPPORTED_PROVIDERS)[number]
 function isValidProvider(provider: string): provider is OAuthProvider {
     return (SUPPORTED_PROVIDERS as readonly string[]).includes(provider)
 }
+
+// A provider is usable only when all three credentials are set; without them the
+// redirect would send the user to the provider with an empty client_id.
+function isProviderConfigured(provider: OAuthProvider): boolean {
+    const { clientId, clientSecret, redirectUri } = oauthConfig[provider]
+    return clientId !== '' && clientSecret !== '' && redirectUri !== ''
+}
+
+function getConfiguredProviders(): OAuthProvider[] {
+    return SUPPORTED_PROVIDERS.filter(isProviderConfigured)
+}
+
+// Shown to the user (via the frontend) when an existing account would be linked
+// through an email the provider does not vouch for.
+export const OAUTH_EMAIL_UNVERIFIED = 'oauth_email_unverified'
 
 function createGoogleClient(): Google {
     return new Google(
@@ -73,6 +88,9 @@ interface OAuthUserInfo {
     email: string
     name: string
     avatar: string | null
+    // Whether the provider confirms the user owns `email`. Linking to an existing
+    // account by email is allowed only when this is true.
+    emailVerified: boolean
 }
 
 async function fetchGoogleUserInfo(accessToken: string): Promise<OAuthUserInfo> {
@@ -87,6 +105,7 @@ async function fetchGoogleUserInfo(accessToken: string): Promise<OAuthUserInfo> 
         email: typeof data['email'] === 'string' ? data['email'] : '',
         name: typeof data['name'] === 'string' ? data['name'] : '',
         avatar: typeof data['picture'] === 'string' ? data['picture'] : null,
+        emailVerified: data['verified_email'] === true,
     }
 }
 
@@ -104,6 +123,8 @@ async function fetchFacebookUserInfo(accessToken: string): Promise<OAuthUserInfo
         email: typeof data['email'] === 'string' ? data['email'] : '',
         name: typeof data['name'] === 'string' ? data['name'] : '',
         avatar: typeof pictureData?.['url'] === 'string' ? pictureData['url'] : null,
+        // The Graph API has no "email confirmed" flag (`verified` is about the account).
+        emailVerified: false,
     }
 }
 
@@ -111,14 +132,11 @@ async function fetchGitHubUserInfo(accessToken: string): Promise<OAuthUserInfo> 
     const headers = { Authorization: `Bearer ${accessToken}` }
     const data = await fetchJson('https://api.github.com/user', headers)
 
-    let email = typeof data['email'] === 'string' ? data['email'] : ''
-    if (email === '') {
-        const emails = await fetchJsonArray('https://api.github.com/user/emails', headers)
-        const primary = emails.find((e) => e['primary'] === true && e['verified'] === true)
-        if (primary !== undefined) {
-            email = typeof primary['email'] === 'string' ? primary['email'] : ''
-        }
-    }
+    // The public `email` of /user is not guaranteed to be verified, so the address
+    // always comes from /user/emails: the primary one, and only when verified.
+    const emails = await fetchJsonArray('https://api.github.com/user/emails', headers)
+    const primary = emails.find((e) => e['primary'] === true && e['verified'] === true)
+    const email = typeof primary?.['email'] === 'string' ? primary['email'] : ''
 
     return {
         id:
@@ -133,26 +151,34 @@ async function fetchGitHubUserInfo(accessToken: string): Promise<OAuthUserInfo> 
                   ? data['login']
                   : '',
         avatar: typeof data['avatar_url'] === 'string' ? data['avatar_url'] : null,
+        emailVerified: email !== '',
     }
 }
 
 async function fetchGitLabUserInfo(accessToken: string): Promise<OAuthUserInfo> {
-    const data = await fetchJson('https://gitlab.com/api/v4/user', {
-        Authorization: `Bearer ${accessToken}`,
-    })
+    const headers = { Authorization: `Bearer ${accessToken}` }
+    const data = await fetchJson('https://gitlab.com/api/v4/user', headers)
+    // /api/v4/user has no verification flag; the OIDC userinfo endpoint does
+    // (needs the `openid email` scopes).
+    const userinfo = await fetchJson('https://gitlab.com/oauth/userinfo', headers)
+    const email = typeof data['email'] === 'string' ? data['email'] : ''
     return {
         id:
             typeof data['id'] === 'string' || typeof data['id'] === 'number'
                 ? String(data['id'])
                 : '',
-        email: typeof data['email'] === 'string' ? data['email'] : '',
+        email,
         name: typeof data['name'] === 'string' ? data['name'] : '',
         avatar: typeof data['avatar_url'] === 'string' ? data['avatar_url'] : null,
+        emailVerified:
+            email !== '' && userinfo['email_verified'] === true && userinfo['email'] === email,
     }
 }
 
 export const oauthService = {
     isValidProvider,
+    isProviderConfigured,
+    getConfiguredProviders,
 
     getAuthorizationUrl(provider: string): AppResult<{
         url: string
@@ -161,6 +187,9 @@ export const oauthService = {
     }> {
         if (!isValidProvider(provider)) {
             return Result.err(badRequest(`Unsupported provider: ${provider}`))
+        }
+        if (!isProviderConfigured(provider)) {
+            return Result.err(notFound('OAuthProvider', `Provider not configured: ${provider}`))
         }
 
         const state = generateState()
@@ -189,7 +218,11 @@ export const oauthService = {
         }
 
         // gitlab
-        const url = createGitLabClient().createAuthorizationURL(state, ['read_user'])
+        const url = createGitLabClient().createAuthorizationURL(state, [
+            'openid',
+            'email',
+            'read_user',
+        ])
         return Result.ok({ url: url.toString(), state, codeVerifier: null })
     },
 
@@ -203,6 +236,9 @@ export const oauthService = {
     ): Promise<AppResult<{ redirectUrl: string }>> {
         if (!isValidProvider(provider)) {
             return Result.err(badRequest(`Unsupported provider: ${provider}`))
+        }
+        if (!isProviderConfigured(provider)) {
+            return Result.err(notFound('OAuthProvider', `Provider not configured: ${provider}`))
         }
 
         if (storedState !== receivedState) {
@@ -331,6 +367,18 @@ export const oauthService = {
                 'oauth user by email lookup',
             )
 
+            if (existingUser !== undefined && !userInfo.emailVerified) {
+                // Someone could register the victim's address at a provider that does
+                // not confirm it; linking would hand them the existing account.
+                logger.warn({ provider }, 'oauth link refused: email not verified by provider')
+                return Result.err(
+                    conflict(
+                        'An account with this email already exists. Sign in with your password.',
+                        OAUTH_EMAIL_UNVERIFIED,
+                    ),
+                )
+            }
+
             if (existingUser !== undefined) {
                 // Link OAuth account to existing user
                 userId = existingUser.id
@@ -363,6 +411,7 @@ export const oauthService = {
                             email: userInfo.email,
                             password: null,
                             avatar: userInfo.avatar,
+                            ...(userInfo.emailVerified ? { emailVerifiedAt: new Date() } : {}),
                         }),
                     'Failed to create user',
                 )

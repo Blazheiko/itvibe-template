@@ -2,6 +2,7 @@ import baseApi from './base-api'
 import type { ApiResponse } from './api-error'
 import { apiPath } from './api-path'
 import type {
+    OAuthProvidersResponse,
     UploadAvatarResponse,
     DeleteAvatarResponse,
     InitResponse,
@@ -58,6 +59,10 @@ const isSuccessfulResponse = <T extends Record<string, unknown>>(
     response.error === null && response.data !== null && !hasResponseError(response.data)
 
 export const authApi = {
+    getOAuthProviders: async (): Promise<ApiResponse<OAuthProvidersResponse>> => {
+        return baseApi.http<OAuthProvidersResponse>('GET', apiPath('auth/oauth/providers'))
+    },
+
     login: async (body: LoginInput): Promise<ApiResponse<LoginResponse>> => {
         return baseApi.http<LoginResponse>('POST', apiPath('auth/login'), body, {
             csrfRecovery: 'public',
