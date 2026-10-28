@@ -223,7 +223,8 @@ The backend uses a synchronizer-token CSRF model for cookie-backed browser reque
 
 - every Redis session has a `csrfToken`
 - legacy sessions without a token are backfilled lazily on the next session load
-- login, logout, logout-all, and change-password rotate the session (the previous one — anonymous or signed in — is deleted) and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request
+- login, logout, logout-all, and change-password rotate the session (the previous one — anonymous or signed in — is deleted) and return the fresh `csrfToken` in the response body so the SPA can update its in-memory holder before the next unsafe request. change-password also returns `wsUrl`/`wsToken` for the WebSocket reconnect and `sessionRenewed`: the password is written first, so a failed rotation still answers success with `sessionRenewed: false`
+- the cookie of an unchanged session is re-sent at most once an hour (marker key `session_cookie_refresh:<id>`, `SET NX EX`), and dropped from the response if the session was deleted meanwhile (`context.session.beforeSend`)
 - the `main/init` bootstrap response also returns the current `csrfToken`
 - `session_web` attaches the session `csrfToken` to any response written by the middleware chain itself (the 401 from `auth_guard`, the 403 from `csrf_guard`), so an anonymous visitor — whose `main/init` is rejected before it reaches the handler — still receives the token it needs to sign the login request
 - unsafe HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`) must send the token in `X-CSRF-Token`
@@ -939,7 +940,17 @@ export default {
             return mapControllerError(context, result.error)
         }
 
-        return { status: 'success' }
+        // The password is already changed: a failed renewal is not an error.
+        const renewed = await authService.renewSession(context.auth, context.session)
+        if (Result.isError(renewed)) {
+            context.logger.error(
+                { err: renewed.error },
+                'Session renewal after password change failed',
+            )
+            return { status: 'success', sessionRenewed: false }
+        }
+
+        return { status: 'success', sessionRenewed: true, ...renewed.value }
     },
 }
 ```
