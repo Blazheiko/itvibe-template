@@ -11,7 +11,7 @@ const packagesItems = [
     { text: 'API Playground', link: '/playground/' },
 ]
 
-export default withMermaid(
+const config = withMermaid(
     defineConfig({
         base: '/vibe-template/',
         lang: 'uk-UA',
@@ -21,12 +21,6 @@ export default withMermaid(
         cleanUrls: true,
         lastUpdated: true,
         ignoreDeadLinks: false,
-        // mermaid тягне CJS-залежності (dayjs, fastdom...), які pnpm не піднімає; у dev бандлимо його цілком
-        vite: {
-            optimizeDeps: {
-                include: ['mermaid'],
-            },
-        },
         head: [
             ['link', { rel: 'icon', href: '/vibe-template/logo.svg' }],
             ['meta', { name: 'author', content: `${author} <${authorEmail}>` }],
@@ -114,7 +108,9 @@ export default withMermaid(
                             { text: 'Маршрутизація', link: '/backend/routing' },
                             { text: 'Middleware', link: '/backend/middlewares' },
                             { text: 'База даних', link: '/backend/database' },
-                            { text: 'Автентифікація та безпека', link: '/backend/auth-security' },
+                            { text: 'Автентифікація', link: '/backend/auth' },
+                            { text: 'Вхід через соцмережі', link: '/backend/oauth' },
+                            { text: 'Безпека', link: '/backend/security' },
                             { text: 'WebSocket', link: '/backend/websocket' },
                             { text: 'Тестування', link: '/backend/testing' },
                             { text: 'Кешування та ETag', link: '/backend/caching-etag' },
@@ -126,7 +122,8 @@ export default withMermaid(
                         text: 'Інтеграції',
                         items: [
                             { text: 'Сховище файлів (S3)', link: '/backend/storage' },
-                            { text: 'Пошта та push', link: '/backend/mail-push' },
+                            { text: 'Пошта', link: '/backend/mail' },
+                            { text: 'Web Push сповіщення', link: '/backend/web-push-notification' },
                             { text: 'AI-інтеграції', link: '/backend/ai' },
                         ],
                     },
@@ -167,3 +164,13 @@ export default withMermaid(
         },
     }),
 )
+
+// mermaid тягне CJS-залежності (dayjs, fastdom...), які pnpm не піднімає, тож у dev
+// бандлимо його цілком. withMermaid дописує ці залежності в include голими іменами,
+// а під pnpm Vite їх не знаходить і пише "Failed to resolve dependency" — прибираємо їх.
+config.vite = {
+    ...config.vite,
+    optimizeDeps: { ...config.vite?.optimizeDeps, include: ['mermaid'] },
+}
+
+export default config

@@ -1,76 +1,74 @@
-# Пошта та push-нотифікації
+# Web Push сповіщення
 
-Бекенд має два канали нотифікацій: email через SMTP ([nodemailer](https://nodemailer.com/)) і Web Push через бібліотеку [`web-push`](https://github.com/web-push-libs/web-push) з VAPID-ключами. Обидва канали вимкнені, доки не задано відповідні змінні оточення — їх перелік і значення за замовчуванням описані в [Конфігурації](/backend/configuration).
+Web Push дозволяє серверу показати користувачу системне сповіщення, **навіть коли вкладку із застосунком закрито**: повідомлення доставляє push-сервіс браузера (Google FCM для Chrome, Mozilla autopush для Firefox, Apple для Safari), а показує його Service Worker. У шаблоні вже є все потрібне: підписка у фронтенді, збереження підписок у PostgreSQL, відправка через бібліотеку [`web-push`](https://github.com/web-push-libs/web-push), журнал відправок і статистика. Щоб це запрацювало, потрібні лише VAPID-ключі.
 
-## Email
+## Як це працює
 
-### Транспорт
+1. Користувач вмикає сповіщення в акаунті ([`UserAccount.vue`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/views/UserAccount.vue)). Браузер питає дозвіл (`Notification.requestPermission()`).
+2. Фронтенд бере **публічний** VAPID-ключ з бекенду і просить браузер створити підписку: `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })`.
+3. Браузер реєструється в своєму push-сервісі й повертає підписку: унікальний `endpoint` (URL у push-сервісі) і ключі шифрування `p256dh` та `auth`.
+4. Фронтенд відправляє підписку на бекенд, бекенд зберігає її в таблиці `push_subscriptions`.
+5. Коли трапляється подія (новий вхід, зміна пароля, відповідь підтримки), бекенд шифрує payload ключами підписки, підписує запит **приватним** VAPID-ключем і робить `POST` на `endpoint`.
+6. Push-сервіс перевіряє підпис, будить Service Worker браузера, а той показує сповіщення. Клік відкриває `data.url`.
 
-Сервіс [`email-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/email-service.ts) створює один лінивий `nodemailer`-транспорт (`createTransport`) з `host`, `port`, `secure`, опційними `requireTLS`/`ignoreTLS` та `auth` (лише якщо задані і `SMTP_USER`, і `SMTP_PASSWORD`). Налаштування беруться з [`config/mail.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/mail.ts).
+## Що таке VAPID-ключі
 
-Публічний API — об'єкт `emailService`:
+**VAPID** (Voluntary Application Server Identification, [RFC 8292](https://www.rfc-editor.org/rfc/rfc8292)) — це спосіб, яким ваш сервер доводить push-сервісу браузера, що він має право надсилати повідомлення на конкретну підписку.
 
-- `isConfigured(): boolean` — чи пройдена перевірка конфігурації;
-- `send(input: SendEmailInput): Promise<AppResult<SendEmailOutput>>` — повертає `Result` (`better-result`), не кидає винятків.
+- Це **пара ключів ECDSA на кривій P-256**: публічний і приватний, у форматі base64url.
+- **Публічний ключ** не секретний. Фронтенд передає його браузеру як `applicationServerKey` під час підписки, і push-сервіс «прив'язує» підписку до нього.
+- **Приватний ключ** — секрет, він лише на сервері. Ним бекенд підписує короткий JWT у заголовку `Authorization` кожного push-запиту. Push-сервіс перевіряє підпис публічним ключем з підписки. Тож навіть якщо хтось дізнається `endpoint`, без приватного ключа він не надішле повідомлення.
+- **`VAPID_SUBJECT`** — контакт власника сервера (`mailto:` або `https:` URL). Його отримує push-сервіс, щоб зв'язатися з вами, якщо з вашими запитами щось не так.
 
-`SendEmailInput` підтримує `to`, `cc`, `bcc`, `replyTo` (рядок, `{ email, name? }` або масив), `subject`, `text`/`html`, `from` та `attachments`. Якщо `from` не задано, використовується `SMTP_FROM_NAME <SMTP_FROM_EMAIL>`; якщо `replyTo` не задано — `SMTP_REPLY_TO` з конфігу.
-
-### Поведінка, коли SMTP вимкнено
-
-Пошта **не підміняється логуванням**. Перед кожною відправкою `send()` перевіряє конфігурацію і при помилці пише `logger.warn` та повертає `Result.err(internalMessage(...))`. Можливі причини:
-
-- `Email service is disabled` — `SMTP_ENABLED` не `true`;
-- `SMTP_HOST is not configured`;
-- `SMTP_FROM_EMAIL is not configured`;
-- `SMTP_USER and SMTP_PASSWORD must be configured together`.
-
-Далі валідуються вхідні дані (порожній `subject`, відсутні і `text`, і `html`, порожній список отримувачів, порожній відправник) — це `badRequest`. Помилка SMTP логується (`Failed to send email`) і повертається як `internal`. Успіх логується як `Email sent` з `messageId`, `accepted`, `rejected`.
-
-::: warning Наслідок для auth-флоу
-Оскільки виклики нижче перетворюють помилку `send()` на `internal`, при вимкненому SMTP запити на верифікацію email і скидання пароля через email завершуються помилкою сервера, а не «тихо» успіхом. Для локальної розробки без SMTP цей шлях не працює — див. [Локальне тестування](#локальне-тестування).
+::: tip VAPID не шифрує повідомлення
+VAPID лише ідентифікує сервер. Вміст повідомлення шифрується окремо ключами самої підписки (`p256dh`, `auth`, [RFC 8291](https://www.rfc-editor.org/rfc/rfc8291)), тож push-сервіс не бачить, що ви надсилаєте. Бібліотека `web-push` робить і те, і інше.
 :::
 
-### Які листи надсилаються
-
-Шаблонів-файлів і i18n немає: тема, `text` та `html` будуються функціями в коді сервісів, англійською, з екрануванням імені користувача через `escapeHtml`.
-
-| Лист                                       | Функція-шаблон           | Де викликається                                                                                                                                              |
-| ------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Підтвердження email («Confirm your email») | `buildEmailContent`      | [`email-verification-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/email-verification-service.ts) |
-| Прив'язка нового email до акаунта          | `buildLinkEmailContent`  | [`email-verification-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/email-verification-service.ts) |
-| Скидання пароля                            | `buildResetEmailContent` | [`password-reset-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/password-reset-service.ts)         |
-
-Посилання в листах містять сирий токен, а в БД зберігається лише його хеш. Деталі флоу — у [Автентифікації та безпеці](/backend/auth-security).
-
-### Тестовий лист: `mail:test`
-
-Скрипт [`send-test-email.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/scripts/send-test-email.ts) (`tsx`, підвантажує `.env` через `dotenv/config`) надсилає простий лист через той самий `emailService`:
-
-```bash
-pnpm --filter backend mail:test you@example.com "Optional subject"
-```
-
-Без отримувача скрипт друкує usage і завершується з кодом `1`. При помилці друкує `Failed to send test email: <причина>` (наприклад `Email service is disabled`) і теж повертає `1`; при успіху — `Message ID` та прийнятих отримувачів. Див. також [Скрипти](/reference/scripts).
-
-Юніт-тести сервісу — [`email-service.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/email-service.spec.ts).
-
-## Web Push
-
-### VAPID-ключі
-
-[`config/push.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/push.ts) читає `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Під час першої відправки [`push-notification-sender-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-notification-sender-service.ts) викликає `webpush.setVapidDetails(...)`; якщо ключі порожні — пише `VAPID keys not configured — push notifications disabled` і нічого не надсилає (`{ sent: 0, failed: 0 }`).
-
-::: warning Генерація ключів
-У репозиторії немає власного скрипта для генерації VAPID-ключів. Бібліотека `web-push` (залежність бекенду) надає CLI та функцію `generateVAPIDKeys()`, наприклад:
-
-```bash
-cd packages/backend && npx web-push generate-vapid-keys
-```
-
-Отримані значення покладіть у `.env` як `VAPID_PUBLIC_KEY=<public>` та `VAPID_PRIVATE_KEY=<private>`. Приватний ключ — секрет.
+::: warning Ключі не можна просто змінити
+Кожна підписка прив'язана до публічного ключа, з яким її створили. Якщо замінити ключі, усі наявні підписки перестануть працювати: push-сервіс відхилятиме запити, і користувачам доведеться підписатися знову. Генеруйте ключі один раз на оточення і зберігайте приватний ключ як секрет (менеджер секретів, змінні CI), а не в репозиторії.
 :::
 
-### HTTP-маршрути
+### Генерація ключів
+
+У бекенді є скрипт [`generate-vapid-keys.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/scripts/generate-vapid-keys.ts):
+
+```bash
+# надрукувати нову пару ключів
+pnpm --filter backend push:vapid
+
+# записати ключі прямо в packages/backend/.env
+pnpm --filter backend push:vapid --write
+```
+
+- З кореня репозиторію те саме запускає `pnpm push:vapid` (і `pnpm push:vapid --write`).
+- Без прапорців скрипт лише друкує рядки `VAPID_PUBLIC_KEY=...` і `VAPID_PRIVATE_KEY=...`, які треба додати в `.env`.
+- `--write` оновлює `VAPID_PUBLIC_KEY` і `VAPID_PRIVATE_KEY` у `packages/backend/.env`, решту файлу не чіпає. Якщо файлу немає, створює його.
+- Якщо приватний ключ у `.env` уже задано, `--write` відмовляється (код виходу `1`), щоб випадково не зламати наявні підписки. Щоб таки замінити ключі, додайте `--force`.
+
+Після генерації задайте `VAPID_SUBJECT` (наприклад `mailto:admin@your-domain.com`) і перезапустіть бекенд.
+
+### Конфігурація
+
+[`config/push.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/push.ts) читає три змінні:
+
+| Змінна              | За замовчуванням                     | Призначення                          |
+| ------------------- | ------------------------------------ | ------------------------------------ |
+| `VAPID_PUBLIC_KEY`  | `''`                                 | публічний ключ, віддається фронтенду |
+| `VAPID_PRIVATE_KEY` | `''`                                 | приватний ключ, секрет               |
+| `VAPID_SUBJECT`     | `mailto:admin@vibe-template.example` | контакт для push-сервісу             |
+
+Під час першої відправки [`push-notification-sender-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-notification-sender-service.ts) викликає `webpush.setVapidDetails(...)`. Якщо ключі порожні, пише `VAPID keys not configured — push notifications disabled` і нічого не надсилає (`{ sent: 0, failed: 0 }`). `GET /push-subscriptions/vapid-public-key` і `POST /push-subscriptions/test-push` у цьому випадку відповідають `500 VAPID keys not configured`, тож підписатися неможливо. Решта застосунку працює.
+
+## Типи сповіщень
+
+Кожне сповіщення має тип `notificationType`, а підписка — необов'язковий список `notificationTypes` (`'mention' | 'system'`), які вона хоче отримувати. Порожній список означає «усі типи».
+
+| Тип       | Що це                                                      |
+| --------- | ---------------------------------------------------------- |
+| `system`  | сповіщення безпеки акаунта                                 |
+| `mention` | повідомлення, адресовані користувачу (відповідь підтримки) |
+
+## HTTP-маршрути
 
 Група `push-subscriptions` у [`http-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) з middleware `session_web` і `csrf_guard`; на кожному маршруті, крім `vapid-public-key`, стоїть `auth_guard` (анонімний запит → `401` до контролера); контролер — [`push-subscription-controller.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts). Фронтенд звертається до них з префіксом `/api` ([`utils/api.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/api.ts)).
 
@@ -87,11 +85,11 @@ cd packages/backend && npx web-push generate-vapid-keys
 | `GET`    | `/push-subscriptions/:subscriptionId/statistics` | Статистика                                                                                                                                                   |
 | `PUT`    | `/push-subscriptions/:subscriptionId/deactivate` | Деактивувати                                                                                                                                                 |
 
-### Збереження підписки
+## Збереження підписки
 
 [`push-subscription-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.ts) у `createSubscription` шукає підписку за `endpoint` (він унікальний серед усіх користувачів). Якщо підписка належить іншому користувачу, її переносять на поточного лише тоді, коли `p256dhKey` і `authKey` збігаються з збереженими (той самий браузер, зміна акаунта); інакше — `409 conflict`, підписка лишається за старим власником. Якщо вона є — оновлює ключі `p256dhKey`/`authKey`, метадані пристрою, `notificationTypes`, `timezone` і знову робить `isActive: true`; інакше створює новий запис. Робота з таблицею — через репозиторій, див. [Репозиторії та трансформери](/backend/repositories-transformers).
 
-### Відправка та формат payload
+## Відправка та формат payload
 
 `pushNotificationSenderService.sendToUser(userId, payload, { skipIfOnline?, notificationType? })`:
 
@@ -142,11 +140,11 @@ cd packages/backend && npx web-push generate-vapid-keys
 - **Обрив без close.** Поки сервер не помітив розрив (heartbeat), з'єднання рахується відкритим.
   :::
 
-### Статистика
+## Статистика
 
 [`push-subscription-statistics-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/statistics/push-subscription-statistics-service.ts) рахує `totalNotifications`, `sentNotifications`, `failedNotifications`, `pendingNotifications`, `successRate` (%), `last7DaysCount`, `lastUsed`, `isActive`. Лічильники дає один SQL-запит `countsBySubscription` (`count(case …)`), межу 7 днів обчислює застосунок і передає параметром.
 
-### Фронтенд
+## Фронтенд
 
 - Підписка — у [`stores/state.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/stores/state.ts): перевіряє `registration.pushManager.getSubscription()`, отримує VAPID-ключ з `/api/push-subscriptions/vapid-public-key`, викликає `pushManager.subscribe({ applicationServerKey })` і відправляє дані на `POST /api/push-subscriptions`.
 - [`service-worker.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/service-worker.ts) у обробнику `push` парсить JSON, зливає `payload.notification` з дефолтами і викликає `showNotification`; `notificationclick` закриває нотифікацію і відкриває `data.url` (або `/`).
@@ -172,6 +170,9 @@ sequenceDiagram
 
 ## Локальне тестування
 
-- **Пошта:** підніміть локальний SMTP-перехоплювач (наприклад Mailpit або MailHog на порту `1025`), задайте `SMTP_ENABLED=true`, `SMTP_HOST=localhost`, `SMTP_PORT=1025`, `SMTP_REQUIRE_TLS=false`, `SMTP_FROM_EMAIL=noreply@example.com` без логіна/пароля і перевірте `pnpm --filter backend mail:test you@example.com`. Ці інструменти не входять до репозиторію.
-- **Push:** згенеруйте VAPID-ключі, перезапустіть бекенд, увімкніть нотифікації у фронтенді (service worker потребує `localhost` або HTTPS), потім викличте `POST /api/push-subscriptions/test-push` (тіло `{}` або `{ "title": "…", "body": "…" }`, з CSRF-токеном) з активною сесією. Результат видно у відповіді (`sent`/`failed`), у логах бекенду та через `/:subscriptionId/logs`.
-- Юніт-тести: `pnpm --filter backend test` (включно з [`push-subscription-service.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts)).
+1. Згенеруйте ключі: `pnpm --filter backend push:vapid --write`, і перезапустіть бекенд.
+2. Service Worker реєструється лише в production-збірці (див. [Фронтенд → PWA](/frontend/#pwa)), а push потребує `localhost` або HTTPS. Зберіть фронтенд і віддайте його бекендом або через `vite preview`.
+3. Увійдіть, увімкніть сповіщення в акаунті й дозвольте їх у браузері.
+4. Викличте `POST /api/push-subscriptions/test-push` (тіло `{}` або `{ "title": "…", "body": "…" }`, з CSRF-токеном) з активною сесією. Результат видно у відповіді (`sent`/`failed`), у логах бекенду та через `/:subscriptionId/logs`.
+
+Юніт-тести: `pnpm --filter backend test`, зокрема [`push-subscription-service.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts).

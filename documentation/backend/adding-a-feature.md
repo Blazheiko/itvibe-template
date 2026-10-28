@@ -555,7 +555,7 @@ curl -s -b cookies.txt $B/notes
 | `POST` з `content-type: text/plain`  | `415`  | `"code":"unsupported_media_type"`, `"allowedKinds":["json"]`                                            | ядро: маршрут приймає лише JSON |
 | `POST` без `x-csrf-token`            | `403`  | `{"status":"error","code":"csrf_invalid","message":"Invalid CSRF token","reason":"token_mismatch",...}` | `csrf_guard`                    |
 
-`CSRF_ENFORCE` за замовчуванням `true`, тож такий запит отримує `403`. Запит без заголовка `Origin` теж отримує `403`, але з `reason: "origin_mismatch"`. Як влаштований захист — [CSRF простими словами](/guide/csrf), деталі — [CSRF](/backend/auth-security#csrf).
+`CSRF_ENFORCE` за замовчуванням `true`, тож такий запит отримує `403`. Запит без заголовка `Origin` теж отримує `403`, але з `reason: "origin_mismatch"`. Як влаштований захист — [CSRF простими словами](/guide/csrf), деталі — [CSRF](/backend/security#csrf).
 
 Те саме можна перевірити без curl в [API Playground](/playground/): він показує маршрути `notes` разом зі схемою тіла.
 

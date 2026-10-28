@@ -36,11 +36,11 @@
 | Міграції БД, конфігурація, деплой             | Ні        | Ні   | Ні    | Не HTTP-можливості: CLI-скрипти (`db:*`, див. [Скрипти](/reference/scripts)) і `.env`. Доступ визначається доступом до сервера/репозиторію (Developer/QA локально, Operator у production)                                                                                                                                                              |
 
 ::: info Видалений маршрут `POST /main/save-user`
-Раніше в групі `main` був анонімний маршрут `/main/save-user`, який створював користувача з паролем без хешування (п. 65 у [списку проблем](https://github.com/Blazheiko/vibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)). Його видалено разом зі схемами `SaveUserInput`/`SaveUserResponse`, `WSSaveUserPayload` і клієнтським `api.saveUser`. Користувачі створюються лише через реєстрацію (email або телефон) та OAuth — див. [Автентифікація та безпека](/backend/auth-security).
+Раніше в групі `main` був анонімний маршрут `/main/save-user`, який створював користувача з паролем без хешування (п. 65 у [списку проблем](https://github.com/Blazheiko/vibe-template/blob/main/docs/plan/code-issues-found-during-docs.md)). Його видалено разом зі схемами `SaveUserInput`/`SaveUserResponse`, `WSSaveUserPayload` і клієнтським `api.saveUser`. Користувачі створюються лише через реєстрацію (email або телефон) та OAuth — див. [Автентифікація](/backend/auth#способи-входу) і [Вхід через соцмережі](/backend/oauth).
 :::
 
 ::: warning Не підтверджено
 Рядок «Update account/profile» з вихідної матриці не має окремого backend-маршруту в `http-routes.ts`. Сторінка `/account` існує, але, судячи з маршрутів, з профілем працюють тільки аватар, прив'язка телефону/email і зміна пароля. Колонки Developer/QA та Operator з вихідної матриці («Test», «Configure») описують організаційні обов'язки і кодом не забезпечуються, тому в таблицю вище їх не включено.
 :::
 
-Докладніше про guards див. [Автентифікація та безпека](/backend/auth-security) і [Middleware](/backend/middlewares).
+Докладніше про guards див. [Автентифікація](/backend/auth#ролі-auth-guard-та-admin-guard) і [Middleware](/backend/middlewares).

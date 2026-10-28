@@ -76,12 +76,12 @@
 - Коли сервер повертає `csrf_invalid`, клієнт один раз емітить `init_app`, щоб повторно ініціалізуватися й отримати новий токен. Неавторизовану відповідь клієнт перетворює на подію `unauthorized` в event bus.
 - Помилки не кидаються: метод повертає `{ data, error }`, де `error` має нормалізовані `code` і `transportCode`. Нормалізація живе в `utils/response-normalizer.ts`.
 
-Серверна сторона цього механізму описана в [/backend/auth-security](/backend/auth-security).
+Серверна сторона цього механізму описана в [Безпека → CSRF](/backend/security#csrf).
 
 ## WebSocket і push
 
 - Після успішного `init` `App.vue` відкриває WebSocket з `data.wsUrl` і `data.wsToken`. Клієнт (`useWebSocketConnection`, `ws-event.ts`, heartbeat, broadcast-обробник) описано в [/backend/websocket](/backend/websocket). Префікс задає `VITE_API_PATH_PREFIX` (за замовчуванням `api`), він має збігатися з бекендовим `API_PATH_PREFIX`. З нього будуються і WS-події, і всі HTTP-шляхи ([`utils/api-path.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/api-path.ts): `apiPath('auth/login')` → `/<prefix>/auth/login`), OAuth-посилання, URL скриншотів і сховища, фільтр API-запитів у service worker і ключ Vite proxy (`/<prefix>` з `ws: true` покриває і WS-ендпоінт `/<prefix>/websocket`).
-- Підписка на Web Push працює через `/api/push-subscriptions*` (VAPID-ключ, CRUD). Як SW обробляє push, описано в [/backend/mail-push](/backend/mail-push).
+- Підписка на Web Push працює через `/api/push-subscriptions*` (VAPID-ключ, CRUD). Як SW обробляє push, описано в [Web Push сповіщення](/backend/web-push-notification#фронтенд).
 
 ## PWA
 

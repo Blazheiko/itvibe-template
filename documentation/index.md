@@ -23,7 +23,7 @@ features:
     - icon: 🔐
       title: Акаунти та вхід
       details: Реєстрація по email і телефону, підтвердження пошти, вхід через Google, GitHub і Facebook, скидання пароля, вихід з усіх пристроїв.
-      link: /backend/auth-security
+      link: /backend/auth
     - icon: ⚡
       title: Швидкий бекенд на uWebSockets.js
       details: HTTP і WebSocket в одному процесі. Код розкладено шарами route → controller → service → repository, тому зрозуміло, куди що писати.
@@ -31,15 +31,15 @@ features:
     - icon: 🛡️
       title: Безпека з коробки
       details: Сесії в Redis, CSRF, CORS, CSP і security-заголовки, rate limiting, захист від перебору паролів, довірені проксі.
-      link: /backend/auth-security
+      link: /backend/security
     - icon: 🔄
       title: Real-time
       details: WebSocket-канал з авторизацією, хто онлайн, історія онлайну, push від сервера до клієнта.
       link: /backend/websocket
     - icon: 🔔
       title: Web Push повідомлення
-      details: Підписка на push у браузері, збереження підписок і відправка через VAPID вже вбудовані. Досить згенерувати ключі й додати їх у .env.
-      link: /backend/mail-push#web-push
+      details: Підписка на push у браузері, збереження підписок і відправка через VAPID вже вбудовані. Ключі генерує одна команда pnpm push:vapid.
+      link: /backend/web-push-notification
     - icon: 📱
       title: Інсталяція PWA
       details: Застосунок встановлюється на телефон і комп'ютер як нативний. Є маніфест, іконки, splash-екран, Service Worker з офлайн-кешем і повідомлення про нову версію.
@@ -173,30 +173,30 @@ expect(Result.isOk(result)).toBe(true)
 
 ### Автентифікація та акаунт
 
-| Можливість                    | Як це працює                                                                       | Детальніше                                             |
-| ----------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Реєстрація по email           | `POST /auth/register/email`, лист з посиланням для підтвердження                   | [Автентифікація](/backend/auth-security#способи-входу) |
-| Підтвердження email           | `POST /auth/verify-email`, повторна відправка `resend-verification-email`          | [Пошта та push](/backend/mail-push)                    |
-| Реєстрація і вхід по телефону | SMS-код: `register/phone/start` → `confirm` → `complete-profile`                   | [Автентифікація](/backend/auth-security#способи-входу) |
-| Вхід через соцмережі (OAuth)  | Google, GitHub, Facebook: `auth/oauth/:provider/redirect` і `/callback`            | [Автентифікація](/backend/auth-security#способи-входу) |
-| Логін / логаут                | `POST /auth/login`, `/logout`, `/logout-all` (вийти на всіх пристроях)             | [Автентифікація](/backend/auth-security)               |
-| Зміна і скидання пароля       | `change-password`, `forgot-password` → лист → `reset-password`; скидання через SMS | [Автентифікація](/backend/auth-security)               |
-| Прив'язка телефону / email    | `link-phone/start`, `link-phone/confirm`, `link-email/start`                       | [Автентифікація](/backend/auth-security)               |
-| Аватар користувача            | `POST /avatar/upload` (S3/MinIO), `DELETE /avatar`                                 | [Сховище файлів](/backend/storage)                     |
-| Ролі                          | Звичайний користувач і адміністратор, guard-и `auth_guard` і `admin_guard`         | [Ролі та можливості](/reference/roles-capabilities)    |
+| Можливість                    | Як це працює                                                                       | Детальніше                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Реєстрація по email           | `POST /auth/register/email`, лист з посиланням для підтвердження                   | [Автентифікація](/backend/auth#способи-входу)       |
+| Підтвердження email           | `POST /auth/verify-email`, повторна відправка `resend-verification-email`          | [Пошта](/backend/mail)                              |
+| Реєстрація і вхід по телефону | SMS-код: `register/phone/start` → `confirm` → `complete-profile`                   | [Автентифікація](/backend/auth#способи-входу)       |
+| Вхід через соцмережі (OAuth)  | Google, GitHub, Facebook: `auth/oauth/:provider/redirect` і `/callback`            | [Автентифікація](/backend/auth#способи-входу)       |
+| Логін / логаут                | `POST /auth/login`, `/logout`, `/logout-all` (вийти на всіх пристроях)             | [Автентифікація](/backend/auth)                     |
+| Зміна і скидання пароля       | `change-password`, `forgot-password` → лист → `reset-password`; скидання через SMS | [Автентифікація](/backend/auth)                     |
+| Прив'язка телефону / email    | `link-phone/start`, `link-phone/confirm`, `link-email/start`                       | [Автентифікація](/backend/auth)                     |
+| Аватар користувача            | `POST /avatar/upload` (S3/MinIO), `DELETE /avatar`                                 | [Сховище файлів](/backend/storage)                  |
+| Ролі                          | Звичайний користувач і адміністратор, guard-и `auth_guard` і `admin_guard`         | [Ролі та можливості](/reference/roles-capabilities) |
 
 ### Безпека
 
-| Можливість                | Що дає                                                                          | Детальніше                                                        |
-| ------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Сесії в Redis             | HttpOnly-cookie з HMAC-підписом, ротація токена, миттєве відкликання сесії      | [Сесії](/backend/auth-security#сесіі)                             |
-| CSRF-захист               | Токен для всіх запитів, що змінюють дані                                        | [CSRF](/backend/auth-security#csrf)                               |
-| CORS                      | Whitelist дозволених доменів                                                    | [CORS](/backend/auth-security#cors)                               |
-| CSP та security-заголовки | Content-Security-Policy, `X-Frame-Options` та інші заголовки на кожну відповідь | [Заголовки](/backend/auth-security#заголовки-безпеки-та-csp)      |
-| Rate limiting             | Глобальні та помаршрутні ліміти, в пам'яті або спільні через Redis              | [Ліміти](/backend/auth-security#обмеження-частоти-запитів)        |
-| Захист від перебору       | Throttling спроб входу, OTP-кодів і скидання пароля                             | [Політика входу](/backend/auth-security#політика-входу)           |
-| Trust proxy               | Коректний IP клієнта за nginx / балансувальником                                | [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip) |
-| Валідація вхідних даних   | Кожен маршрут описує схему arktype; некоректний запит не дійде до вашого коду   | [Валідація](/backend/validation)                                  |
+| Можливість                | Що дає                                                                          | Детальніше                                                   |
+| ------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Сесії в Redis             | HttpOnly-cookie з HMAC-підписом, ротація токена, миттєве відкликання сесії      | [Сесії](/backend/auth#сесіі)                                 |
+| CSRF-захист               | Токен для всіх запитів, що змінюють дані                                        | [CSRF](/backend/security#csrf)                               |
+| CORS                      | Whitelist дозволених доменів                                                    | [CORS](/backend/security#cors)                               |
+| CSP та security-заголовки | Content-Security-Policy, `X-Frame-Options` та інші заголовки на кожну відповідь | [Заголовки](/backend/security#заголовки-безпеки-та-csp)      |
+| Rate limiting             | Глобальні та помаршрутні ліміти, в пам'яті або спільні через Redis              | [Ліміти](/backend/security#обмеження-частоти-запитів)        |
+| Захист від перебору       | Throttling спроб входу, OTP-кодів і скидання пароля                             | [Політика входу](/backend/security#політика-входу)           |
+| Trust proxy               | Коректний IP клієнта за nginx / балансувальником                                | [Trust proxy](/backend/security#trust-proxy-і-визначення-ip) |
+| Валідація вхідних даних   | Кожен маршрут описує схему arktype; некоректний запит не дійде до вашого коду   | [Валідація](/backend/validation)                             |
 
 ### Real-time (WebSocket)
 
@@ -213,7 +213,7 @@ expect(Result.isOk(result)).toBe(true)
 - **Транзакційні листи** через SMTP (nodemailer): підтвердження email, скидання пароля. Є скрипт `send-test-email` для перевірки налаштувань.
 - **Web Push** (VAPID): підписка, оновлення, деактивація, тестова відправка, журнал доставок і статистика по кожній підписці (`/push-subscriptions/*`).
 
-Детальніше: [Пошта та push](/backend/mail-push).
+Детальніше: [Пошта](/backend/mail) і [Web Push сповіщення](/backend/web-push-notification).
 
 ### Файли
 

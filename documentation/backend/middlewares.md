@@ -43,7 +43,7 @@ Middleware задаються списком назв на групі маршр
 | `ws_admin_guard` | [`app/middlewares/ws-admin-guard.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/middlewares/ws-admin-guard.ts)                       | для WS-маршрутів: якщо `userData.role !== 'admin'`, відповідь `status "403"` з `forbidden` без виклику handler. HTTP-`auth_guard`/`admin_guard` на WS не працюють: WS-контекст не має `auth` і HTTP-`responseData` |
 | `test1`…`test4`  | `app/middlewares/test-middleware*.ts`                                                                                                                                    | демонстраційні middleware (логують і дописують `middlewareData`); зареєстровані в kernel, але в жодному маршруті не використовуються                                                                               |
 
-Деталі сесій і CSRF — на сторінці [Автентифікація та безпека](/backend/auth-security).
+Деталі сесій і CSRF — на сторінці [Автентифікація](/backend/auth) і [Безпека](/backend/security#csrf).
 
 ## Як виконується ланцюжок
 
