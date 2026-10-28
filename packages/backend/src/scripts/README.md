@@ -1,7 +1,8 @@
 # Backend scripts
 
-| File                 | Run                                                                 | What it does                                                                                                                  |
-| -------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `send-test-email.ts` | `pnpm --filter backend mail:test <recipient@example.com> [subject]` | Sends a test email through the configured mail driver (`emailService`) to check SMTP settings. Reads `packages/backend/.env`. |
+| File                     | Run                                                                 | What it does                                                                                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `send-test-email.ts`     | `pnpm --filter backend mail:test <recipient@example.com> [subject]` | Sends a test email through the configured mail driver (`emailService`) to check SMTP settings. Reads `packages/backend/.env`.                                                                       |
+| `generate-vapid-keys.ts` | `pnpm --filter backend push:vapid [--write] [--force]`              | Generates a VAPID key pair for Web Push. Prints it, or with `--write` saves it to `packages/backend/.env`; refuses to replace existing keys without `--force` (that breaks existing subscriptions). |
 
 Database scripts (`db:create`, `db:migrate`, `db:seed`, …) live in `src/db/` and are described in [Database](https://blazheiko.github.io/vibe-template/backend/database).

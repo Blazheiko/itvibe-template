@@ -38,8 +38,8 @@ features:
       link: /backend/websocket
     - icon: 🔔
       title: Web Push повідомлення
-      details: Підписка на push у браузері, збереження підписок і відправка через VAPID вже вбудовані. Досить згенерувати ключі й додати їх у .env.
-      link: /backend/mail-push#web-push
+      details: Підписка на push у браузері, збереження підписок і відправка через VAPID вже вбудовані. Ключі генерує одна команда pnpm push:vapid.
+      link: /backend/web-push-notification
     - icon: 📱
       title: Інсталяція PWA
       details: Застосунок встановлюється на телефон і комп'ютер як нативний. Є маніфест, іконки, splash-екран, Service Worker з офлайн-кешем і повідомлення про нову версію.
@@ -176,7 +176,7 @@ expect(Result.isOk(result)).toBe(true)
 | Можливість                    | Як це працює                                                                       | Детальніше                                             |
 | ----------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Реєстрація по email           | `POST /auth/register/email`, лист з посиланням для підтвердження                   | [Автентифікація](/backend/auth-security#способи-входу) |
-| Підтвердження email           | `POST /auth/verify-email`, повторна відправка `resend-verification-email`          | [Пошта та push](/backend/mail-push)                    |
+| Підтвердження email           | `POST /auth/verify-email`, повторна відправка `resend-verification-email`          | [Пошта](/backend/mail)                                 |
 | Реєстрація і вхід по телефону | SMS-код: `register/phone/start` → `confirm` → `complete-profile`                   | [Автентифікація](/backend/auth-security#способи-входу) |
 | Вхід через соцмережі (OAuth)  | Google, GitHub, Facebook: `auth/oauth/:provider/redirect` і `/callback`            | [Автентифікація](/backend/auth-security#способи-входу) |
 | Логін / логаут                | `POST /auth/login`, `/logout`, `/logout-all` (вийти на всіх пристроях)             | [Автентифікація](/backend/auth-security)               |
@@ -213,7 +213,7 @@ expect(Result.isOk(result)).toBe(true)
 - **Транзакційні листи** через SMTP (nodemailer): підтвердження email, скидання пароля. Є скрипт `send-test-email` для перевірки налаштувань.
 - **Web Push** (VAPID): підписка, оновлення, деактивація, тестова відправка, журнал доставок і статистика по кожній підписці (`/push-subscriptions/*`).
 
-Детальніше: [Пошта та push](/backend/mail-push).
+Детальніше: [Пошта](/backend/mail) і [Web Push сповіщення](/backend/web-push-notification).
 
 ### Файли
 
