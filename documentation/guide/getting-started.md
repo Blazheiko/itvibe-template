@@ -245,16 +245,18 @@ Demo-адмін має роль `admin`, тому йому доступна ад
 
 ### Те саме через curl
 
-Цей сценарій можна пройти без браузера. Cookie зберігаються у файлі `cookies.txt`, а CSRF-токен береться з відповіді `init`. Токен потрібен навіть для входу: `init` спершу створює гостьову сесію, і запит входу має прийти з її токеном.
+Цей сценарій можна пройти без браузера. Cookie зберігаються у файлі `cookies.txt`, а CSRF-токен береться з відповіді `init`. Токен потрібен навіть для входу: `init` спершу створює гостьову сесію, і запит входу має прийти з її токеном. Браузер сам додає до `POST` заголовок `Origin`, а curl — ні, тому його треба передати явно: без нього сервер відповість `403` ([чому так](/guide/csrf)).
 
 ```bash
 B=http://127.0.0.1:3000/api
+# Origin фронтенду: у dev сервер довіряє origin з APP_URL і FRONTEND_URL
+O='origin: http://localhost:5173'
 
-# 0. гостьова сесія і CSRF-токен: POST без токена сервер відхилить при CSRF_ENFORCE=true
+# 0. гостьова сесія і CSRF-токен: POST без токена сервер відхилить
 CSRF=$(curl -s -c cookies.txt -b cookies.txt $B/main/init | sed -E 's/.*"csrfToken":"([^"]+)".*/\1/')
 
 # 1. вхід: сервер ставить cookie сесії
-curl -s -c cookies.txt -b cookies.txt -H 'content-type: application/json' -H "x-csrf-token: $CSRF" \
+curl -s -c cookies.txt -b cookies.txt -H "$O" -H 'content-type: application/json' -H "x-csrf-token: $CSRF" \
   -d '{"email":"user@example.com","password":"<user-password>","token":""}' $B/auth/login
 
 # 2. хто я: cookie йде автоматично
@@ -262,7 +264,7 @@ curl -s -b cookies.txt $B/main/init
 
 # 3. вихід: після входу токен новий, беремо його знову з init
 CSRF=$(curl -s -b cookies.txt -c cookies.txt $B/main/init | sed -E 's/.*"csrfToken":"([^"]+)".*/\1/')
-curl -s -b cookies.txt -c cookies.txt -X POST -H "x-csrf-token: $CSRF" $B/auth/logout
+curl -s -b cookies.txt -c cookies.txt -X POST -H "$O" -H "x-csrf-token: $CSRF" $B/auth/logout
 
 # 4. після виходу: 401
 curl -s -o /dev/null -w '%{http_code}\n' -b cookies.txt $B/main/init
