@@ -1,13 +1,39 @@
 import type { HttpContext } from '#vendor/types/types.js'
 import { mapControllerError } from '#app/controllers/shared/controller-error.js'
 import { Result } from 'better-result'
-import { oauthService } from '#app/services/auth/oauth-service.js'
-import { badRequest } from '#app/services/shared/errors.js'
+import { OAUTH_EMAIL_UNVERIFIED, oauthService } from '#app/services/auth/oauth-service.js'
+import { appErrorMessage, badRequest, type AppError } from '#app/services/shared/errors.js'
 import type { OAuthCallbackQuery, OAuthRedirectQuery } from 'shared/schemas'
 import oauthConfig from '#config/oauth.js'
-import type { OAuthRedirectResponse, OAuthCallbackResponse } from 'shared'
+import type { OAuthCallbackResponse, OAuthProvidersResponse, OAuthRedirectResponse } from 'shared'
+
+// The callback is a browser navigation, so every outcome must be a redirect back to
+// the frontend: an error status would leave the user on a raw JSON page.
+const redirectToError = (
+    context: HttpContext<unknown, OAuthCallbackQuery>,
+    error: AppError,
+): OAuthCallbackResponse => {
+    context.logger.warn({ error: appErrorMessage(error) }, 'oauth callback failed')
+    const reason =
+        'reason' in error && error.reason === OAUTH_EMAIL_UNVERIFIED ? OAUTH_EMAIL_UNVERIFIED : null
+    context.responseData.status = 302
+    context.responseData.setHeader('Location', withReason(oauthConfig.frontendErrorUrl, reason))
+    return { status: 'error', message: appErrorMessage(error) }
+}
+
+// Adds `reason=<code>` to the configured error URL, which may be relative or absolute.
+const withReason = (url: string, reason: string | null): string => {
+    if (reason === null) return url
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}reason=${encodeURIComponent(reason)}`
+}
 
 export default {
+    providers(context: HttpContext): OAuthProvidersResponse {
+        context.logger.info('oauth providers handler')
+        return { status: 'ok', providers: oauthService.getConfiguredProviders() }
+    },
+
     async redirect(
         context: HttpContext<unknown, OAuthRedirectQuery>,
     ): Promise<OAuthRedirectResponse> {
@@ -57,9 +83,7 @@ export default {
                 : null
 
         if (code === '' || receivedState === '' || storedState === '') {
-            responseData.status = 302
-            responseData.setHeader('Location', oauthConfig.frontendErrorUrl)
-            return mapControllerError(context, badRequest('Missing OAuth parameters'))
+            return redirectToError(context, badRequest('Missing OAuth parameters'))
         }
 
         const result = await oauthService.handleCallback(
@@ -78,9 +102,7 @@ export default {
         })
 
         if (Result.isError(result)) {
-            responseData.status = 302
-            responseData.setHeader('Location', oauthConfig.frontendErrorUrl)
-            return mapControllerError(context, result.error)
+            return redirectToError(context, result.error)
         }
 
         responseData.status = 302

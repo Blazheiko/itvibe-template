@@ -221,6 +221,13 @@ export default [
     {
         group: [
             defineRoute({
+                url: '/providers',
+                method: 'get',
+                handler: OAuthController.providers.bind(OAuthController),
+                ResponseSchema: ResponseSchemas.OAuthProvidersResponseSchema,
+                description: 'OAuth providers configured on the backend',
+            }),
+            defineRoute({
                 url: '/:provider/redirect',
                 method: 'get',
                 handler: OAuthController.redirect.bind(OAuthController),

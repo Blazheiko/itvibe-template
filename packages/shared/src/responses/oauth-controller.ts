@@ -13,3 +13,13 @@ export const OAuthCallbackResponseSchema = type({
     'message?': 'string',
 })
 export type OAuthCallbackResponse = typeof OAuthCallbackResponseSchema.infer
+
+// Providers whose client id, secret and redirect URI are all set on the backend.
+export const OAuthProviderSchema = type.enumerated('google', 'facebook', 'github', 'gitlab')
+export type OAuthProvider = typeof OAuthProviderSchema.infer
+
+export const OAuthProvidersResponseSchema = type({
+    status: "'ok'",
+    providers: OAuthProviderSchema.array(),
+})
+export type OAuthProvidersResponse = typeof OAuthProvidersResponseSchema.infer
