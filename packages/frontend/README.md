@@ -95,6 +95,10 @@ Copy `.env.example` to `.env` and set the `VITE_*` variables as needed:
 - If `main/init` fails (network, 5xx, no token), the request is not repeated and later mutations are held until a new `main/init` succeeds; meanwhile they fail locally with `clientCode: 'session_unverified'`, no `code`, `transportCode: 0`.
 - Concurrent requests share one `main/init`.
 
+The service worker (`src/service-worker.ts`, rules in `src/utils/sw-request-policy.ts`) never caches the API: non-GET requests, other origins and everything under `VITE_API_PATH_PREFIX` bypass it, every cache write requires a complete same-origin response without `no-store`/`private`, and activation drops API entries an older worker cached.
+
+`pnpm test:e2e:security` runs the CSRF and service worker scenarios against the production build served by the real backend with enforcement on (needs PostgreSQL and Redis).
+
 ## Error monitoring
 
 - `src/utils/sentry-service.ts` is the only module that should import the Sentry

@@ -9,6 +9,8 @@
         "nightwatch.conf.*",
         "playwright.config.*",
         "playwright.csp.config.*",
+        "playwright.security.config.*",
+        "e2e-security/fixtures.ts",
         "eslint.config.*"
     ],
     "compilerOptions": {
