@@ -1,4 +1,4 @@
-# Feature Flags and Configurability: itvibe-template
+# Feature Flags and Configurability: vibe-template
 
 Last updated: 2026-05-30
 

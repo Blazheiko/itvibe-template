@@ -102,7 +102,7 @@
 | 56  | ~~Тест shared не містить жодного тесту (`pass 1` — порожній файл)~~ ✅                                            | Середня      | Тести / shared               |
 | 57  | ~~`guards` у shared порожні й закоментовані в `index.ts`~~ ✅                                                     | Низька       | shared                       |
 | 58  | ~~`EntityIdSchema` без `.brand()` — не брендований тип~~ ✅                                                       | Низька       | shared                       |
-| 59  | ~~Фронтенд: fallback `VITE_BASE_URL` на `https://itvibe-template.example`~~ ✅                                    | Середня      | Frontend / DX                |
+| 59  | ~~Фронтенд: fallback `VITE_BASE_URL` на `https://vibe-template.example`~~ ✅                                      | Середня      | Frontend / DX                |
 | 60  | ~~Фронтенд: `console.log(data)` друкує відповідь init з `wsToken`~~ ✅                                            | Середня      | Frontend / безпека           |
 | 61  | ~~Фронтенд: нетипізовані `VITE_*` змінні, застарілі коментарі~~ ✅                                                | Низька       | Frontend                     |
 | 62  | ~~Playground: `/api/doc/routes` зашито, ігнорує `baseUrl` і `API_PATH_PREFIX`~~ ✅                                | Низька       | Playground                   |
@@ -180,7 +180,7 @@
 
 ### 7. Потрібен pgvector, ніде не задокументовано
 
-> **Виправлено** у feat-007 (гілка `feat/db-dx`): розділ [«pgvector»](https://blazheiko.github.io/itvibe-template/backend/database#pgvector) у `documentation/backend/database.md` пояснює, навіщо потрібне розширення (пошук у базі знань Support AI), що буде без нього, як його встановити й перевірити; на нього посилаються `README.md`, `packages/backend/README.md`, `getting-started`, `ai`, `deployment`, `repositories-transformers`.
+> **Виправлено** у feat-007 (гілка `feat/db-dx`): розділ [«pgvector»](https://blazheiko.github.io/vibe-template/backend/database#pgvector) у `documentation/backend/database.md` пояснює, навіщо потрібне розширення (пошук у базі знань Support AI), що буде без нього, як його встановити й перевірити; на нього посилаються `README.md`, `packages/backend/README.md`, `getting-started`, `ai`, `deployment`, `repositories-transformers`.
 
 - **Що:** `src/db/create-database.ts` виконує `CREATE EXTENSION IF NOT EXISTS vector`. На звичайному образі `postgres` команда `db:create` падає.
 - **Пропозиція:** згадати pgvector у README (у документації вже є, образ `pgvector/pgvector:pg16`).
@@ -189,7 +189,7 @@
 
 > **Виправлено** у feat-006: застосунок, `db:create` і `drizzle.config.ts` (перейменовано з `.js`) беруть налаштування з однієї `resolveDatabaseConfig()`.
 
-- **Що:** `drizzle.config.js` і `src/db/create-database.ts` мають defaults (`127.0.0.1`, `5432`, `postgres`, `itvibe_template`). `src/config/database.ts` defaults не має (див. також п. 5).
+- **Що:** `drizzle.config.js` і `src/db/create-database.ts` мають defaults (`127.0.0.1`, `5432`, `postgres`, `vibe_template`). `src/config/database.ts` defaults не має (див. також п. 5).
 - **Наслідок:** міграції можуть піти в одну БД, а застосунок не стартувати або підключитися не туди.
 - **Пропозиція:** один спільний модуль конфігурації БД для застосунку і скриптів.
 
@@ -597,7 +597,7 @@
 
 > **Виправлено** у feat-033 (гілка `feat/frontend-playground`): без змінної (і з порожнім значенням у `.env.example`) запити йдуть same-origin — через Vite proxy у dev; домену-прикладу в бандлі немає.
 
-- **Що:** `packages/frontend/src/utils/base-api.ts` без `VITE_BASE_URL` бере `https://itvibe-template.example`, тож у dev запити оминають Vite proxy, доки змінну не задано.
+- **Що:** `packages/frontend/src/utils/base-api.ts` без `VITE_BASE_URL` бере `https://vibe-template.example`, тож у dev запити оминають Vite proxy, доки змінну не задано.
 - **Пропозиція:** fallback на відносний шлях (same-origin через proxy).
 
 ### 60. Фронтенд: `console.log(data)` з `wsToken`
@@ -723,7 +723,7 @@
 
 ### 73. HTTP-виклики фронтенду вшивають `/api/`
 
-> **Виправлено** у feat-038 (гілка `feat/format-push-prefix`): HTTP-шляхи (`utils/api-path.ts`, `apiPath()`), OAuth-посилання, URL скриншотів і сховища, service worker і ключ Vite proxy беруть префікс з `VITE_API_PATH_PREFIX`; `WS_API_PREFIX` замінено на спільний `API_PREFIX`. Заодно прибрано залишковий fallback `https://itvibe-template.example` у `stores/state.ts` (п. 59).
+> **Виправлено** у feat-038 (гілка `feat/format-push-prefix`): HTTP-шляхи (`utils/api-path.ts`, `apiPath()`), OAuth-посилання, URL скриншотів і сховища, service worker і ключ Vite proxy беруть префікс з `VITE_API_PATH_PREFIX`; `WS_API_PREFIX` замінено на спільний `API_PREFIX`. Заодно прибрано залишковий fallback `https://vibe-template.example` у `stores/state.ts` (п. 59).
 
 - **Що:** `packages/frontend/src/utils/api.ts` має 46 шляхів виду `'/api/...'`, а Vite proxy (`vite.config.ts`) теж налаштований лише на `/api`. Після feat-024 WS-події беруть префікс з `VITE_API_PATH_PREFIX`, а HTTP — ні, тож бекенд з іншим `API_PATH_PREFIX` працює з фронтендом лише через переписування шляхів на проксі.
 - **Пропозиція:** будувати HTTP-шляхи з того самого `WS_API_PREFIX` (перейменувати на `API_PREFIX`) і брати proxy-ключ з тієї ж змінної; суміжне з п. 62 (playground).

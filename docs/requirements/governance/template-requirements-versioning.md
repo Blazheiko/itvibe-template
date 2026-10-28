@@ -1,4 +1,4 @@
-# Requirements Versioning and Status: itvibe-template
+# Requirements Versioning and Status: vibe-template
 
 Last updated: 2026-05-30
 

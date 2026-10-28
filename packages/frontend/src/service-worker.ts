@@ -38,8 +38,8 @@ const filesToCache = [
     '/audio/pdjyznja.mp3',
 ]
 
-const serviceWorkerErrorQueueCacheName = '__itvibe_template_sw_error_queue__'
-const serviceWorkerErrorQueueRequestPrefix = '/__itvibe_template_sw_error_queue__/'
+const serviceWorkerErrorQueueCacheName = '__vibe_template_sw_error_queue__'
+const serviceWorkerErrorQueueRequestPrefix = '/__vibe_template_sw_error_queue__/'
 const serviceWorkerErrorQueueMaxItems = 20
 const serviceWorkerErrorQueueTtlMs = 24 * 60 * 60 * 1000
 

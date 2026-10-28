@@ -138,7 +138,7 @@ function buildResetEmailContent(
 <html lang="en">
   <body style="margin:0;padding:0;background:${EMAIL_BRAND.canvas};font-family:Inter,Arial,sans-serif;color:${EMAIL_BRAND.textPrimary};">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-      Reset your ITVibe Template password.
+      Reset your Vibe Template password.
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${EMAIL_BRAND.canvas};padding:32px 16px;">
       <tr>
@@ -147,7 +147,7 @@ function buildResetEmailContent(
             <tr>
               <td style="padding-bottom:16px;">
                 <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:${EMAIL_BRAND.accentSoft};border:1px solid ${EMAIL_BRAND.accentLine};color:${EMAIL_BRAND.accent};font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
-                  ITVibe Template
+                  Vibe Template
                 </div>
               </td>
             </tr>
@@ -170,7 +170,7 @@ function buildResetEmailContent(
                         Hello${escapedGreeting}.
                       </p>
                       <p style="margin:0 0 28px;font-size:17px;line-height:1.7;color:${EMAIL_BRAND.textSecondary};">
-                        We received a request to reset your ITVibe Template password. Use the button below to set a new one.
+                        We received a request to reset your Vibe Template password. Use the button below to set a new one.
                       </p>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
                         <tr>

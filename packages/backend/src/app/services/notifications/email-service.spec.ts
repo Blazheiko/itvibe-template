@@ -40,7 +40,7 @@ function configureSmtpEnv(): void {
     process.env['SMTP_USER'] = 'mailer'
     process.env['SMTP_PASSWORD'] = 'secret'
     process.env['SMTP_FROM_EMAIL'] = 'noreply@example.com'
-    process.env['SMTP_FROM_NAME'] = 'ITVibe Template'
+    process.env['SMTP_FROM_NAME'] = 'Vibe Template'
     process.env['SMTP_REPLY_TO'] = 'support@example.com'
 }
 
@@ -154,7 +154,7 @@ describe('emailService', () => {
             secure: true,
         })
         expect(sendMailMock).toHaveBeenCalledWith({
-            from: 'ITVibe Template <noreply@example.com>',
+            from: 'Vibe Template <noreply@example.com>',
             html: '<p>Hello</p>',
             replyTo: 'support@example.com',
             subject: 'Welcome',
@@ -198,7 +198,7 @@ describe('emailService', () => {
         expect(sendMailMock).toHaveBeenCalledWith({
             bcc: ['Hidden User <hidden@example.com>'],
             cc: ['copy@example.com', 'Copy Two <copy2@example.com>'],
-            from: 'ITVibe Template <noreply@example.com>',
+            from: 'Vibe Template <noreply@example.com>',
             replyTo: ['Reply Team <reply@example.com>'],
             subject: 'Welcome',
             text: 'Hello',

@@ -1,4 +1,4 @@
-# Requirements Prioritization: itvibe-template
+# Requirements Prioritization: vibe-template
 
 Last updated: 2026-05-30
 

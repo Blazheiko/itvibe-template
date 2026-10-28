@@ -1,4 +1,4 @@
-# Constraints and Assumptions: itvibe-template
+# Constraints and Assumptions: vibe-template
 
 Last updated: 2026-05-30
 

@@ -3,8 +3,8 @@
         <section class="static-section">
             <h1>About</h1>
             <p>
-                ITVibe Template is an educational project template for learning a Vue 3 and
-                TypeScript full-stack workspace.
+                Vibe Template is an educational project template for learning a Vue 3 and TypeScript
+                full-stack workspace.
             </p>
         </section>
     </main>

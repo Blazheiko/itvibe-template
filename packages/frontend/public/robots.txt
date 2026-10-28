@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://itvibe-template.example/sitemap.xml
+Sitemap: https://vibe-template.example/sitemap.xml

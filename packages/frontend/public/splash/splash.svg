@@ -1,12 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1290" height="2796" viewBox="0 0 1290 2796">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#14B8A6"/>
-      <stop offset="100%" stop-color="#2563EB"/>
-    </linearGradient>
-    <linearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#14B8A6"/>
-      <stop offset="100%" stop-color="#2563EB"/>
+      <stop offset="0%" stop-color="#6A9DC4"/>
+      <stop offset="100%" stop-color="#3D6E97"/>
     </linearGradient>
   </defs>
 
@@ -21,20 +17,14 @@
   <!-- Logo tile (white) -->
   <rect x="425" y="1080" width="440" height="440" rx="96" fill="#ffffff"/>
 
-  <!-- Lightning bolt -->
-  <g transform="translate(425 1080)">
-    <path d="M253 60 L129 249 H202 L176 380 L317 185 H240 Z"
-          fill="url(#logoBg)"
-          stroke="url(#logoBg)"
-          stroke-width="6"
-          stroke-linejoin="round"/>
-  </g>
+  <!-- vb mark -->
+  <g fill="none" stroke="#4E7FA8" stroke-width="52" stroke-linecap="round" stroke-linejoin="round" transform="translate(425 1080) scale(0.859375) translate(0 4)"><path d="M112 220 L176 372 L240 220"/><path d="M296 132 V372"/><circle cx="350" cy="312" r="60"/></g>
 
   <!-- App name -->
   <text x="645" y="1700" text-anchor="middle"
         font-family="-apple-system, Segoe UI, Roboto, Arial, sans-serif"
         font-size="104" font-weight="700" fill="#ffffff"
-        letter-spacing="-2">ITVibe Template</text>
+        letter-spacing="-2">Vibe Template</text>
 
   <!-- Tagline -->
   <text x="645" y="1780" text-anchor="middle"

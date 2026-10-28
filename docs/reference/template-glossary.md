@@ -1,4 +1,4 @@
-# Glossary: itvibe-template
+# Glossary: vibe-template
 
 Last updated: 2026-05-30
 

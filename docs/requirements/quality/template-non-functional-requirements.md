@@ -1,11 +1,11 @@
-# Non-Functional Requirements: itvibe-template
+# Non-Functional Requirements: vibe-template
 
 Last updated: 2026-05-30
 
 ## 1. Scope
 
 This document defines baseline non-functional requirements for the production-oriented
-`itvibe-template`. Items marked `Implemented default` describe behavior already visible
+`vibe-template`. Items marked `Implemented default` describe behavior already visible
 in the codebase. Items marked `Target` or `Extension point` define the expected bar for
 downstream production adoption.
 

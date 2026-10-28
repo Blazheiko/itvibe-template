@@ -11,6 +11,6 @@ pnpm --filter api-playground dev
 
 Open `http://localhost:5174`. The Vite dev server proxies `/api` and `/ws` to `127.0.0.1:3000`; `VITE_API_BASE_URL` overrides the base URL.
 
-Full description — stack, route loading, UI, settings, WebSocket, troubleshooting, limitations: **[documentation/playground](https://blazheiko.github.io/itvibe-template/playground/)**.
+Full description — stack, route loading, UI, settings, WebSocket, troubleshooting, limitations: **[documentation/playground](https://blazheiko.github.io/vibe-template/playground/)**.
 
 Internal notes (ideas, not current behaviour): [`docs/ROADMAP.md`](./docs/ROADMAP.md), [`docs/UI-UX-ANALYSIS.md`](./docs/UI-UX-ANALYSIS.md).

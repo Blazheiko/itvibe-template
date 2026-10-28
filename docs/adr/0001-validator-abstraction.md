@@ -2,7 +2,7 @@
 
 - **Статус:** прийнято, реалізовано.
 - **Дата запису:** 2026-10-24 (feat-009). Рішення реалізоване до початку git-історії (знімок `8f3479f`, 2026-06-01).
-- **Джерело:** початковий план [`VALIDATOR_ABSTRACTION_PLAN.md`](https://github.com/Blazheiko/itvibe-template/blob/8f3479f/packages/backend/src/docs/VALIDATOR_ABSTRACTION_PLAN.md) (файл видалено у feat-009; посилання на останній коміт, де він змінювався).
+- **Джерело:** початковий план [`VALIDATOR_ABSTRACTION_PLAN.md`](https://github.com/Blazheiko/vibe-template/blob/8f3479f/packages/backend/src/docs/VALIDATOR_ABSTRACTION_PLAN.md) (файл видалено у feat-009; посилання на останній коміт, де він змінювався).
 
 ## Контекст
 
@@ -27,8 +27,8 @@ ArkType (`@arktype/type`) протікав у ядро фреймворку `pac
 Рішення «не робимо» прийнято 2026-10-24 у feat-026 (п. 27 code-issues):
 
 - **Експорт `InputSchema` з `app/validate/index.ts` (§3.6 плану).** Схеми входу живуть у `packages/shared` і імпортуються з `shared/schemas` і бекендом, і фронтендом. Ще одна точка реекспорту в бекенді дала б два шляхи до тих самих схем без нової можливості.
-- **Демонстраційний `nativeValidator(predicate)` (§9).** Другий адаптер без жодного споживача — мертвий код. Контракт `Validator<T>` і без нього перевіряється тестами `arkValidator` і використовується ядром (`validate-route-payload.ts`, `ws-api-dispatcher.ts`); приклад власного адаптера описано в [`validation.md`](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/backend/validation.md#заміна-бібліотеки-валідації).
+- **Демонстраційний `nativeValidator(predicate)` (§9).** Другий адаптер без жодного споживача — мертвий код. Контракт `Validator<T>` і без нього перевіряється тестами `arkValidator` і використовується ядром (`validate-route-payload.ts`, `ws-api-dispatcher.ts`); приклад власного адаптера описано в [`validation.md`](https://github.com/Blazheiko/vibe-template/blob/main/documentation/backend/validation.md#заміна-бібліотеки-валідації).
 - **Перенесення `RouteConfig` / `ResponseSchema` з `vendor/types` в `app/routing/types.ts` (§5.6).** `vendor/types` — публічна поверхня типів ядра, її імпортують `vendor/start/*` і `vendor/utils/*`. Перенесення в `app/` змусило б `vendor` залежати від `app`, тобто порушило б напрям залежностей із розділу «Розподіл vendor/ та app/» в `architecture.md`.
-- Нотатка про конвенцію «один валідатор» у README (крок 10) — тепер вона в [`documentation/backend/validation.md`](https://github.com/Blazheiko/itvibe-template/blob/main/documentation/backend/validation.md#заміна-бібліотеки-валідації) і в п. 4 цього ADR.
+- Нотатка про конвенцію «один валідатор» у README (крок 10) — тепер вона в [`documentation/backend/validation.md`](https://github.com/Blazheiko/vibe-template/blob/main/documentation/backend/validation.md#заміна-бібліотеки-валідації) і в п. 4 цього ADR.
 
-Поточний опис валідації — [Валідація](https://blazheiko.github.io/itvibe-template/backend/validation).
+Поточний опис валідації — [Валідація](https://blazheiko.github.io/vibe-template/backend/validation).

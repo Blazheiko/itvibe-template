@@ -1,4 +1,4 @@
-# Accessibility Requirements: itvibe-template
+# Accessibility Requirements: vibe-template
 
 Last updated: 2026-05-30
 

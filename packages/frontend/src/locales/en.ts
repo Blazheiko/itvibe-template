@@ -25,7 +25,7 @@ export default {
     },
 
     login: {
-        heroTitle: 'ITVibe Template',
+        heroTitle: 'Vibe Template',
         heroSubtitle: 'Learn a Vue 3 and TypeScript full-stack workspace structure.',
         featureSupportTitle: 'Support',
         featureSupportDesc: 'Open a support conversation and get help with your account.',
@@ -36,7 +36,7 @@ export default {
         signIn: 'Sign In',
         createAccount: 'Create Account',
         about: 'About',
-        mobileTitle: 'Welcome to ITVibe Template',
+        mobileTitle: 'Welcome to Vibe Template',
         mobileSubtitle: 'Explore an educational full-stack application template',
         socialLoginFailed: 'Social login failed. Please try again.',
     },

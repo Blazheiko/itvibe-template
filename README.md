@@ -1,8 +1,8 @@
-# itvibe-template
+# vibe-template
 
-[![Docs](https://github.com/Blazheiko/itvibe-template/actions/workflows/docs.yml/badge.svg)](https://github.com/Blazheiko/itvibe-template/actions/workflows/docs.yml)
+[![Docs](https://github.com/Blazheiko/vibe-template/actions/workflows/docs.yml/badge.svg)](https://github.com/Blazheiko/vibe-template/actions/workflows/docs.yml)
 
-📖 **Documentation:** <https://blazheiko.github.io/itvibe-template/> (Ukrainian, backend-focused;
+📖 **Documentation:** <https://blazheiko.github.io/vibe-template/> (Ukrainian, backend-focused;
 source in [`documentation/`](documentation/), run locally with `pnpm docs:dev`).
 
 A full-stack TypeScript monorepo template: a Vue 3 frontend, a high-performance
@@ -109,7 +109,7 @@ enable them.
 > initial migration fails with `type "vector" does not exist` without it. The
 > stock `postgres` Docker image does not include it; use `pgvector/pgvector:pg16`
 > (or install pgvector for your PostgreSQL). Details:
-> [Database → pgvector](https://blazheiko.github.io/itvibe-template/backend/database#pgvector).
+> [Database → pgvector](https://blazheiko.github.io/vibe-template/backend/database#pgvector).
 
 ### Feature prerequisites
 
@@ -193,7 +193,7 @@ PGSQL_HOST=127.0.0.1
 PGSQL_PORT=5432
 PGSQL_USER=postgres
 PGSQL_PASSWORD=password
-PGSQL_DB_NAME=itvibe_template
+PGSQL_DB_NAME=vibe_template
 
 # Redis
 REDIS_HOST=127.0.0.1
@@ -300,7 +300,7 @@ pnpm db:studio     # open Drizzle Studio
 > regular user from `SEED_ADMIN_*` / `SEED_USER_*`; existing users are never
 > modified. Run it before starting the backend, which caches prompts at startup.
 > Logic and tests live in `packages/backend/src/db/seed/`; see the
-> [database docs](https://blazheiko.github.io/itvibe-template/backend/database#seed).
+> [database docs](https://blazheiko.github.io/vibe-template/backend/database#seed).
 
 ## Configuration
 
@@ -356,13 +356,13 @@ container runs as the unprivileged user `app`, has a `HEALTHCHECK` on
 separate one-shot run of the same image before each rollout:
 
 ```bash
-docker build -t itvibe-template .
-docker run --rm --env-file production.env itvibe-template pnpm db:create:prod
-docker run --rm --env-file production.env itvibe-template pnpm db:migrate
-docker run -d -p 3000:3000 --env-file production.env itvibe-template
+docker build -t vibe-template .
+docker run --rm --env-file production.env vibe-template pnpm db:create:prod
+docker run --rm --env-file production.env vibe-template pnpm db:migrate
+docker run -d -p 3000:3000 --env-file production.env vibe-template
 ```
 
-`db:create:prod` runs the compiled `dist/db/create-database.js`, because the image has only production dependencies (no `tsx`). `.dockerignore` keeps local `.env` files out of the build. Details: [Deployment](https://blazheiko.github.io/itvibe-template/backend/deployment).
+`db:create:prod` runs the compiled `dist/db/create-database.js`, because the image has only production dependencies (no `tsx`). `.dockerignore` keeps local `.env` files out of the build. Details: [Deployment](https://blazheiko.github.io/vibe-template/backend/deployment).
 
 ### Production / security checklist
 

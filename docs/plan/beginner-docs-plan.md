@@ -193,16 +193,16 @@ flowchart LR
 
 ## Статус виконання (2026-10-25)
 
-| PR                                                            | Етапи | Стан                             |
-| ------------------------------------------------------------- | ----- | -------------------------------- |
-| [#117](https://github.com/Blazheiko/itvibe-template/pull/117) | 1, 6  | готово (разом з головною)        |
-| [#119](https://github.com/Blazheiko/itvibe-template/pull/119) | 2, 3  | готово                           |
-| [#120](https://github.com/Blazheiko/itvibe-template/pull/120) | 4, 5  | готово                           |
-| [#121](https://github.com/Blazheiko/itvibe-template/pull/121) | 9     | готово                           |
-| [#122](https://github.com/Blazheiko/itvibe-template/pull/122) | 7     | готово (5 сторінок)              |
-| [#123](https://github.com/Blazheiko/itvibe-template/pull/123) | 10    | готово, без скриншота Playground |
-| #124                                                          | 8     | готово                           |
+| PR                                                          | Етапи | Стан                             |
+| ----------------------------------------------------------- | ----- | -------------------------------- |
+| [#117](https://github.com/Blazheiko/vibe-template/pull/117) | 1, 6  | готово (разом з головною)        |
+| [#119](https://github.com/Blazheiko/vibe-template/pull/119) | 2, 3  | готово                           |
+| [#120](https://github.com/Blazheiko/vibe-template/pull/120) | 4, 5  | готово                           |
+| [#121](https://github.com/Blazheiko/vibe-template/pull/121) | 9     | готово                           |
+| [#122](https://github.com/Blazheiko/vibe-template/pull/122) | 7     | готово (5 сторінок)              |
+| [#123](https://github.com/Blazheiko/vibe-template/pull/123) | 10    | готово, без скриншота Playground |
+| #124                                                        | 8     | готово                           |
 
-PR-и складені стеком: кожен базується на попередньому. Окремо, від `main`: [#118](https://github.com/Blazheiko/itvibe-template/pull/118) — виправлення `.env.example`, знайдені під час проходження швидкого старту.
+PR-и складені стеком: кожен базується на попередньому. Окремо, від `main`: [#118](https://github.com/Blazheiko/vibe-template/pull/118) — виправлення `.env.example`, знайдені під час проходження швидкого старту.
 
 Не зроблено: перевірка «Першого дня» на 1–2 реальних читачах (розділ «Перевірка результату») — це за людьми.

@@ -1,11 +1,11 @@
-# Functional Requirements: itvibe-template
+# Functional Requirements: vibe-template
 
 Last updated: 2026-05-30
 
 ## 1. Purpose
 
 This document describes the functional capabilities provided by the
-`itvibe-template` full-stack TypeScript monorepo. It is intended to help product
+`vibe-template` full-stack TypeScript monorepo. It is intended to help product
 owners, developers, QA engineers, and operators understand what the template can
 do before it is customized for a specific product.
 

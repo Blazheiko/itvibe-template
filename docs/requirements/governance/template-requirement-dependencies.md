@@ -1,4 +1,4 @@
-# Requirement Dependencies: itvibe-template
+# Requirement Dependencies: vibe-template
 
 Last updated: 2026-05-30
 

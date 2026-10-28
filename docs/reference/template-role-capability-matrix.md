@@ -1,4 +1,4 @@
-# Role Capability Matrix: itvibe-template
+# Role Capability Matrix: vibe-template
 
 Last updated: 2026-05-30
 
