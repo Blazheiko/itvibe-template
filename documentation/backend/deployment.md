@@ -1,6 +1,6 @@
 # Деплой
 
-Ця сторінка описує, як зібрати застосунок для production, що міститься в [`Dockerfile`](https://github.com/Blazheiko/vibe-template/blob/main/Dockerfile) і які умови потрібні під час запуску. Змінні оточення детально описано на сторінці [Конфігурація](/backend/configuration), а безпеку — на сторінці [Автентифікація та безпека](/backend/auth-security). Тут вони лише згадуються.
+Ця сторінка описує, як зібрати застосунок для production, що міститься в [`Dockerfile`](https://github.com/Blazheiko/vibe-template/blob/main/Dockerfile) і які умови потрібні під час запуску. Змінні оточення детально описано на сторінці [Конфігурація](/backend/configuration), а безпеку — на сторінці [Безпека](/backend/security). Тут вони лише згадуються.
 
 ## Збірка
 
@@ -20,7 +20,7 @@
 
 ### CSP, коли фронтенд віддає проксі
 
-При `SERVE_STATIC=true` бекенд сам ставить CSP на HTML (див. [Content-Security-Policy](/backend/auth-security#content-security-policy)). Якщо HTML віддає nginx або CDN, політику документа треба задати там, з тим самим винятком для service worker:
+При `SERVE_STATIC=true` бекенд сам ставить CSP на HTML (див. [Content-Security-Policy](/backend/security#content-security-policy)). Якщо HTML віддає nginx або CDN, політику документа треба задати там, з тим самим винятком для service worker:
 
 ```nginx
 location = /service-worker.js {
@@ -120,14 +120,14 @@ macOS, Docker Desktop, `docker build --no-cache`:
 ## Runtime
 
 - **Змінні**: повний перелік наведено на сторінці [Конфігурація](/backend/configuration), про production-like режим (`APP_IS_PRODUCTION` або `APP_ENV`/`NODE_ENV` зі значенням `production`/`prod`) див. [Production-like режим](/backend/configuration#production-like-режим). Образ задає `NODE_ENV=production` і `APP_ENV=production`: `secure` у cookie і конфіг CSP (`config/csp.ts`, зокрема `wss:` у `getWsUrl()`) читають саме `APP_ENV`. Для staging-оточення перевизначте `APP_ENV` при запуску.
-- **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/auth-security#trust-proxy-і-визначення-ip).
+- **TLS і проксі**: сервер слухає HTTP (`server.listen(host, port)` у [`server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/server.ts)), тож TLS завершується на реверс-проксі. За проксі потрібні `TRUST_PROXY=true` і `TRUSTED_PROXY_CIDRS`, див. [Trust proxy](/backend/security#trust-proxy-і-визначення-ip).
 - **Unix socket**: якщо `APP_UNIX_PATH` задано й не порожнє, сервер викликає `listen_unix` замість TCP, і `HOST`/`PORT` тоді ігноруються. Порожнє `APP_UNIX_PATH=` (як у `.env.example`) означає TCP на `HOST:PORT`.
 - **Graceful shutdown**: [`index.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/index.ts) обробляє `SIGINT`, `SIGHUP`, `SIGTERM` і `uncaughtException`. `stopGracefully` закриває WebSocket-з'єднання та listen socket, робить `flush` Sentry (2 с), закриває пул PostgreSQL і Redis, а потім викликає `process.exit(0)`. У контейнері PID 1 — Node (`CMD` у exec-формі), тож `docker stop` закінчується через `stopGracefully` з кодом 0.
 - **Sentry**: бекенд читає `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` тощо під час виконання ([`config/sentry.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/sentry.ts)). Фронтенду потрібні `VITE_SENTRY_*` як `--build-arg` під час збірки.
 
 ### Rate limit на edge
 
-Локальні ліміти бекенду (L1, маршрути, upgrade рівня 1, WS-повідомлення) живуть у пам'яті кожного процесу і захищають сам процес; з N інстансами їхній бюджет N×. Чутливі дії (вхід, реєстрація, SMS, скидання пароля) і upgrade рівня 2 обмежує спільний бюджет у Redis, див. [Обмеження частоти запитів](/backend/auth-security#обмеження-частоти-запитів). Ліміт на реверс-проксі — опційний додатковий шар на вході, а не заміна відсутньої функції. Приклад для nginx із шляхами за замовчуванням (`API_PATH_PREFIX=api`):
+Локальні ліміти бекенду (L1, маршрути, upgrade рівня 1, WS-повідомлення) живуть у пам'яті кожного процесу і захищають сам процес; з N інстансами їхній бюджет N×. Чутливі дії (вхід, реєстрація, SMS, скидання пароля) і upgrade рівня 2 обмежує спільний бюджет у Redis, див. [Обмеження частоти запитів](/backend/security#обмеження-частоти-запитів). Ліміт на реверс-проксі — опційний додатковий шар на вході, а не заміна відсутньої функції. Приклад для nginx із шляхами за замовчуванням (`API_PATH_PREFIX=api`):
 
 ```nginx
 limit_req_zone  $binary_remote_addr zone=api:10m rate=10r/s;
@@ -203,8 +203,8 @@ Workflow для збірки, тестів або деплою самого за
 - [ ] Redis доступний.
 - [ ] `pnpm db:create:prod` і `pnpm db:migrate` виконано one-shot запуском образу перед rollout.
 - [ ] Healthcheck відповідає вашим `PORT` / `API_PATH_PREFIX`.
-- [ ] `CSRF_ALLOWED_ORIGINS` з origin фронтенду: образ задає `APP_ENV=production`, і без цієї змінної сервер не стартує ([CSRF](/backend/auth-security#csrf)).
-- [ ] `APP_ENV=production`, `APP_KEY` і решта пунктів із [чекліста безпеки](/backend/auth-security#чекліст-для-production).
+- [ ] `CSRF_ALLOWED_ORIGINS` з origin фронтенду: образ задає `APP_ENV=production`, і без цієї змінної сервер не стартує ([CSRF](/backend/security#csrf)).
+- [ ] `APP_ENV=production`, `APP_KEY` і решта пунктів із [чекліста безпеки](/backend/security#чекліст-для-production).
 - [ ] TLS на проксі, `TRUST_PROXY` і `TRUSTED_PROXY_CIDRS` налаштовано.
 - [ ] Визначено, хто віддає фронтенд: `SERVE_STATIC=true` або окремий хостинг/CDN.
 - [ ] `VITE_SENTRY_*` передано як build-args, `SENTRY_*` — як runtime env.

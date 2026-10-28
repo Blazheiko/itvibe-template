@@ -76,7 +76,7 @@
 - Коли сервер повертає `csrf_invalid`, клієнт один раз емітить `init_app`, щоб повторно ініціалізуватися й отримати новий токен. Неавторизовану відповідь клієнт перетворює на подію `unauthorized` в event bus.
 - Помилки не кидаються: метод повертає `{ data, error }`, де `error` має нормалізовані `code` і `transportCode`. Нормалізація живе в `utils/response-normalizer.ts`.
 
-Серверна сторона цього механізму описана в [/backend/auth-security](/backend/auth-security).
+Серверна сторона цього механізму описана в [Безпека → CSRF](/backend/security#csrf).
 
 ## WebSocket і push
 

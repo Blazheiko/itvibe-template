@@ -95,7 +95,7 @@ flowchart LR
 
 ### Авторизація та сесія
 
-Спеціальної логіки для автентифікації чи CSRF немає: CSRF-токен автоматично не отримується і не підставляється. `fetch` викликається без явного `credentials`. Через Vite proxy запити same-origin, тому браузер надсилає cookie за звичайними правилами. Потрібні заголовки (наприклад, токен) можна додати вручну в заголовки запиту або в глобальні заголовки. Для `POST`/`PUT`/`PATCH`/`DELETE` потрібні дві речі: заголовок `x-csrf-token` (значення `csrfToken` з відповіді `GET /api/main/init`) і дозволений origin. Браузер надсилає `Origin: http://localhost:5174`, а в dev бекенд за замовчуванням довіряє лише origin з `APP_URL` і `FRONTEND_URL`. Тому додайте playground у `packages/backend/.env`: `CSRF_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174`, і перезапустіть бекенд ([CSRF простими словами](/guide/csrf)). Про механізми захисту на backend див. [Автентифікація та безпека](/backend/auth-security).
+Спеціальної логіки для автентифікації чи CSRF немає: CSRF-токен автоматично не отримується і не підставляється. `fetch` викликається без явного `credentials`. Через Vite proxy запити same-origin, тому браузер надсилає cookie за звичайними правилами. Потрібні заголовки (наприклад, токен) можна додати вручну в заголовки запиту або в глобальні заголовки. Для `POST`/`PUT`/`PATCH`/`DELETE` потрібні дві речі: заголовок `x-csrf-token` (значення `csrfToken` з відповіді `GET /api/main/init`) і дозволений origin. Браузер надсилає `Origin: http://localhost:5174`, а в dev бекенд за замовчуванням довіряє лише origin з `APP_URL` і `FRONTEND_URL`. Тому додайте playground у `packages/backend/.env`: `CSRF_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174`, і перезапустіть бекенд ([CSRF простими словами](/guide/csrf)). Про механізми захисту на backend див. [Безпека](/backend/security).
 
 ### WebSocket
 
@@ -119,7 +119,7 @@ flowchart LR
 | маршрути не завантажуються, `Failed to fetch` або 404 на `/api/doc/routes` | backend запущений на `:3000`; у `packages/backend/.env` задано `APP_ENV=manual-test`, `DOC_PAGE=true`, `SERVE_STATIC=true` (без усіх трьох endpoint не реєструється); `API_PATH_PREFIX` — `api` (див. «Обмеження») |
 | HTTP-запити йдуть не туди                                                  | `VITE_API_BASE_URL` і `baseUrl` / override у налаштуваннях: порожнє значення означає «через Vite proxy»                                                                                                            |
 | WebSocket не підключається                                                 | URL і токен у формі підключення; токен береться з відповіді, що містить `wsUrl` і `wsToken`; закриття з кодом `4001` — токен недійсний                                                                             |
-| помилки CORS у консолі                                                     | запити йдуть повз proxy (заданий `baseUrl` на інший origin); тоді origin playground має бути в CORS-whitelist backend ([Автентифікація та безпека](/backend/auth-security))                                        |
+| помилки CORS у консолі                                                     | запити йдуть повз proxy (заданий `baseUrl` на інший origin); тоді origin playground має бути в CORS-whitelist backend ([Безпека](/backend/security#cors))                                                          |
 | `POST` повертає `403` з `code: csrf_invalid`                               | `reason: origin_mismatch` — origin playground (`http://localhost:5174`) немає в `CSRF_ALLOWED_ORIGINS`; `reason: token_mismatch` — немає або застарів `x-csrf-token` (візьміть новий з `GET /api/main/init`)       |
 
 Кнопка **Test Connection** у налаштуваннях робить `GET <baseUrl>/<prefix>/ping` — liveness-маршрут бекенду (раніше вона била в неіснуючий `/health`). WS-адреса за замовчуванням виводиться з `baseUrl`: `http://` → `ws://`, `https://` → `wss://`. Повідомлення не ставляться в чергу: без відкритого з'єднання `sendMessage` нічого не надсилає, пише помилку в консоль і повертає `false`.
@@ -131,5 +131,5 @@ flowchart LR
 - У `packages/api-playground/docs/` лишились дві внутрішні нотатки — `ROADMAP.md` і `UI-UX-ANALYSIS.md`. Це ідеї та аналіз, а не опис фактичної поведінки.
 
 ::: danger Безпека
-Ніколи не вмикайте `APP_ENV=manual-test` і `DOC_PAGE=true` у production. `/doc/routes` розкриває повну карту API: URL, middleware, схеми валідації та rate limits. Див. [Автентифікація та безпека](/backend/auth-security) і [Маршрутизація](/backend/routing).
+Ніколи не вмикайте `APP_ENV=manual-test` і `DOC_PAGE=true` у production. `/doc/routes` розкриває повну карту API: URL, middleware, схеми валідації та rate limits. Див. [Безпека](/backend/security) і [Маршрутизація](/backend/routing).
 :::

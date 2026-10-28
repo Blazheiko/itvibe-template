@@ -94,7 +94,7 @@ Redis-репозиторіїв немає: у `app/repositories/` усі мод�
 
 - приводять `bigint` id до `string`;
 - переводять `Date` у ISO-рядок через `luxon` (`DateTime.fromJSDate(...).toISO()`), з перейменуванням `createdAt`/`updatedAt` → `created_at`/`updated_at`;
-- прибирають чутливі поля: [user-transformer.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) відкидає `password` і `sessionToken` (простір імен сесій у Redis, див. [Автентифікація й безпека](/backend/auth-security)) і додає похідне `emailVerified: boolean`.
+- прибирають чутливі поля: [user-transformer.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) відкидає `password` і `sessionToken` (простір імен сесій у Redis, див. [Автентифікація](/backend/auth#що-таке-usertoken)) і додає похідне `emailVerified: boolean`.
 
 ```ts
 serialize(user: UserRow): SerializedUser {
