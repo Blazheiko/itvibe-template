@@ -1,5 +1,5 @@
 # Session Handoff
 
-**Feature:** feat-009 - Internal Docs Cleanup · **Branch:** `feat/internal-docs-cleanup` · **Date:** 2026-10-24
+**Feature:** feat-042 - CSRF Hardening · **Branch:** `feat/csrf-hardening` · **Date:** 2026-10-28
 
-Work is complete per `docs/plan/internal-docs-cleanup-plan.md`; evidence is in `progress.md`. Remaining: feature PR to `main` and the done PR. Follow-ups found during the work are listed in `progress.md` → Notes for Next Session.
+Implementation of tasks A–E is complete; evidence is in `progress.md`. Remaining: review and merge of the feature PR, the rollout tasks (T0.4, R.1–R.6 in `docs/plan/csrf-hardening-tasks.md`), then the PR flipping feat-042 to `done`.
