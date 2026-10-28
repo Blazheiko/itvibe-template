@@ -116,5 +116,7 @@ packages/backend/src/
 - [Маршрутизація](/backend/routing)
 - [Middleware](/backend/middlewares)
 - [База даних](/backend/database)
-- [Автентифікація та безпека](/backend/auth-security)
+- [Автентифікація](/backend/auth)
+- [Вхід через соцмережі](/backend/oauth)
+- [Безпека](/backend/security)
 - [Додавання фічі](/backend/adding-a-feature)
