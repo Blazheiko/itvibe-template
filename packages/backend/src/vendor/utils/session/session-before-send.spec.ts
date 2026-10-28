@@ -108,4 +108,24 @@ describe('session beforeSend', () => {
         expect(context.responseData.cookies.has(sessionConfig.cookieName)).toBe(false)
         expect(context.session.beforeSend).toBeUndefined()
     })
+
+    it('a failed marker write does not fail the new session', async () => {
+        storage.getSession.mockResolvedValue(null)
+        storage.markCookieIssued.mockRejectedValue(new Error('Redis down'))
+        const responseData = createResponseData()
+        const context = createContext(
+            { method: 'get', headers: new Map(), cookies: new Map() } as never,
+            responseData,
+        )
+
+        await expect(sessionHandler(context, undefined, undefined)).resolves.toBeUndefined()
+
+        expect(storage.saveSession).toHaveBeenCalledOnce()
+        expect(context.session.sessionInfo).not.toBeNull()
+        expect(responseData.cookies.has(sessionConfig.cookieName)).toBe(true)
+        expect(logger.warn).toHaveBeenCalledWith(
+            expect.anything(),
+            'Cookie refresh marker not set for a new session',
+        )
+    })
 })

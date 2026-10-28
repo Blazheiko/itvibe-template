@@ -72,8 +72,13 @@ const createSessionInfo = async (data: SessionData = {}): Promise<SessionInfo> =
     }
 
     await saveSession(session)
-    // Its cookie goes out with this response: no refresh for the next hour.
-    await markCookieIssued(session.id, COOKIE_REFRESH_SECONDS)
+    // Its cookie goes out with this response: no refresh for the next hour. The
+    // session already exists, so a failed marker only means an earlier refresh.
+    try {
+        await markCookieIssued(session.id, COOKIE_REFRESH_SECONDS)
+    } catch (err) {
+        logger.warn({ err }, 'Cookie refresh marker not set for a new session')
+    }
 
     return session
 }
