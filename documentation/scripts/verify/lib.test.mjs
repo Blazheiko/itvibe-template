@@ -13,7 +13,7 @@ import {
     workflowPaths,
 } from './lib.mjs'
 
-const BASE = '/itvibe-template/'
+const BASE = '/vibe-template/'
 
 describe('classifyUrl', () => {
     for (const url of [
@@ -29,16 +29,16 @@ describe('classifyUrl', () => {
     ]) {
         it(`skips ${url || '(empty)'}`, () => assert.equal(classifyUrl(url), 'skip'))
     }
-    for (const url of ['/itvibe-template/guide/x', 'guide/x', '../a.svg', '/wrong/base']) {
+    for (const url of ['/vibe-template/guide/x', 'guide/x', '../a.svg', '/wrong/base']) {
         it(`treats ${url} as internal`, () => assert.equal(classifyUrl(url), 'internal'))
     }
 })
 
 describe('resolveInternalUrl', () => {
-    const page = '/itvibe-template/guide/smoke'
+    const page = '/vibe-template/guide/smoke'
 
     it('resolves a local asset', () => {
-        assert.deepEqual(resolveInternalUrl('/itvibe-template/logo.svg', page, BASE), {
+        assert.deepEqual(resolveInternalUrl('/vibe-template/logo.svg', page, BASE), {
             kind: 'asset',
             file: 'logo.svg',
             hash: '',
@@ -50,7 +50,7 @@ describe('resolveInternalUrl', () => {
     })
 
     it('resolves a clean page URL to both cleanUrls candidates', () => {
-        assert.deepEqual(resolveInternalUrl('/itvibe-template/backend/config#env', page, BASE), {
+        assert.deepEqual(resolveInternalUrl('/vibe-template/backend/config#env', page, BASE), {
             kind: 'page',
             candidates: ['backend/config.html', 'backend/config/index.html'],
             hash: 'env',
@@ -58,10 +58,10 @@ describe('resolveInternalUrl', () => {
     })
 
     it('resolves the site root and directory URLs to index.html', () => {
-        assert.deepEqual(resolveInternalUrl('/itvibe-template/', page, BASE).candidates, [
+        assert.deepEqual(resolveInternalUrl('/vibe-template/', page, BASE).candidates, [
             'index.html',
         ])
-        assert.deepEqual(resolveInternalUrl('/itvibe-template/guide/', page, BASE).candidates, [
+        assert.deepEqual(resolveInternalUrl('/vibe-template/guide/', page, BASE).candidates, [
             'guide/index.html',
         ])
     })
@@ -118,15 +118,15 @@ describe('markdownToDist', () => {
     it('maps pages to html and URL paths', () => {
         assert.deepEqual(markdownToDist('index.md', BASE), {
             html: 'index.html',
-            urlPath: '/itvibe-template/',
+            urlPath: '/vibe-template/',
         })
         assert.deepEqual(markdownToDist('guide/smoke.md', BASE), {
             html: 'guide/smoke.html',
-            urlPath: '/itvibe-template/guide/smoke',
+            urlPath: '/vibe-template/guide/smoke',
         })
         assert.deepEqual(markdownToDist('backend/index.md', BASE), {
             html: 'backend/index.html',
-            urlPath: '/itvibe-template/backend/',
+            urlPath: '/vibe-template/backend/',
         })
     })
 })

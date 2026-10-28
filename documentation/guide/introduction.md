@@ -1,6 +1,6 @@
 # Вступ
 
-**itvibe-template** — це full-stack TypeScript-монорепозиторій-шаблон: фронтенд на Vue 3, високопродуктивний бекенд на uWebSockets.js і пакет `shared` зі спільними контрактами (схеми, enum-и, guards, відповіді), які використовуються з обох боків. Репозиторій організовано як [pnpm](https://pnpm.io/) workspace ([README.md](https://github.com/Blazheiko/itvibe-template/blob/main/README.md), [pnpm-workspace.yaml](https://github.com/Blazheiko/itvibe-template/blob/main/pnpm-workspace.yaml)).
+**vibe-template** — це full-stack TypeScript-монорепозиторій-шаблон: фронтенд на Vue 3, високопродуктивний бекенд на uWebSockets.js і пакет `shared` зі спільними контрактами (схеми, enum-и, guards, відповіді), які використовуються з обох боків. Репозиторій організовано як [pnpm](https://pnpm.io/) workspace ([README.md](https://github.com/Blazheiko/vibe-template/blob/main/README.md), [pnpm-workspace.yaml](https://github.com/Blazheiko/vibe-template/blob/main/pnpm-workspace.yaml)).
 
 ## Для чого він
 
@@ -12,7 +12,7 @@
 - **PWA** — фронтенд налаштований як Progressive Web App.
 - **Інше** — файлове сховище (S3/MinIO), транзакційна пошта, i18n, інтеграції з AI-провайдерами, моніторинг помилок і типобезпечний шар контрактів.
 
-Готові продуктові флоу: реєстрація/підтвердження email, логін/логаут (зокрема logout-all), зміна та скидання пароля, опційна телефонна автентифікація, основа OAuth (`auth/oauth/:provider/redirect` і `/callback`), сторінка акаунта з аватаром, керування push-підписками, адмін-зона (користувачі, онлайн, база знань), AI-чат підтримки та API playground ([README.md](https://github.com/Blazheiko/itvibe-template/blob/main/README.md)).
+Готові продуктові флоу: реєстрація/підтвердження email, логін/логаут (зокрема logout-all), зміна та скидання пароля, опційна телефонна автентифікація, основа OAuth (`auth/oauth/:provider/redirect` і `/callback`), сторінка акаунта з аватаром, керування push-підписками, адмін-зона (користувачі, онлайн, база знань), AI-чат підтримки та API playground ([README.md](https://github.com/Blazheiko/vibe-template/blob/main/README.md)).
 
 ### Кому підходить
 
@@ -34,7 +34,7 @@
 | Спостережуваність | Sentry (`@sentry/node`, `@sentry/vue`), Pino                                  |
 | Інтеграції        | S3/MinIO (`@aws-sdk/client-s3`), nodemailer, web-push, OpenAI / Mistral / xAI |
 
-Джерела: [package.json](https://github.com/Blazheiko/itvibe-template/blob/main/package.json), [packages/backend/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/package.json), [packages/frontend/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/package.json), [packages/shared/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/package.json).
+Джерела: [package.json](https://github.com/Blazheiko/vibe-template/blob/main/package.json), [packages/backend/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/package.json), [packages/frontend/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/package.json), [packages/shared/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/package.json).
 
 Вимоги: Node.js `^24.22.1` і pnpm `>=9` (зафіксовано `pnpm@9.15.0` через `packageManager`), TypeScript `6.0.3`.
 

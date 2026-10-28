@@ -1,12 +1,12 @@
 # Про автора
 
-**itvibe-template** розробив **Олександр Блажейко** — full-stack розробник на TypeScript, Node.js і Vue.
+**vibe-template** розробив **Олександр Блажейко** — full-stack розробник на TypeScript, Node.js і Vue.
 
-| Контакт | Посилання                                                                 |
-| ------- | ------------------------------------------------------------------------- |
-| Email   | [blazheiko@gmail.com](mailto:blazheiko@gmail.com)                         |
-| GitHub  | [@Blazheiko](https://github.com/Blazheiko)                                |
-| Шаблон  | [Blazheiko/itvibe-template](https://github.com/Blazheiko/itvibe-template) |
+| Контакт | Посилання                                                             |
+| ------- | --------------------------------------------------------------------- |
+| Email   | [blazheiko@gmail.com](mailto:blazheiko@gmail.com)                     |
+| GitHub  | [@Blazheiko](https://github.com/Blazheiko)                            |
+| Шаблон  | [Blazheiko/vibe-template](https://github.com/Blazheiko/vibe-template) |
 
 ## Навіщо цей шаблон
 
@@ -14,6 +14,6 @@
 
 ## Зворотний зв'язок
 
-- Помилки й пропозиції щодо коду — через [Issues на GitHub](https://github.com/Blazheiko/itvibe-template/issues).
+- Помилки й пропозиції щодо коду — через [Issues на GitHub](https://github.com/Blazheiko/vibe-template/issues).
 - Неточність у документації — кнопка «Редагувати сторінку на GitHub» внизу будь-якої сторінки.
 - Питання щодо співпраці або використання шаблону — на [blazheiko@gmail.com](mailto:blazheiko@gmail.com).

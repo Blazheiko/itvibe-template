@@ -4,12 +4,12 @@
 
 ## Передумови
 
-| Інструмент | Версія                               | Джерело                                                                                                                                                                 |
-| ---------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Node.js    | `24.22.1` (вимога `^24.22.1`)        | [.nvmrc](https://github.com/Blazheiko/itvibe-template/blob/main/.nvmrc), [package.json](https://github.com/Blazheiko/itvibe-template/blob/main/package.json)            |
-| pnpm       | `>=9.0.0`, зафіксовано `pnpm@9.15.0` | [package.json](https://github.com/Blazheiko/itvibe-template/blob/main/package.json) (`engines`, `packageManager`)                                                       |
-| PostgreSQL | з розширенням **pgvector**           | [create-database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/db/create-database.ts) виконує `CREATE EXTENSION IF NOT EXISTS vector` |
-| Redis      | будь-яка сучасна версія              | [config/redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts)                                                          |
+| Інструмент | Версія                               | Джерело                                                                                                                                                               |
+| ---------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js    | `24.22.1` (вимога `^24.22.1`)        | [.nvmrc](https://github.com/Blazheiko/vibe-template/blob/main/.nvmrc), [package.json](https://github.com/Blazheiko/vibe-template/blob/main/package.json)              |
+| pnpm       | `>=9.0.0`, зафіксовано `pnpm@9.15.0` | [package.json](https://github.com/Blazheiko/vibe-template/blob/main/package.json) (`engines`, `packageManager`)                                                       |
+| PostgreSQL | з розширенням **pgvector**           | [create-database.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/db/create-database.ts) виконує `CREATE EXTENSION IF NOT EXISTS vector` |
+| Redis      | будь-яка сучасна версія              | [config/redis.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/redis.ts)                                                          |
 
 Структуру репозиторію описано в розділі [Структура проєкту](/guide/project-structure).
 
@@ -18,20 +18,20 @@
 pgvector потрібен для пошуку в базі знань Support AI, і тип `vector` є в самій схемі, тому розширення обов'язкове навіть без AI. Звичайний образ `postgres` його не містить, і `db:create` на ньому впаде. Використовуйте образ `pgvector/pgvector`. Пояснення та інші способи встановлення: [База даних → pgvector](/backend/database#pgvector).
 
 ```bash
-docker run -d --name itvibe-pg \
+docker run -d --name vibe-pg \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=<your-pg-password> \
   -p 5432:5432 pgvector/pgvector:pg16
 
-docker run -d --name itvibe-redis \
+docker run -d --name vibe-redis \
   -p 6379:6379 redis:7 redis-server --requirepass <your-redis-password>
 ```
 
 ## 1. Клонування та встановлення залежностей
 
 ```bash
-git clone https://github.com/Blazheiko/itvibe-template.git
-cd itvibe-template
+git clone https://github.com/Blazheiko/vibe-template.git
+cd vibe-template
 nvm use          # бере версію з .nvmrc
 pnpm install
 ```
@@ -51,7 +51,7 @@ PGSQL_HOST=127.0.0.1
 PGSQL_PORT=5432
 PGSQL_USER=postgres
 PGSQL_PASSWORD=<your-pg-password>
-PGSQL_DB_NAME=itvibe_template
+PGSQL_DB_NAME=vibe_template
 
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
@@ -72,12 +72,12 @@ SERVE_STATIC=false
 
 Пояснення:
 
-- **База даних** читається лише зі змінних `PGSQL_*` ([config/database.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/database.ts)); ті самі значення бере drizzle-kit ([`drizzle.config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts)). Незадані змінні отримують defaults `127.0.0.1:5432`, `postgres`, база `itvibe_template`.
-- **Redis**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_PREFIX` ([config/redis.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/redis.ts)). Якщо Redis запущено без пароля, залиште `REDIS_PASSWORD` порожнім.
+- **База даних** читається лише зі змінних `PGSQL_*` ([config/database.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/database.ts)); ті самі значення бере drizzle-kit ([`drizzle.config.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/drizzle.config.ts)). Незадані змінні отримують defaults `127.0.0.1:5432`, `postgres`, база `vibe_template`.
+- **Redis**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_PREFIX` ([config/redis.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/redis.ts)). Якщо Redis запущено без пароля, залиште `REDIS_PASSWORD` порожнім.
 - **`SERVE_STATIC`**: у `.env.example` стоїть `false`, бо в dev фронтенд віддає Vite. `true` потрібне лише тоді, коли в `packages/backend/public` лежить зібраний фронтенд; без цього каталогу сервер пише попередження і стартує без статики.
 - **`DOMAIN`** разом з портом: фронтенд підключається до WebSocket за адресою `ws://<DOMAIN>/api/websocket`. Без порту браузер піде на порт 80, вхід працюватиме, але в шапці буде статус **Disconnected** і real-time функції не працюватимуть.
 - **`SEED_*`** — логіни й паролі demo-акаунтів, які створить `db:seed --demo`. Пароль має бути від 8 до 32 символів (як у формі входу). Це локальні тестові значення, не використовуйте їх деінде.
-- **`APP_KEY`** потрібен для хешування OTP, коли ввімкнено phone-auth (мінімум 32 символи, див. [validate-runtime-config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)). Із `AUTH_PHONE_ENABLED=false` сервер стартує і без нього, але краще задати його одразу.
+- **`APP_KEY`** потрібен для хешування OTP, коли ввімкнено phone-auth (мінімум 32 символи, див. [validate-runtime-config.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)). Із `AUTH_PHONE_ENABLED=false` сервер стартує і без нього, але краще задати його одразу.
 
 Повний перелік змінних з defaults наведено на сторінці [Конфігурація](/backend/configuration).
 
@@ -112,13 +112,13 @@ pnpm --filter backend db:seed      # початкові промпти; з --dem
 Очікуваний вивід:
 
 ```text
-Database "itvibe_template" created successfully.
-Extension "vector" ensured in database "itvibe_template".
+Database "vibe_template" created successfully.
+Extension "vector" ensured in database "vibe_template".
 ...
 [✓] migrations applied successfully!
 ```
 
-`db:create` можна запускати повторно: для наявної БД він виводить `Database "itvibe_template" already exists.`
+`db:create` можна запускати повторно: для наявної БД він виводить `Database "vibe_template" already exists.`
 
 ::: info Seed
 `db:seed` вставляє початкові AI-промпти й безпечний для повторного запуску. Щоб отримати адміна для локальної роботи, задайте `SEED_ADMIN_EMAIL` і `SEED_ADMIN_PASSWORD` у `.env` (опційно `SEED_USER_*`) і виконайте `pnpm --filter backend db:seed --demo`. Запускайте seed до `pnpm dev`, бо промпти кешуються на старті. Деталі: [База даних → Seed](/backend/database#seed).
@@ -132,12 +132,12 @@ Extension "vector" ensured in database "itvibe_template".
 pnpm dev
 ```
 
-Скрипт збирає `shared` і `backend`, а потім паралельно запускає dev-сервери backend і frontend ([package.json](https://github.com/Blazheiko/itvibe-template/blob/main/package.json)). Після старту:
+Скрипт збирає `shared` і `backend`, а потім паралельно запускає dev-сервери backend і frontend ([package.json](https://github.com/Blazheiko/vibe-template/blob/main/package.json)). Після старту:
 
-| Сервіс                     | URL                                                                     | Джерело                                                                                                    |
-| -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Backend (HTTP + WebSocket) | `http://localhost:3000` (`PORT`, `HOST=0.0.0.0`)                        | [config/app.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/app.ts) |
-| Frontend (Vite)            | `http://localhost:5173`; `/api` і `/ws` проксюються на `127.0.0.1:3000` | [vite.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/vite.config.ts)  |
+| Сервіс                     | URL                                                                     | Джерело                                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Backend (HTTP + WebSocket) | `http://localhost:3000` (`PORT`, `HOST=0.0.0.0`)                        | [config/app.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/app.ts) |
+| Frontend (Vite)            | `http://localhost:5173`; `/api` і `/ws` проксюються на `127.0.0.1:3000` | [vite.config.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/vite.config.ts)  |
 
 У лозі backend має з'явитися рядок `Listening http://0.0.0.0:3000`, а у Vite рядок `Local: http://localhost:5173/`.
 
@@ -145,7 +145,7 @@ pnpm dev
 
 ## 5. Перевірка health
 
-Маршрут `GET /ping` оголошено в [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts). HTTP-маршрути мають префікс `API_PATH_PREFIX`, за замовчуванням `api`:
+Маршрут `GET /ping` оголошено в [http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts). HTTP-маршрути мають префікс `API_PATH_PREFIX`, за замовчуванням `api`:
 
 ```bash
 curl -i http://127.0.0.1:3000/api/ping
@@ -270,7 +270,7 @@ curl -s -b cookies.txt -c cookies.txt -X POST -H "$O" -H "x-csrf-token: $CSRF" $
 curl -s -o /dev/null -w '%{http_code}\n' -b cookies.txt $B/main/init
 ```
 
-Поле `token` у тілі входу обов'язкове за схемою [`login.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/auth/login.ts); фронтенд передає порожній рядок. Без нього сервер відповість `422 validation_failed`.
+Поле `token` у тілі входу обов'язкове за схемою [`login.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/auth/login.ts); фронтенд передає порожній рядок. Без нього сервер відповість `422 validation_failed`.
 
 ## Усунення проблем
 

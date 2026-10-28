@@ -74,7 +74,7 @@ flowchart TD
 - **Зміна схеми БД зачіпає лише репозиторій**, а не весь код.
 - **Пароль не потрапить у відповідь випадково**, бо дані йдуть клієнту лише через трансформер.
 
-Правила між шарами перевіряє тест [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts): якщо контролер імпортує репозиторій напряму, `pnpm test` впаде. Детальніше — [Архітектура](/backend/architecture).
+Правила між шарами перевіряє тест [`layering.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/layering.spec.ts): якщо контролер імпортує репозиторій напряму, `pnpm test` впаде. Детальніше — [Архітектура](/backend/architecture).
 
 ## Помилки без винятків
 
@@ -109,7 +109,7 @@ flowchart LR
 
 ### API: одна схема — і перевірка, і тип
 
-Ось частина схеми логіну з [`shared/src/schemas/auth/login.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/auth/login.ts):
+Ось частина схеми логіну з [`shared/src/schemas/auth/login.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/auth/login.ts):
 
 ```ts
 const IdentifierLoginInputSchema = type({
@@ -125,9 +125,9 @@ export type LoginInput = typeof LoginInputSchema.infer // тип виведен�
 
 Цей один файл використовують три місця:
 
-- **маршрут** `POST /api/auth/login` перевіряє тіло запиту: `validator: LoginInputSchema` у [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts);
+- **маршрут** `POST /api/auth/login` перевіряє тіло запиту: `validator: LoginInputSchema` у [`http-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts);
 - **контролер** отримує вже типізовані дані: `login(context: HttpContext<LoginInput>)`;
-- **фронтенд** надсилає запит того самого типу: `login: async (body: LoginInput)` у [`api.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/api.ts).
+- **фронтенд** надсилає запит того самого типу: `login: async (body: LoginInput)` у [`api.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/api.ts).
 
 Що це дає: перейменуйте в схемі `identifier` на `login`, перезберіть `shared` і запустіть `pnpm typecheck`. Помилки з'являться з обох боків одразу (вивід скорочено):
 
@@ -154,19 +154,19 @@ export const users = pgTable('users', {
 })
 ```
 
-З неї `db:generate` генерує SQL-міграцію, а репозиторій виводить типи рядка ([`user-repository.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/user/user-repository.ts)):
+З неї `db:generate` генерує SQL-міграцію, а репозиторій виводить типи рядка ([`user-repository.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/repositories/user/user-repository.ts)):
 
 ```ts
 export type UserRow = InferSelectModel<typeof users> // те, що повертає SELECT
 export type UserInsert = InferInsertModel<typeof users> // те, що можна передати в INSERT
 ```
 
-Далі тип іде ланцюжком: [`user-transformer.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) описує публічну форму як `Omit<UserRow, 'password' | 'sessionToken' | ...>`. Додали колонку в `schema.ts` — вона з'явиться в `UserRow` і в серіалізованому користувачі без жодного ручного типу. А пароль туди не потрапить, бо його явно виключено.
+Далі тип іде ланцюжком: [`user-transformer.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/user-transformer.ts) описує публічну форму як `Omit<UserRow, 'password' | 'sessionToken' | ...>`. Додали колонку в `schema.ts` — вона з'явиться в `UserRow` і в серіалізованому користувачі без жодного ручного типу. А пароль туди не потрапить, бо його явно виключено.
 
 ### Чого цей підхід не робить
 
 - **API і БД — різні контракти, і це навмисно.** Тип відповіді не виводиться з таблиці автоматично: між ними стоїть transformer, який прибирає секрети і перетворює дати та `bigint` на рядки.
-- **Захист працює там, де тип справді імпортовано.** Якщо компонент оголосить власний тип замість імпорту зі `shared`, зміну схеми TypeScript у ньому не помітить. Виняток у самому `shared` один: у `CanonicalErrorResponse` поле `details` має точніший TypeScript-тип, ніж може описати схема ([error-response.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/error-response.ts)).
+- **Захист працює там, де тип справді імпортовано.** Якщо компонент оголосить власний тип замість імпорту зі `shared`, зміну схеми TypeScript у ньому не помітить. Виняток у самому `shared` один: у `CanonicalErrorResponse` поле `details` має точніший TypeScript-тип, ніж може описати схема ([error-response.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/responses/error-response.ts)).
 - **Відповідь під час виконання не перевіряється.** `ResponseSchema` у маршруті описує API для [API Playground](/playground/); захист відповіді — лише TypeScript під час компіляції.
 
 Детальніше — [Валідація](/backend/validation), [Пакет shared](/shared/), [База даних](/backend/database).
@@ -197,7 +197,7 @@ HTTP — це «запитав і отримав відповідь». WebSocket
 ## Що робити далі
 
 1. Якщо ще не запускали проєкт, пройдіть [Швидкий старт](/guide/getting-started) разом з першим сценарієм.
-2. Відкрийте [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) і пройдіть по `GET /api/main/init` від маршруту до репозиторію — це найкращий спосіб відчути структуру.
+2. Відкрийте [`http-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) і пройдіть по `GET /api/main/init` від маршруту до репозиторію — це найкращий спосіб відчути структуру.
 3. Тримайте під рукою [Глосарій](/reference/glossary), якщо зустрінете незнайомий термін.
 
 ::: tip Наступний крок

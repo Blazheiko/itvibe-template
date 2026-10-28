@@ -101,9 +101,9 @@ sequenceDiagram
 
 ### Новий маршрут, що змінює дані
 
-Додавайте його в групу маршрутів, де є `session_web` і `csrf_guard` — так влаштовані всі групи в [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts). Тоді захист працює автоматично. Фронтенд підставить токен сам, якщо ви викликаєте API через `baseApi.http` або `baseApi.upload`.
+Додавайте його в групу маршрутів, де є `session_web` і `csrf_guard` — так влаштовані всі групи в [`http-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts). Тоді захист працює автоматично. Фронтенд підставить токен сам, якщо ви викликаєте API через `baseApi.http` або `baseApi.upload`.
 
-Якщо новий запит робить **незалогінений** користувач (як вхід чи скидання пароля), передайте `{ csrfRecovery: 'public' }`: так фронтенд знатиме, що повтор у гостьовій сесії допустимий. Приклади — в [`api.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/api.ts).
+Якщо новий запит робить **незалогінений** користувач (як вхід чи скидання пароля), передайте `{ csrfRecovery: 'public' }`: так фронтенд знатиме, що повтор у гостьовій сесії допустимий. Приклади — в [`api.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/api.ts).
 
 ### Налаштування
 

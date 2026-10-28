@@ -1,6 +1,6 @@
 # Автентифікація та безпека
 
-Ця сторінка описує, як бекенд автентифікує користувачів і захищає HTTP- та WebSocket-трафік: сесії в Redis з HMAC-підписаною cookie, способи входу (email/пароль, телефон/SMS, OAuth), обмеження частоти запитів, CSRF, CORS, заголовки безпеки, визначення IP за проксі та авторизацію WebSocket. Усе нижче описано за поточним кодом у `packages/backend/src`. Загальний порядок обробки запиту описано на сторінці [Життєвий цикл запиту](/backend/request-lifecycle), а підключення middleware до маршрутів — на сторінці [Маршрутизація та middleware](/backend/routing-middlewares).
+Ця сторінка описує, як бекенд автентифікує користувачів і захищає HTTP- та WebSocket-трафік: сесії в Redis з HMAC-підписаною cookie, способи входу (email/пароль, телефон/SMS, OAuth), обмеження частоти запитів, CSRF, CORS, заголовки безпеки, визначення IP за проксі та авторизацію WebSocket. Усе нижче описано за поточним кодом у `packages/backend/src`. Загальний порядок обробки запиту описано на сторінці [Життєвий цикл запиту](/backend/request-lifecycle), а підключення middleware до маршрутів — на сторінці [Маршрутизація](/backend/routing) і [Middleware](/backend/middlewares).
 
 ## Коротко на прикладі: що відбувається після входу
 
@@ -34,7 +34,7 @@ uwebsocket:auth:ws:<token>                       одноразовий WebSocke
 
 ### Формат cookie
 
-Сесію створює і перевіряє [`session-handler.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/session-handler.ts), а підпис робить [`token-handler.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/token-handler.ts).
+Сесію створює і перевіряє [`session-handler.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/session-handler.ts), а підпис робить [`token-handler.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/token-handler.ts).
 
 - Значення до підпису: `<userToken>.<sessionId>`. Для анонімної сесії замість `userToken` стоїть рядок `anon_session`.
 - `sessionId` генерується через `crypto.randomUUID()`.
@@ -42,7 +42,7 @@ uwebsocket:auth:ws:<token>                       одноразовий WebSocke
 - Під час перевірки підписи порівнюються через `crypto.timingSafeEqual`. Токен має складатися рівно з 3 частин, а `userToken` має відповідати шаблону `^[a-zA-Z0-9_-]{10,}$`.
 - Якщо `APP_KEY` не задано, він коротший за 32 символи або дорівнює `your-secret-key` чи `change-me`, модуль кидає помилку під час завантаження, і сервер не стартує.
 
-Ім'я та атрибути cookie задає [`config/session.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/session.ts):
+Ім'я та атрибути cookie задає [`config/session.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/session.ts):
 
 | Параметр                     | Значення                                                                                                                                   |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -52,7 +52,7 @@ uwebsocket:auth:ws:<token>                       одноразовий WebSocke
 | `sameSite`                   | `Lax`                                                                                                                                      |
 | TTL (`age`, `maxAge`, Redis) | 24 години (`duration('24h')`)                                                                                                              |
 
-Поки триває перехід на нове ім'я, [`resolve-session-cookie.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/resolve-session-cookie.ts) спершу шукає активне ім'я cookie, а потім застаріле `uapi`. Якщо знайдено лише застаріле ім'я, [`delete-legacy-session-cookie.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/delete-legacy-session-cookie.ts) надсилає `Set-Cookie`, який видаляє стару cookie. Під час старту [`validate-runtime-config.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts) перевіряє, що при `__Host-` префіксі cookie має `Secure=true`, а `APP_URL` починається з `https://`.
+Поки триває перехід на нове ім'я, [`resolve-session-cookie.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/resolve-session-cookie.ts) спершу шукає активне ім'я cookie, а потім застаріле `uapi`. Якщо знайдено лише застаріле ім'я, [`delete-legacy-session-cookie.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/delete-legacy-session-cookie.ts) надсилає `Set-Cookie`, який видаляє стару cookie. Під час старту [`validate-runtime-config.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts) перевіряє, що при `__Host-` префіксі cookie має `Secure=true`, а `APP_URL` починається з `https://`.
 
 ### Redis як джерело істини
 
@@ -68,7 +68,7 @@ uwebsocket:auth:ws:<token>                       одноразовий WebSocke
 
 Клієнту `userToken` не потрібен: відповіді з користувачем (`user-transformer.ts`) його не містять. Сам по собі він сесію не відкриває — потрібні ще `sessionId` і підпис `APP_KEY`, — але й світити його в JSON, доступному з JavaScript, немає причин.
 
-Сесії зберігає [`redis-session-storage.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/redis-session-storage.ts):
+Сесії зберігає [`redis-session-storage.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/redis-session-storage.ts):
 
 - Ключ має вигляд `session:<userToken|anon_session>:<sessionId>`. Перед кожною операцією `sanitizeRedisKey` перевіряє його: дозволено лише `[a-zA-Z0-9:_*-]`, довжина не більше 86 символів.
 - Запис робиться через `SETEX` з TTL `age`, читання — через `GETEX ... EX age`. Тобто кожне читання продовжує життя сесії (ковзний TTL).
@@ -79,7 +79,7 @@ uwebsocket:auth:ws:<token>                       одноразовий WebSocke
     - **курсор `SCAN` зберігається** в `logout_all:cursor:<userToken>:<sessionId>` (TTL 600 с) після кожної порції, і повтор `logoutAll` з тієї самої сесії продовжує з нього, а не з `0`, тому на великій базі повтори просуваються. Сесії, створені між спробами позаду збереженого курсора, продовжений обхід не бачить;
     - **повне відкликання** (скидання пароля, виклик без поточної сесії) завжди обходить базу з `0` і курсор не читає й не пише: прогрес перерваного `logoutAll`, який пропустив свою сесію, не може приховати її від відкликання.
 
-Middleware `session_web` ([`session-web.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/ws/session-web.ts)) читає cookie, а `session_api` ([`session-api.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/http/session-api.ts)) бере той самий підписаний токен із заголовка `Authorization: Bearer <token>`. Cookie нової сесії видається одразу, а cookie незміненої сесії — повторно не частіше ніж раз на годину, щоб продовжити строк дії. Момент оновлення визначає окремий ключ `session_cookie_refresh:<sessionId>` (`SET NX EX 3600`): запис сесії при цьому не переписується, тож оновлення не може відновити сесію, яку інший запит щойно видалив. Нова сесія ставить цей ключ одразу; якщо запис ключа не вдається, сесія все одно створюється (помилка лише логується), і cookie просто буде оновлено раніше. Перед відправкою відповіді (`context.session.beforeSend` після хендлера) сервер перевіряє, що сесія, чию cookie повторно видає запит, ще існує: повільна відповідь не повертає браузеру cookie сесії, яку тим часом замінив інший запит (зміна пароля, logout-all). Запити, що самі змінили сесію (login, logout), свою cookie зберігають. Якщо ця перевірка не вдається (Redis недоступний), cookie з відповіді прибирається, а відповідь хендлера лишається без змін. Залишковий ризик: браузер може отримати відповіді в іншому порядку, ніж сервер їх відправив, і зберегти cookie вже видаленої сесії. Тоді наступний запит отримує нову анонімну сесію (користувач входить знову); прав видаленої сесії він не отримує.
+Middleware `session_web` ([`session-web.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/ws/session-web.ts)) читає cookie, а `session_api` ([`session-api.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/http/session-api.ts)) бере той самий підписаний токен із заголовка `Authorization: Bearer <token>`. Cookie нової сесії видається одразу, а cookie незміненої сесії — повторно не частіше ніж раз на годину, щоб продовжити строк дії. Момент оновлення визначає окремий ключ `session_cookie_refresh:<sessionId>` (`SET NX EX 3600`): запис сесії при цьому не переписується, тож оновлення не може відновити сесію, яку інший запит щойно видалив. Нова сесія ставить цей ключ одразу; якщо запис ключа не вдається, сесія все одно створюється (помилка лише логується), і cookie просто буде оновлено раніше. Перед відправкою відповіді (`context.session.beforeSend` після хендлера) сервер перевіряє, що сесія, чию cookie повторно видає запит, ще існує: повільна відповідь не повертає браузеру cookie сесії, яку тим часом замінив інший запит (зміна пароля, logout-all). Запити, що самі змінили сесію (login, logout), свою cookie зберігають. Якщо ця перевірка не вдається (Redis недоступний), cookie з відповіді прибирається, а відповідь хендлера лишається без змін. Залишковий ризик: браузер може отримати відповіді в іншому порядку, ніж сервер їх відправив, і зберегти cookie вже видаленої сесії. Тоді наступний запит отримує нову анонімну сесію (користувач входить знову); прав видаленої сесії він не отримує.
 
 ### Ротація
 
@@ -120,11 +120,11 @@ sequenceDiagram
 
 ## Способи входу
 
-Маршрути групи `auth` оголошено в [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts). Група має middleware `session_web` і `csrf_guard` та rate limit 10 запитів на хвилину з IP на кожен маршрут групи (окремі маршрути мають суворіші власні ліміти). Контролери: [`auth-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/auth/auth-controller.ts) і [`oauth-controller.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/auth/oauth-controller.ts).
+Маршрути групи `auth` оголошено в [`http-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts). Група має middleware `session_web` і `csrf_guard` та rate limit 10 запитів на хвилину з IP на кожен маршрут групи (окремі маршрути мають суворіші власні ліміти). Контролери: [`auth-controller.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/auth/auth-controller.ts) і [`oauth-controller.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/auth/oauth-controller.ts).
 
-- **Email і пароль**: `POST /auth/register/email` для реєстрації та `POST /auth/login` для входу. Схема входу [`login.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/auth/login.ts) приймає або `email`, або `identifier`, разом із `password` (8–32 символи). Паролі хешує `hashPassword` з `metautil` ([`auth-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts)). Є також `forgot-password`, `reset-password`, `verify-email`, `resend-verification-email`, `change-password`, `link-email/start`.
-- **Телефон і SMS**: `register/phone/start`, `register/phone/confirm`, `register/phone/complete-profile`, `reset-phone/start`, `reset-phone/complete`, `link-phone/start`, `link-phone/confirm`. Вмикається через `AUTH_PHONE_ENABLED` ([`config/auth.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/auth.ts)). OTP-коди зберігаються як HMAC-SHA256 з ключем `AUTH_OTP_HMAC_KEY` (або `APP_KEY`, якщо перший не задано) ([`otp-verification-hash.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/otp-verification-hash.ts)). Якщо телефонний вхід увімкнено, а ключ коротший за 32 символи, сервер не стартує.
-- **OAuth** (бібліотека `arctic`): `GET /auth/oauth/:provider/redirect` і `GET /auth/oauth/:provider/callback` для провайдерів Google, Facebook, GitHub і GitLab ([`config/oauth.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/oauth.ts), [`oauth-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/oauth-service.ts)). `state` генерує `generateState()`. Для Google додатково використовується PKCE (`generateCodeVerifier()`). `oauthState` і `oauthCodeVerifier` зберігаються в сесії. У callback `state` звіряється, і при розбіжності повертається помилка `OAuth state mismatch`. Після цього дані OAuth видаляються з сесії.
+- **Email і пароль**: `POST /auth/register/email` для реєстрації та `POST /auth/login` для входу. Схема входу [`login.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/auth/login.ts) приймає або `email`, або `identifier`, разом із `password` (8–32 символи). Паролі хешує `hashPassword` з `metautil` ([`auth-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts)). Є також `forgot-password`, `reset-password`, `verify-email`, `resend-verification-email`, `change-password`, `link-email/start`.
+- **Телефон і SMS**: `register/phone/start`, `register/phone/confirm`, `register/phone/complete-profile`, `reset-phone/start`, `reset-phone/complete`, `link-phone/start`, `link-phone/confirm`. Вмикається через `AUTH_PHONE_ENABLED` ([`config/auth.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/auth.ts)). OTP-коди зберігаються як HMAC-SHA256 з ключем `AUTH_OTP_HMAC_KEY` (або `APP_KEY`, якщо перший не задано) ([`otp-verification-hash.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/otp-verification-hash.ts)). Якщо телефонний вхід увімкнено, а ключ коротший за 32 символи, сервер не стартує.
+- **OAuth** (бібліотека `arctic`): `GET /auth/oauth/:provider/redirect` і `GET /auth/oauth/:provider/callback` для провайдерів Google, Facebook, GitHub і GitLab ([`config/oauth.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/oauth.ts), [`oauth-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/oauth-service.ts)). `state` генерує `generateState()`. Для Google додатково використовується PKCE (`generateCodeVerifier()`). `oauthState` і `oauthCodeVerifier` зберігаються в сесії. У callback `state` звіряється, і при розбіжності повертається помилка `OAuth state mismatch`. Після цього дані OAuth видаляються з сесії.
 
 Провайдер SMS обирається через `AUTH_SMS_PROVIDER`. Валідатор runtime-конфігурації забороняє `AUTH_SMS_PROVIDER=fake` в середовищах production-like і вимагає явно задати `AUTH_SMS_PROVIDER_ALLOW_FAKE=true` та `AUTH_FAKE_SMS_CODE`.
 
@@ -132,8 +132,8 @@ sequenceDiagram
 
 Ліміти працюють на двох рівнях, і в них різні задачі.
 
-- **Ліміт захищає процес від частих тяжких операцій** (парсинг тіла, middleware, запити до БД, AI) → `rateLimit` на маршруті чи групі або глобальний ліміт у [`config/rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts). Лічильник у пам'яті процесу, кожен інстанс рахує окремо.
-- **Ліміт стосується чутливої дії** (вхід, реєстрація, SMS, скидання й зміна пароля) і має бути спільним для всіх інстансів → політика в [`config/throttle-policies.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/throttle-policies.ts) і виклик `consumeAuthThrottle(policy, key)` у сервісі. Лічильник у Redis.
+- **Ліміт захищає процес від частих тяжких операцій** (парсинг тіла, middleware, запити до БД, AI) → `rateLimit` на маршруті чи групі або глобальний ліміт у [`config/rate-limit.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/rate-limit.ts). Лічильник у пам'яті процесу, кожен інстанс рахує окремо.
+- **Ліміт стосується чутливої дії** (вхід, реєстрація, SMS, скидання й зміна пароля) і має бути спільним для всіх інстансів → політика в [`config/throttle-policies.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/throttle-policies.ts) і виклик `consumeAuthThrottle(policy, key)` у сервісі. Лічильник у Redis.
 
 ```
 HTTP API:  L1 (memory) → ліміт маршруту (memory) → handler → auth-політики (Redis)
@@ -142,20 +142,20 @@ WebSocket: upgrade рівень 1 (memory) → рівень 2 (Redis) → auth (
 
 ### Локальні ліміти (у пам'яті, на інстанс)
 
-| Ліміт                  | Де задано                                                                                                                               | Ключ         | Алгоритм     | Вікно / максимум                                                       | Змінна оточення            |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------ | ---------------------------------------------------------------------- | -------------------------- |
-| L1 — усі API-запити    | [`config/rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts)              | IP           | fixed-window | 60 с / 600                                                             | `HTTP_GLOBAL_RATE_LIMIT_*` |
-| Маршрут або група HTTP | `rateLimit` у [`http-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) | IP + маршрут | sliding-log  | за маршрутом, напр. група `auth` 60 с / 10, `forgot-password` 60 с / 3 | — (у коді)                 |
-| WS upgrade, рівень 1   | [`config/rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/rate-limit.ts)              | IP           | sliding-log  | 60 с / 120                                                             | `WS_UPGRADE_RATE_LIMIT_*`  |
-| WS-повідомлення        | `rateLimit` у [`ws-routes.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts)     | IP + маршрут | sliding-log  | 60 с / 60–120                                                          | — (у коді)                 |
+| Ліміт                  | Де задано                                                                                                                             | Ключ         | Алгоритм     | Вікно / максимум                                                       | Змінна оточення            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------ | ---------------------------------------------------------------------- | -------------------------- |
+| L1 — усі API-запити    | [`config/rate-limit.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/rate-limit.ts)              | IP           | fixed-window | 60 с / 600                                                             | `HTTP_GLOBAL_RATE_LIMIT_*` |
+| Маршрут або група HTTP | `rateLimit` у [`http-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) | IP + маршрут | sliding-log  | за маршрутом, напр. група `auth` 60 с / 10, `forgot-password` 60 с / 3 | — (у коді)                 |
+| WS upgrade, рівень 1   | [`config/rate-limit.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/rate-limit.ts)              | IP           | sliding-log  | 60 с / 120                                                             | `WS_UPGRADE_RATE_LIMIT_*`  |
+| WS-повідомлення        | `rateLimit` у [`ws-routes.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts)     | IP + маршрут | sliding-log  | 60 с / 60–120                                                          | — (у коді)                 |
 
-- **L1** ([`http-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)) рахує кожен API-запит рівно один раз: маршрути, API-404, preflight `OPTIONS` і звичайні HTTP-запити на `/<API_PATH_PREFIX>/websocket`. Статика не рахується. На успішній відповіді L1 заголовків не пише; на 429 віддає `X-RateLimit-*` і `Retry-After`, і ліміт маршруту тоді не перевіряється.
+- **L1** ([`http-rate-limit.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/http-rate-limit.ts)) рахує кожен API-запит рівно один раз: маршрути, API-404, preflight `OPTIONS` і звичайні HTTP-запити на `/<API_PATH_PREFIX>/websocket`. Статика не рахується. На успішній відповіді L1 заголовків не пише; на 429 віддає `X-RateLimit-*` і `Retry-After`, і ліміт маршруту тоді не перевіряється.
 - **Ліміт маршруту** має пріоритет над лімітом групи. Відповідь містить `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; перевищення — `429 rate_limited` з `Retry-After`; помилка лічильника — `503 rate_limit_unavailable` (fail-closed).
-- **Чому синхронно і в пам'яті.** У [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) обидві HTTP-перевірки стоять **до** реєстрації `res.onData()`: якщо там буде `await`, uWS може доставити тіло малого POST раніше, ніж його почнуть читати, і запит зависне. Redis асинхронний, тому для цих лімітів не підходить. До того ж їхня задача — захистити процес, а не тримати точний бюджет у кластері.
+- **Чому синхронно і в пам'яті.** У [`server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/server.ts) обидві HTTP-перевірки стоять **до** реєстрації `res.onData()`: якщо там буде `await`, uWS може доставити тіло малого POST раніше, ніж його почнуть читати, і запит зависне. Redis асинхронний, тому для цих лімітів не підходить. До того ж їхня задача — захистити процес, а не тримати точний бюджет у кластері.
 - **Бюджет при N інстансах** дорівнює N × максимум. Це свідомий вибір: кожен процес захищає себе сам. Ліміт на вході за потреби дає reverse proxy, див. [Розгортання](/backend/deployment#rate-limit-на-edge).
 - **WS-повідомлення** рахуються за IP, а не за з'єднанням: інакше бюджет можна множити, відкриваючи нові з'єднання.
 
-**Лічильник** ([`rate-limit-store.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-store.ts)):
+**Лічильник** ([`rate-limit-store.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/rate-limit-store.ts)):
 
 - **Відхилені спроби квоту не витрачають і не зберігаються.** Тому `Retry-After` точний. Стан на ключ обмежений: sliding log довжиною не більше `max`, для L1 один лічильник.
 - **Межа ключів жорстка, 100 000.** На новий ключ перевіряються максимум 64 найстаріші ключі; якщо місця немає, витісняється найстаріший. Повний GC раз на 60 с.
@@ -166,7 +166,7 @@ WebSocket: upgrade рівень 1 (memory) → рівень 2 (Redis) → auth (
 
 ### Спільні ліміти (Redis)
 
-Усі спільні ліміти описані в реєстрі [`config/throttle-policies.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/throttle-policies.ts); стовпці таблиці відповідають полям `ThrottlePolicy`. Сервіси передають лише політику й ключ — `consumeAuthThrottle(throttlePolicies.loginIp, ip)` ([`auth-throttle-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts)). Fixed-window політики пишуть ключ `auth:throttle:<scope>:<key>` (Lua `INCR` + `PEXPIRE` лише на першій спробі, тож вікно відраховується від першої спроби і відмови його не продовжують). `wsUpgradeShared` — sliding log на ZSET з ключем `rl:upgrade:<ip>` ([`redis-sliding-log.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/redis-sliding-log.ts)), час береться з Redis.
+Усі спільні ліміти описані в реєстрі [`config/throttle-policies.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/throttle-policies.ts); стовпці таблиці відповідають полям `ThrottlePolicy`. Сервіси передають лише політику й ключ — `consumeAuthThrottle(throttlePolicies.loginIp, ip)` ([`auth-throttle-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts)). Fixed-window політики пишуть ключ `auth:throttle:<scope>:<key>` (Lua `INCR` + `PEXPIRE` лише на першій спробі, тож вікно відраховується від першої спроби і відмови його не продовжують). `wsUpgradeShared` — sliding log на ZSET з ключем `rl:upgrade:<ip>` ([`redis-sliding-log.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/rate-limit/redis-sliding-log.ts)), час береться з Redis.
 
 | Політика                  | Операція                                                      | Ключ            | Алгоритм     | Вікно / максимум                       | Змінна оточення                                               | При відмові Redis                        | Скидання     |
 | ------------------------- | ------------------------------------------------------------- | --------------- | ------------ | -------------------------------------- | ------------------------------------------------------------- | ---------------------------------------- | ------------ |
@@ -194,7 +194,7 @@ WebSocket: upgrade рівень 1 (memory) → рівень 2 (Redis) → auth (
 
 `0` у змінній auth-політики — помилка конфігу на старті: захист чутливої дії вимкнути не можна. Вимкнути змінною (`MAX=0`) можна лише `wsUpgradeShared` (`disableable`), напр. для одного інстансу.
 
-Спільні ліміти ходять в окреме з'єднання ([`redis-rate-limit.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/redis-rate-limit.ts)) до того самого Redis-сервера: без offline queue, без повторного надсилання команд і з коротким таймаутом `RATE_LIMIT_REDIS_TIMEOUT_MS`. Основний клієнт сесій тепер теж працює без offline queue і повторів, але з довшим таймаутом `REDIS_COMMAND_TIMEOUT_MS` (див. [Відмова Redis](#відмова-redis)). Таймаут означає «результат невідомий»: Lua могла вже спожити спробу, тому повтору немає.
+Спільні ліміти ходять в окреме з'єднання ([`redis-rate-limit.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/database/redis-rate-limit.ts)) до того самого Redis-сервера: без offline queue, без повторного надсилання команд і з коротким таймаутом `RATE_LIMIT_REDIS_TIMEOUT_MS`. Основний клієнт сесій тепер теж працює без offline queue і повторів, але з довшим таймаутом `REDIS_COMMAND_TIMEOUT_MS` (див. [Відмова Redis](#відмова-redis)). Таймаут означає «результат невідомий»: Lua могла вже спожити спробу, тому повтору немає.
 
 ### Політика входу
 
@@ -216,7 +216,7 @@ WebSocket: upgrade рівень 1 (memory) → рівень 2 (Redis) → auth (
 - Пропуск рівня 2 **не** витрачає локальний бюджет удруге: рівень 1 уже спожив спробу цього upgrade.
 - Пропуск рівня 2 **не гарантує** WS-з'єднання: перевірка токена й сесії теж іде в Redis. Якщо сесію не знайдено, upgrade відхиляється з `401` до `res.upgrade`.
 - **Перевищення бюджету під час відмови:** кожен інстанс рахує лише локально, тож за вікно можливо до N × поріг рівня 1 upgrade з одного IP.
-- **Повна недоступність Redis зупиняє не лише ліміти, але швидко.** Основний клієнт сесій ([`redis.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/redis.ts), опції в [`redis-main-options.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/redis-main-options.ts)) працює без offline queue (`enableOfflineQueue: false`), без повторного надсилання (`autoResendUnfulfilledCommands: false`, `maxRetriesPerRequest: 0`) і з таймаутом `REDIS_COMMAND_TIMEOUT_MS` (500 мс); reconnect іде у фоні із затримкою `min(times · 100, 2000)` мс. Обгортка `withRedis` відмовляє одразу без команди, якщо з'єднання не `ready`. Тож запит, що читає сесію, отримує `503 service_unavailable` з `Retry-After: 1` за мілісекунди (розрив) або за час таймауту (підключений, але повільний Redis), а не чекає. Перша ж недоступна команда перериває запит, наступні не виконуються.
+- **Повна недоступність Redis зупиняє не лише ліміти, але швидко.** Основний клієнт сесій ([`redis.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/database/redis.ts), опції в [`redis-main-options.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/database/redis-main-options.ts)) працює без offline queue (`enableOfflineQueue: false`), без повторного надсилання (`autoResendUnfulfilledCommands: false`, `maxRetriesPerRequest: 0`) і з таймаутом `REDIS_COMMAND_TIMEOUT_MS` (500 мс); reconnect іде у фоні із затримкою `min(times · 100, 2000)` мс. Обгортка `withRedis` відмовляє одразу без команди, якщо з'єднання не `ready`. Тож запит, що читає сесію, отримує `503 service_unavailable` з `Retry-After: 1` за мілісекунди (розрив) або за час таймауту (підключений, але повільний Redis), а не чекає. Перша ж недоступна команда перериває запит, наступні не виконуються.
 - **Ціна відмови від черги:** короткий reconnect теж дає `503`, а не коротку затримку; HTTP-клієнт отримує `Retry-After: 1`.
 - **WS-з'єднання під час збою не закриваються:** `ping`/`pong` не залежить від Redis, а прикладне повідомлення отримує відповідь `service_unavailable` зі своїм `event` (див. [WebSocket](/backend/websocket#диспетчер)).
 - **Пізнє виконання.** Команду, вже записану в сокет, Redis може виконати навіть після того, як клієнт отримав таймаут. Наслідки обмежені: в одному процесі одне з'єднання, тож порядок записів процесу зберігається; запізнілий `SETEX` при login створить сесію без cookie, яка зникне за TTL; запізнілий `DEL` при logout видалить сесію пізніше, а клієнт, отримавши `503`, повторить вихід.
@@ -258,7 +258,7 @@ const throttle = await tryInternal(
 
 Пояснення для початківців — [CSRF простими словами](/guide/csrf).
 
-Використовується модель synchronizer token ([`config/csrf.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csrf.ts), [`csrf-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/middlewares/csrf-guard.ts), [`csrf-token.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/csrf-token.ts)):
+Використовується модель synchronizer token ([`config/csrf.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/csrf.ts), [`csrf-guard.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/middlewares/csrf-guard.ts), [`csrf-token.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/csrf-token.ts)):
 
 - Кожна сесія має `csrfToken`: 32 випадкові байти в кодуванні base64url. Якщо в старій сесії токена немає, він дописується під час наступного завантаження сесії.
 - `csrf_guard` перевіряє лише методи `post`, `put`, `patch`, `delete`/`del`. Перевірки йдуть по черзі, і кожна може лише відхилити запит, а не пропустити наступні:
@@ -274,7 +274,7 @@ const throttle = await tryInternal(
 
 ## CORS
 
-[`config/cors.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/cors.ts) задає налаштування, а `setCorsHeader` у [`server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/server.ts) їх застосовує:
+[`config/cors.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/cors.ts) задає налаштування, а `setCorsHeader` у [`server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/server.ts) їх застосовує:
 
 - `ENABLED_CORS` за замовчуванням дорівнює `false`.
 - `CORS_ALLOWED_ORIGINS` — список дозволених origin з точним збігом, без wildcard. `Access-Control-Allow-Origin` відображає `Origin` запиту лише тоді, коли він є в списку. Порожній список забороняє всі крос-доменні запити.
@@ -283,13 +283,13 @@ const throttle = await tryInternal(
 
 ## Заголовки безпеки та CSP
 
-[`http-response-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts) (`setSecurityHeaders`) додає до кожної відповіді — JSON API, помилок, CORS `OPTIONS`, HTML-оболонки SPA і статики — такі заголовки: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` і `Strict-Transport-Security: max-age=31536000; includeSubDomains`, а також CSP за правилами нижче.
+[`http-response-handlers.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/network/http-response-handlers.ts) (`setSecurityHeaders`) додає до кожної відповіді — JSON API, помилок, CORS `OPTIONS`, HTML-оболонки SPA і статики — такі заголовки: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` і `Strict-Transport-Security: max-age=31536000; includeSubDomains`, а також CSP за правилами нижче.
 
-Статика ([`static-server.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts)) завантажується в пам'ять під час старту з білого списку розширень, без файлів, що починаються з крапки. Запити з `..`, `%2e%2e`, `\0` або `%00` отримують `400`.
+Статика ([`static-server.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/static-server.ts)) завантажується в пам'ять під час старту з білого списку розширень, без файлів, що починаються з крапки. Запити з `..`, `%2e%2e`, `\0` або `%00` отримують `400`.
 
 ### Content-Security-Policy
 
-Політику будує [`config/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/csp.ts) з функцій [`vendor/utils/network/csp.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/csp.ts). Значення заголовків обчислюються **один раз на старті**.
+Політику будує [`config/csp.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/csp.ts) з функцій [`vendor/utils/network/csp.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/network/csp.ts). Значення заголовків обчислюються **один раз на старті**.
 
 | Відповідь                                            | Політика                                                                |
 | ---------------------------------------------------- | ----------------------------------------------------------------------- |
@@ -330,13 +330,13 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 **Origins.** Беруться з тих адрес, які браузер реально використовує:
 
 - API — `CSP_API_ORIGIN`, за замовчуванням origin `APP_URL`. Має збігатися з `VITE_BASE_URL` фронтенду.
-- WebSocket — origin результату `getWsUrl()` ([`get-ws-url-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/communication/get-ws-url-service.ts): `DOMAIN`, `APP_ENV`, `API_PATH_PREFIX`), саме цю адресу API віддає клієнту як `wsUrl`. Перевизначення — `CSP_WS_ORIGIN`.
+- WebSocket — origin результату `getWsUrl()` ([`get-ws-url-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/communication/get-ws-url-service.ts): `DOMAIN`, `APP_ENV`, `API_PATH_PREFIX`), саме цю адресу API віддає клієнту як `wsUrl`. Перевизначення — `CSP_WS_ORIGIN`.
 - Медіа — origin `CDN_URL` (клієнт отримує його як `cdnUrl`). Це єдине джерело зображень поза `'self'`: чат підтримки та інші екрани віддають медіа тільки з нашого CDN, а не з presigned S3 URL (див. [Сховище](/backend/storage)). Запити до S3, які робить лише бекенд, у `connect-src` не потрібні.
 - Sentry — `CSP_SENTRY_ORIGIN` (origin з `VITE_SENTRY_DSN`).
 
 Невалідне значення (не origin, неправильна схема, `;`, `,` або пробіл) зупиняє старт через `validateRuntimeConfig()`.
 
-**Чому немає `'unsafe-inline'` у `script-src`.** Vite-збірка не має inline-скриптів; єдиний inline-блок в `index.html` — `application/ld+json`, на який `script-src` не діє. `eval` / `new Function` теж заборонені: фронтенд не імпортує ArkType у runtime (перевірка JIT у ArkType викликає `new Function`), тому WS-payload перевіряються гардами з [`ws-payload-guards.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/frontend/src/utils/ws-payload-guards.ts), а `ErrorCodeSchema` винесено з `shared/errors` у `shared/responses`. E2e-тест `test:e2e:csp` падає на будь-якому порушенні CSP, тож повернення ArkType у бандл буде помічене.
+**Чому немає `'unsafe-inline'` у `script-src`.** Vite-збірка не має inline-скриптів; єдиний inline-блок в `index.html` — `application/ld+json`, на який `script-src` не діє. `eval` / `new Function` теж заборонені: фронтенд не імпортує ArkType у runtime (перевірка JIT у ArkType викликає `new Function`), тому WS-payload перевіряються гардами з [`ws-payload-guards.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/ws-payload-guards.ts), а `ErrorCodeSchema` винесено з `shared/errors` у `shared/responses`. E2e-тест `test:e2e:csp` падає на будь-якому порушенні CSP, тож повернення ArkType у бандл буде помічене.
 
 ::: warning HTML без бекенда
 Коли `SERVE_STATIC=false`, HTML віддає reverse proxy або CDN, і CSP для документа треба налаштувати там (див. [Деплой](/backend/deployment#csp-коли-фронтенд-віддає-проксі)). Бекенд у такому разі ставить лише жорстку політику на API.
@@ -344,27 +344,27 @@ report-uri <CSP_REPORT_URI>        # якщо задано
 
 ## Trust proxy і визначення IP
 
-[`config/network.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/network.ts) і [`get-ip.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/get-ip.ts):
+[`config/network.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/network.ts) і [`get-ip.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/network/get-ip.ts):
 
 - `TRUST_PROXY` за замовчуванням дорівнює `false`. Тоді IP клієнта — це remote address сокета, а заголовки ігноруються.
 - Якщо `TRUST_PROXY=true`, заголовкам довіряють лише тоді, коли remote address входить у `TRUSTED_PROXY_CIDRS` (підтримуються IPv4, IPv6 і IPv4-mapped адреси). Ланцюжок `X-Forwarded-For` разом із remote address обходиться справа наліво, і клієнтом вважається перша адреса, яка не належить довіреному проксі. Якщо такої немає, використовується `X-Real-IP`, а потім remote address.
-- Цей IP використовують rate limit і throttling. Якщо `TRUST_PROXY` за реверс-проксі неправильно налаштовано, усі клієнти отримують спільний ліміт за IP проксі. У production-like режимі старт пише `warn`, якщо `TRUST_PROXY=false` або `TRUST_PROXY=true` з порожнім `TRUSTED_PROXY_CIDRS` ([validate-runtime-config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)).
+- Цей IP використовують rate limit і throttling. Якщо `TRUST_PROXY` за реверс-проксі неправильно налаштовано, усі клієнти отримують спільний ліміт за IP проксі. У production-like режимі старт пише `warn`, якщо `TRUST_PROXY=false` або `TRUST_PROXY=true` з порожнім `TRUSTED_PROXY_CIDRS` ([validate-runtime-config.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/start/validate-runtime-config.ts)).
 
 ## Авторизація WebSocket
 
-1. Автентифікований клієнт викликає `GET /main/update-ws-token` (`auth_guard`). [`generate-ws-token-service.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/generate-ws-token-service.ts) кладе в Redis ключ `auth:ws:<token>` з TTL 60 с і даними `{ sessionId, userId, userToken }`.
-2. Клієнт відкриває `/<pathPrefix>/websocket` і передає токен першим елементом `Sec-WebSocket-Protocol`. `handleUpgrade` у [`ws-handlers.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-handlers.ts) перевіряє формат токена: довжина `accessTokenLength`, лише символи `[a-zA-Z0-9]`. Якщо формат невірний, сервер відповідає `401`.
-3. [`ws-session-auth.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/websocket/ws-session-auth.ts) (`verifyUpgradeToken`) читає токен, знаходить сесію `session:<userToken>:<sessionId>` і перевіряє, що `userId` у сесії збігається з `userId` у токені. `refreshToken` продовжує TTL токена до 120 с, а `revokeToken` видаляє токен під час закриття з'єднання.
+1. Автентифікований клієнт викликає `GET /main/update-ws-token` (`auth_guard`). [`generate-ws-token-service.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/generate-ws-token-service.ts) кладе в Redis ключ `auth:ws:<token>` з TTL 60 с і даними `{ sessionId, userId, userToken }`.
+2. Клієнт відкриває `/<pathPrefix>/websocket` і передає токен першим елементом `Sec-WebSocket-Protocol`. `handleUpgrade` у [`ws-handlers.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-handlers.ts) перевіряє формат токена: довжина `accessTokenLength`, лише символи `[a-zA-Z0-9]`. Якщо формат невірний, сервер відповідає `401`.
+3. [`ws-session-auth.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/websocket/ws-session-auth.ts) (`verifyUpgradeToken`) читає токен, знаходить сесію `session:<userToken>:<sessionId>` і перевіряє, що `userId` у сесії збігається з `userId` у токені. `refreshToken` продовжує TTL токена до 120 с, а `revokeToken` видаляє токен під час закриття з'єднання.
 4. Кожне повідомлення проходить через `wsSessionHandler`. Якщо сесії немає або в ній немає `userId`, клієнт отримує unauthorized-повідомлення, а з'єднання закривається з кодом `4001`.
 
 ## Ролі: `auth_guard` та `admin_guard`
 
-- [`auth-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/auth-guard.ts) повертає `401 unauthorized`, якщо `auth.check()` хибне.
-- [`admin-guard.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/middlewares/admin-guard.ts) завантажує користувача з БД і повертає `403 forbidden`, якщо `role !== 'admin'`. Адмінські групи підключають `["session_web", "csrf_guard", "auth_guard", "admin_guard"]`.
+- [`auth-guard.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/middlewares/core/auth-guard.ts) повертає `401 unauthorized`, якщо `auth.check()` хибне.
+- [`admin-guard.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/middlewares/admin-guard.ts) завантажує користувача з БД і повертає `403 forbidden`, якщо `role !== 'admin'`. Адмінські групи підключають `["session_web", "csrf_guard", "auth_guard", "admin_guard"]`.
 
 ## Аудит безпеки
 
-Початковий аудит бекенду (15 findings) закрито: стан кожного finding — виправлення, коміт або PR, тест — у [docs/security/security-analysis-status.md](https://github.com/Blazheiko/itvibe-template/blob/main/docs/security/security-analysis-status.md). Кожне виправлення перевіряє регресійний тест (feat-040).
+Початковий аудит бекенду (15 findings) закрито: стан кожного finding — виправлення, коміт або PR, тест — у [docs/security/security-analysis-status.md](https://github.com/Blazheiko/vibe-template/blob/main/docs/security/security-analysis-status.md). Кожне виправлення перевіряє регресійний тест (feat-040).
 
 ## Чекліст для production
 

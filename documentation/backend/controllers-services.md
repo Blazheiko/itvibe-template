@@ -4,21 +4,21 @@
 
 ## Контролери
 
-Контролери лежать у [`src/app/controllers`](https://github.com/Blazheiko/itvibe-template/tree/main/packages/backend/src/app/controllers):
+Контролери лежать у [`src/app/controllers`](https://github.com/Blazheiko/vibe-template/tree/main/packages/backend/src/app/controllers):
 
 - `http/` — обробники HTTP-маршрутів, згруповані за доменом;
-- `ws/` — обробники WebSocket-подій ([admin-ws-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/ws/admin-ws-controller.ts), [support-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/ws/support-controller.ts));
-- `shared/` — `mapControllerError` ([controller-error.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/shared/controller-error.ts)).
+- `ws/` — обробники WebSocket-подій ([admin-ws-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/ws/admin-ws-controller.ts), [support-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/ws/support-controller.ts));
+- `shared/` — `mapControllerError` ([controller-error.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/shared/controller-error.ts)).
 
 Окремої теки `static/` у контролерах немає: роздача статики живе у vendor-шарі.
 
-Контролер — це об'єкт за замовчуванням (`export default { ... }`) з async-методами. У маршрутах метод передається як `handler: AuthController.login.bind(AuthController)` ([http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts), [ws-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts)).
+Контролер — це об'єкт за замовчуванням (`export default { ... }`) з async-методами. У маршрутах метод передається як `handler: AuthController.login.bind(AuthController)` ([http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts), [ws-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts)).
 
 ### Контекст обробника
 
 Коротка шпаргалка нижче; кожне поле розібрано в розділах [HttpContext докладно](#httpcontext-докладно) і [WsContext докладно](#wscontext-докладно).
 
-Типи визначені у [vendor/types/types.d.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts):
+Типи визначені у [vendor/types/types.d.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts):
 
 ```ts
 export interface HttpContext<TPayload = unknown, TQuery = null> {
@@ -50,11 +50,11 @@ export interface WsContext<TPayload = unknown> {
 | Сесія               | `context.session.sessionInfo`, `updateSessionData(...)`            | `session: null`                       |
 | Статус / заголовки  | `context.responseData.status = 201`, `responseData.setHeader(...)` | `context.responseData.status` (рядок) |
 
-[`getTypedPayload`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/validation/get-typed-payload.ts) працює з обома контекстами й повертає payload, який уже пройшов валідатор маршруту (див. [Валідація](/backend/validation)). Параметри шляху беруться напряму, наприклад у [oauth-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/auth/oauth-controller.ts): `context.httpData.params["provider"] ?? ""`.
+[`getTypedPayload`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/validation/get-typed-payload.ts) працює з обома контекстами й повертає payload, який уже пройшов валідатор маршруту (див. [Валідація](/backend/validation)). Параметри шляху беруться напряму, наприклад у [oauth-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/auth/oauth-controller.ts): `context.httpData.params["provider"] ?? ""`.
 
 ### HttpContext докладно
 
-Контекст створюється для кожного запиту в [http-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts). Спочатку `session` і `auth` — заглушки (`getUserId()` → `null`, `login()` → `false`); реальні реалізації підставляє session-middleware з [session-handler.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/session-handler.ts). Тому на маршруті без session-middleware `auth.getUserId()` завжди повертає `null`.
+Контекст створюється для кожного запиту в [http-context.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts). Спочатку `session` і `auth` — заглушки (`getUserId()` → `null`, `login()` → `false`); реальні реалізації підставляє session-middleware з [session-handler.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/session-handler.ts). Тому на маршруті без session-middleware `auth.getUserId()` завжди повертає `null`.
 
 Крім полів нижче, є `requestId` (UUID запиту) і `signal` — `AbortSignal`, який спрацьовує, коли клієнт розірвав з'єднання до відповіді. Його варто передавати в довгі операції (`fetch`, LLM-виклики).
 
@@ -101,16 +101,16 @@ async getItem(context: HttpContext<unknown, ListQuery>) {
 
 Те, що піде клієнтові, крім тіла (тілом стає значення, яке повертає метод).
 
-| Поле / метод                       | Опис                                                                                                                                                                                                                                    |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status: number`                   | HTTP-статус, за замовчуванням `200`. `200` з порожнім тілом (`null`) стає `204`; `3xx`, `204`, `205` відправляються без тіла.                                                                                                           |
-| `setHeader(name, value)`           | Додає заголовок відповіді (наприклад `Location` для `302`, `Cache-Control`).                                                                                                                                                            |
-| `setCookie(name, value, options?)` | Ставить cookie. Не вказані опції беруться з `cookiesConfig.default` ([config/cookies.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/config/cookies.ts)). Є перевантаження `setCookie(cookie: Cookie)`. |
-| `deleteCookie(name, options?)`     | Відправляє `Set-Cookie` з `Max-Age=0`. `path` має збігатися з `Path` оригінальної cookie, інакше браузер її не видалить.                                                                                                                |
-| `headers`, `cookies`               | Накопичені заголовки / cookies. Змінюйте через методи вище.                                                                                                                                                                             |
-| `payload`                          | Сюди фреймворк сам кладе результат обробника — у контролері не чіпайте.                                                                                                                                                                 |
-| `middlewareData`                   | Довільні дані, які middleware передають далі по ланцюжку.                                                                                                                                                                               |
-| `aborted`                          | Службовий прапорець; для скасування використовуйте `context.signal`.                                                                                                                                                                    |
+| Поле / метод                       | Опис                                                                                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status: number`                   | HTTP-статус, за замовчуванням `200`. `200` з порожнім тілом (`null`) стає `204`; `3xx`, `204`, `205` відправляються без тіла.                                                                                                         |
+| `setHeader(name, value)`           | Додає заголовок відповіді (наприклад `Location` для `302`, `Cache-Control`).                                                                                                                                                          |
+| `setCookie(name, value, options?)` | Ставить cookie. Не вказані опції беруться з `cookiesConfig.default` ([config/cookies.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/config/cookies.ts)). Є перевантаження `setCookie(cookie: Cookie)`. |
+| `deleteCookie(name, options?)`     | Відправляє `Set-Cookie` з `Max-Age=0`. `path` має збігатися з `Path` оригінальної cookie, інакше браузер її не видалить.                                                                                                              |
+| `headers`, `cookies`               | Накопичені заголовки / cookies. Змінюйте через методи вище.                                                                                                                                                                           |
+| `payload`                          | Сюди фреймворк сам кладе результат обробника — у контролері не чіпайте.                                                                                                                                                               |
+| `middlewareData`                   | Довільні дані, які middleware передають далі по ланцюжку.                                                                                                                                                                             |
+| `aborted`                          | Службовий прапорець; для скасування використовуйте `context.signal`.                                                                                                                                                                  |
 
 ```ts
 context.responseData.status = 302
@@ -122,7 +122,7 @@ return null
 
 #### `session: Session`
 
-Серверна сесія в Redis ([redis-session-storage.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/session/redis-session-storage.ts)). Сесія існує завжди, навіть для анонімного користувача; cookie з її id ставить middleware.
+Серверна сесія в Redis ([redis-session-storage.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/redis-session-storage.ts)). Сесія існує завжди, навіть для анонімного користувача; cookie з її id ставить middleware.
 
 | Поле / метод                 | Опис                                                                                                                                       |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -160,17 +160,17 @@ if (Result.isError(result)) return mapControllerError(context, result.error)
 await context.auth.login(result.value.userId, result.value.userToken)
 ```
 
-Перевірку «чи залогінений» на рівні маршруту зазвичай робить auth-middleware (див. [Маршрутизація та middleware](/backend/routing-middlewares)); у контролері `getUserId()` потрібен, щоб передати id у сервіс.
+Перевірку «чи залогінений» на рівні маршруту зазвичай робить auth-middleware (див. [Маршрутизація](/backend/routing) і [Middleware](/backend/middlewares)); у контролері `getUserId()` потрібен, щоб передати id у сервіс.
 
 ### WsContext докладно
 
-Контекст створюється для кожного WS-повідомлення в [ws-context.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts) диспетчером [ws-api-dispatcher.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/utils/routing/ws-api-dispatcher.ts). Сесія й автентифікація вже перевірені при підключенні (upgrade), тому `session` і `auth` тут завжди `null` — користувач береться з `userData`. Є також `requestId`, `logger` (з `requestId` і `userId`) і `signal`, який спрацьовує при закритті з'єднання.
+Контекст створюється для кожного WS-повідомлення в [ws-context.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts) диспетчером [ws-api-dispatcher.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/routing/ws-api-dispatcher.ts). Сесія й автентифікація вже перевірені при підключенні (upgrade), тому `session` і `auth` тут завжди `null` — користувач береться з `userData`. Є також `requestId`, `logger` (з `requestId` і `userId`) і `signal`, який спрацьовує при закритті з'єднання.
 
 #### `ws: MyWebSocket`
 
 Сокет uWebSockets.js поточного з'єднання (`WebSocket<UserConnection>` + `id`). Потрібен, коли треба діяти з самим з'єднанням, а не просто відповісти:
 
-- `ws.subscribe(topic)` / `ws.unsubscribe(topic)` — підписка на pub/sub-канал (так робить [admin-ws-channel-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/admin/admin-ws-channel-service.ts));
+- `ws.subscribe(topic)` / `ws.unsubscribe(topic)` — підписка на pub/sub-канал (так робить [admin-ws-channel-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/admin/admin-ws-channel-service.ts));
 - `ws.getUserData()` — той самий об'єкт, що й `context.userData`.
 
 Відповідь на поточне повідомлення **не** відправляйте через `ws.send` — просто поверніть значення з методу. Розсилки іншим клієнтам робіть через сервіси `communication/` (broadcast).
@@ -212,7 +212,7 @@ subscribeOnlineUsers(context: WsContext): AdminOnlineUsersWsResponse {
 
 #### `userData: UserConnection | null`
 
-Дані з'єднання, зібрані під час upgrade ([types.d.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts)):
+Дані з'єднання, зібрані під час upgrade ([types.d.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts)):
 
 | Поле                       | Опис                                                                   |
 | -------------------------- | ---------------------------------------------------------------------- |
@@ -239,7 +239,7 @@ void supportService.chat(BigInt(userData.userId), payload.message, userData.uuid
 
 ### Повернення даних і статус
 
-Значення, яке повертає метод, стає тілом відповіді; статус за замовчуванням — успішний, інший задається через `context.responseData.status` (наприклад `201` у [admin-knowledge-base-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/admin/admin-knowledge-base-controller.ts), `302` для редиректів в OAuth). Типи відповідей беруться з `shared` (`shared/responses`).
+Значення, яке повертає метод, стає тілом відповіді; статус за замовчуванням — успішний, інший задається через `context.responseData.status` (наприклад `201` у [admin-knowledge-base-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/admin/admin-knowledge-base-controller.ts), `302` для редиректів в OAuth). Типи відповідей беруться з `shared` (`shared/responses`).
 
 ### Мапінг помилок
 
@@ -255,7 +255,7 @@ export function mapControllerError(
 }
 ```
 
-[`applyAppErrorStatus`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/apply-service-status.ts) виставляє HTTP-статус за `_tag` (`BadRequest`→400, `Unauthorized`→401, `Forbidden`→403, `NotFound`→404, `Conflict`→409, `RateLimited`→429 + `Retry-After`, `Internal`→500 — таблиця в [errors.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)), а тіло має форму `{ status: 'error', message, code, reason? }`. Для WS є аналог [`appErrorToWsError`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/ws-error.ts).
+[`applyAppErrorStatus`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/apply-service-status.ts) виставляє HTTP-статус за `_tag` (`BadRequest`→400, `Unauthorized`→401, `Forbidden`→403, `NotFound`→404, `Conflict`→409, `RateLimited`→429 + `Retry-After`, `Internal`→500 — таблиця в [errors.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)), а тіло має форму `{ status: 'error', message, code, reason? }`. Для WS є аналог [`appErrorToWsError`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/ws-error.ts).
 
 Типовий метод контролера наведено в [Кроці 7](/backend/adding-a-feature#крок-7-controller).
 
@@ -271,13 +271,13 @@ export function mapControllerError(
 | `admin/`         | База знань, онлайн-користувачі, історія, користувачі | `admin/knowledge-base/:id`, `admin/users-online` |
 | `ai/`            | Промпти та статистика використання LLM               | `prompts/:type`, `admin/usage/stats`             |
 
-Префікси груп — у [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts); деталі — у [Маршрутизації та middleware](/backend/routing-middlewares).
+Префікси груп — у [http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts); деталі — у [Маршрутизації](/backend/routing).
 
-Контролери не звертаються до репозиторіїв і зовнішніх API напряму: це перевіряє [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts).
+Контролери не звертаються до репозиторіїв і зовнішніх API напряму: це перевіряє [`layering.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/layering.spec.ts).
 
 ## Сервіси
 
-Сервіси лежать у [`src/app/services`](https://github.com/Blazheiko/itvibe-template/tree/main/packages/backend/src/app/services). Index-файлів у доменах немає — імпорт іде з конкретного файлу.
+Сервіси лежать у [`src/app/services`](https://github.com/Blazheiko/vibe-template/tree/main/packages/backend/src/app/services). Index-файлів у доменах немає — імпорт іде з конкретного файлу.
 
 | Домен            | Відповідальність                                                                                   |
 | ---------------- | -------------------------------------------------------------------------------------------------- |
@@ -296,17 +296,17 @@ export function mapControllerError(
 
 ### Як сервіси оголошуються
 
-DI-контейнера немає. Сервіс — модульний синглтон-об'єкт (`export const authService = { ... }`, [auth-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts)) або окрема функція (`export async function consumeAuthThrottle`, [auth-throttle-service.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts)). Залежності — звичайні ES-імпорти репозиторіїв і трансформерів з `#app/repositories/index.js` і `#app/transformers/index.js` (див. [Репозиторії та трансформери](/backend/repositories-transformers)). Фабрика використовується лише для AI-адаптера: `export const textAdapter = createTextAdapter()` у [ai-provider.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/ai/ai-provider.ts).
+DI-контейнера немає. Сервіс — модульний синглтон-об'єкт (`export const authService = { ... }`, [auth-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts)) або окрема функція (`export async function consumeAuthThrottle`, [auth-throttle-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts)). Залежності — звичайні ES-імпорти репозиторіїв і трансформерів з `#app/repositories/index.js` і `#app/transformers/index.js` (див. [Репозиторії та трансформери](/backend/repositories-transformers)). Фабрика використовується лише для AI-адаптера: `export const textAdapter = createTextAdapter()` у [ai-provider.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/ai/ai-provider.ts).
 
 ### Результати та помилки
 
-Сервіси повертають `AppResult<T> = Result<T, AppError>` з `better-result` і не кидають винятків назовні. `AppError` — дискримінований union за `_tag` ([errors.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)); конструктори: `badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `rateLimited`, `internal`. Виклики репозиторіїв обгортаються в `tryInternal` / `tryDomain` з [result-helpers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts). Приклад — [Крок 6](/backend/adding-a-feature#крок-6-service).
+Сервіси повертають `AppResult<T> = Result<T, AppError>` з `better-result` і не кидають винятків назовні. `AppError` — дискримінований union за `_tag` ([errors.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)); конструктори: `badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `rateLimited`, `internal`. Виклики репозиторіїв обгортаються в `tryInternal` / `tryDomain` з [result-helpers.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts). Приклад — [Крок 6](/backend/adding-a-feature#крок-6-service).
 
-Бізнес-правила (перевірка власника ресурсу, throttle, генерація токенів, повідомлення) живуть у сервісах; хелпери доступу — у [session-access.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/session-access.ts) (`resolveActorAuth`, `resolveResourceOwnership`).
+Бізнес-правила (перевірка власника ресурсу, throttle, генерація токенів, повідомлення) живуть у сервісах; хелпери доступу — у [session-access.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/session-access.ts) (`resolveActorAuth`, `resolveResourceOwnership`).
 
 ### Тести сервісів
 
-Тести `*.spec.ts` лежать поруч із сервісом. Патерн: замокати `#app/repositories/index.js` і `#app/transformers/index.js` через `vi.mock`, імпортувати сервіс динамічно після моків, перевіряти `Result.isOk` / `Result.isError`. Фрагмент з [push-subscription-service.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts):
+Тести `*.spec.ts` лежать поруч із сервісом. Патерн: замокати `#app/repositories/index.js` і `#app/transformers/index.js` через `vi.mock`, імпортувати сервіс динамічно після моків, перевіряти `Result.isOk` / `Result.isError`. Фрагмент з [push-subscription-service.spec.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts):
 
 ```ts
 vi.mock('#app/repositories/index.js', () => ({

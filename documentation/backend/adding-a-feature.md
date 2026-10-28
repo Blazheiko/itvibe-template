@@ -6,7 +6,7 @@
 Пройдіть вправу [Перший маршрут](/guide/first-endpoint): там ті самі шари (схема → service → controller → route) показано без бази даних. Цей туторіал додає до них таблицю, міграцію, repository, transformer і захист маршруту сесією.
 :::
 
-Загальну картину шарів описано в [Архітектурі](/backend/architecture), роутинг і middleware — у [Роутингу та middleware](/backend/routing-middlewares), роботу з БД — у [Базі даних](/backend/database), а шлях запиту — у [Життєвому циклі запиту](/backend/request-lifecycle).
+Загальну картину шарів описано в [Архітектурі](/backend/architecture), роутинг і middleware — у [Маршрутизації](/backend/routing) і [Middleware](/backend/middlewares), роботу з БД — у [Базі даних](/backend/database), а шлях запиту — у [Життєвому циклі запиту](/backend/request-lifecycle).
 
 ::: tip Перевірено на практиці
 Весь код нижче було реально додано в чисту копію репозиторію, після чого пройшли `pnpm --filter shared build`, `pnpm typecheck`, повний `pnpm --filter backend test` (разом із новим `note-service.spec.ts` і перевіркою шарів `layering.spec.ts`) та `npx eslint` для змінених файлів, а запити з кроку 10 виконано на запущеному сервері. Як зразок узято наявну фічу push-підписок.
@@ -33,7 +33,7 @@
 
 ## Крок 1. Схема вхідних даних у `shared`
 
-Вхідні payload-и описуються ArkType-схемами в `packages/shared/src/schemas/<домен>/`. Ключ `"+": "reject"` забороняє зайві поля, так само як у [create-subscription.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/push-subscription/create-subscription.ts).
+Вхідні payload-и описуються ArkType-схемами в `packages/shared/src/schemas/<домен>/`. Ключ `"+": "reject"` забороняє зайві поля, так само як у [create-subscription.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/push-subscription/create-subscription.ts).
 
 ```ts
 // packages/shared/src/schemas/note/create-note.ts
@@ -48,7 +48,7 @@ export const CreateNoteInputSchema = type({
 export type CreateNoteInput = typeof CreateNoteInputSchema.infer
 ```
 
-Експортуйте схему й тип з [packages/shared/src/schemas/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/schemas/index.ts) (звідти їх імпортують як `shared/schemas`):
+Експортуйте схему й тип з [packages/shared/src/schemas/index.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/index.ts) (звідти їх імпортують як `shared/schemas`):
 
 ```ts
 export { CreateNoteInputSchema, type CreateNoteInput } from './note/create-note.js'
@@ -56,7 +56,7 @@ export { CreateNoteInputSchema, type CreateNoteInput } from './note/create-note.
 
 ## Крок 2. Схеми відповідей у `shared`
 
-Відповіді контролерів живуть у `packages/shared/src/responses/` і будуються як `type.or(<успіх>, CanonicalErrorResponseSchema)`, див. [push-subscription-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/push-subscription-controller.ts) та [error-response.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/error-response.ts). Тип `Note` — це публічний контракт, який повертає transformer.
+Відповіді контролерів живуть у `packages/shared/src/responses/` і будуються як `type.or(<успіх>, CanonicalErrorResponseSchema)`, див. [push-subscription-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/responses/push-subscription-controller.ts) та [error-response.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/responses/error-response.ts). Тип `Note` — це публічний контракт, який повертає transformer.
 
 ```ts
 // packages/shared/src/responses/note-controller.ts
@@ -84,13 +84,13 @@ export const CreateNoteResponseSchema = type.or(
 export type CreateNoteResponse = typeof CreateNoteResponseSchema.infer
 ```
 
-Додайте рядок у [packages/shared/src/responses/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/src/responses/index.ts):
+Додайте рядок у [packages/shared/src/responses/index.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/responses/index.ts):
 
 ```ts
 export * from './note-controller.js'
 ```
 
-Бекенд споживає `shared` через `dist/` (див. `exports` у [packages/shared/package.json](https://github.com/Blazheiko/itvibe-template/blob/main/packages/shared/package.json)), тому після змін **обов'язково** перезберіть пакет:
+Бекенд споживає `shared` через `dist/` (див. `exports` у [packages/shared/package.json](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/package.json)), тому після змін **обов'язково** перезберіть пакет:
 
 ```bash
 pnpm --filter shared build
@@ -98,7 +98,7 @@ pnpm --filter shared build
 
 ## Крок 3. Таблиця й міграція
 
-Додайте таблицю в кінець [packages/backend/src/database/schema.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/schema.ts). Усі потрібні хелпери (`pgTable`, `bigserial`, `bigint`, `varchar`, `text`, `timestamp`, `index`) там уже імпортовано, а `users` оголошено вище у файлі.
+Додайте таблицю в кінець [packages/backend/src/database/schema.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/database/schema.ts). Усі потрібні хелпери (`pgTable`, `bigserial`, `bigint`, `varchar`, `text`, `timestamp`, `index`) там уже імпортовано, а `users` оголошено вище у файлі.
 
 ```ts
 export const notes = pgTable(
@@ -117,10 +117,10 @@ export const notes = pgTable(
 ```
 
 ::: warning Часовий пояс
-Колонка `timestamp` без часового поясу зберігає `now()` у часовому поясі PostgreSQL, а читається як UTC. Якщо PostgreSQL працює не в UTC (наприклад, встановлений локально з поясом `Europe/Kiev`), `created_at` у відповіді буде зсунутий на різницю поясів. В образі `pgvector/pgvector` пояс UTC, і проблеми не видно. Так само оголошено дати в наявних таблицях шаблону, див. [п. 76](https://github.com/Blazheiko/itvibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
+Колонка `timestamp` без часового поясу зберігає `now()` у часовому поясі PostgreSQL, а читається як UTC. Якщо PostgreSQL працює не в UTC (наприклад, встановлений локально з поясом `Europe/Kiev`), `created_at` у відповіді буде зсунутий на різницю поясів. В образі `pgvector/pgvector` пояс UTC, і проблеми не видно. Так само оголошено дати в наявних таблицях шаблону, див. [п. 76](https://github.com/Blazheiko/vibe-template/blob/main/docs/plan/code-issues-found-during-docs.md).
 :::
 
-Згенеруйте міграцію ([drizzle.config.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/drizzle.config.ts) пише їх у `src/drizzle/migrations` у форматі «тека на міграцію»):
+Згенеруйте міграцію ([drizzle.config.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/drizzle.config.ts) пише їх у `src/drizzle/migrations` у форматі «тека на міграцію»):
 
 ```bash
 pnpm --filter backend db:generate --name add_notes
@@ -141,11 +141,11 @@ CREATE INDEX "notes_user_id_idx" ON "notes" ("user_id");--> statement-breakpoint
 ALTER TABLE "notes" ADD CONSTRAINT "notes_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
 ```
 
-Щоб застосувати міграцію до живої БД, виконайте `pnpm --filter backend db:migrate` (потрібен PostgreSQL з налаштуваннями `PGSQL_*`). У цьому прикладі зв'язок іде лише через `userId`, тому [relations.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/database/relations.ts) не змінюємо.
+Щоб застосувати міграцію до живої БД, виконайте `pnpm --filter backend db:migrate` (потрібен PostgreSQL з налаштуваннями `PGSQL_*`). У цьому прикладі зв'язок іде лише через `userId`, тому [relations.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/database/relations.ts) не змінюємо.
 
 ## Крок 4. Repository
 
-Repository — єдине місце, де виконуються запити Drizzle. Патерн узято з [push-subscription-repository.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/notifications/push-subscription-repository.ts): типи рядків через `InferSelectModel` / `InferInsertModel`, інтерфейс `I...Repository` і об'єкт-реалізація.
+Repository — єдине місце, де виконуються запити Drizzle. Патерн узято з [push-subscription-repository.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/repositories/notifications/push-subscription-repository.ts): типи рядків через `InferSelectModel` / `InferInsertModel`, інтерфейс `I...Repository` і об'єкт-реалізація.
 
 ```ts
 // packages/backend/src/app/repositories/note/note-repository.ts
@@ -181,7 +181,7 @@ export const noteRepository: INoteRepository = {
 }
 ```
 
-Додайте експорт у barrel [repositories/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/repositories/index.ts). Сервіси імпортують repository саме звідти, і саме цей модуль мокається в тестах:
+Додайте експорт у barrel [repositories/index.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/repositories/index.ts). Сервіси імпортують repository саме звідти, і саме цей модуль мокається в тестах:
 
 ```ts
 export { noteRepository } from './note/note-repository.js'
@@ -190,7 +190,7 @@ export type { NoteRow, NoteInsert } from './note/note-repository.js'
 
 ## Крок 5. Transformer
 
-Transformer перетворює рядок БД на публічний DTO: `bigint` → `string`, `Date` → ISO-рядок через `luxon`, як у [push-subscription-transformer.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/push-subscription-transformer.ts). Внутрішні поля (`userId`) назовні не віддаються.
+Transformer перетворює рядок БД на публічний DTO: `bigint` → `string`, `Date` → ISO-рядок через `luxon`, як у [push-subscription-transformer.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/push-subscription-transformer.ts). Внутрішні поля (`userId`) назовні не віддаються.
 
 ```ts
 // packages/backend/src/app/transformers/note-transformer.ts
@@ -214,9 +214,9 @@ export const noteTransformer = {
 }
 ```
 
-Тип `NoteRow` імпортується з barrel `#app/repositories/index.js`, а не з файлу репозиторію: прямий імпорт поза `app/repositories` заборонено, і [`layering.spec.ts`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/layering.spec.ts) на ньому впаде.
+Тип `NoteRow` імпортується з barrel `#app/repositories/index.js`, а не з файлу репозиторію: прямий імпорт поза `app/repositories` заборонено, і [`layering.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/layering.spec.ts) на ньому впаде.
 
-Експорт у [transformers/index.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/transformers/index.ts):
+Експорт у [transformers/index.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/index.ts):
 
 ```ts
 export { noteTransformer } from './note-transformer.js'
@@ -224,7 +224,7 @@ export { noteTransformer } from './note-transformer.js'
 
 ## Крок 6. Service
 
-Сервіс містить бізнес-логіку й не кидає винятків назовні. Він повертає `AppResult<T>` (`Result` з `better-result`, див. [errors.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)). Виклики repository обгортаються в `tryInternal` з [result-helpers.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts): він перетворює виняток на помилку `Internal` з публічним повідомленням.
+Сервіс містить бізнес-логіку й не кидає винятків назовні. Він повертає `AppResult<T>` (`Result` з `better-result`, див. [errors.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)). Виклики repository обгортаються в `tryInternal` з [result-helpers.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts): він перетворює виняток на помилку `Internal` з публічним повідомленням.
 
 ```ts
 // packages/backend/src/app/services/note/note-service.ts
@@ -272,7 +272,7 @@ export const noteService = {
 
 ## Крок 7. Controller
 
-Контролер — тонкий шар. Він дістає `userId` з `context.auth`, бере вже провалідований payload через `getTypedPayload`, викликає сервіс і перетворює помилку на канонічну відповідь через `mapControllerError` (ця функція ж виставляє HTTP-статус). Усі поля `context` (`httpData`, `responseData`, `session`, `auth`, `logger`) описані в [HttpContext докладно](/backend/controllers-services#httpcontext-докладно). Структуру взято з [push-subscription-controller.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts).
+Контролер — тонкий шар. Він дістає `userId` з `context.auth`, бере вже провалідований payload через `getTypedPayload`, викликає сервіс і перетворює помилку на канонічну відповідь через `mapControllerError` (ця функція ж виставляє HTTP-статус). Усі поля `context` (`httpData`, `responseData`, `session`, `auth`, `logger`) описані в [HttpContext докладно](/backend/controllers-services#httpcontext-докладно). Структуру взято з [push-subscription-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts).
 
 ```ts
 // packages/backend/src/app/controllers/http/note/note-controller.ts
@@ -328,7 +328,7 @@ export default {
 
 ## Крок 8. Реєстрація маршрутів
 
-У [http-routes.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) додайте імпорт контролера (поруч з іншими) і допишіть `CreateNoteInputSchema` до наявного імпорту з `shared/schemas`:
+У [http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) додайте імпорт контролера (поруч з іншими) і допишіть `CreateNoteInputSchema` до наявного імпорту з `shared/schemas`:
 
 ```ts
 import NoteController from '#app/controllers/http/note/note-controller.js'
@@ -369,13 +369,13 @@ import {
 ] satisfies routeList;
 ```
 
-[`defineRoute`](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Роутингу та middleware](/backend/routing-middlewares)).
+[`defineRoute`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Маршрутизації](/backend/routing) і [Middleware](/backend/middlewares)).
 
-Якщо додаєте оновлення або видалення нотатки: для часткового оновлення беріть `method: "patch"` з `validator`, а для видалення — `method: "delete"` з `url: "/:id"` і без `validator`, бо `DELETE` тіло не читає ([Методи і тіло запиту](/backend/routing-middlewares#методи-і-тіло-запиту)).
+Якщо додаєте оновлення або видалення нотатки: для часткового оновлення беріть `method: "patch"` з `validator`, а для видалення — `method: "delete"` з `url: "/:id"` і без `validator`, бо `DELETE` тіло не читає ([Методи і тіло запиту](/backend/routing#методи-і-тіло-запиту)).
 
 ## Крок 9. Тест сервісу
 
-Тести сервісів лежать поряд із кодом і мокають barrel `#app/repositories/index.js` через `vi.mock`, як у [push-subscription-service.spec.ts](https://github.com/Blazheiko/itvibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts). БД для них не потрібна.
+Тести сервісів лежать поряд із кодом і мокають barrel `#app/repositories/index.js` через `vi.mock`, як у [push-subscription-service.spec.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts). БД для них не потрібна.
 
 ```ts
 // packages/backend/src/app/services/note/note-service.spec.ts
@@ -559,7 +559,7 @@ curl -s -b cookies.txt $B/notes
 
 Те саме можна перевірити без curl в [API Playground](/playground/): він показує маршрути `notes` разом зі схемою тіла.
 
-Перед мержем пройдіть повний Definition of Done з [AGENTS.md](https://github.com/Blazheiko/itvibe-template/blob/main/AGENTS.md): `pnpm typecheck`, `pnpm lint`, `pnpm test` і ручну перевірку вище.
+Перед мержем пройдіть повний Definition of Done з [AGENTS.md](https://github.com/Blazheiko/vibe-template/blob/main/AGENTS.md): `pnpm typecheck`, `pnpm lint`, `pnpm test` і ручну перевірку вище.
 
 ## Типові помилки
 

@@ -20,7 +20,7 @@ import {
     workflowPaths,
 } from './verify/lib.mjs'
 
-const BASE = '/itvibe-template/'
+const BASE = '/vibe-template/'
 const MIN_ARTICLE_CHARS = 300
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = path.join(ROOT, '.vitepress', 'dist')
@@ -44,7 +44,8 @@ const KEY_PAGES = [
     { page: 'backend/architecture.md', h1: 'Архітектура бекенду' },
     { page: 'backend/request-lifecycle.md', h1: 'Життєвий цикл запиту' },
     { page: 'backend/configuration.md', h1: 'Конфігурація' },
-    { page: 'backend/routing-middlewares.md', h1: 'Маршрутизація та middleware' },
+    { page: 'backend/routing.md', h1: 'Маршрутизація' },
+    { page: 'backend/middlewares.md', h1: 'Middleware' },
     { page: 'backend/database.md', h1: 'База даних' },
     { page: 'backend/auth-security.md', h1: 'Автентифікація та безпека' },
     { page: 'backend/websocket.md', h1: 'WebSocket' },
@@ -73,7 +74,7 @@ const KEY_PAGES = [
 /** Home page (layout: home) checks (T2.3a). */
 const HOME = {
     page: 'index.md',
-    name: 'itvibe-template',
+    name: 'vibe-template',
     tagline: 'Документація з фокусом на бекенд',
 }
 
