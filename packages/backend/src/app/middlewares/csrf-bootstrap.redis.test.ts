@@ -278,3 +278,57 @@ describe.skipIf(!hasRedis)('session rotation on login', () => {
         expect(updated?.data['marker']).toBe('after-login')
     })
 })
+
+describe.skipIf(!hasRedis)('session cookie of a slow response', () => {
+    const signIn = async (userToken: string) => {
+        const bootstrap = await init()
+        const response = await mutate(bootstrap.cookie, String(bootstrap.payload?.['csrfToken']))
+        await response.context.auth.login('45', userToken)
+        return {
+            cookie: response.context.responseData.cookies.get(sessionConfig.cookieName)?.value,
+            token: String(response.context.session.sessionInfo?.data.csrfToken),
+            id: String(response.context.session.sessionInfo?.id),
+        }
+    }
+
+    it('an unchanged session gets no Set-Cookie until the refresh is due', async () => {
+        const s1 = await signIn('slowCookieToken0001')
+
+        const next = await mutate(s1.cookie, s1.token)
+
+        expect(next.passed).toBe(true)
+        expect(next.cookie).toBeUndefined()
+    })
+
+    it('a slow request does not restore the cookie of a session replaced meanwhile', async () => {
+        const s1 = await signIn('slowCookieToken0002')
+        // Make the cookie refresh due, so the slow request re-sends the S1 cookie.
+        const key = `session:slowCookieToken0002:${s1.id}`
+        const stored = JSON.parse(String(await admin.get(key))) as { data: object }
+        await admin.set(
+            key,
+            JSON.stringify({ ...stored, data: { ...stored.data, cookieIssuedAt: 0 } }),
+        )
+
+        // R1 starts with S1 (its middleware chain prepares Set-Cookie: S1) ...
+        const slow = await mutate(s1.cookie, s1.token)
+        expect(slow.cookie).toEqual(expect.any(String))
+        // ... a password change renews the session meanwhile (S1 deleted, S2 issued) ...
+        const change = await mutate(s1.cookie, s1.token)
+        await change.context.auth.login('45', 'slowCookieToken0002')
+        // ... and R1 answers after it.
+        await slow.context.session.beforeSend?.()
+
+        expect(slow.context.responseData.cookies.has(sessionConfig.cookieName)).toBe(false)
+    })
+
+    it('a request that swapped the session itself keeps its cookie', async () => {
+        const bootstrap = await init()
+        const response = await mutate(bootstrap.cookie, String(bootstrap.payload?.['csrfToken']))
+        await response.context.auth.login('46', 'slowCookieToken0003')
+
+        await response.context.session.beforeSend?.()
+
+        expect(response.context.responseData.cookies.has(sessionConfig.cookieName)).toBe(true)
+    })
+})

@@ -220,12 +220,19 @@ export default {
             return mapControllerError(context, result.error)
         }
 
+        // The password is already changed: a failed session renewal does not undo
+        // that, so the answer stays a success and says the session was not renewed.
+        // The previous session may be gone; the client then signs in again.
         const renewed = await authService.renewSession(context.auth, context.session)
         if (Result.isError(renewed)) {
-            return mapControllerError(context, renewed.error)
+            context.logger.error(
+                { err: renewed.error },
+                'Session renewal after password change failed',
+            )
+            return { status: 'success', sessionRenewed: false }
         }
 
-        return { status: 'success', csrfToken: renewed.value.csrfToken }
+        return { status: 'success', sessionRenewed: true, ...renewed.value }
     },
 
     async forgotPassword(

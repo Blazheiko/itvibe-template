@@ -595,6 +595,10 @@ const setHttpHandler = async (
         )
             responseData.payload = await route.handler(context)
 
+        // After the handler, right before sending: a slow request must not restore
+        // the cookie of a session that another request replaced meanwhile.
+        await context.session.beforeSend?.()
+
         if (abortSignal.aborted) return
 
         res.cork(() => {

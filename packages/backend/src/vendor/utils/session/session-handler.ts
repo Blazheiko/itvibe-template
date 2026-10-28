@@ -49,10 +49,21 @@ const withCsrfToken = (data: SessionData): SessionData => ({
 //     return key;
 // };
 
+/**
+ * How often the cookie of an unchanged session is sent again to slide its expiry.
+ * Re-sending it on every request let a slow response restore a session cookie
+ * that a concurrent request (password change, logout-all) had already replaced.
+ */
+const COOKIE_REFRESH_MS = 60 * 60 * 1000
+
+// Requests that re-send the cookie of the session they arrived with; checked again
+// before the response goes out (discardStaleSessionCookie).
+const pendingCookieRefresh = new WeakMap<HttpContext, { sessionId: string; userToken: string }>()
+
 const createSessionInfo = async (data: SessionData = {}): Promise<SessionInfo> => {
     const session: SessionInfo = {
         id: generateSessionId(),
-        data: withCsrfToken(data),
+        data: { ...withCsrfToken(data), cookieIssuedAt: Date.now() },
         createdAt: new Date().toISOString(),
         // expiresAt: DateTime.now().plus({ seconds: sessionConfig.age }).toISO(),
     }
@@ -94,6 +105,8 @@ export const sessionHandler = async (
     context: HttpContext,
     accessToken: string | undefined,
     _userId: string | undefined,
+    // The cookie arrived under the legacy name: re-issue it under the current one.
+    forceCookie = false,
 ): Promise<void> => {
     const { responseData } = context
 
@@ -152,17 +165,37 @@ export const sessionHandler = async (
             sessionInfo = updatedSessionInfo
         }
     }
-    const cookieValue = createCookieValue(sessionInfo.id, sessionUserToken)
-    const signedToken = createSignedToken(cookieValue)
-
-    responseData.setCookie(sessionConfig.cookieName, signedToken, {
-        path: sessionConfig.cookie.path,
-        httpOnly: sessionConfig.cookie.httpOnly,
-        secure: sessionConfig.cookie.secure,
-        maxAge: sessionConfig.age,
-        sameSite: sessionConfig.cookie.sameSite,
-        expires: new Date(Date.now() + sessionConfig.age * 1000),
-    })
+    const presented = sessionInfo.id === sessionId
+    const issuedAt =
+        typeof sessionInfo.data['cookieIssuedAt'] === 'number'
+            ? sessionInfo.data['cookieIssuedAt']
+            : 0
+    if (!presented || forceCookie || Date.now() - issuedAt >= COOKIE_REFRESH_MS) {
+        if (presented) {
+            const refreshed = await updateSessionData(
+                sessionInfo.id,
+                { cookieIssuedAt: Date.now() },
+                sessionUserToken ?? ANON_TOKEN,
+            )
+            if (refreshed !== null) sessionInfo = refreshed
+            pendingCookieRefresh.set(context, {
+                sessionId: sessionInfo.id,
+                userToken: sessionUserToken ?? ANON_TOKEN,
+            })
+            context.session.beforeSend = async (): Promise<void> => {
+                await discardStaleSessionCookie(context)
+            }
+        }
+        const cookieValue = createCookieValue(sessionInfo.id, sessionUserToken)
+        responseData.setCookie(sessionConfig.cookieName, createSignedToken(cookieValue), {
+            path: sessionConfig.cookie.path,
+            httpOnly: sessionConfig.cookie.httpOnly,
+            secure: sessionConfig.cookie.secure,
+            maxAge: sessionConfig.age,
+            sameSite: sessionConfig.cookie.sameSite,
+            expires: new Date(Date.now() + sessionConfig.age * 1000),
+        })
+    }
 
     // Storage namespace of the current session. Reassigned when login/logout swap the
     // session, so session helpers called later in the same request address the new one.
@@ -346,3 +379,19 @@ export const wsSessionHandler = async (
 }
 
 // export default { sessionHandler, wsSessionHandler };
+
+/**
+ * Before the response goes out: a request that re-sends the cookie of the session
+ * it arrived with must not restore that cookie if the session was deleted meanwhile
+ * (a password change or logout-all in another request replaced it). Requests that
+ * swapped the session themselves (login, logout) keep their cookie.
+ */
+export const discardStaleSessionCookie = async (context: HttpContext): Promise<void> => {
+    const pending = pendingCookieRefresh.get(context)
+    if (pending === undefined) return
+    pendingCookieRefresh.delete(context)
+    if (context.session.sessionInfo?.id !== pending.sessionId) return
+    if ((await getSession(pending.sessionId, pending.userToken)) === null) {
+        context.responseData.cookies.delete(sessionConfig.cookieName)
+    }
+}

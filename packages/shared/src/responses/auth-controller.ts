@@ -128,7 +128,14 @@ export const LogoutAllResponseSchema = type.or(
 export type LogoutAllResponse = typeof LogoutAllResponseSchema.infer
 
 export const ChangePasswordResponseSchema = type.or(
-    { status: "'success'", 'message?': 'string', csrfToken: 'string' },
+    {
+        status: "'success'",
+        'message?': 'string',
+        sessionRenewed: 'boolean',
+        'csrfToken?': 'string',
+        'wsUrl?': 'string',
+        'wsToken?': 'string',
+    },
     CanonicalErrorResponseSchema,
 )
 export type ChangePasswordResponse = typeof ChangePasswordResponseSchema.infer

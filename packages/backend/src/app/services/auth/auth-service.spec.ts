@@ -537,8 +537,14 @@ describe('authService', () => {
         const result = await authService.renewSession(authMock as any, sessionMock as any)
 
         expect(authMock.login).toHaveBeenCalledWith('7', 'user-session-token')
+        expect(generateWsTokenMock).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'renewed-session-id' }),
+            '7',
+        )
         expect(Result.isOk(result) && result.value).toEqual({
             csrfToken: ROTATED_LOGOUT_CSRF_TOKEN,
+            wsUrl: 'wss://example.com/ws',
+            wsToken: expect.any(String),
         })
     })
 

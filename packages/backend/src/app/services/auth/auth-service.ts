@@ -1207,7 +1207,10 @@ export const authService = {
      * (OWASP: renew the session ID on any change of credentials). The previous
      * session is deleted, so its cookie and token stop working.
      */
-    async renewSession(auth: Auth, session: Session): Promise<AppResult<{ csrfToken: string }>> {
+    async renewSession(
+        auth: Auth,
+        session: Session,
+    ): Promise<AppResult<{ csrfToken: string; wsUrl: string; wsToken: string }>> {
         const userId = auth.getUserId()
         const userToken = session.sessionInfo?.data.userToken
         if (userId === null || typeof userToken !== 'string') {
@@ -1222,11 +1225,21 @@ export const authService = {
             return Result.err(result.error)
         }
 
-        const csrfToken = getSessionCsrfToken(session.sessionInfo)
-        if (csrfToken === undefined) {
+        const sessionInfo = session.sessionInfo
+        const csrfToken = getSessionCsrfToken(sessionInfo)
+        if (sessionInfo === null || csrfToken === undefined) {
             return Result.err(internalMessage('Missing rotated CSRF token'))
         }
-        return Result.ok({ csrfToken })
+        // The open WebSocket is bound to the deleted session: the client reconnects
+        // with this token.
+        const wsTokenResult = await tryInternal(
+            () => generateWsToken(sessionInfo, userId),
+            'Failed to generate WebSocket token',
+        )
+        if (Result.isError(wsTokenResult)) {
+            return Result.err(wsTokenResult.error)
+        }
+        return Result.ok({ csrfToken, wsUrl: getWsUrl(), wsToken: wsTokenResult.value })
     },
 
     async logoutAll(
