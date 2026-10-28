@@ -18,12 +18,13 @@
 - [x] PR C — sessions (`c8631f9`): `auth.login` deletes the previous anonymous session too; session helpers follow login/logout (OAuth state cleanup addressed a stale namespace); `change-password` renews the session (`authService.renewSession`) and returns `csrfToken`; audit table in `auth-security.md`
 - [x] PR D — Service Worker (`23e0b22`): `classifyRequest` bypasses non-GET, cross-origin and the API first; prefix matching; `isCacheableResponse` on every write; activation drops API entries
 - [x] PR E — e2e (`0951b42`): `pnpm --filter frontend test:e2e:security` against the real backend with enforcement on
+- [x] Review fixes (`973ac74`, `7f41076`): owner check in `synced`; refresh timeout + per-caller abort + no refresh in `reloading`; no stale session cookie from slow responses (hourly cookie refresh + `beforeSend` check); change-password partial success (`sessionRenewed`) and WS reconnect
 
 ## Evidence of Completion
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — clean
-- `pnpm test` — backend 967, frontend 117, shared 14, api-playground 14, documentation 26
-- `pnpm --filter backend test:redis` (REDIS_TEST_URL set) — 40
+- `pnpm test` — backend 970, frontend 121, shared 14, api-playground 14, documentation 26
+- `pnpm --filter backend test:redis` (REDIS_TEST_URL set) — 43
 - `pnpm --filter frontend test:e2e` — 12
 - `pnpm --filter frontend test:e2e:security` — 7: cold login, logout → login, stale token (one retry), session lost / account switched in another tab, rejected mutations without side effects, no API in Cache Storage
 - `pnpm docs:build && pnpm docs:verify` — passed
@@ -35,5 +36,6 @@
 - Not done here (environment / rollout, tasks T0.4 and R.1–R.6): record actual env per environment, add `CSRF_ALLOWED_ORIGINS` to deploy config **before** merging (a production-like start without it now fails), diagnostic phase with explicit `CSRF_ENFORCE=false`, then enable with a restart.
 - E.3: `test:e2e:security` is not in CI (same as `test:e2e:csp`): it needs PostgreSQL and Redis services in the workflow.
 - The SW activation cleanup is covered by a unit test, not e2e: in a fresh Chromium context Cache Storage could not be seeded reliably before a worker activates (unregistering a worker also drops it).
-- Behaviour changes worth noting in review: the SW no longer caches cross-origin requests (e.g. Google Fonts files); `change-password` now rotates the session cookie.
+- The WS reconnect after a password change is not covered by e2e (unit/controller level only).
+- Behaviour changes worth noting in review: the session cookie of an unchanged session is re-sent at most hourly; the SW no longer caches cross-origin requests (e.g. Google Fonts files); `change-password` now rotates the session cookie.
 - `logout` of an anonymous session still does not delete that session (pre-existing, harmless).
