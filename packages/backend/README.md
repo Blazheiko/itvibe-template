@@ -510,7 +510,7 @@ Individual routes can also declare their own `middlewares`, `rateLimit`, and `al
 | `middlewares`         | `string[]`   | `[]`        | Middleware keys from `kernel.ts`, stacked on top of group middlewares                                        |
 | `rateLimit`           | `RateLimit`  | `undefined` | Per-route rate limit                                                                                         |
 | `description`         | `string`     | `undefined` | Shown in API docs                                                                                            |
-| `ResponseSchema`      | `ArkType`    | `undefined` | Response schema for docs                                                                                     |
+| `ResponseSchema`      | `ArkType`    | `undefined` | Response schema for docs and the runtime check (`RESPONSE_VALIDATION`)                                       |
 
 `BodyKind` values: `'json'` · `'multipart'` · `'urlencoded'` · `'text'` · `'octet'`
 

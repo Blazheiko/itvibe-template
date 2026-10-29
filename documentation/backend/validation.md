@@ -188,13 +188,14 @@ HTTP-відповідь (обробник помилок у [server.ts](https://
 
 ## Схеми відповідей (`ResponseSchema`)
 
-`ResponseSchema` (тип `BaseType` з ArkType у [types.d.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts)) **у рантаймі не перевіряється**: він лише копіюється в маршрут у [router.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/router.ts) і читається тільки [serialize-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/routing/serialize-routes.ts) для doc-сторінки маршрутів (`outputSchema`). Схеми відповідей беруться з `shared/responses`.
+`ResponseSchema` (тип `BaseType` з ArkType у [types.d.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts)) використовується двічі. [serialize-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/routing/serialize-routes.ts) перетворює його на `outputSchema` для doc-сторінки маршрутів. А [router.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/router.ts) при старті будує з нього `responseCheck` — перевірку результату контролера під час виконання, яку вмикає змінна `RESPONSE_VALIDATION` (`strict` / `log` / `off`). Перевіряється об'єкт до JSON-серіалізації; подробиці — [Перевірка відповідей](/backend/response-validation). Схеми відповідей беруться з `shared/responses`.
 
 ## Що лишилося ArkType-специфічним
 
 Рішення про абстракцію валідатора записане в [ADR 0001](https://github.com/Blazheiko/vibe-template/blob/main/docs/adr/0001-validator-abstraction.md) і реалізоване: `vendor/start/server.ts` і `ws-api-dispatcher.ts` працюють тільки з `Validator<T>`. Свідомо прив'язаними до ArkType лишаються:
 
 - `ResponseSchema?: BaseType` у `vendor/types/types.d.ts`;
+- перевірка відповідей під час виконання ([validate-response.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/validation/validate-response.ts)) викликає схему напряму й розпізнає помилки через `type.errors`, а не через `Validator<T>`;
 - `defineRoute`/`defineWsRoute` і `InferQuery` типізовані через `Type` з `@arktype/type`;
 - doc-серіалізація `ResponseSchema` (`outputSchema`) — лише ArkType; схеми `validator` / `queryValidator` приймаються й від інших движків через `describe()` (див. [контракт](#контракт-validator-t));
 - схема WS-конверта в `ws-message-validator.ts`.
