@@ -423,6 +423,16 @@
             "dependencies": ["feat-042"],
             "status": "done",
             "evidence": "PR #138 (merge 89cb878; reviewed as #137): OAuth linking by email only for a provider-verified email, GET /api/auth/oauth/providers, buttons only for configured providers, callback errors always 302 with reason; pnpm typecheck/lint/format:check clean, pnpm test backend 1004 frontend 126; mutation checks on the linking guard and callback redirect; manual check against a running backend (providers list, 404 for unconfigured, 302 on callback errors, buttons and reason message in Chrome); evidence block in progress.md. Not done: real provider login (needs real credentials), test:e2e"
+        },
+        {
+            "id": "feat-044",
+            "name": "Runtime Response Validation",
+            "description": "docs/plan/response-schema-runtime-validation.md + -tasks.md: RESPONSE_VALIDATION=strict|log|off (default strict outside production, off in production) validates the handler result against the route ResponseSchema before serialization; strict replaces an invalid response with 500 internal_error (WS: status error, data null), log keeps the response and logs a warn without values (sampled, deduplicated, Sentry), off skips the check; responses without a body and middleware-stopped requests are not checked; update documentation/backend",
+            "owner": "Blazheiko",
+            "branch": "feat/response-validation",
+            "dependencies": [],
+            "status": "in_progress",
+            "evidence": ""
         }
     ]
 }
