@@ -97,4 +97,10 @@ describe.skipIf(!hasPg)('llm_text_usage on PostgreSQL', async () => {
         })
         expect(embedding).toMatchObject({ totalCalls: 1, totalTokens: 7, callsWithoutUsage: 0 })
     })
+    // feat-044: PostgreSQL returns count(*) as a bigint string; the
+    // GetTextUsageResponseSchema total is a number.
+    it('countText returns a number, not a bigint string', async () => {
+        const total = await llmUsageRepository.countText({ userId })
+        expect(total).toBe(3)
+    })
 })
