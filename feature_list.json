@@ -483,6 +483,16 @@
             "dependencies": ["feat-044"],
             "status": "not-started",
             "evidence": ""
+        },
+        {
+            "id": "feat-050",
+            "name": "Typed Route Responses",
+            "description": "docs/plan/typed-route-response-plan.md: defineRoute and defineWsRoute infer the handler return type from ResponseSchema, so a wrong or drifted schema is a tsc error; fix the mismatches the prototype found (testPush return type, wrong schema on GET /support/screenshot/:articleId, serialize-routes fixtures); update documentation/backend/routing.md and the controller guides",
+            "owner": "Blazheiko",
+            "branch": "feat/typed-route-response",
+            "dependencies": ["feat-044"],
+            "status": "not-started",
+            "evidence": ""
         }
     ]
 }
