@@ -1,8 +1,29 @@
-# Контролери та сервіси
+# Контролери
 
-Прикладний код бекенду розділений на тонкі **контролери** (HTTP/WS-адаптери) і **сервіси** (бізнес-логіка, що повертає `AppResult<T>`). Загальну схему шарів описано в [Архітектурі](/backend/architecture), покроковий приклад нової фічі — у [Як додати фічу](/backend/adding-a-feature). Ця сторінка — довідник конвенцій обох шарів.
+Контролер — це **вхідний адаптер** бекенду: він стоїть між транспортом (HTTP через uWebSockets.js або WebSocket-подія) і бізнес-логікою. Маршрутизатор і middleware вже розібрали запит, перевірили сесію, CSRF і провалідували payload схемою з `shared`; контролер отримує готовий `HttpContext` / `WsContext` і має лише «перекласти» запит мовою сервісу, а результат сервісу — мовою протоколу.
 
-## Контролери
+## Навіщо потрібен цей шар
+
+- **Ізоляція транспорту.** Лише контролер знає про `context.responseData`, статус-коди, cookies, заголовки, сесію і WS-сокет. Сервіси про HTTP нічого не знають, тому одну й ту саму логіку можна викликати з HTTP-маршруту, WS-події, скрипта чи тесту.
+- **Єдина точка входу для маршруту.** Кожен рядок у [http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts) / [ws-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts) вказує на конкретний метод контролера — за маршрутом легко знайти код, що його обслуговує.
+- **Передбачуваний формат відповіді.** Контролер збирає відповідь `{ status: 'success', ... }` за типом із `shared/responses`, а помилки сервісу перетворює на канонічне тіло й правильний статус однією функцією `mapControllerError`. Клієнт завжди бачить однакову форму помилок.
+- **Тонкість як правило.** Контролер не містить бізнес-правил, не звертається до БД і зовнішніх API. Завдяки цьому його майже не треба тестувати окремо, а вся логіка, що варта тестів, зосереджена в сервісах. Межу перевіряє [`layering.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/layering.spec.ts).
+
+Типова робота методу контролера — п'ять кроків: дістати `userId` і payload з контексту → викликати один метод сервісу → на помилці повернути `mapControllerError` → на успіху зібрати відповідь → за потреби виставити статус, cookie чи заголовок.
+
+```mermaid
+flowchart LR
+    R[Router + middleware] --> C[Controller]
+    C --> S[Service]
+    S --> Repo[Repository]
+    Repo --> DB[(PostgreSQL)]
+    S --> T[Transformer]
+    T --> DTO[DTO]
+    S -->|AppResult| C
+    C --> Resp[HTTP / WS response]
+```
+
+## Структура
 
 Контролери лежать у [`src/app/controllers`](https://github.com/Blazheiko/vibe-template/tree/main/packages/backend/src/app/controllers):
 
@@ -14,7 +35,7 @@
 
 Контролер — це об'єкт за замовчуванням (`export default { ... }`) з async-методами. У маршрутах метод передається як `handler: AuthController.login.bind(AuthController)` ([http-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/http-routes.ts), [ws-routes.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/ws-routes.ts)).
 
-### Контекст обробника
+## Контекст обробника
 
 Коротка шпаргалка нижче; кожне поле розібрано в розділах [HttpContext докладно](#httpcontext-докладно) і [WsContext докладно](#wscontext-докладно).
 
@@ -52,13 +73,13 @@ export interface WsContext<TPayload = unknown> {
 
 [`getTypedPayload`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/validation/get-typed-payload.ts) працює з обома контекстами й повертає payload, який уже пройшов валідатор маршруту (див. [Валідація](/backend/validation)). Параметри шляху беруться напряму, наприклад у [oauth-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/auth/oauth-controller.ts): `context.httpData.params["provider"] ?? ""`.
 
-### HttpContext докладно
+## HttpContext докладно
 
 Контекст створюється для кожного запиту в [http-context.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/context/http-context.ts). Спочатку `session` і `auth` — заглушки (`getUserId()` → `null`, `login()` → `false`); реальні реалізації підставляє session-middleware з [session-handler.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/session-handler.ts). Тому на маршруті без session-middleware `auth.getUserId()` завжди повертає `null`.
 
 Крім полів нижче, є `requestId` (UUID запиту) і `signal` — `AbortSignal`, який спрацьовує, коли клієнт розірвав з'єднання до відповіді. Його варто передавати в довгі операції (`fetch`, LLM-виклики).
 
-#### `logger: Logger`
+### `logger: Logger`
 
 Дочірній [pino](https://getpino.io/)-логер, у який уже додано `requestId`, тож усі записи одного запиту легко зв'язати. Першим аргументом передавайте об'єкт контексту, другим — повідомлення; помилку кладіть у поле `err`, щоб pino її серіалізував:
 
@@ -69,7 +90,7 @@ context.logger.error({ err: result.error }, 'Failed to load history')
 
 Не логуйте паролі, токени та повні тіла запитів.
 
-#### `httpData: HttpData<TPayload, TQuery>`
+### `httpData: HttpData<TPayload, TQuery>`
 
 Усе, що прийшло від клієнта. Об'єкт тільки для читання.
 
@@ -97,7 +118,7 @@ async getItem(context: HttpContext<unknown, ListQuery>) {
 }
 ```
 
-#### `responseData: ResponseData`
+### `responseData: ResponseData`
 
 Те, що піде клієнтові, крім тіла (тілом стає значення, яке повертає метод).
 
@@ -120,7 +141,7 @@ context.responseData.deleteCookie('oauth_state', { path: '/' })
 return null
 ```
 
-#### `session: Session`
+### `session: Session`
 
 Серверна сесія в Redis ([redis-session-storage.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/session/redis-session-storage.ts)). Сесія існує завжди, навіть для анонімного користувача; cookie з її id ставить middleware.
 
@@ -139,7 +160,7 @@ await context.session.updateSessionData({ locale: 'uk' })
 
 `sessionInfo` — знімок на момент початку запиту: після `updateSessionData` беріть дані з результату, який він повертає.
 
-#### `auth: Auth`
+### `auth: Auth`
 
 Автентифікація поверх сесії.
 
@@ -162,11 +183,11 @@ await context.auth.login(result.value.userId, result.value.userToken)
 
 Перевірку «чи залогінений» на рівні маршруту зазвичай робить auth-middleware (див. [Маршрутизація](/backend/routing) і [Middleware](/backend/middlewares)); у контролері `getUserId()` потрібен, щоб передати id у сервіс.
 
-### WsContext докладно
+## WsContext докладно
 
 Контекст створюється для кожного WS-повідомлення в [ws-context.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/context/ws-context.ts) диспетчером [ws-api-dispatcher.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/routing/ws-api-dispatcher.ts). Сесія й автентифікація вже перевірені при підключенні (upgrade), тому `session` і `auth` тут завжди `null` — користувач береться з `userData`. Є також `requestId`, `logger` (з `requestId` і `userId`) і `signal`, який спрацьовує при закритті з'єднання.
 
-#### `ws: MyWebSocket`
+### `ws: MyWebSocket`
 
 Сокет uWebSockets.js поточного з'єднання (`WebSocket<UserConnection>` + `id`). Потрібен, коли треба діяти з самим з'єднанням, а не просто відповісти:
 
@@ -175,7 +196,7 @@ await context.auth.login(result.value.userId, result.value.userToken)
 
 Відповідь на поточне повідомлення **не** відправляйте через `ws.send` — просто поверніть значення з методу. Розсилки іншим клієнтам робіть через сервіси `communication/` (broadcast).
 
-#### `wsData: WsData<TPayload>`
+### `wsData: WsData<TPayload>`
 
 | Поле             | Опис                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------- |
@@ -184,7 +205,7 @@ await context.auth.login(result.value.userId, result.value.userToken)
 | `middlewareData` | Дані, які передають WS-middleware.                                                                      |
 | `status`         | Службове поле (`'200'`); статус відповіді задається через `responseData.status`.                        |
 
-#### `responseData: WsResponseData`
+### `responseData: WsResponseData`
 
 Конверт відповіді, який диспетчер відправляє клієнту: `{ event, timestamp, status, data, error }`.
 
@@ -210,7 +231,7 @@ subscribeOnlineUsers(context: WsContext): AdminOnlineUsersWsResponse {
 
 Необроблений виняток з контролера диспетчер перехопить і відповість `internal_error`, але для очікуваних помилок `throw` не використовуйте.
 
-#### `userData: UserConnection | null`
+### `userData: UserConnection | null`
 
 Дані з'єднання, зібрані під час upgrade ([types.d.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/types/types.d.ts)):
 
@@ -237,11 +258,11 @@ const payload = getTypedPayload(context)
 void supportService.chat(BigInt(userData.userId), payload.message, userData.uuid, context.signal)
 ```
 
-### Повернення даних і статус
+## Повернення даних і статус
 
 Значення, яке повертає метод, стає тілом відповіді; статус за замовчуванням — успішний, інший задається через `context.responseData.status` (наприклад `201` у [admin-knowledge-base-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/admin/admin-knowledge-base-controller.ts), `302` для редиректів в OAuth). Типи відповідей беруться з `shared` (`shared/responses`).
 
-### Мапінг помилок
+## Мапінг помилок
 
 Помилки сервісу (`AppError`) перетворюються на канонічну відповідь однією функцією:
 
@@ -259,7 +280,7 @@ export function mapControllerError(
 
 Типовий метод контролера наведено в [Кроці 7](/backend/adding-a-feature#крок-7-controller).
 
-### Групи HTTP-контролерів
+## Групи HTTP-контролерів
 
 | Тека             | Відповідальність                                     | Приклад маршруту                                 |
 | ---------------- | ---------------------------------------------------- | ------------------------------------------------ |
@@ -275,75 +296,7 @@ export function mapControllerError(
 
 Контролери не звертаються до репозиторіїв і зовнішніх API напряму: це перевіряє [`layering.spec.ts`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/layering.spec.ts).
 
-## Сервіси
-
-Сервіси лежать у [`src/app/services`](https://github.com/Blazheiko/vibe-template/tree/main/packages/backend/src/app/services). Index-файлів у доменах немає — імпорт іде з конкретного файлу.
-
-| Домен            | Відповідальність                                                                                   |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| `actions/`       | Лише типи `ToolDefinition` / `ToolCallHandler` для викликів інструментів                           |
-| `admin/`         | Онлайн-користувачі, історія онлайну, підписка адміна на WS-канал                                   |
-| `ai/`            | Адаптери LLM-провайдерів (OpenAI, Mistral, xAI), промпти, облік використання (`usage/`)            |
-| `auth/`          | Реєстрація/логін, OAuth, скидання пароля, верифікація email/SMS, throttle, WS-токен                |
-| `communication/` | Broadcast, присутність у WS, онлайн-статус, URL WebSocket                                          |
-| `core/`          | `mainService`: init, сесія, оновлення WS-токена                                                    |
-| `notifications/` | Email, push-підписки та відправка push                                                             |
-| `observability/` | Інтеграція із Sentry                                                                               |
-| `shared/`        | `AppError`/`AppResult`, `tryInternal`/`tryDomain`, мапінг помилок у HTTP/WS, доступ до сесії, мова |
-| `statistics/`    | Статистика push-підписок                                                                           |
-| `support/`       | Чат підтримки, база знань, ембединги, LLM, переклад запитів                                        |
-| `user/`          | Аватар                                                                                             |
-
-### Як сервіси оголошуються
-
-DI-контейнера немає. Сервіс — модульний синглтон-об'єкт (`export const authService = { ... }`, [auth-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/auth-service.ts)) або окрема функція (`export async function consumeAuthThrottle`, [auth-throttle-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/auth/auth-throttle-service.ts)). Залежності — звичайні ES-імпорти репозиторіїв і трансформерів з `#app/repositories/index.js` і `#app/transformers/index.js` (див. [Репозиторії та трансформери](/backend/repositories-transformers)). Фабрика використовується лише для AI-адаптера: `export const textAdapter = createTextAdapter()` у [ai-provider.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/ai/ai-provider.ts).
-
-### Результати та помилки
-
-Сервіси повертають `AppResult<T> = Result<T, AppError>` з `better-result` і не кидають винятків назовні. `AppError` — дискримінований union за `_tag` ([errors.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/errors.ts)); конструктори: `badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `rateLimited`, `internal`. Виклики репозиторіїв обгортаються в `tryInternal` / `tryDomain` з [result-helpers.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/result-helpers.ts). Приклад — [Крок 6](/backend/adding-a-feature#крок-6-service).
-
-Бізнес-правила (перевірка власника ресурсу, throttle, генерація токенів, повідомлення) живуть у сервісах; хелпери доступу — у [session-access.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/shared/session-access.ts) (`resolveActorAuth`, `resolveResourceOwnership`).
-
-### Тести сервісів
-
-Тести `*.spec.ts` лежать поруч із сервісом. Патерн: замокати `#app/repositories/index.js` і `#app/transformers/index.js` через `vi.mock`, імпортувати сервіс динамічно після моків, перевіряти `Result.isOk` / `Result.isError`. Фрагмент з [push-subscription-service.spec.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/notifications/push-subscription-service.spec.ts):
-
-```ts
-vi.mock('#app/repositories/index.js', () => ({
-    pushSubscriptionRepository: pushSubscriptionRepositoryMock,
-}))
-
-afterEach(() => {
-    vi.resetModules()
-    vi.clearAllMocks()
-})
-
-it('returns serialized subscriptions', async () => {
-    pushSubscriptionRepositoryMock.findByUserIdWithLogs.mockResolvedValue([{ id: 1n }])
-
-    const { pushSubscriptionService } = await import('./push-subscription-service.js')
-    const result = await pushSubscriptionService.getSubscriptions(7n)
-
-    expect(Result.isOk(result)).toBe(true)
-})
-```
-
-## Потік виклику
-
-```mermaid
-flowchart LR
-    R[Router + middleware] --> C[Controller]
-    C -->|getTypedPayload, auth.getUserId| S[Service]
-    S -->|tryInternal| Repo[Repository]
-    Repo --> DB[(PostgreSQL)]
-    S --> T[Transformer]
-    S -->|Result.ok| C
-    S -->|Result.err AppError| E[mapControllerError]
-    E -->|status + error payload| C
-    C --> Resp[HTTP response]
-```
-
-## Що класти в контролер, а що в сервіс
+## Чек-лист контролера
 
 **Контролер:**
 
@@ -353,11 +306,13 @@ flowchart LR
 - [ ] зібрати відповідь `{ status: 'success', ... }` за типом із `shared`;
 - [ ] за потреби — статус (`201`, `302`), cookies, заголовки, сесія.
 
-**Сервіс:**
-
-- [ ] бізнес-правила, перевірка прав і власності;
-- [ ] виклики репозиторіїв (у `tryInternal`) і серіалізація через трансформери;
-- [ ] зовнішні інтеграції (email, push, LLM, Sentry);
-- [ ] повернення `AppResult<T>`, без `throw` і без доступу до `responseData`.
-
 **Ніколи в контролері:** прямі імпорти репозиторіїв, `fetch` до зовнішніх API, `throw` для очікуваних помилок.
+
+## Суміжні шари
+
+- [Контролери](/backend/controllers) — HTTP/WS-адаптери: приймають запит і віддають відповідь.
+- [Сервіси](/backend/services) — бізнес-логіка, повертають `AppResult<T>`.
+- [Репозиторії](/backend/repositories) — єдине місце, де пишеться SQL.
+- [Трансформери](/backend/transformers) — перетворення рядків БД на публічні DTO.
+
+Загальна схема — [Архітектура](/backend/architecture), покроковий приклад — [Додавання фічі](/backend/adding-a-feature).

@@ -276,7 +276,7 @@ sequenceDiagram
 ## Як додати WS-маршрут
 
 1. Опишіть схему вхідних даних і відповіді в `packages/shared` (як `SupportChatInputSchema` і `SupportChatResponseSchema`).
-2. Додайте метод у контролер у `packages/backend/src/app/controllers/ws/`. Він отримує `WsContext<Input>`; payload беріть через `getTypedPayload(context)`, користувача — з `context.userData`, сокет — з `context.ws`. Помилки сервісів перетворюйте через `appErrorToWsError`. Усі поля контексту описані в [WsContext докладно](/backend/controllers-services#wscontext-докладно).
+2. Додайте метод у контролер у `packages/backend/src/app/controllers/ws/`. Він отримує `WsContext<Input>`; payload беріть через `getTypedPayload(context)`, користувача — з `context.userData`, сокет — з `context.ws`. Помилки сервісів перетворюйте через `appErrorToWsError`. Усі поля контексту описані в [WsContext докладно](/backend/controllers#wscontext-докладно).
 3. Зареєструйте маршрут у `ws-routes.ts` в наявній або новій групі з `prefix` і `rateLimit`:
 
 ```ts

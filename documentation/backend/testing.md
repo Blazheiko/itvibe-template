@@ -36,7 +36,7 @@
 
 ## Патерни мокання
 
-- **Barrel-модулі.** Сервіси мокають `#app/repositories/index.js` і `#app/transformers/index.js`, а потім динамічно імпортують сервіс. Детально — у [«Контролери та сервіси»](/backend/controllers-services) і [«Репозиторії та трансформери»](/backend/repositories-transformers); повний приклад — крок 9 у [«Додавання фічі»](/backend/adding-a-feature).
+- **Barrel-модулі.** Сервіси мокають `#app/repositories/index.js` і `#app/transformers/index.js`, а потім динамічно імпортують сервіс. Детально — у [«Сервіси»](/backend/services), [«Репозиторії»](/backend/repositories) і [«Трансформери»](/backend/transformers); повний приклад — крок 9 у [«Додавання фічі»](/backend/adding-a-feature).
 - **Окремі модулі.** Деякі тести мокають конкретний файл, наприклад `knowledge-base-service.spec.ts` мокає `#app/repositories/support/support-knowledge-repository.js`, `support-embedding-service.js` і `#logger`.
 - **Конфіг.** `vi.mock("#config/csrf.js", ...)` у `csrf-guard.spec.ts` підставляє конфіг з `enforce: true`.
 - **uWebSockets.js.** `server.spec.ts` і `http-validation.spec.ts` мокають `uWebSockets.js` (`App: () => ({})`), маршрути, `ws-handlers` та HTTP-middleware, а `HttpResponse` підміняють об'єктом із `vi.fn()` для `cork`/`writeStatus`/`writeHeader`/`end`. Справжній сервер не стартує, портів ніхто не слухає (у spec-файлах немає викликів `listen(`).
