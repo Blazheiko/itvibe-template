@@ -172,7 +172,7 @@ beforeAll(async () => {
     const server = await import('./server.js')
     stopServer = server.stopServer
     await server.initServer({
-        httpRoutes: routes,
+        httpRoutes: routes.map((route) => ({ ...route, responseCheck: null })),
         wsRoutesByUrl: new Map(),
         sourceHttpRoutes: [],
         sourceWsRoutes: [],

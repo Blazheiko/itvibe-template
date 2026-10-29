@@ -198,7 +198,7 @@ describe('HTTP body limits', () => {
                 route('octet', { allowedContentTypes: ['octet'] }),
                 route('multipart', { allowedContentTypes: ['multipart'] }),
                 route('text', { allowedContentTypes: ['text'] }),
-            ],
+            ].map((route) => ({ ...route, responseCheck: null })),
             wsRoutesByUrl: new Map(),
             sourceHttpRoutes: [],
             sourceWsRoutes: [],

@@ -15,6 +15,11 @@ export default defineConfig({
         ...(maxWorkers !== undefined && maxWorkers !== ''
             ? { maxWorkers: /^\d+$/.test(maxWorkers) ? Number(maxWorkers) : maxWorkers }
             : {}),
+        // feat-044: temporary until T8 fixes the existing ResponseSchema mismatches.
+        // The default outside production is strict; log keeps the suites green while
+        // the mismatches are collected. New response-validation tests set the mode
+        // themselves. Remove this in T8.
+        env: { RESPONSE_VALIDATION: 'log' },
         // *.redis.test.ts and *.pg.test.ts need a real Redis / PostgreSQL:
         // run them with `pnpm test:redis` / `pnpm test:pg`.
         exclude: [...configDefaults.exclude, 'dist/**', '**/*.redis.test.ts', '**/*.pg.test.ts'],

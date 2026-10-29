@@ -123,7 +123,7 @@ describe('login body validation runs before the login throttle', () => {
                     url: 'api/auth/login',
                     middlewares: [],
                 },
-            ],
+            ].map((route) => ({ ...route, responseCheck: null })),
             wsRoutesByUrl: new Map(),
             sourceHttpRoutes: [],
             sourceWsRoutes: [],

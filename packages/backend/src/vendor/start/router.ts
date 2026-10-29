@@ -2,7 +2,16 @@ import logger from '#vendor/utils/logger.js'
 import { normalizePath } from '#vendor/utils/network/http-request-handlers.js'
 import { isNoBodyMethod } from '#vendor/utils/routing/body-methods.js'
 import appConfig from '#config/app.js'
-import type { Method, RateLimit, RouteItem, WsRoutes, routeList } from '#vendor/types/types.js'
+import responseValidationConfig from '#config/response-validation.js'
+import { createResponseCheck } from '#vendor/utils/validation/validate-response.js'
+import type {
+    Method,
+    NormalizedRouteItem,
+    RateLimit,
+    RouteItem,
+    WsRoutes,
+    routeList,
+} from '#vendor/types/types.js'
 
 const parseRouteParams = (url: string): string[] =>
     url
@@ -14,7 +23,7 @@ const createRoute = (
     method: Method,
     route: RouteItem,
     groupRateLimit: RateLimit | undefined,
-): RouteItem => {
+): NormalizedRouteItem => {
     const responseSchema = route.ResponseSchema
     const normalizedUrl = normalizePath(route.url)
 
@@ -33,10 +42,12 @@ const createRoute = (
         description: route.description,
         allowedContentTypes: route.allowedContentTypes,
         ...(responseSchema !== undefined ? { ResponseSchema: responseSchema } : {}),
+        // Built once here, so RESPONSE_VALIDATION=off costs one null check per request.
+        responseCheck: createResponseCheck(responseSchema, responseValidationConfig),
     }
 }
 
-const routeHandler = (route: RouteItem, groupRateLimit?: RateLimit): RouteItem => {
+const routeHandler = (route: RouteItem, groupRateLimit?: RateLimit): NormalizedRouteItem => {
     let method = route.method
     method = method === 'delete' ? 'del' : route.method
     if (isNoBodyMethod(method) && route.validator !== undefined) {
@@ -49,7 +60,7 @@ const routeHandler = (route: RouteItem, groupRateLimit?: RateLimit): RouteItem =
     return createRoute(method, route, groupRateLimit)
 }
 
-const routesHandler = (routeList: routeList): RouteItem[] => {
+const routesHandler = (routeList: routeList): NormalizedRouteItem[] => {
     logger.info('routes Handler start')
     const parseRouteList = parseGroups(routeList, '', [], undefined)
     return parseRouteList.map((route) => routeHandler(route, route.groupRateLimit))
@@ -103,7 +114,7 @@ const parseGroups = (
 
 // Convert flat routes into the full-url lookup used by the WS dispatcher.
 // WS dispatch is exact-match only; `:param` route matching is not supported.
-const createWsRoutesByUrl = (routes: RouteItem[]): WsRoutes => {
+const createWsRoutesByUrl = (routes: NormalizedRouteItem[]): WsRoutes => {
     const routesByUrl: WsRoutes = {}
     routes.forEach((route) => {
         if (routesByUrl[route.url] !== undefined) {

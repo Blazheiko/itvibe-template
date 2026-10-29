@@ -17,6 +17,7 @@ import checkRateLimitWs, { createWsRateLimitErrorResponse } from '../rate-limit/
 import { ValidationError } from '#app/validate/errors/validation-error.js'
 import { validateRoutePayload } from '#vendor/utils/validation/validate-route-payload.js'
 import logger from '#vendor/utils/logger.js'
+import { isEmptyPayload } from '#vendor/utils/network/response-body.js'
 
 type WsErrorEnvelope = NonNullable<WsResponseData['error']>
 
@@ -96,6 +97,24 @@ export default async (
             ) {
                 const handler = route.handler
                 responseData.data = await handler(context)
+                // Runtime ResponseSchema check (feat-044, plan §4.3.2). Only this
+                // direct reply is checked, not later async messages or broadcasts.
+                if (
+                    route.responseCheck !== null &&
+                    !isEmptyPayload(responseData.data) &&
+                    !route.responseCheck(responseData.data, {
+                        route: route.url,
+                        transport: 'ws',
+                        requestId,
+                    })
+                ) {
+                    responseData.data = null
+                    responseData.status = 'error'
+                    responseData.error = createWsErrorEnvelope(
+                        'internal_error',
+                        'Internal server error',
+                    )
+                }
             }
 
             return responseData

@@ -170,7 +170,7 @@ const loadServer = async (mode: Mode) => {
     }))
     const { initServer } = await import('./server.js')
     await initServer({
-        httpRoutes: routes,
+        httpRoutes: routes.map((route) => ({ ...route, responseCheck: null })),
         wsRoutesByUrl: new Map(),
         sourceHttpRoutes: [],
         sourceWsRoutes: [],

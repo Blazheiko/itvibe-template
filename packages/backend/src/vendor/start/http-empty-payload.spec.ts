@@ -191,7 +191,7 @@ describe('HTTP response with an empty payload', () => {
                 route('zero', { payload: 0 }),
                 route('empty-string', { payload: '' }),
                 route('redirect', { status: 302, payload: {}, headers: { Location: '/x' } }),
-            ],
+            ].map((route) => ({ ...route, responseCheck: null })),
             wsRoutesByUrl: new Map(),
             sourceHttpRoutes: [],
             sourceWsRoutes: [],

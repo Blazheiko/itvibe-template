@@ -3,6 +3,7 @@ import type { Logger } from 'pino'
 import type { BaseType } from '@arktype/type'
 import type { InferPayload, Validator } from '#vendor/contracts/validator.js'
 import type { BodyKind } from '../utils/network/http-request-handlers.js'
+import type { ResponseCheck } from '../utils/validation/validate-response.js'
 
 export type Payload = Record<string, unknown> | string | Buffer | number | boolean | bigint | null
 
@@ -200,7 +201,7 @@ export interface ResponseData {
 }
 
 export type Method = 'get' | 'post' | 'del' | 'put' | 'patch' | 'ws' | 'delete' | 'options'
-export type WsRoutes = Record<string, RouteItem>
+export type WsRoutes = Record<string, NormalizedRouteItem>
 export type Validators = Record<string, Record<string, unknown>>
 export interface RateLimit {
     windowMs: number
@@ -274,6 +275,15 @@ export interface RouteItem<
         : TQueryValidator extends Validator<unknown>
           ? RouteHandler<unknown, InferPayload<TQueryValidator>>
           : RouteHandler
+}
+
+/**
+ * A route after routesHandler: responseCheck is always set, to the runtime
+ * ResponseSchema check or to null (RESPONSE_VALIDATION=off or no schema), so the
+ * request path only compares it with null.
+ */
+export interface NormalizedRouteItem extends RouteItem {
+    responseCheck: ResponseCheck | null
 }
 
 export interface ResponseSchema {
