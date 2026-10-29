@@ -1,438 +1,502 @@
 {
-    "schema": {
-        "fields": [
-            "id",
-            "name",
-            "description",
-            "owner",
-            "branch",
-            "dependencies",
-            "status",
-            "evidence"
-        ],
-        "status_values": ["not-started", "in_progress", "blocked", "review", "done"],
-        "notes": "owner = team member or agent name responsible. branch = git branch where progress.md and session-handoff.md for this feature live. Only the owner edits the feature's row; everyone else opens a PR to change it."
+  "schema": {
+    "fields": [
+      "id",
+      "name",
+      "description",
+      "owner",
+      "branch",
+      "dependencies",
+      "status",
+      "evidence"
+    ],
+    "status_values": [
+      "not-started",
+      "in_progress",
+      "blocked",
+      "review",
+      "done"
+    ],
+    "notes": "owner = team member or agent name responsible. branch = git branch where progress.md and session-handoff.md for this feature live. Only the owner edits the feature's row; everyone else opens a PR to change it."
+  },
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "Project Setup",
+      "description": "Confirm the project can install dependencies, run verification, and start from a clean checkout",
+      "owner": "Blazheiko",
+      "branch": "main",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "./init.sh (pnpm install, typecheck, lint, test, build) passes on main at f8e2d16 (2026-10-25); the same checks run on every PR in .github/workflows (quality, e2e, build, test-pg, test-redis)"
     },
-    "features": [
-        {
-            "id": "feat-001",
-            "name": "Project Setup",
-            "description": "Confirm the project can install dependencies, run verification, and start from a clean checkout",
-            "owner": "Blazheiko",
-            "branch": "main",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "./init.sh (pnpm install, typecheck, lint, test, build) passes on main at f8e2d16 (2026-10-25); the same checks run on every PR in .github/workflows (quality, e2e, build, test-pg, test-redis)"
-        },
-        {
-            "id": "feat-003",
-            "name": "VitePress Documentation",
-            "description": "VitePress documentation site in documentation/ with backend focus, published to GitHub Pages (plan: docs/plan/vitepress-documentation-plan.md, tasks: docs/plan/vitepress-documentation-tasks.md)",
-            "owner": "Blazheiko",
-            "branch": "feat/vitepress-docs",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #2 merged (bc32821); Pages deploy run 39298566100; release evidence in progress.md (Stage 5)"
-        },
-        {
-            "id": "feat-005",
-            "name": "Security Hardening",
-            "description": "Apply CSP from config/csp.ts to API/static responses; rate-limit WebSocket upgrade and add a global per-IP limit; stop logging WS/session tokens; runtime guard for broadcastToChannel channels (items 1, 2, 3, 9). Details: docs/plan/code-issues-found-during-docs.md; CSP plan: docs/plan/csp-fix-plan.md",
-            "owner": "Blazheiko",
-            "branch": "feat/security-hardening",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "Item 1 CSP: PR #22 (70bb473); item 2 rate limits: PRs #22, #23 (e774d15); item 3 tokens in logs: PR #26 (906b436); item 9 channel guard: PR #29 (f564de0). Evidence in progress.md. Redis rate-limit counter split out to feat-013"
-        },
-        {
-            "id": "feat-006",
-            "name": "Env Example Sync",
-            "description": "Fix SERVE_STATIC=true crash, PGSQL_PORT NaN fallback, unify DB defaults between app and scripts, sync .env.example with the 109 env vars read by code incl. REDIS_PREFIX (items 4, 5, 6, 8); set SERVE_STATIC and APP_ENV in the Docker image (item 31). Details: docs/plan/code-issues-found-during-docs.md",
-            "owner": "Blazheiko",
-            "branch": "feat/env-example-sync",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #24 (942212600f) items 4, 31; PR #27 (b8a0719) items 5, 6, 8; evidence in progress.md on feat/env-example-sync; review approved PR #27 incl. docker build + db:create:prod/db:migrate"
-        },
-        {
-            "id": "feat-007",
-            "name": "Database DX",
-            "description": "Document pgvector requirement in README, implement or remove the empty db:seed, remove/re-export empty src/drizzle/schema/index.ts (items 7, 10, 11). Details: docs/plan/code-issues-found-during-docs.md",
-            "owner": "Blazheiko",
-            "branch": "feat/db-dx",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #43 (merge aaa46cf): db:seed (prompts always, demo accounts with --demo, one transaction, safe failure log), pgvector docs, empty src/drizzle files removed; typecheck, lint, pnpm test (backend 564, frontend 45, shared 3, docs 26), docs:build + docs:verify, drizzle-kit check, manual seed run on a throwaway DB; evidence in progress.md on feat/db-dx"
-        },
-        {
-            "id": "feat-008",
-            "name": "HTTP Body Fixes",
-            "description": "Read body for PATCH (or forbid patch routes), proper response for null payload, tests for body-kind/limit resolution and 413, show limits in playground, settle default limits (items 12, 13, 14). Details: docs/plan/code-issues-found-during-docs.md",
-            "owner": "Blazheiko",
-            "branch": "feat/http-body-fixes",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #46 (merge 8ee410b): PATCH reads the body, no body validator on GET/DELETE, 422/415 without Content-Type; empty payload → 204 / status without body / canonical error body, no Content-Type or Content-Length without a body; body-limit tests incl. real uWS, strict parseSize, bodyLimits in playground, defaults documented; typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), api-playground build, docs:build + docs:verify, negative controls, manual curl; evidence in progress.md on feat/http-body-fixes"
-        },
-        {
-            "id": "feat-009",
-            "name": "Internal Docs Cleanup",
-            "description": "Clean up stale internal docs outside documentation/ (item 15, scope extended): backend (remove SESSION_SECURITY, etag-improvements, directory-structure, dead export-types.js; SECURITY_ANALYSIS -> traceable status table in docs/security/; VALIDATOR_ABSTRACTION_PLAN -> ADR in docs/adr/; move HTTP_BODY_LIMITS_PLAN to docs/plan/; update backend README and scripts README); root README and AGENTS.md fixes; api-playground docs merged into documentation/playground and removed, short README; frontend README and composables docs; status lines for finished plans in docs/plan/. Plan: docs/plan/internal-docs-cleanup-plan.md",
-            "owner": "Blazheiko",
-            "branch": "feat/internal-docs-cleanup",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #49 (merge aef99ce): stale internal docs removed or replaced (backend src/docs, SECURITY_ANALYSIS -> docs/security/security-analysis-status.md with traceability of 15 findings, validator plan -> docs/adr/0001, api-playground docs merged into documentation/playground); root/backend/frontend/composables READMEs and AGENTS.md aligned with code; status lines for finished plans; docs.yml paths; typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), docs:build + docs:verify, link check 852 links / 0 violations; evidence in progress.md on feat/internal-docs-cleanup"
-        },
-        {
-            "id": "feat-010",
-            "name": "Format Baseline",
-            "description": "Make pnpm format:check pass (206 files on main) and align code style with AGENTS.md: root .prettierrc, one formatting commit, .git-blame-ignore-revs (item 16, Prettier part of item 68). Roadmap F00: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/format-baseline",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #53 (merge 0655aca): root .prettierrc.json, formatting commit 60c735c in .git-blame-ignore-revs; format:check clean (was 206 files), typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), build, test:e2e 12/12 on 4 projects, docs:build + docs:verify, AST of 385 .ts files identical; evidence in progress.md on feat/format-baseline"
-        },
-        {
-            "id": "feat-011",
-            "name": "Documentation v2",
-            "description": "VitePress documentation v2 pages (stage 6 of docs/plan/vitepress-documentation-tasks.md, T6.1-T6.10d): controllers/services, repositories/transformers, validation, websocket, storage, mail/push, AI, observability, caching/ETag, testing, deployment, shared/frontend/playground, workflow and reference pages. One page per PR.",
-            "owner": "Blazheiko",
-            "branch": "feat/docs-v2",
-            "dependencies": ["feat-003"],
-            "status": "done",
-            "evidence": "Stage 6 pages merged via PRs #9, #10, #13, #14, #15, #16, #17, #18; Pages deploy run 39391819578; evidence in progress.md"
-        },
-        {
-            "id": "feat-012",
-            "name": "Remove save-user Endpoint",
-            "description": "Remove the anonymous POST /api/main/save-user endpoint (created users with an unhashed password, bypassing registration) and related code: controller/service methods, SaveUserInput/SaveUserResponse/WSSaveUserPayload schemas, frontend api.saveUser; update docs and requirements. Issue 65 in docs/plan/code-issues-found-during-docs.md",
-            "owner": "Blazheiko",
-            "branch": "fix/remove-save-user",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "This PR: shared build, pnpm typecheck/lint/test (backend 268/268), backend build, no save-user references in packages; docs:build + docs:verify"
-        },
-        {
-            "id": "feat-013",
-            "name": "Shared Rate-Limit Counter",
-            "description": "Redis-backed rate-limit store so HTTP L1, per-route and WS upgrade limits are shared across instances (leftover of item 2 / finding C-2). Today the counter lives in process memory; the nginx edge limit in documentation/backend/deployment.md is the workaround. Details: docs/plan/code-issues-found-during-docs.md item 2, docs/plan/ws-upgrade-rate-limit-plan.md; plan: docs/plan/redis-rate-limit-plan.md; tasks: docs/plan/redis-rate-limit-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/redis-rate-limit",
-            "dependencies": ["feat-005"],
-            "status": "done",
-            "evidence": "PR #32 (feat/redis-rate-limit, review fixes 94c6963): typecheck, lint, backend 466, frontend 41, test:redis 16 (CI job redis-tests green), docs:build + docs:verify, manual check with two backends on one Redis; evidence in progress.md on feat/redis-rate-limit"
-        },
-        {
-            "id": "feat-014",
-            "name": "Strip Console Logs In Production",
-            "description": "Frontend production build must not print to the browser console: remove console.log(data) with wsToken from App.vue and strip console.log/info/debug/trace via esbuild.pure in the app and service-worker builds (code-issues item 60)",
-            "owner": "Blazheiko",
-            "branch": "fix/strip-console-in-prod",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "This PR: pnpm --filter frontend build (dist: console.log 45 -> 0, info 4 -> 0, debug 1 -> 0; warn/error kept), dev server keeps logs, frontend tests 41, typecheck, lint, docs:build + docs:verify"
-        },
-        {
-            "id": "feat-015",
-            "name": "Backend Console To Pino",
-            "description": "Route runtime console.error calls in the backend through pino (WS close handler, server stop); malformed JSON bodies become MalformedBodyError -> 400 bad_request logged as warn without the body (previously 500 + logger.error to Sentry with a parser message that can quote the body); drop console.log(\"start\")",
-            "owner": "Blazheiko",
-            "branch": "fix/backend-console-to-pino",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "This PR: backend tests 471 (new malformed-body.spec.ts), typecheck, lint, docs:build + docs:verify"
-        },
-        {
-            "id": "feat-016",
-            "name": "Redis Main Client Fast Failure",
-            "description": "Main Redis client fails fast instead of hanging ~45 s when Redis is down: no offline queue or resend, commandTimeout, RedisUnavailableError -> 503 service_unavailable with Retry-After, one Sentry event per incident (redis-health), WS heartbeat independent of Redis, logoutAll deadline (code-issues item 70). Plan: docs/plan/redis-main-client-timeout-plan.md; tasks: docs/plan/redis-main-client-timeout-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/redis-main-client-timeout",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #37 (merged 17ea622): typecheck, lint, backend 551, frontend 45, test:redis 31 (incl. logoutAll retry and password-reset regressions), docs:build + docs:verify, manual check with two backends and Redis stopped 19 s; evidence in progress.md on feat/redis-main-client-timeout. Exception: 8 mobile-layout E2E tests fail on main as well (not caused by feat-016), tracked as feat-017"
-        },
-        {
-            "id": "feat-017",
-            "name": "Fix Mobile Layout E2E",
-            "description": "8 Playwright tests in packages/frontend/e2e/mobile-layout.spec.ts fail on main on all 4 browsers (\"registration submit button is not hidden behind bottom browser UI\", \"support input stays visible above bottom browser UI\": toBeVisible, element not found). Found during feat-016 T10.2; blocks the E2E part of Definition of Done for UI features",
-            "owner": "Blazheiko",
-            "branch": "fix/mobile-layout-e2e",
-            "dependencies": [],
-            "status": "done",
-            "evidence": "PR #40: test:e2e 12/12 on 4 browsers (36/36 with --repeat-each=3), geometry check fails at a 300 px viewport, frontend typecheck now includes e2e/, lint, pnpm test, docs:build + docs:verify; evidence in progress.md on fix/mobile-layout-e2e"
-        },
-        {
-            "id": "feat-018",
-            "name": "App CI",
-            "description": "CI workflow ci.yml (format:check, typecheck, lint, test, e2e on all Playwright projects, coverage artifact), vitest testTimeout, pnpm in Playwright webServer (code-issues items 36, 37, 38). Roadmap F01: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/app-ci",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #55 (merge 7e649c6): ci.yml quality + e2e, first run without caches green (run 40089711640), negative controls red at lint (40089935251) and test (40090062773), coverage artifact, testTimeout 15 s, pnpm in Playwright; branch protection on main requires quality and e2e (strict); evidence in progress.md on feat/app-ci"
-        },
-        {
-            "id": "feat-019",
-            "name": "Docker Hardening",
-            "description": ".dockerignore with canary checks of builder stage and image layers, non-root user app, HEALTHCHECK, exec-form CMD node, migrations as one-shot runs (code-issues items 28, 29, 30). Roadmap F02: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/docker-hardening",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #67 (merge 1d10df8): .dockerignore (context 83.45 MB -> 124.7 kB, build 337 -> 172 s), user app uid 999, HEALTHCHECK checking the ping body, exec CMD, one-shot migrations; canary absent in builder stage, layers and history (positive controls); healthy/unhealthy scenarios; docker stop exit 0; docs:build + docs:verify; evidence in progress.md on feat/docker-hardening"
-        },
-        {
-            "id": "feat-020",
-            "name": "HTTP/WS Response Safety",
-            "description": "401 before res.upgrade without a live session; Cache-Control: no-store on API responses by default (code-issues items 18, 42). Roadmap F03: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/response-safety",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #69 (merge 73184a3): 401 before WS upgrade without a session + frontend refreshes the token after a failed handshake (bounded, e2e negative control 28 -> <=2 refreshes), Cache-Control no-store on API responses; backend 715, frontend 50, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual check on a running backend; evidence in progress.md on feat/response-safety"
-        },
-        {
-            "id": "feat-021",
-            "name": "Push Access & Methods",
-            "description": "test-push -> POST, declarative auth_guard on push-subscriptions and role guard on admin WS route, subscription transfer only with matching p256dh/auth (decision R2) (code-issues items 47, 48, 67). Roadmap F04: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/push-access",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #59: POST test-push with body schema, auth_guard on push routes except vapid-public-key, ws_admin_guard on admin WS group, transfer only with matching keys (409 otherwise), 404 for non-numeric subscription ids; route access matrix test with negative control; backend 686, frontend 45, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual check on a disposable DB incl. WS; evidence in progress.md on feat/push-access"
-        },
-        {
-            "id": "feat-022",
-            "name": "Push Data Access",
-            "description": "push-notification-log-repository, findByUserIdWithLogs in 2 queries keeping the 5-latest-logs contract, SQL aggregates for statistics, bounded parallel send with batch log insert (code-issues items 20, 21, 49). Roadmap F05: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/push-data-access",
-            "dependencies": ["feat-021", "feat-036"],
-            "status": "done",
-            "evidence": "PR #61: push-notification-log-repository, findByUserIdWithLogs in 2 queries, SQL statistics, sendToUser with concurrency 5 and one batch write; test:pg 15 (deep-equal to verbatim legacy copies, query counts), sender unit 5, backend 691, frontend 45, typecheck, lint, build, docs:build + docs:verify, manual HTTP check on a disposable DB; new code-issues item 72; evidence in progress.md on feat/push-data-access"
-        },
-        {
-            "id": "feat-023",
-            "name": "Storage Hardening",
-            "description": "buildKey in deleteFromS3, magic-bytes file type check, publicRead avatars (decision R1), restricted corsS3.xml (code-issues items 32, 44, 45, 46). Roadmap F06: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/storage-hardening",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #71 (merge fa1342d): buildObjectKey + deleteFromS3 with relative keys, detectImageType (magic bytes) for avatars and KB screenshots, public avatars, GET/HEAD-only bucket CORS; specs RED first, backend 731, frontend 50, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual upload against MinIO; evidence in progress.md on feat/storage-hardening"
-        },
-        {
-            "id": "feat-024",
-            "name": "WebSocket Cleanup",
-            "description": "WS event prefix from VITE_API_PATH_PREFIX, remove dead WS code (user-storage, unreachable branch, websocket-base reconnect) (code-issues items 17, 19). Roadmap F07: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/ws-cleanup",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #73 (merge caf4c99): WS events from VITE_API_PATH_PREFIX, pending-request check fixed (feat-009 follow-up), user-storage/unreachable branch/WebsocketBase removed; frontend 58, backend 731, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual WS with API_PATH_PREFIX=v1; new code-issues item 73; evidence in progress.md on feat/ws-cleanup"
-        },
-        {
-            "id": "feat-025",
-            "name": "Layering Cleanup",
-            "description": "controllers and ws-coordinator go through services, complete repositories barrel, no logger in repositories, clearEmbedding in a transaction (code-issues items 22, 24, 25). Roadmap F08: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/layering-cleanup",
-            "dependencies": ["feat-036"],
-            "status": "done",
-            "evidence": "PR #63 (merge 0dd6975): adminUserService, userRoleService for ws-coordinator and admin_guard, full repositories barrel, no logger in repositories, clearEmbedding in one UPDATE; layering.spec.ts with negative control; test:pg 18, backend 703, frontend 45, typecheck, lint, build, docs:build + docs:verify; manual check on a disposable DB; evidence in progress.md on feat/layering-cleanup"
-        },
-        {
-            "id": "feat-026",
-            "name": "Validation Cleanup",
-            "description": "ArkType errors as messages[{path,message}], remove dead validation/controller code, ADR 0001 leftovers decided (code-issues items 26, 27). Roadmap F09: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/validation-cleanup",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #65 (merge 18af90b): per-field issues in 422/WS details, dead validation code removed, ADR 0001 leftovers decided; flip missed in chore PR #66, recorded in the final chore PR"
-        },
-        {
-            "id": "feat-027",
-            "name": "AI Reliability",
-            "description": "validate AI_TEXT_DRIVER, AI_REQUEST_TIMEOUT_MS with AbortSignal and cancellation on HTTP abort/WS close, prompt-controller through AI service with domain errors 502/504 (code-issues items 23, 50, 51). Roadmap F10: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/ai-reliability",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #75 (merge a00fdcf): AI_TEXT_DRIVER validated, AI_REQUEST_TIMEOUT_MS + caller signal in all adapters, HttpContext/WsContext signals (Support AI and prompt test cancel), promptTestService with upstream_error 502 / upstream_timeout 504; backend 763, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual against a fake provider; evidence in progress.md on feat/ai-reliability"
-        },
-        {
-            "id": "feat-028",
-            "name": "AI Usage Accounting",
-            "description": "usage for translation, prompt test and embeddings; nullable token columns (NULL = provider did not report usage) with migration and contracts (code-issues items 53). Roadmap F11: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/ai-usage-accounting",
-            "dependencies": ["feat-027"],
-            "status": "done",
-            "evidence": "PR #77 (merge 551a7f8): migration llm_usage_nullable (NULL = unknown usage, user_id NULL for indexing, SUPPORT_EMBEDDING), translation/prompt test/embeddings recorded, adapters record NULL instead of dropping, callsWithoutUsage; drizzle-kit check, migration on a DB with rows, test:pg 21, backend 771, frontend 58, e2e 12, typecheck, lint, build, docs; evidence in progress.md on feat/ai-usage-accounting"
-        },
-        {
-            "id": "feat-029",
-            "name": "AI Quality",
-            "description": "Support AI language from profile/request, embedding dimension check, batched reindexAll, distance threshold, prompt cache TTL (code-issues items 43, 52, 54). Roadmap F12: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/ai-quality",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #79 (merge 074c648): answer language from the UI locale with SUPPORT_DEFAULT_LANGUAGE, embedding dimension check, batched reindexAll, SUPPORT_SEARCH_MAX_DISTANCE, prompt cache TTL with background refresh; backend 797, test:pg 22, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/ai-quality"
-        },
-        {
-            "id": "feat-030",
-            "name": "Observability",
-            "description": "LOG_LEVEL, requestId/userId in error logs, GET /ready with DB and Redis checks, HEALTHCHECK on /ready (code-issues items 33, 34, 35). Roadmap F13: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/observability",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #81 (merge df9c591): LOG_LEVEL, requestId from the first request step and userId in request logs (handleError child logger), GET /ready with DB+Redis checks, HEALTHCHECK on /api/ready, pg.Pool error no longer crashes the server; backend 815, test:redis 31, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual DB/Redis outage and image health checks; evidence in progress.md on feat/observability"
-        },
-        {
-            "id": "feat-031",
-            "name": "Static Caching",
-            "description": "immutable only for /assets, RFC 9110 If-None-Match, bounded RAM cache with streaming for large files, precompressed br/gz (code-issues items 39, 40, 41). Roadmap F14: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/static-caching",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #83 (merge 9d46bcf): immutable only for /assets, RFC 9110 If-None-Match, memory budget with streaming from disk, br/gzip variants at startup; backend 841, test:redis 31, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual on real uWS with the frontend build and a 5 MiB file; evidence in progress.md on feat/static-caching"
-        },
-        {
-            "id": "feat-032",
-            "name": "Shared Cleanup",
-            "description": "real shared tests, guards export, branded EntityId (code-issues items 56, 57, 58). Roadmap F15: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/shared-cleanup",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #85 (merge ecbf624): 13 real shared tests, guards re-exported from the root, branded EntityId with a type test; shared 13, backend 843, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/shared-cleanup"
-        },
-        {
-            "id": "feat-033",
-            "name": "Frontend & Playground",
-            "description": "relative VITE_BASE_URL fallback, typed VITE_* vars, playground prefix/wss/no fake queue (decision R4), /health in playground (code-issues items 59, 61, 62, 63, 64). Roadmap F16: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/frontend-playground",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #87 (merge 16d0ff5): same-origin VITE_BASE_URL fallback, typed VITE_*, prefix-aware playground (routes, /ping, proxy), wss, no fake queue; playground 11 tests, backend 843, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/frontend-playground"
-        },
-        {
-            "id": "feat-034",
-            "name": "Drop users.is_admin",
-            "description": "remove is_admin, role is the only source (decision R5): code first, then DROP COLUMN migration (code-issues items 66). Roadmap F17: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/drop-is-admin",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #89 (merge e303033): isAdmin removed from code and schema, migration 20261024171546_drop_users_is_admin; 0 is_admin/role mismatches on dev DB; fresh-DB migrate + seed + admin login 200 / user 403; typecheck, lint, test, build, e2e, docs:build + docs:verify; evidence in progress.md on feat/drop-is-admin"
-        },
-        {
-            "id": "feat-035",
-            "name": "ESLint Strict",
-            "description": "enable strictTypeChecked rules for backend, frontend, api-playground (three PRs) (code-issues items 68). Roadmap F18: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/eslint-strict",
-            "dependencies": ["feat-010", "feat-018"],
-            "status": "done",
-            "evidence": "PRs #91 (backend), #92 (frontend), #93 (api-playground): strictTypeChecked for all three, relaxations with reasons, dead root blocks removed; typecheck, lint, test (+redis, pg), build, e2e, docs:build + docs:verify; evidence in progress.md on feat/eslint-strict"
-        },
-        {
-            "id": "feat-036",
-            "name": "PG Test Harness",
-            "description": "*.pg.test.ts convention, test:pg, temporary DB with migrations, pg-tests.yml with pgvector/pgvector:pg16 (prerequisite for feat-022 and feat-025). Roadmap F19: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/pg-test-harness",
-            "dependencies": ["feat-010"],
-            "status": "done",
-            "evidence": "PR #57: *.pg.test.ts + test:pg with a throwaway database (pgvector, migrations, dropped in teardown), smoke test, pg-tests.yml green (3 passed, not skipped); local negative control still drops the database; pnpm test 671 without pg tests; typecheck, lint, format:check, docs:build + docs:verify; evidence in progress.md on feat/pg-test-harness"
-        },
-        {
-            "id": "feat-037",
-            "name": "Review Fixes",
-            "description": "fixes from the post-plan review (range 0655aca..main): WS responses under a non-api prefix, xAI abort/timeout swallowed (high); push log loss on deactivate failure, static stream hang on shrunk file, 304 without Vary, adapter timeout tests, strict VITE_* typing (medium); low findings and AC text sync in open-issues-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/review-fixes",
-            "dependencies": ["feat-035"],
-            "status": "done",
-            "evidence": "PR #96 (merge 818a45c): 2 high, 5 medium and the low review findings fixed with negative controls; backend 850, frontend 61, playground 14, redis 31, pg 22, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/review-fixes"
-        },
-        {
-            "id": "feat-038",
-            "name": "Format, Push Events, HTTP Prefix",
-            "description": "code-issues items 71 (format:check covers vue/js/mjs/css, one formatting commit in .git-blame-ignore-revs), 72 (push on business events: new sign-in, password changed / reset / logout-all as system; support reply as mention with skipIfOnline), 73 (frontend HTTP paths and Vite proxy from VITE_API_PATH_PREFIX)",
-            "owner": "Blazheiko",
-            "branch": "feat/format-push-prefix",
-            "dependencies": ["feat-037"],
-            "status": "done",
-            "evidence": "PRs #99 (item 73: HTTP paths and proxy from VITE_API_PATH_PREFIX), #100 (item 72: push on sign-in, password change/reset, logout-all, support reply), #101 (item 71: format glob, formatting commit dd9db8b in .git-blame-ignore-revs); typecheck, lint, format:check, test, build, e2e, docs:build + docs:verify; evidence in progress.md on feat/format-push-prefix"
-        },
-        {
-            "id": "feat-039",
-            "name": "Hide users.session_token",
-            "description": "users.session_token (the per-user Redis session namespace, also part of the signed cookie) leaked in every userTransformer response (login, registration, OAuth, phone link); strip it, drop the unused findBySessionToken, document why the column exists",
-            "owner": "Blazheiko",
-            "branch": "feat/hide-session-token",
-            "dependencies": ["feat-038"],
-            "status": "done",
-            "evidence": "PR #106 (merge 10f5b51): sessionToken stripped by userTransformer, unused findBySessionToken removed, auth-security.md explains users.session_token; unit test fails without the fix; manual login on a fresh DB; backend 858, e2e 12, typecheck, lint, build, docs:build + docs:verify"
-        },
-        {
-            "id": "feat-040",
-            "name": "Security Regression Tests",
-            "description": "regression tests for findings marked 'closed, no test' in docs/security/security-analysis-status.md: C-1 (CORS origin outside allowlist), H-1 (error details only in local), H-3 (static extension allowlist and unsafe URL status), H-4 (default cookie sameSite Lax), M-2 (validation of urlencoded/multipart), M-3 (415 for content type not allowed by route), M-4 (non-digit Content-Length), L-1 (DELETE registered), L-2 (doc routes absent outside manual-test), L-3 (no 'Get Http Data' log); update the status table",
-            "owner": "Blazheiko",
-            "branch": "feat/security-regression-tests",
-            "dependencies": ["feat-039"],
-            "status": "done",
-            "evidence": "PR #109: regression tests for C-1, H-1, H-3, H-4, M-2, M-3, M-4, L-1, L-2, L-3, each checked by mutation; typecheck, lint, format:check, test (backend 908), docs:build + docs:verify; evidence in progress.md on feat/security-regression-tests"
-        },
-        {
-            "id": "feat-041",
-            "name": "Engine-Neutral Route Doc Schemas",
-            "description": "serialize-routes.ts TODO(validation-docs): route docs accept non-ArkType validator.describe() payloads (a ready { expression, fields, jsonSchema } descriptor or a plain JSON Schema object), so a custom adapter shows its body/query schema in the playground; validators without a usable describe() still serialize without a schema; update documentation/backend/validation.md",
-            "owner": "Blazheiko",
-            "branch": "feat/neutral-route-doc-schemas",
-            "dependencies": ["feat-040"],
-            "status": "done",
-            "evidence": "PR #113: describeSchema() accepts ArkType, a ready descriptor or a JSON Schema object for validator/queryValidator; 6 new serialize-routes cases; typecheck, lint, format:check, test (backend 914), docs:build + docs:verify; evidence in progress.md on feat/neutral-route-doc-schemas"
-        },
-        {
-            "id": "feat-042",
-            "name": "CSRF Hardening",
-            "description": "docs/plan/csrf-hardening-plan.md: CSRF_ENFORCE and CSRF_STRICT_ORIGIN default to true, CSRF_ALLOWED_ORIGINS required in production-like envs, Sec-Fetch-Site check, login CSRF closed (fail-closed guard), anonymous session deleted on login + audit of auth transitions, frontend session/token model with one verified retry, Service Worker never caches API, e2e with enforcement on; task list in docs/plan/csrf-hardening-tasks.md",
-            "owner": "Blazheiko",
-            "branch": "feat/csrf-hardening",
-            "dependencies": ["feat-041"],
-            "status": "done",
-            "evidence": "PR #132 (merge f511388): CSRF_ENFORCE/CSRF_STRICT_ORIGIN default true, fail-closed guard, session rotation, SW API bypass; pnpm typecheck/lint/test clean, backend 975 tests, test:redis 45, test:e2e 12, test:e2e:security 7; evidence block in progress.md on feat/csrf-hardening. Rollout tasks T0.4, R.1-R.6 are per-environment and tracked outside the feature"
-        },
-        {
-            "id": "feat-043",
-            "name": "OAuth Email Verification and Configured Providers",
-            "description": "docs/plan/oauth-email-verification-plan.md: link an OAuth account to an existing user by email only when the provider reports the email as verified (Google verified_email, GitHub primary+verified, GitLab OIDC email_verified, Facebook never); new users from a verified email get emailVerifiedAt; GET /api/auth/oauth/providers lists configured providers, redirect to an unconfigured provider returns 404; frontend shows buttons only for configured providers (adds GitHub, GitLab) and a message for oauth_email_unverified; update documentation/backend/oauth.md",
-            "owner": "Blazheiko",
-            "branch": "feat/oauth-email-verification",
-            "dependencies": ["feat-042"],
-            "status": "done",
-            "evidence": "PR #138 (merge 89cb878; reviewed as #137): OAuth linking by email only for a provider-verified email, GET /api/auth/oauth/providers, buttons only for configured providers, callback errors always 302 with reason; pnpm typecheck/lint/format:check clean, pnpm test backend 1004 frontend 126; mutation checks on the linking guard and callback redirect; manual check against a running backend (providers list, 404 for unconfigured, 302 on callback errors, buttons and reason message in Chrome); evidence block in progress.md. Not done: real provider login (needs real credentials), test:e2e"
-        },
-        {
-            "id": "feat-044",
-            "name": "Runtime Response Validation",
-            "description": "docs/plan/response-schema-runtime-validation.md + -tasks.md: RESPONSE_VALIDATION=strict|log|off (default strict outside production, off in production) validates the handler result against the route ResponseSchema before serialization; strict replaces an invalid response with 500 internal_error (WS: status error, data null), log keeps the response and logs a warn without values (sampled, deduplicated, Sentry), off skips the check; responses without a body and middleware-stopped requests are not checked; update documentation/backend",
-            "owner": "Blazheiko",
-            "branch": "feat/response-validation",
-            "dependencies": [],
-            "status": "in_progress",
-            "evidence": ""
-        }
-    ]
+    {
+      "id": "feat-003",
+      "name": "VitePress Documentation",
+      "description": "VitePress documentation site in documentation/ with backend focus, published to GitHub Pages (plan: docs/plan/vitepress-documentation-plan.md, tasks: docs/plan/vitepress-documentation-tasks.md)",
+      "owner": "Blazheiko",
+      "branch": "feat/vitepress-docs",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #2 merged (bc32821); Pages deploy run 39298566100; release evidence in progress.md (Stage 5)"
+    },
+    {
+      "id": "feat-005",
+      "name": "Security Hardening",
+      "description": "Apply CSP from config/csp.ts to API/static responses; rate-limit WebSocket upgrade and add a global per-IP limit; stop logging WS/session tokens; runtime guard for broadcastToChannel channels (items 1, 2, 3, 9). Details: docs/plan/code-issues-found-during-docs.md; CSP plan: docs/plan/csp-fix-plan.md",
+      "owner": "Blazheiko",
+      "branch": "feat/security-hardening",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "Item 1 CSP: PR #22 (70bb473); item 2 rate limits: PRs #22, #23 (e774d15); item 3 tokens in logs: PR #26 (906b436); item 9 channel guard: PR #29 (f564de0). Evidence in progress.md. Redis rate-limit counter split out to feat-013"
+    },
+    {
+      "id": "feat-006",
+      "name": "Env Example Sync",
+      "description": "Fix SERVE_STATIC=true crash, PGSQL_PORT NaN fallback, unify DB defaults between app and scripts, sync .env.example with the 109 env vars read by code incl. REDIS_PREFIX (items 4, 5, 6, 8); set SERVE_STATIC and APP_ENV in the Docker image (item 31). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "Blazheiko",
+      "branch": "feat/env-example-sync",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #24 (942212600f) items 4, 31; PR #27 (b8a0719) items 5, 6, 8; evidence in progress.md on feat/env-example-sync; review approved PR #27 incl. docker build + db:create:prod/db:migrate"
+    },
+    {
+      "id": "feat-007",
+      "name": "Database DX",
+      "description": "Document pgvector requirement in README, implement or remove the empty db:seed, remove/re-export empty src/drizzle/schema/index.ts (items 7, 10, 11). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "Blazheiko",
+      "branch": "feat/db-dx",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #43 (merge aaa46cf): db:seed (prompts always, demo accounts with --demo, one transaction, safe failure log), pgvector docs, empty src/drizzle files removed; typecheck, lint, pnpm test (backend 564, frontend 45, shared 3, docs 26), docs:build + docs:verify, drizzle-kit check, manual seed run on a throwaway DB; evidence in progress.md on feat/db-dx"
+    },
+    {
+      "id": "feat-008",
+      "name": "HTTP Body Fixes",
+      "description": "Read body for PATCH (or forbid patch routes), proper response for null payload, tests for body-kind/limit resolution and 413, show limits in playground, settle default limits (items 12, 13, 14). Details: docs/plan/code-issues-found-during-docs.md",
+      "owner": "Blazheiko",
+      "branch": "feat/http-body-fixes",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #46 (merge 8ee410b): PATCH reads the body, no body validator on GET/DELETE, 422/415 without Content-Type; empty payload → 204 / status without body / canonical error body, no Content-Type or Content-Length without a body; body-limit tests incl. real uWS, strict parseSize, bodyLimits in playground, defaults documented; typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), api-playground build, docs:build + docs:verify, negative controls, manual curl; evidence in progress.md on feat/http-body-fixes"
+    },
+    {
+      "id": "feat-009",
+      "name": "Internal Docs Cleanup",
+      "description": "Clean up stale internal docs outside documentation/ (item 15, scope extended): backend (remove SESSION_SECURITY, etag-improvements, directory-structure, dead export-types.js; SECURITY_ANALYSIS -> traceable status table in docs/security/; VALIDATOR_ABSTRACTION_PLAN -> ADR in docs/adr/; move HTTP_BODY_LIMITS_PLAN to docs/plan/; update backend README and scripts README); root README and AGENTS.md fixes; api-playground docs merged into documentation/playground and removed, short README; frontend README and composables docs; status lines for finished plans in docs/plan/. Plan: docs/plan/internal-docs-cleanup-plan.md",
+      "owner": "Blazheiko",
+      "branch": "feat/internal-docs-cleanup",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #49 (merge aef99ce): stale internal docs removed or replaced (backend src/docs, SECURITY_ANALYSIS -> docs/security/security-analysis-status.md with traceability of 15 findings, validator plan -> docs/adr/0001, api-playground docs merged into documentation/playground); root/backend/frontend/composables READMEs and AGENTS.md aligned with code; status lines for finished plans; docs.yml paths; typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), docs:build + docs:verify, link check 852 links / 0 violations; evidence in progress.md on feat/internal-docs-cleanup"
+    },
+    {
+      "id": "feat-010",
+      "name": "Format Baseline",
+      "description": "Make pnpm format:check pass (206 files on main) and align code style with AGENTS.md: root .prettierrc, one formatting commit, .git-blame-ignore-revs (item 16, Prettier part of item 68). Roadmap F00: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/format-baseline",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #53 (merge 0655aca): root .prettierrc.json, formatting commit 60c735c in .git-blame-ignore-revs; format:check clean (was 206 files), typecheck, lint, pnpm test (backend 671, frontend 45, shared 3, docs 26), build, test:e2e 12/12 on 4 projects, docs:build + docs:verify, AST of 385 .ts files identical; evidence in progress.md on feat/format-baseline"
+    },
+    {
+      "id": "feat-011",
+      "name": "Documentation v2",
+      "description": "VitePress documentation v2 pages (stage 6 of docs/plan/vitepress-documentation-tasks.md, T6.1-T6.10d): controllers/services, repositories/transformers, validation, websocket, storage, mail/push, AI, observability, caching/ETag, testing, deployment, shared/frontend/playground, workflow and reference pages. One page per PR.",
+      "owner": "Blazheiko",
+      "branch": "feat/docs-v2",
+      "dependencies": [
+        "feat-003"
+      ],
+      "status": "done",
+      "evidence": "Stage 6 pages merged via PRs #9, #10, #13, #14, #15, #16, #17, #18; Pages deploy run 39391819578; evidence in progress.md"
+    },
+    {
+      "id": "feat-012",
+      "name": "Remove save-user Endpoint",
+      "description": "Remove the anonymous POST /api/main/save-user endpoint (created users with an unhashed password, bypassing registration) and related code: controller/service methods, SaveUserInput/SaveUserResponse/WSSaveUserPayload schemas, frontend api.saveUser; update docs and requirements. Issue 65 in docs/plan/code-issues-found-during-docs.md",
+      "owner": "Blazheiko",
+      "branch": "fix/remove-save-user",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "This PR: shared build, pnpm typecheck/lint/test (backend 268/268), backend build, no save-user references in packages; docs:build + docs:verify"
+    },
+    {
+      "id": "feat-013",
+      "name": "Shared Rate-Limit Counter",
+      "description": "Redis-backed rate-limit store so HTTP L1, per-route and WS upgrade limits are shared across instances (leftover of item 2 / finding C-2). Today the counter lives in process memory; the nginx edge limit in documentation/backend/deployment.md is the workaround. Details: docs/plan/code-issues-found-during-docs.md item 2, docs/plan/ws-upgrade-rate-limit-plan.md; plan: docs/plan/redis-rate-limit-plan.md; tasks: docs/plan/redis-rate-limit-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/redis-rate-limit",
+      "dependencies": [
+        "feat-005"
+      ],
+      "status": "done",
+      "evidence": "PR #32 (feat/redis-rate-limit, review fixes 94c6963): typecheck, lint, backend 466, frontend 41, test:redis 16 (CI job redis-tests green), docs:build + docs:verify, manual check with two backends on one Redis; evidence in progress.md on feat/redis-rate-limit"
+    },
+    {
+      "id": "feat-014",
+      "name": "Strip Console Logs In Production",
+      "description": "Frontend production build must not print to the browser console: remove console.log(data) with wsToken from App.vue and strip console.log/info/debug/trace via esbuild.pure in the app and service-worker builds (code-issues item 60)",
+      "owner": "Blazheiko",
+      "branch": "fix/strip-console-in-prod",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "This PR: pnpm --filter frontend build (dist: console.log 45 -> 0, info 4 -> 0, debug 1 -> 0; warn/error kept), dev server keeps logs, frontend tests 41, typecheck, lint, docs:build + docs:verify"
+    },
+    {
+      "id": "feat-015",
+      "name": "Backend Console To Pino",
+      "description": "Route runtime console.error calls in the backend through pino (WS close handler, server stop); malformed JSON bodies become MalformedBodyError -> 400 bad_request logged as warn without the body (previously 500 + logger.error to Sentry with a parser message that can quote the body); drop console.log(\"start\")",
+      "owner": "Blazheiko",
+      "branch": "fix/backend-console-to-pino",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "This PR: backend tests 471 (new malformed-body.spec.ts), typecheck, lint, docs:build + docs:verify"
+    },
+    {
+      "id": "feat-016",
+      "name": "Redis Main Client Fast Failure",
+      "description": "Main Redis client fails fast instead of hanging ~45 s when Redis is down: no offline queue or resend, commandTimeout, RedisUnavailableError -> 503 service_unavailable with Retry-After, one Sentry event per incident (redis-health), WS heartbeat independent of Redis, logoutAll deadline (code-issues item 70). Plan: docs/plan/redis-main-client-timeout-plan.md; tasks: docs/plan/redis-main-client-timeout-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/redis-main-client-timeout",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #37 (merged 17ea622): typecheck, lint, backend 551, frontend 45, test:redis 31 (incl. logoutAll retry and password-reset regressions), docs:build + docs:verify, manual check with two backends and Redis stopped 19 s; evidence in progress.md on feat/redis-main-client-timeout. Exception: 8 mobile-layout E2E tests fail on main as well (not caused by feat-016), tracked as feat-017"
+    },
+    {
+      "id": "feat-017",
+      "name": "Fix Mobile Layout E2E",
+      "description": "8 Playwright tests in packages/frontend/e2e/mobile-layout.spec.ts fail on main on all 4 browsers (\"registration submit button is not hidden behind bottom browser UI\", \"support input stays visible above bottom browser UI\": toBeVisible, element not found). Found during feat-016 T10.2; blocks the E2E part of Definition of Done for UI features",
+      "owner": "Blazheiko",
+      "branch": "fix/mobile-layout-e2e",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #40: test:e2e 12/12 on 4 browsers (36/36 with --repeat-each=3), geometry check fails at a 300 px viewport, frontend typecheck now includes e2e/, lint, pnpm test, docs:build + docs:verify; evidence in progress.md on fix/mobile-layout-e2e"
+    },
+    {
+      "id": "feat-018",
+      "name": "App CI",
+      "description": "CI workflow ci.yml (format:check, typecheck, lint, test, e2e on all Playwright projects, coverage artifact), vitest testTimeout, pnpm in Playwright webServer (code-issues items 36, 37, 38). Roadmap F01: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/app-ci",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #55 (merge 7e649c6): ci.yml quality + e2e, first run without caches green (run 40089711640), negative controls red at lint (40089935251) and test (40090062773), coverage artifact, testTimeout 15 s, pnpm in Playwright; branch protection on main requires quality and e2e (strict); evidence in progress.md on feat/app-ci"
+    },
+    {
+      "id": "feat-019",
+      "name": "Docker Hardening",
+      "description": ".dockerignore with canary checks of builder stage and image layers, non-root user app, HEALTHCHECK, exec-form CMD node, migrations as one-shot runs (code-issues items 28, 29, 30). Roadmap F02: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/docker-hardening",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #67 (merge 1d10df8): .dockerignore (context 83.45 MB -> 124.7 kB, build 337 -> 172 s), user app uid 999, HEALTHCHECK checking the ping body, exec CMD, one-shot migrations; canary absent in builder stage, layers and history (positive controls); healthy/unhealthy scenarios; docker stop exit 0; docs:build + docs:verify; evidence in progress.md on feat/docker-hardening"
+    },
+    {
+      "id": "feat-020",
+      "name": "HTTP/WS Response Safety",
+      "description": "401 before res.upgrade without a live session; Cache-Control: no-store on API responses by default (code-issues items 18, 42). Roadmap F03: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/response-safety",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #69 (merge 73184a3): 401 before WS upgrade without a session + frontend refreshes the token after a failed handshake (bounded, e2e negative control 28 -> <=2 refreshes), Cache-Control no-store on API responses; backend 715, frontend 50, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual check on a running backend; evidence in progress.md on feat/response-safety"
+    },
+    {
+      "id": "feat-021",
+      "name": "Push Access & Methods",
+      "description": "test-push -> POST, declarative auth_guard on push-subscriptions and role guard on admin WS route, subscription transfer only with matching p256dh/auth (decision R2) (code-issues items 47, 48, 67). Roadmap F04: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/push-access",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #59: POST test-push with body schema, auth_guard on push routes except vapid-public-key, ws_admin_guard on admin WS group, transfer only with matching keys (409 otherwise), 404 for non-numeric subscription ids; route access matrix test with negative control; backend 686, frontend 45, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual check on a disposable DB incl. WS; evidence in progress.md on feat/push-access"
+    },
+    {
+      "id": "feat-022",
+      "name": "Push Data Access",
+      "description": "push-notification-log-repository, findByUserIdWithLogs in 2 queries keeping the 5-latest-logs contract, SQL aggregates for statistics, bounded parallel send with batch log insert (code-issues items 20, 21, 49). Roadmap F05: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/push-data-access",
+      "dependencies": [
+        "feat-021",
+        "feat-036"
+      ],
+      "status": "done",
+      "evidence": "PR #61: push-notification-log-repository, findByUserIdWithLogs in 2 queries, SQL statistics, sendToUser with concurrency 5 and one batch write; test:pg 15 (deep-equal to verbatim legacy copies, query counts), sender unit 5, backend 691, frontend 45, typecheck, lint, build, docs:build + docs:verify, manual HTTP check on a disposable DB; new code-issues item 72; evidence in progress.md on feat/push-data-access"
+    },
+    {
+      "id": "feat-023",
+      "name": "Storage Hardening",
+      "description": "buildKey in deleteFromS3, magic-bytes file type check, publicRead avatars (decision R1), restricted corsS3.xml (code-issues items 32, 44, 45, 46). Roadmap F06: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/storage-hardening",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #71 (merge fa1342d): buildObjectKey + deleteFromS3 with relative keys, detectImageType (magic bytes) for avatars and KB screenshots, public avatars, GET/HEAD-only bucket CORS; specs RED first, backend 731, frontend 50, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual upload against MinIO; evidence in progress.md on feat/storage-hardening"
+    },
+    {
+      "id": "feat-024",
+      "name": "WebSocket Cleanup",
+      "description": "WS event prefix from VITE_API_PATH_PREFIX, remove dead WS code (user-storage, unreachable branch, websocket-base reconnect) (code-issues items 17, 19). Roadmap F07: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/ws-cleanup",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #73 (merge caf4c99): WS events from VITE_API_PATH_PREFIX, pending-request check fixed (feat-009 follow-up), user-storage/unreachable branch/WebsocketBase removed; frontend 58, backend 731, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual WS with API_PATH_PREFIX=v1; new code-issues item 73; evidence in progress.md on feat/ws-cleanup"
+    },
+    {
+      "id": "feat-025",
+      "name": "Layering Cleanup",
+      "description": "controllers and ws-coordinator go through services, complete repositories barrel, no logger in repositories, clearEmbedding in a transaction (code-issues items 22, 24, 25). Roadmap F08: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/layering-cleanup",
+      "dependencies": [
+        "feat-036"
+      ],
+      "status": "done",
+      "evidence": "PR #63 (merge 0dd6975): adminUserService, userRoleService for ws-coordinator and admin_guard, full repositories barrel, no logger in repositories, clearEmbedding in one UPDATE; layering.spec.ts with negative control; test:pg 18, backend 703, frontend 45, typecheck, lint, build, docs:build + docs:verify; manual check on a disposable DB; evidence in progress.md on feat/layering-cleanup"
+    },
+    {
+      "id": "feat-026",
+      "name": "Validation Cleanup",
+      "description": "ArkType errors as messages[{path,message}], remove dead validation/controller code, ADR 0001 leftovers decided (code-issues items 26, 27). Roadmap F09: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/validation-cleanup",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #65 (merge 18af90b): per-field issues in 422/WS details, dead validation code removed, ADR 0001 leftovers decided; flip missed in chore PR #66, recorded in the final chore PR"
+    },
+    {
+      "id": "feat-027",
+      "name": "AI Reliability",
+      "description": "validate AI_TEXT_DRIVER, AI_REQUEST_TIMEOUT_MS with AbortSignal and cancellation on HTTP abort/WS close, prompt-controller through AI service with domain errors 502/504 (code-issues items 23, 50, 51). Roadmap F10: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/ai-reliability",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #75 (merge a00fdcf): AI_TEXT_DRIVER validated, AI_REQUEST_TIMEOUT_MS + caller signal in all adapters, HttpContext/WsContext signals (Support AI and prompt test cancel), promptTestService with upstream_error 502 / upstream_timeout 504; backend 763, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual against a fake provider; evidence in progress.md on feat/ai-reliability"
+    },
+    {
+      "id": "feat-028",
+      "name": "AI Usage Accounting",
+      "description": "usage for translation, prompt test and embeddings; nullable token columns (NULL = provider did not report usage) with migration and contracts (code-issues items 53). Roadmap F11: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/ai-usage-accounting",
+      "dependencies": [
+        "feat-027"
+      ],
+      "status": "done",
+      "evidence": "PR #77 (merge 551a7f8): migration llm_usage_nullable (NULL = unknown usage, user_id NULL for indexing, SUPPORT_EMBEDDING), translation/prompt test/embeddings recorded, adapters record NULL instead of dropping, callsWithoutUsage; drizzle-kit check, migration on a DB with rows, test:pg 21, backend 771, frontend 58, e2e 12, typecheck, lint, build, docs; evidence in progress.md on feat/ai-usage-accounting"
+    },
+    {
+      "id": "feat-029",
+      "name": "AI Quality",
+      "description": "Support AI language from profile/request, embedding dimension check, batched reindexAll, distance threshold, prompt cache TTL (code-issues items 43, 52, 54). Roadmap F12: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/ai-quality",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #79 (merge 074c648): answer language from the UI locale with SUPPORT_DEFAULT_LANGUAGE, embedding dimension check, batched reindexAll, SUPPORT_SEARCH_MAX_DISTANCE, prompt cache TTL with background refresh; backend 797, test:pg 22, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/ai-quality"
+    },
+    {
+      "id": "feat-030",
+      "name": "Observability",
+      "description": "LOG_LEVEL, requestId/userId in error logs, GET /ready with DB and Redis checks, HEALTHCHECK on /ready (code-issues items 33, 34, 35). Roadmap F13: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/observability",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #81 (merge df9c591): LOG_LEVEL, requestId from the first request step and userId in request logs (handleError child logger), GET /ready with DB+Redis checks, HEALTHCHECK on /api/ready, pg.Pool error no longer crashes the server; backend 815, test:redis 31, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual DB/Redis outage and image health checks; evidence in progress.md on feat/observability"
+    },
+    {
+      "id": "feat-031",
+      "name": "Static Caching",
+      "description": "immutable only for /assets, RFC 9110 If-None-Match, bounded RAM cache with streaming for large files, precompressed br/gz (code-issues items 39, 40, 41). Roadmap F14: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/static-caching",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #83 (merge 9d46bcf): immutable only for /assets, RFC 9110 If-None-Match, memory budget with streaming from disk, br/gzip variants at startup; backend 841, test:redis 31, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; manual on real uWS with the frontend build and a 5 MiB file; evidence in progress.md on feat/static-caching"
+    },
+    {
+      "id": "feat-032",
+      "name": "Shared Cleanup",
+      "description": "real shared tests, guards export, branded EntityId (code-issues items 56, 57, 58). Roadmap F15: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/shared-cleanup",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #85 (merge ecbf624): 13 real shared tests, guards re-exported from the root, branded EntityId with a type test; shared 13, backend 843, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/shared-cleanup"
+    },
+    {
+      "id": "feat-033",
+      "name": "Frontend & Playground",
+      "description": "relative VITE_BASE_URL fallback, typed VITE_* vars, playground prefix/wss/no fake queue (decision R4), /health in playground (code-issues items 59, 61, 62, 63, 64). Roadmap F16: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/frontend-playground",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #87 (merge 16d0ff5): same-origin VITE_BASE_URL fallback, typed VITE_*, prefix-aware playground (routes, /ping, proxy), wss, no fake queue; playground 11 tests, backend 843, frontend 58, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/frontend-playground"
+    },
+    {
+      "id": "feat-034",
+      "name": "Drop users.is_admin",
+      "description": "remove is_admin, role is the only source (decision R5): code first, then DROP COLUMN migration (code-issues items 66). Roadmap F17: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/drop-is-admin",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #89 (merge e303033): isAdmin removed from code and schema, migration 20261024171546_drop_users_is_admin; 0 is_admin/role mismatches on dev DB; fresh-DB migrate + seed + admin login 200 / user 403; typecheck, lint, test, build, e2e, docs:build + docs:verify; evidence in progress.md on feat/drop-is-admin"
+    },
+    {
+      "id": "feat-035",
+      "name": "ESLint Strict",
+      "description": "enable strictTypeChecked rules for backend, frontend, api-playground (three PRs) (code-issues items 68). Roadmap F18: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/eslint-strict",
+      "dependencies": [
+        "feat-010",
+        "feat-018"
+      ],
+      "status": "done",
+      "evidence": "PRs #91 (backend), #92 (frontend), #93 (api-playground): strictTypeChecked for all three, relaxations with reasons, dead root blocks removed; typecheck, lint, test (+redis, pg), build, e2e, docs:build + docs:verify; evidence in progress.md on feat/eslint-strict"
+    },
+    {
+      "id": "feat-036",
+      "name": "PG Test Harness",
+      "description": "*.pg.test.ts convention, test:pg, temporary DB with migrations, pg-tests.yml with pgvector/pgvector:pg16 (prerequisite for feat-022 and feat-025). Roadmap F19: docs/plan/open-issues-roadmap.md; tasks: docs/plan/open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/pg-test-harness",
+      "dependencies": [
+        "feat-010"
+      ],
+      "status": "done",
+      "evidence": "PR #57: *.pg.test.ts + test:pg with a throwaway database (pgvector, migrations, dropped in teardown), smoke test, pg-tests.yml green (3 passed, not skipped); local negative control still drops the database; pnpm test 671 without pg tests; typecheck, lint, format:check, docs:build + docs:verify; evidence in progress.md on feat/pg-test-harness"
+    },
+    {
+      "id": "feat-037",
+      "name": "Review Fixes",
+      "description": "fixes from the post-plan review (range 0655aca..main): WS responses under a non-api prefix, xAI abort/timeout swallowed (high); push log loss on deactivate failure, static stream hang on shrunk file, 304 without Vary, adapter timeout tests, strict VITE_* typing (medium); low findings and AC text sync in open-issues-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/review-fixes",
+      "dependencies": [
+        "feat-035"
+      ],
+      "status": "done",
+      "evidence": "PR #96 (merge 818a45c): 2 high, 5 medium and the low review findings fixed with negative controls; backend 850, frontend 61, playground 14, redis 31, pg 22, e2e 12, typecheck, lint, build, docs:build + docs:verify; evidence in progress.md on feat/review-fixes"
+    },
+    {
+      "id": "feat-038",
+      "name": "Format, Push Events, HTTP Prefix",
+      "description": "code-issues items 71 (format:check covers vue/js/mjs/css, one formatting commit in .git-blame-ignore-revs), 72 (push on business events: new sign-in, password changed / reset / logout-all as system; support reply as mention with skipIfOnline), 73 (frontend HTTP paths and Vite proxy from VITE_API_PATH_PREFIX)",
+      "owner": "Blazheiko",
+      "branch": "feat/format-push-prefix",
+      "dependencies": [
+        "feat-037"
+      ],
+      "status": "done",
+      "evidence": "PRs #99 (item 73: HTTP paths and proxy from VITE_API_PATH_PREFIX), #100 (item 72: push on sign-in, password change/reset, logout-all, support reply), #101 (item 71: format glob, formatting commit dd9db8b in .git-blame-ignore-revs); typecheck, lint, format:check, test, build, e2e, docs:build + docs:verify; evidence in progress.md on feat/format-push-prefix"
+    },
+    {
+      "id": "feat-039",
+      "name": "Hide users.session_token",
+      "description": "users.session_token (the per-user Redis session namespace, also part of the signed cookie) leaked in every userTransformer response (login, registration, OAuth, phone link); strip it, drop the unused findBySessionToken, document why the column exists",
+      "owner": "Blazheiko",
+      "branch": "feat/hide-session-token",
+      "dependencies": [
+        "feat-038"
+      ],
+      "status": "done",
+      "evidence": "PR #106 (merge 10f5b51): sessionToken stripped by userTransformer, unused findBySessionToken removed, auth-security.md explains users.session_token; unit test fails without the fix; manual login on a fresh DB; backend 858, e2e 12, typecheck, lint, build, docs:build + docs:verify"
+    },
+    {
+      "id": "feat-040",
+      "name": "Security Regression Tests",
+      "description": "regression tests for findings marked 'closed, no test' in docs/security/security-analysis-status.md: C-1 (CORS origin outside allowlist), H-1 (error details only in local), H-3 (static extension allowlist and unsafe URL status), H-4 (default cookie sameSite Lax), M-2 (validation of urlencoded/multipart), M-3 (415 for content type not allowed by route), M-4 (non-digit Content-Length), L-1 (DELETE registered), L-2 (doc routes absent outside manual-test), L-3 (no 'Get Http Data' log); update the status table",
+      "owner": "Blazheiko",
+      "branch": "feat/security-regression-tests",
+      "dependencies": [
+        "feat-039"
+      ],
+      "status": "done",
+      "evidence": "PR #109: regression tests for C-1, H-1, H-3, H-4, M-2, M-3, M-4, L-1, L-2, L-3, each checked by mutation; typecheck, lint, format:check, test (backend 908), docs:build + docs:verify; evidence in progress.md on feat/security-regression-tests"
+    },
+    {
+      "id": "feat-041",
+      "name": "Engine-Neutral Route Doc Schemas",
+      "description": "serialize-routes.ts TODO(validation-docs): route docs accept non-ArkType validator.describe() payloads (a ready { expression, fields, jsonSchema } descriptor or a plain JSON Schema object), so a custom adapter shows its body/query schema in the playground; validators without a usable describe() still serialize without a schema; update documentation/backend/validation.md",
+      "owner": "Blazheiko",
+      "branch": "feat/neutral-route-doc-schemas",
+      "dependencies": [
+        "feat-040"
+      ],
+      "status": "done",
+      "evidence": "PR #113: describeSchema() accepts ArkType, a ready descriptor or a JSON Schema object for validator/queryValidator; 6 new serialize-routes cases; typecheck, lint, format:check, test (backend 914), docs:build + docs:verify; evidence in progress.md on feat/neutral-route-doc-schemas"
+    },
+    {
+      "id": "feat-042",
+      "name": "CSRF Hardening",
+      "description": "docs/plan/csrf-hardening-plan.md: CSRF_ENFORCE and CSRF_STRICT_ORIGIN default to true, CSRF_ALLOWED_ORIGINS required in production-like envs, Sec-Fetch-Site check, login CSRF closed (fail-closed guard), anonymous session deleted on login + audit of auth transitions, frontend session/token model with one verified retry, Service Worker never caches API, e2e with enforcement on; task list in docs/plan/csrf-hardening-tasks.md",
+      "owner": "Blazheiko",
+      "branch": "feat/csrf-hardening",
+      "dependencies": [
+        "feat-041"
+      ],
+      "status": "done",
+      "evidence": "PR #132 (merge f511388): CSRF_ENFORCE/CSRF_STRICT_ORIGIN default true, fail-closed guard, session rotation, SW API bypass; pnpm typecheck/lint/test clean, backend 975 tests, test:redis 45, test:e2e 12, test:e2e:security 7; evidence block in progress.md on feat/csrf-hardening. Rollout tasks T0.4, R.1-R.6 are per-environment and tracked outside the feature"
+    },
+    {
+      "id": "feat-043",
+      "name": "OAuth Email Verification and Configured Providers",
+      "description": "docs/plan/oauth-email-verification-plan.md: link an OAuth account to an existing user by email only when the provider reports the email as verified (Google verified_email, GitHub primary+verified, GitLab OIDC email_verified, Facebook never); new users from a verified email get emailVerifiedAt; GET /api/auth/oauth/providers lists configured providers, redirect to an unconfigured provider returns 404; frontend shows buttons only for configured providers (adds GitHub, GitLab) and a message for oauth_email_unverified; update documentation/backend/oauth.md",
+      "owner": "Blazheiko",
+      "branch": "feat/oauth-email-verification",
+      "dependencies": [
+        "feat-042"
+      ],
+      "status": "done",
+      "evidence": "PR #138 (merge 89cb878; reviewed as #137): OAuth linking by email only for a provider-verified email, GET /api/auth/oauth/providers, buttons only for configured providers, callback errors always 302 with reason; pnpm typecheck/lint/format:check clean, pnpm test backend 1004 frontend 126; mutation checks on the linking guard and callback redirect; manual check against a running backend (providers list, 404 for unconfigured, 302 on callback errors, buttons and reason message in Chrome); evidence block in progress.md. Not done: real provider login (needs real credentials), test:e2e"
+    },
+    {
+      "id": "feat-044",
+      "name": "Runtime Response Validation",
+      "description": "docs/plan/response-schema-runtime-validation.md + -tasks.md: RESPONSE_VALIDATION=strict|log|off (default strict outside production, off in production) validates the handler result against the route ResponseSchema before serialization; strict replaces an invalid response with 500 internal_error (WS: status error, data null), log keeps the response and logs a warn without values (sampled, deduplicated, Sentry), off skips the check; responses without a body and middleware-stopped requests are not checked; update documentation/backend",
+      "owner": "Blazheiko",
+      "branch": "feat/response-validation",
+      "dependencies": [],
+      "status": "done",
+      "evidence": "PR #142 (merge 562c38b): RESPONSE_VALIDATION strict|log|off checks the handler result against ResponseSchema before serialization (HTTP any handler status, no-body/middleware/thrown skipped; strict 500 drops handler headers, keeps cookies; WS data null); logs without values, deduplicated, Sentry tag response_validation; found and fixed usage total bigint string; pnpm typecheck/lint/format:check clean, pnpm test backend 1075 frontend 126, test:pg regression, mutation checks, manual crawl in log and strict, docs:build/verify; evidence in progress.md. Not done: WS routes against a running server, local test:e2e, rollout (T13)"
+    }
+  ]
 }
