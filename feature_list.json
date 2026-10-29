@@ -431,8 +431,8 @@
             "owner": "Blazheiko",
             "branch": "feat/response-validation",
             "dependencies": [],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #142 (merge 562c38b): RESPONSE_VALIDATION strict|log|off checks the handler result against ResponseSchema before serialization (HTTP any handler status, no-body/middleware/thrown skipped; strict 500 drops handler headers, keeps cookies; WS data null); logs without values, deduplicated, Sentry tag response_validation; found and fixed usage total bigint string; pnpm typecheck/lint/format:check clean, pnpm test backend 1075 frontend 126, test:pg regression, mutation checks, manual crawl in log and strict, docs:build/verify; evidence in progress.md. Not done: WS routes against a running server, local test:e2e, rollout (T13)"
         }
     ]
 }
