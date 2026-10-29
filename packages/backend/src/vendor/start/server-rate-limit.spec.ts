@@ -158,6 +158,7 @@ const loadServer = async (
         httpRoutes: routes.map((route) => ({
             ...route,
             url: route.url.replace(/^api\//, `${pathPrefix}/`),
+            responseCheck: null,
         })),
         wsRoutesByUrl: new Map(),
         sourceHttpRoutes: [],

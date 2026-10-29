@@ -163,7 +163,7 @@ describe('Cache-Control on API responses', () => {
                     payload: { a: 1 },
                     headers: { 'cache-control': 'private, max-age=5' },
                 }),
-            ],
+            ].map((route) => ({ ...route, responseCheck: null })),
             wsRoutesByUrl: new Map(),
             sourceHttpRoutes: [],
             sourceWsRoutes: [],

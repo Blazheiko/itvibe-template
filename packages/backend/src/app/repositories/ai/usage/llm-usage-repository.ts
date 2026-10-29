@@ -55,7 +55,7 @@ export const llmUsageRepository: ILlmUsageRepository = {
 
     async countText(filter = {}) {
         const where = buildTextWhere(filter)
-        const query = db.select({ count: sql<number>`count(*)` }).from(llmTextUsage)
+        const query = db.select({ count: sql<number>`count(*)::int` }).from(llmTextUsage)
         const result = await (where !== undefined ? query.where(where) : query)
         return result[0]?.count ?? 0
     },

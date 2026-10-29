@@ -128,7 +128,7 @@ const loadServer = async (app: Record<string, unknown> = {}) => {
     })
     const { initServer } = await import('./server.js')
     await initServer({
-        httpRoutes: routes,
+        httpRoutes: routes.map((route) => ({ ...route, responseCheck: null })),
         wsRoutesByUrl: new Map(),
         sourceHttpRoutes: [],
         sourceWsRoutes: [],

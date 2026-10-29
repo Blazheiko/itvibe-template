@@ -1,6 +1,7 @@
 import aiConfig from '#config/ai.js'
 import supportConfig from '#config/support.js'
 import loggingConfig from '#config/logging.js'
+import responseValidationConfig from '#config/response-validation.js'
 import healthConfig from '#config/health.js'
 import appConfig from '#config/app.js'
 import { authConfig } from '#config/auth.js'
@@ -49,6 +50,12 @@ export function validateRuntimeConfig(): void {
 
     if (loggingConfig.configError !== null) {
         throw new Error(`Invalid logging configuration: ${loggingConfig.configError}`)
+    }
+
+    if (responseValidationConfig.configError !== null) {
+        throw new Error(
+            `Invalid response validation configuration: ${responseValidationConfig.configError}`,
+        )
     }
 
     if (supportConfig.configError !== null) {

@@ -40,6 +40,22 @@ const anonymousContext = (): HttpContext =>
         httpData: { headers: new Map(), cookies: new Map(), method: 'post' },
     }) as unknown as HttpContext
 
+describe('runtime response validation wiring (feat-044 T5)', () => {
+    it('every normalized route has responseCheck set, never undefined', () => {
+        for (const route of [...http, ...ws]) {
+            expect(route.responseCheck, route.url).not.toBeUndefined()
+        }
+    })
+
+    it('a route with a ResponseSchema gets a check, one without gets null', () => {
+        // Tests run outside production, so RESPONSE_VALIDATION is never off here.
+        for (const route of [...http, ...ws]) {
+            const expected = route.ResponseSchema === undefined ? 'object' : 'function'
+            expect(typeof route.responseCheck, route.url).toBe(expected)
+        }
+    })
+})
+
 describe('route access matrix (code-issues items 48, 67)', () => {
     it('test-push accepts only POST', () => {
         const testPush = pushRoutes.filter((route) => route.url.endsWith('/test-push'))

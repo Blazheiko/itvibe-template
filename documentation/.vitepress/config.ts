@@ -101,6 +101,7 @@ const config = withMermaid(
                             { text: 'Репозиторії', link: '/backend/repositories' },
                             { text: 'Трансформери', link: '/backend/transformers' },
                             { text: 'Валідація', link: '/backend/validation' },
+                            { text: 'Перевірка відповідей', link: '/backend/response-validation' },
                             { text: 'Маршрутизація', link: '/backend/routing' },
                             { text: 'Middleware', link: '/backend/middlewares' },
                             { text: 'База даних', link: '/backend/database' },

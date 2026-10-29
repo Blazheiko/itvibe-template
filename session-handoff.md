@@ -1,5 +1,5 @@
 # Session Handoff
 
-**Feature:** feat-042 - CSRF Hardening · **Branch:** `feat/csrf-hardening` · **Date:** 2026-10-28
+**Feature:** feat-044 - Runtime Response Validation · **Branch:** `feat/response-validation` · **Date:** 2026-10-29
 
-Implementation of tasks A–E is complete; evidence is in `progress.md`. Remaining: review and merge of the feature PR, the rollout tasks (T0.4, R.1–R.6 in `docs/plan/csrf-hardening-tasks.md`), then the PR flipping feat-042 to `done`.
+Tasks T0–T11 are complete; evidence is in `progress.md`. Remaining: merge of the feature PR, the PR flipping feat-044 to `done`, then T12 follow-ups and the T13 rollout feature (`docs/plan/response-schema-runtime-validation-tasks.md`).

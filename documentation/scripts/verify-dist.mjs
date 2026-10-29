@@ -56,6 +56,7 @@ const KEY_PAGES = [
     { page: 'backend/repositories.md', h1: 'Репозиторії' },
     { page: 'backend/transformers.md', h1: 'Трансформери' },
     { page: 'backend/validation.md', h1: 'Валідація' },
+    { page: 'backend/response-validation.md', h1: 'Перевірка відповідей' },
     { page: 'backend/deployment.md', h1: 'Деплой' },
     { page: 'backend/observability.md', h1: 'Observability' },
     { page: 'backend/testing.md', h1: 'Тестування' },

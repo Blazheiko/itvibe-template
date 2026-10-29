@@ -5,6 +5,7 @@ import appConfig from '#config/app.js'
 import corsConfig from '#config/cors.js'
 import state from '#app/state/state.js'
 import { createResponseData } from '#vendor/utils/network/response-data.js'
+import { hasResponseBody, isEmptyPayload } from '#vendor/utils/network/response-body.js'
 import {
     onMessage,
     onOpen,
@@ -45,6 +46,7 @@ import type {
     HttpContext,
     HttpData,
     MyWebSocket,
+    NormalizedRouteItem,
     ResponseData,
     RouteItem,
     Payload,
@@ -80,7 +82,7 @@ export type UserData = Record<string, unknown>
 const server: TemplatedApp = uWS.App()
 
 interface ServerRoutes {
-    httpRoutes: RouteItem[]
+    httpRoutes: NormalizedRouteItem[]
     wsRoutesByUrl: Readonly<WsRoutes>
     sourceHttpRoutes: routeList
     sourceWsRoutes: routeList
@@ -278,6 +280,28 @@ export const readAndParseBody = async (
 
 const NO_BODY_SKIPPED_HEADERS = ['content-type', 'content-length'] as const
 
+/**
+ * Runtime ResponseSchema check of what the handler returned (feat-044, plan §4.3.1).
+ * Only a response that will carry the handler payload is checked: whatever the
+ * status (a /ready 503 included), but not 3xx/204/205 or an empty payload. In
+ * strict mode an invalid payload becomes a canonical 500: the handler headers
+ * may describe the rejected payload (ETag, Content-Disposition, ...) and are
+ * dropped, the cookies stay because the session has already changed.
+ */
+const checkHandlerResponse = (
+    route: NormalizedRouteItem,
+    responseData: ResponseData,
+    requestId: string,
+): void => {
+    if (route.responseCheck === null) return
+    const { status, payload } = responseData
+    if (isEmptyPayload(payload) || !hasResponseBody(status, payload)) return
+    if (route.responseCheck(payload, { route: route.url, transport: 'http', requestId })) return
+    responseData.status = 500
+    responseData.headers.length = 0
+    responseData.payload = { ...buildStatusErrorBody(500) }
+}
+
 const sendResponse = (
     res: HttpResponse,
     responseData: ResponseData,
@@ -287,17 +311,10 @@ const sendResponse = (
     // Only null and undefined are "no payload"; false, 0 and "" are JSON data.
     // undefined is outside the Payload type but a handler cast can still yield it.
     const payload = responseData.payload as Payload | undefined
-    const isEmptyPayload = payload === null || payload === undefined
-    const isSuccess = status >= 200 && status < 300
-    // 3xx (incl. 304), 204 and 205 never carry a body (RFC 9110 §15.3.5, §15.3.6,
-    // §15.4.5); neither does a 2xx with an empty payload.
-    const noBody =
-        (status >= 300 && status < 400) ||
-        status === 204 ||
-        status === 205 ||
-        (isSuccess && isEmptyPayload)
+    const emptyPayload = isEmptyPayload(payload)
+    const noBody = !hasResponseBody(status, payload)
     // 200 with nothing to send becomes 204; another 2xx (201, 202, …) keeps its meaning.
-    const sentStatus = status === 200 && isEmptyPayload ? 204 : status
+    const sentStatus = status === 200 && emptyPayload ? 204 : status
     writeHttpStatus(res, sentStatus)
     if (!noBody) res.writeHeader('content-type', 'application/json')
     setSecurityHeaders(res, responseData.headers)
@@ -315,7 +332,7 @@ const sendResponse = (
         res.endWithoutBody()
     } else if (noBody) {
         res.end()
-    } else if (isEmptyPayload) {
+    } else if (emptyPayload) {
         res.end(makeJson(buildStatusErrorBody(status)))
     } else res.end(makeJson(payload))
 }
@@ -509,7 +526,7 @@ const docRoutesHandler = async (
 const setHttpHandler = async (
     res: HttpResponse,
     req: HttpRequest,
-    route: RouteItem,
+    route: NormalizedRouteItem,
 ): Promise<void> => {
     if (state['listenSocket'] === undefined) {
         logger.warn('We just refuse if already shutting down')
@@ -592,8 +609,10 @@ const setHttpHandler = async (
                 (await executeMiddlewares(route.middlewares, context))) &&
             responseData.status >= 200 &&
             responseData.status < 300
-        )
+        ) {
             responseData.payload = await route.handler(context)
+            checkHandlerResponse(route, responseData, requestId)
+        }
 
         // After the handler, right before sending: a slow request must not restore
         // the cookie of a session that another request replaced meanwhile.
@@ -629,7 +648,7 @@ const configureHttp = async (server: TemplatedApp, routes: ServerRoutes): Promis
         }
     }
 
-    routes.httpRoutes.forEach((route: RouteItem) => {
+    routes.httpRoutes.forEach((route: NormalizedRouteItem) => {
         registerHttpRoute(server, route)
     })
     if (configApp.env === 'manual-test' && configApp.docPage && configApp.serveStatic) {
@@ -692,7 +711,7 @@ const configureHttp = async (server: TemplatedApp, routes: ServerRoutes): Promis
     })
 }
 
-const registerHttpRoute = (server: TemplatedApp, route: RouteItem): void => {
+const registerHttpRoute = (server: TemplatedApp, route: NormalizedRouteItem): void => {
     const path = `/${normalizePath(route.url)}`
     const handler = async (res: HttpResponse, req: HttpRequest): Promise<void> => {
         await setHttpHandler(res, req, route)

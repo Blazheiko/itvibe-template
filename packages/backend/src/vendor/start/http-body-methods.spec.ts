@@ -153,7 +153,7 @@ describe('HTTP methods with a request body', () => {
                 route('post', 'optional', OptionalSchema),
                 route('post', 'defaults', DefaultSchema),
                 route('post', 'no-validator'),
-            ],
+            ].map((route) => ({ ...route, responseCheck: null })),
             wsRoutesByUrl: new Map(),
             sourceHttpRoutes: [],
             sourceWsRoutes: [],
