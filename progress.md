@@ -2,41 +2,39 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-28
-**Active Feature:** feat-043 - OAuth Email Verification and Configured Providers
-**Branch:** `feat/oauth-email-verification` (stacked on `docs/restore-after-134`, PR #136)
-**Plan:** `docs/plan/oauth-email-verification-plan.md`
+**Last Updated:** 2026-10-29
+**Active Feature:** feat-044 - Runtime Response Validation
+**Branch:** `feat/response-validation`
+**Plan:** `docs/plan/response-schema-runtime-validation.md`, tasks: `docs/plan/response-schema-runtime-validation-tasks.md`
 
 ## Status
 
 ### Done
 
-- [x] Start: PR #135 (feature_list entry + plan; feat-042 closed)
-- [x] Backend (`0cf9b5e`): `OAuthUserInfo.emailVerified` (Google `verified_email`, GitHub primary+verified from `/user/emails`, GitLab OIDC `email_verified` with `openid email` scopes, Facebook never); linking an existing user by email only for a verified email, otherwise `409` `oauth_email_unverified`; new users from a verified email get `emailVerifiedAt`; `isProviderConfigured` / `getConfiguredProviders`, unconfigured provider → not found; `GET /api/auth/oauth/providers`
-- [x] Bug found on the way: callback errors returned `400` with a `Location` header (`mapControllerError` overwrote the `302`), so the browser never got back to the frontend. Every callback outcome is now a `302`; `reason=oauth_email_unverified` is appended to `OAUTH_FRONTEND_ERROR_URL`
-- [x] Frontend (`4286c5f`): `SocialAuthButtons.vue` + `useOAuthProviders` (one request, cached, retried after a failure); buttons only for configured providers incl. GitHub and GitLab; no divider when none; register keeps the terms check (`interceptClick`); Login message for `reason=oauth_email_unverified`
-- [x] Docs: `documentation/backend/oauth.md` (linking rule, providers route, unconfigured → 404, errors, adding a provider with `emailVerified` and `OAuthProviderSchema`)
+- [x] T0: PR #141 (feature_list entry + plan and task list)
+- [x] T1–T2 (`929b3b8`): `config/response-validation.ts` — `RESPONSE_VALIDATION=strict|log|off` (default `strict` outside production, `off` in production), `RESPONSE_VALIDATION_SAMPLE_RATE` 0..1; invalid value stops the start via `validateRuntimeConfig()`; `.env.example`
+- [x] T4 (`90726a5`): `vendor/utils/validation/validate-response.ts` — `createResponseCheck(schema, config)`; logs path/code/expected only (no values), one log line + one Sentry event (tag `response_validation`) per route per minute with a `suppressed` counter; sampling only in `log`; schema output never replaces the payload
+- [x] T3, T5–T7 (`22d1fd4`): `hasResponseBody()`/`isEmptyPayload()` shared with `sendResponse`; `NormalizedRouteItem.responseCheck` (required, built once in `routesHandler`); HTTP `checkHandlerResponse` (any status incl. `/ready` 503; not for middleware-stopped, thrown, 3xx/204/205/empty); strict → canonical 500, handler headers dropped, cookies kept; WS strict → `status: 'error'`, `internal_error`, `data: null`
+- [x] T8 (`807505f`): crawl of the running backend in `log` then `strict` (≈35 HTTP routes incl. admin, push CRUD, auth) found one mismatch — `GET /api/admin/usage/text` `total` was a bigint string (`count(*)` without `::int`); fixed + pg regression test. Temporary vitest pin to `log` removed
+- [x] T9: benchmark — valid check is 3–5% of `JSON.stringify` (1000 users 5.4 µs vs 141 µs); an invalid response costs about as much as serialization
+- [x] T10 (`7d3b06c`): `documentation/backend/response-validation.md`, env rows in `configuration.md`, sidebar + `KEY_PAGES`
 
-### Not done
+### Not done / out of scope
 
-- [ ] Real login through a provider: needs real client credentials (only fake ones were used)
-- [ ] `pnpm --filter frontend test:e2e` not run in this session
+- [ ] WS routes not exercised against a running server (covered by dispatcher tests only)
+- [ ] `GET /api/admin/history-online` returned 500 locally: the local DB lacks the `user_online.role` migration — unrelated to this feature
+- [ ] `pnpm --filter frontend test:e2e` not run locally (backend-only change; e2e on CI does not start the backend)
+- [ ] T12 follow-ups and T13 rollout (separate feature `feat-0YY`)
 
 ## Evidence of Completion
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — clean
-- `pnpm test` — backend 998, frontend 126, shared 14, api-playground 14, documentation 26
-- Mutation checks: disabling the linking guard fails 5 tests in `oauth-service.spec.ts`; the previous `oauth-controller.ts` fails 4 of 5 tests in `oauth-controller.spec.ts`
+- `pnpm test` — backend 1075, frontend 126, shared 14, api-playground 14, documentation 26
+- `PG_TEST_URL=… pnpm --filter backend test:pg llm-usage.pg.test.ts` — 23 passed; the new `countText` test fails without the fix (`'3'` vs `3`)
+- Mutation checks: disabling the HTTP and WS call sites fails 5 tests; removing the header reset fails 1
+- Manual: backend on :3100 with `RESPONSE_VALIDATION=log` logged `data.total expected a number` for `/api/admin/usage/text`; after the fix, `strict` crawl — no validation errors, no 500 from validation
 - `pnpm docs:build && pnpm docs:verify` — passed
-- Manual check against the running backend (local Redis + PostgreSQL), fake credentials passed as env vars:
-    - no `*_CLIENT_ID` set: `GET /api/auth/oauth/providers` → `{"providers":[]}`, `/google/redirect` → `404`, login modal has no social block and no divider
-    - Google + GitHub set, GitLab with only a client id: providers → `["google","github"]`, `/gitlab/redirect` → `404`; `/github/redirect` → `302` to github.com with `client_id`, `state`, `scope=user:email` and the redirect URI
-    - callback with a wrong `state` and with the right `state` + fake `code`: both `302 Location: /?error=oauth_failed` (logged `OAuth state mismatch`, `Failed to exchange authorization code`)
-    - login modal in Chrome shows exactly Google and GitHub; `/login?error=oauth_failed&reason=oauth_email_unverified` shows the dedicated message, without `reason` the generic one
 
 ## Notes for Next Session
 
-- Merge PR #136 first; this branch contains its three commits.
-- Real-provider check: set real `GOOGLE_*` in `.env` and log in with a new email and with an email that already has a password account.
-- Local frontend `.env` has `VITE_BASE_URL=http://localhost:5173`; when the docs dev server holds 5173 the app calls it instead of the backend (503).
-- Out of scope (plan): linking social accounts from account settings, encrypting `oauth_accounts` tokens.
+- After merge: PR flipping feat-044 to `done`, then register the rollout feature (T13) and follow-ups (T12) in `feature_list.json`.
