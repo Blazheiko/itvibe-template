@@ -432,7 +432,57 @@
             "branch": "feat/response-validation",
             "dependencies": [],
             "status": "done",
-            "evidence": "PR #142 (merge 562c38b): RESPONSE_VALIDATION strict|log|off checks the handler result against ResponseSchema before serialization (HTTP any handler status, no-body/middleware/thrown skipped; strict 500 drops handler headers, keeps cookies; WS data null); logs without values, deduplicated, Sentry tag response_validation; found and fixed usage total bigint string; pnpm typecheck/lint/format:check clean, pnpm test backend 1075 frontend 126, test:pg regression, mutation checks, manual crawl in log and strict, docs:build/verify; evidence in progress.md. Not done: WS routes against a running server, local test:e2e, rollout (T13)"
+            "evidence": "PR #142 (merge 562c38b): RESPONSE_VALIDATION strict|log|off checks the handler result against ResponseSchema before serialization (HTTP any handler status, no-body/middleware/thrown skipped; strict 500 drops handler headers, keeps cookies; WS data null); logs without values, deduplicated, Sentry tag response_validation; found and fixed usage total bigint string; pnpm typecheck/lint/format:check clean, pnpm test backend 1075 frontend 126, test:pg regression, mutation checks, manual crawl in log and strict, docs:build/verify; evidence in progress.md. after review: CI=1 test:e2e 12 passed, invalid response checked manually in strict/log/off, benchmark per mode; follow-ups feat-045..feat-049. Not done: WS routes against a running server"
+        },
+        {
+            "id": "feat-045",
+            "name": "Response Validation Rollout",
+            "description": "docs/plan/response-schema-runtime-validation-tasks.md T13: RESPONSE_VALIDATION=log in staging (rate 1), then production (rate from the T9 benchmark); collect warn logs and Sentry events tagged response_validation, fix each mismatch in its own PR; after 14 days without warnings switch staging to strict; production strict only by a recorded team decision",
+            "owner": "Blazheiko",
+            "branch": "chore/response-validation-rollout",
+            "dependencies": ["feat-044"],
+            "status": "not-started",
+            "evidence": ""
+        },
+        {
+            "id": "feat-046",
+            "name": "Strip Undeclared Response Fields",
+            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §4.4: response schemas use '+': 'delete' (after an audit for morphs) and strict sends the cleaned schema output, so ResponseSchema becomes an allow-list that blocks leaks of extra fields",
+            "owner": "Blazheiko",
+            "branch": "feat/strip-response-fields",
+            "dependencies": ["feat-044"],
+            "status": "not-started",
+            "evidence": ""
+        },
+        {
+            "id": "feat-047",
+            "name": "Wire-Format Response Schemas",
+            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §7: align response schemas with the JSON the client receives (Date -> ISO string, e.g. push-subscription schemas) so /doc/routes describes the wire format; decide whether CI validates JSON.parse(JSON.stringify(payload))",
+            "owner": "Blazheiko",
+            "branch": "feat/wire-format-response-schemas",
+            "dependencies": ["feat-044"],
+            "status": "not-started",
+            "evidence": ""
+        },
+        {
+            "id": "feat-048",
+            "name": "Uniform WS Error Envelope",
+            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §4.3.2: validation_failed and not_found WS errors return data: null instead of the initial data: {}, like rate-limit and response-validation errors",
+            "owner": "Blazheiko",
+            "branch": "feat/ws-error-envelope",
+            "dependencies": ["feat-044"],
+            "status": "not-started",
+            "evidence": ""
+        },
+        {
+            "id": "feat-049",
+            "name": "Validate Async WS Messages",
+            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §4.3.2: runtime schema check for messages a WS handler sends later (support AI replies) and for broadcasts, which feat-044 does not cover",
+            "owner": "Blazheiko",
+            "branch": "feat/ws-async-message-validation",
+            "dependencies": ["feat-044"],
+            "status": "not-started",
+            "evidence": ""
         }
     ]
 }
