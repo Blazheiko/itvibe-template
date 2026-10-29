@@ -115,7 +115,7 @@ export const helloService = {
 
 ## Крок 3. Controller
 
-Контролер перекладає HTTP на виклик сервісу і назад. Що є в `context` і як з ним працювати — див. [HttpContext докладно](/backend/controllers-services#httpcontext-докладно).
+Контролер перекладає HTTP на виклик сервісу і назад. Що є в `context` і як з ним працювати — див. [HttpContext докладно](/backend/controllers#httpcontext-докладно).
 
 ```ts
 // packages/backend/src/app/controllers/http/hello/hello-controller.ts
@@ -272,8 +272,8 @@ cd packages/backend && npx vitest run src/app/services/hello
 | ------------------------ | ------------------------------------------- | ---------------------------------------------------------------------- |
 | Контракт у `shared`      | `HelloQuerySchema`, `HelloResponseSchema`   | [Пакет shared](/shared/), [Валідація](/backend/validation)             |
 | Runtime-валідація        | `queryValidator` → `422`                    | [Валідація](/backend/validation)                                       |
-| `Result` замість `throw` | `Result.ok` / `Result.err(badRequest(...))` | [Контролери та сервіси](/backend/controllers-services)                 |
-| Мапінг помилок           | `mapControllerError` → `400`                | [Контролери та сервіси](/backend/controllers-services)                 |
+| `Result` замість `throw` | `Result.ok` / `Result.err(badRequest(...))` | [Сервіси](/backend/services)                                           |
+| Мапінг помилок           | `mapControllerError` → `400`                | [Контролери](/backend/controllers)                                     |
 | Оголошення маршруту      | `defineRoute` у групі з `prefix`            | [Маршрутизація](/backend/routing) і [Middleware](/backend/middlewares) |
 
 Чого тут ще немає: бази даних, сесії і захисту маршруту. Усе це додає наступний крок.

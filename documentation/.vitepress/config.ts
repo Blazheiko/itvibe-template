@@ -96,14 +96,10 @@ const config = withMermaid(
                             { text: 'Архітектура', link: '/backend/architecture' },
                             { text: 'Життєвий цикл запиту', link: '/backend/request-lifecycle' },
                             { text: 'Конфігурація', link: '/backend/configuration' },
-                            {
-                                text: 'Контролери та сервіси',
-                                link: '/backend/controllers-services',
-                            },
-                            {
-                                text: 'Репозиторії та трансформери',
-                                link: '/backend/repositories-transformers',
-                            },
+                            { text: 'Контролери', link: '/backend/controllers' },
+                            { text: 'Сервіси', link: '/backend/services' },
+                            { text: 'Репозиторії', link: '/backend/repositories' },
+                            { text: 'Трансформери', link: '/backend/transformers' },
                             { text: 'Валідація', link: '/backend/validation' },
                             { text: 'Маршрутизація', link: '/backend/routing' },
                             { text: 'Middleware', link: '/backend/middlewares' },

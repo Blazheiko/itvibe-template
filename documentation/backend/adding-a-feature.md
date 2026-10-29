@@ -272,7 +272,7 @@ export const noteService = {
 
 ## Крок 7. Controller
 
-Контролер — тонкий шар. Він дістає `userId` з `context.auth`, бере вже провалідований payload через `getTypedPayload`, викликає сервіс і перетворює помилку на канонічну відповідь через `mapControllerError` (ця функція ж виставляє HTTP-статус). Усі поля `context` (`httpData`, `responseData`, `session`, `auth`, `logger`) описані в [HttpContext докладно](/backend/controllers-services#httpcontext-докладно). Структуру взято з [push-subscription-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts).
+Контролер — тонкий шар. Він дістає `userId` з `context.auth`, бере вже провалідований payload через `getTypedPayload`, викликає сервіс і перетворює помилку на канонічну відповідь через `mapControllerError` (ця функція ж виставляє HTTP-статус). Усі поля `context` (`httpData`, `responseData`, `session`, `auth`, `logger`) описані в [HttpContext докладно](/backend/controllers#httpcontext-докладно). Структуру взято з [push-subscription-controller.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/controllers/http/notifications/push-subscription-controller.ts).
 
 ```ts
 // packages/backend/src/app/controllers/http/note/note-controller.ts
