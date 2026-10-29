@@ -2,7 +2,7 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-29
+**Last Updated:** 2026-10-29 (review fixes)
 **Active Feature:** feat-044 - Runtime Response Validation
 **Branch:** `feat/response-validation`
 **Plan:** `docs/plan/response-schema-runtime-validation.md`, tasks: `docs/plan/response-schema-runtime-validation-tasks.md`
@@ -23,8 +23,8 @@
 
 - [ ] WS routes not exercised against a running server (covered by dispatcher tests only)
 - [ ] `GET /api/admin/history-online` returned 500 locally: the local DB lacks the `user_online.role` migration — unrelated to this feature
-- [ ] `pnpm --filter frontend test:e2e` not run locally (backend-only change; e2e on CI does not start the backend)
-- [ ] T12 follow-ups and T13 rollout (separate feature `feat-0YY`)
+- T12 follow-ups registered in `feature_list.json`: feat-046 (strip undeclared fields), feat-047 (wire-format schemas), feat-048 (uniform WS error envelope), feat-049 (async WS messages); per-route override deliberately not registered until a route needs it
+- T13 rollout registered as feat-045
 
 ## Evidence of Completion
 
@@ -34,6 +34,12 @@
 - Mutation checks: disabling the HTTP and WS call sites fails 5 tests; removing the header reset fails 1
 - Manual: backend on :3100 with `RESPONSE_VALIDATION=log` logged `data.total expected a number` for `/api/admin/usage/text`; after the fix, `strict` crawl — no validation errors, no 500 from validation
 - `pnpm docs:build && pnpm docs:verify` — passed
+- After review: `CI=1 pnpm --filter frontend test:e2e` (production build + `vite preview`, as on CI) — 12 passed. Without `CI=1` Playwright reuses whatever dev server already listens on :5173; on this machine that was an unrelated running dev server and 12 tests failed there
+- After review, manual check of an invalid response in all three modes: the `count(*)::int` fix temporarily reverted, backend on :3100, `GET /api/admin/usage/text` as admin:
+    - `strict` → `500 {"status":"error","code":"internal_error","message":"Internal Server Error"}` + `ERROR Response does not match ResponseSchema` with `path: data.total`
+    - `log` → `200` with `"total":"0"` + `WARN` with the same issue
+    - `off` → `200` with `"total":"0"`, no log line
+- After review, benchmark per mode (off / log 0.1 / log 1 / strict) with the method in `documentation/backend/response-validation.md`
 
 ## Notes for Next Session
 
