@@ -1,51 +1,6 @@
 import { type } from '@arktype/type'
 import { CanonicalErrorResponseSchema } from './error-response.js'
 
-export const PushSubscriptionSchema = type({
-    id: 'string',
-    userId: 'string',
-    endpoint: 'string',
-    p256dhKey: 'string',
-    authKey: 'string',
-    userAgent: 'string | null',
-    ipAddress: 'string | null',
-    deviceType: 'string | null',
-    browserName: 'string | null',
-    browserVersion: 'string | null',
-    osName: 'string | null',
-    osVersion: 'string | null',
-    notificationTypes: "('mention' | 'system')[] | null",
-    timezone: 'string | null',
-    isActive: 'boolean',
-    lastUsedAt: 'Date | null',
-    createdAt: 'Date',
-    updatedAt: 'Date',
-    'notificationLogs?': 'unknown[]',
-})
-export type PushSubscription = typeof PushSubscriptionSchema.infer
-
-export const PushSubscriptionLogSchema = type({
-    id: 'string',
-    'subscriptionId?': 'string | null',
-    'userId?': 'string | null',
-    status: 'string | null',
-    'errorMessage?': 'string | null',
-    'messageTitle?': 'string | null',
-    'messageBody?': 'string | null',
-    'messageData?': 'unknown',
-    'responseData?': 'unknown',
-    sentAt: 'Date',
-})
-export type PushSubscriptionLog = typeof PushSubscriptionLogSchema.infer
-
-export const PushSubscriptionLogSummarySchema = type({
-    id: 'string',
-    messageTitle: 'string | null',
-    status: 'string | null',
-    sentAt: 'Date',
-})
-export type PushSubscriptionLogSummary = typeof PushSubscriptionLogSummarySchema.infer
-
 // Wire shapes of push-subscription-transformer.ts and push-notification-log-transformer.ts:
 // the response schemas are an allow-list (feat-046), so every field the client gets
 // is listed here.
