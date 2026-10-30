@@ -151,11 +151,7 @@ export const ForgotPasswordResponseSchema = type({
 export type ForgotPasswordResponse = typeof ForgotPasswordResponseSchema.infer
 
 type ResetPasswordReason =
-    | 'invalid_token'
-    | 'expired_token'
-    | 'used_token'
-    | 'token_required'
-    | 'passwords_mismatch'
+    'invalid_token' | 'expired_token' | 'used_token' | 'token_required' | 'passwords_mismatch'
 // The canonical error already accepts `reason: string`; a second error branch with the
 // ResetPasswordReason enum would overlap it, and an overlapping union cannot get the
 // undeclared-key strip (feat-046). The exact reason stays in ResetPasswordResponse.
