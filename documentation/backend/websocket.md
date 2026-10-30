@@ -141,7 +141,12 @@ const WsMessageSchema = type({
 }
 ```
 
-При помилці `status: "error"`, `data: null` (або `{}`), а `error` — конверт `{ code, message, reason?, details? }`.
+Помилки бувають двох видів:
+
+- **Помилка транспорту** — диспетчер не дійшов до відповіді обробника або відхилив її (маршрут не знайдено, невалідний payload, ліміт, виняток, перевірка відповіді, Redis): `status: "error"`, `data: null`, а `error` — конверт `{ code, message, reason?, details? }`. Конверт будує [ws-error-envelope.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/utils/network/ws-error-envelope.ts); `setWsError` ставить усі три поля разом, тож дані, які обробник встиг записати до винятку, клієнт не отримає.
+- **Бізнес-помилка** — обробник або middleware повернули помилку як результат (`appErrorToWsError`, наприклад `ws_admin_guard`): вона лежить у `data` як `{ status: "error", code, message, reason? }`, а `error: null`. Таку відповідь описує `ResponseSchema` маршруту (union з `CanonicalErrorResponseSchema`), як і в HTTP.
+
+Відповідь починається з `data: null`: якщо middleware зупинив запит і нічого не записав, клієнт отримає `null`.
 
 ### Диспетчер
 
