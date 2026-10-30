@@ -437,12 +437,12 @@
         {
             "id": "feat-045",
             "name": "Response Validation Rollout",
-            "description": "docs/plan/strip-response-fields-plan.md §4.6 (supersedes response-schema-runtime-validation-tasks.md T13): RESPONSE_VALIDATION_CONTRACT has no off mode and log is fail-closed for schema mismatches, so production starts in log after the feat-046 staging gate; rollout is production log -> strict (the only difference left: undeclared keys become a 500 instead of being stripped) after a period without undeclared_key warnings in logs and Sentry",
+            "description": "documentation/backend/response-validation.md «Розгортання»: the template has no production, so the rollout is a documented procedure for adopters — strict in dev/CI/e2e, log on staging for ≥ 7 days without mismatch records, log in production, optional production strict after ≥ 14 days without undeclared_key; rollback via RESPONSE_VALIDATION_CONTRACT or the previous backend version",
             "owner": "Blazheiko",
             "branch": "chore/response-validation-rollout",
             "dependencies": ["feat-044", "feat-046"],
-            "status": "not-started",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR chore/response-validation-rollout: «Розгортання» section in documentation/backend/response-validation.md; pnpm docs:build && pnpm docs:verify passed. No rollout run: the template has no staging or production"
         },
         {
             "id": "feat-046",
