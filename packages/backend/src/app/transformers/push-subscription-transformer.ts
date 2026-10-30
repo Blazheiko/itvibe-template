@@ -1,5 +1,9 @@
 import { DateTime } from 'luxon'
 import type { PushSubscriptionRow, PushSubscriptionWithLogs } from '#app/repositories/index.js'
+import {
+    pushNotificationLogTransformer,
+    type SerializedPushLogSummary,
+} from './push-notification-log-transformer.js'
 
 export type SerializedPushSubscription = Omit<
     PushSubscriptionRow,
@@ -14,8 +18,9 @@ export type SerializedPushSubscription = Omit<
 
 export type SerializedPushSubscriptionWithLogs = Omit<
     PushSubscriptionWithLogs,
-    'id' | 'userId' | 'createdAt' | 'updatedAt' | 'lastUsedAt'
+    'id' | 'userId' | 'createdAt' | 'updatedAt' | 'lastUsedAt' | 'notificationLogs'
 > & {
+    notificationLogs: SerializedPushLogSummary[]
     id: string
     userId: string
     created_at: string | null
@@ -37,9 +42,13 @@ export const pushSubscriptionTransformer = {
     },
 
     serializeWithLogs(subscription: PushSubscriptionWithLogs): SerializedPushSubscriptionWithLogs {
-        const { createdAt, updatedAt, lastUsedAt, id, userId, ...rest } = subscription
+        const { createdAt, updatedAt, lastUsedAt, id, userId, notificationLogs, ...rest } =
+            subscription
         return {
             ...rest,
+            notificationLogs: notificationLogs.map((log) =>
+                pushNotificationLogTransformer.serializeSummary(log),
+            ),
             id: String(id),
             userId: String(userId),
             created_at: DateTime.fromJSDate(createdAt).toISO(),

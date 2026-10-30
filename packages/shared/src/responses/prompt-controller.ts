@@ -1,17 +1,17 @@
 import { type } from '@arktype/type'
 import { CanonicalErrorResponseSchema } from './error-response.js'
 
-// A prompt row as llm_system_prompts stores it (prompt-repository.ts PromptRow).
+// prompt-transformer.ts SerializedPrompt: a llm_system_prompts row as the client gets it.
 export const PromptRowSchema = type({
-    id: 'bigint',
+    id: 'string',
     type: "'SUPPORT_SYSTEM' | 'SUPPORT_FIRST_CHAT' | 'SUPPORT_QUERY_TRANSLATION'",
     topic: 'string | null',
     content: 'string',
     model: 'string | null',
     temperature: 'number | null',
     maxTokens: 'number | null',
-    createdAt: 'Date',
-    updatedAt: 'Date',
+    createdAt: 'string',
+    updatedAt: 'string',
 })
 export type PromptRowResponse = typeof PromptRowSchema.infer
 

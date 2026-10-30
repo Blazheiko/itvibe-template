@@ -12,9 +12,10 @@ export interface PushSubscriptionStatistics {
     pendingNotifications: number
     successRate: number
     last7DaysCount: number
-    lastUsed: Date | null
+    /** ISO strings: the wire shape (feat-047). */
+    lastUsed: string | null
     isActive: boolean
-    createdAt: Date
+    createdAt: string
 }
 
 export interface PushSubscriptionStatisticsResult {
@@ -53,9 +54,9 @@ export async function getPushSubscriptionStatistics(
             successRate:
                 totalNotifications > 0 ? (sentNotifications / totalNotifications) * 100 : 0,
             last7DaysCount,
-            lastUsed: subscription.lastUsedAt,
+            lastUsed: subscription.lastUsedAt?.toISOString() ?? null,
             isActive: subscription.isActive,
-            createdAt: subscription.createdAt,
+            createdAt: subscription.createdAt.toISOString(),
         },
     }
 }

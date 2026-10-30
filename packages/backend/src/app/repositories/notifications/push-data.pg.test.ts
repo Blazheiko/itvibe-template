@@ -73,9 +73,10 @@ describe.skipIf(!hasPg)('push data access on PostgreSQL', async () => {
                 successRate:
                     totalNotifications > 0 ? (sentNotifications / totalNotifications) * 100 : 0,
                 last7DaysCount,
-                lastUsed: subscription.lastUsedAt,
+                // Wire shape since feat-047: ISO strings.
+                lastUsed: subscription.lastUsedAt?.toISOString() ?? null,
                 isActive: subscription.isActive,
-                createdAt: subscription.createdAt,
+                createdAt: subscription.createdAt.toISOString(),
             },
         }
     }

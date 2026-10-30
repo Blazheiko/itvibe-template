@@ -1,8 +1,12 @@
 import type { CreateSubscriptionInput, UpdateSubscriptionInput } from 'shared/schemas'
 import { Result } from 'better-result'
-import { pushSubscriptionRepository, type PushNotificationLogRow } from '#app/repositories/index.js'
+import { pushSubscriptionRepository } from '#app/repositories/index.js'
 import type { SerializedPushSubscription } from '#app/transformers/push-subscription-transformer.js'
-import { pushSubscriptionTransformer } from '#app/transformers/index.js'
+import {
+    pushNotificationLogTransformer,
+    pushSubscriptionTransformer,
+    type SerializedPushNotificationLog,
+} from '#app/transformers/index.js'
 import { conflict, internalMessage, notFound, type AppResult } from '#app/services/shared/errors.js'
 import { tryInternal } from '#app/services/shared/result-helpers.js'
 import { getPushSubscriptionStatistics } from '#app/services/statistics/push-subscription-statistics-service.js'
@@ -122,7 +126,7 @@ export const pushSubscriptionService = {
         subscriptionId: bigint,
     ): Promise<
         AppResult<{
-            data: SerializedPushSubscription & { notificationLogs: PushNotificationLogRow[] }
+            data: SerializedPushSubscription & { notificationLogs: SerializedPushNotificationLog[] }
         }>
     > {
         const result = await tryInternal(
@@ -146,7 +150,7 @@ export const pushSubscriptionService = {
         return Result.ok({
             data: {
                 ...pushSubscriptionTransformer.serialize(subscription),
-                notificationLogs: logs,
+                notificationLogs: pushNotificationLogTransformer.serializeArray(logs),
             },
         })
     },
@@ -218,7 +222,7 @@ export const pushSubscriptionService = {
         subscriptionId: bigint,
     ): Promise<
         AppResult<{
-            data: Awaited<ReturnType<typeof pushSubscriptionRepository.getLogsBySubscriptionId>>
+            data: SerializedPushNotificationLog[]
         }>
     > {
         const logsResult = await tryInternal(
@@ -229,7 +233,7 @@ export const pushSubscriptionService = {
             return Result.err(logsResult.error)
         }
 
-        return Result.ok({ data: logsResult.value })
+        return Result.ok({ data: pushNotificationLogTransformer.serializeArray(logsResult.value) })
     },
 
     async getSubscriptionStatistics(
