@@ -42,7 +42,7 @@ const createRoute = (
         description: route.description,
         allowedContentTypes: route.allowedContentTypes,
         ...(responseSchema !== undefined ? { ResponseSchema: responseSchema } : {}),
-        // Built once here, so RESPONSE_VALIDATION=off costs one null check per request.
+        // Built once here; null only for a route without a ResponseSchema.
         responseCheck: createResponseCheck(responseSchema, responseValidationConfig),
     }
 }

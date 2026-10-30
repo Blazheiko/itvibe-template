@@ -23,10 +23,6 @@ Production — коли `APP_IS_PRODUCTION=true` (або `APP_ENV=production`/`p
 RESPONSE_VALIDATION_CONTRACT=log
 ```
 
-::: warning Стара назва
-Один реліз сервер ще читає `RESPONSE_VALIDATION` і пише попередження при старті: `strict` і `log` діють як нові значення, `off` стає `log`. Якщо задано обидві змінні, діє `RESPONSE_VALIDATION_CONTRACT`. `RESPONSE_VALIDATION_SAMPLE_RATE` ігнорується з попередженням.
-:::
-
 ::: warning Production
 У `log` невідповідність схемі дає `500`. Перед першим релізом у production сервер має щонайменше тиждень працювати на staging у `log` без записів `Response does not match ResponseSchema`. Перемикача немає: відкат — попередня версія бекенда.
 :::

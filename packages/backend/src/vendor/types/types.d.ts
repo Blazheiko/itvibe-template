@@ -285,8 +285,8 @@ export interface RouteItem<
 
 /**
  * A route after routesHandler: responseCheck is always set, to the runtime
- * ResponseSchema check or to null (RESPONSE_VALIDATION=off or no schema), so the
- * request path only compares it with null.
+ * ResponseSchema check or to null for a route without a schema, so the request path
+ * only compares it with null.
  */
 export interface NormalizedRouteItem extends RouteItem {
     responseCheck: ResponseCheck | null
