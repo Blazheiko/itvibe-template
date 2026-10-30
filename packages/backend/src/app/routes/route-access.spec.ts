@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { BaseType } from '@arktype/type'
+import { type } from '@arktype/type'
 
 import { unknownPaths } from '#app/routes/response-schema-guards.js'
 import type { HttpContext, RouteItem } from '#vendor/types/types.js'
@@ -119,10 +119,26 @@ describe('response schema guards (feat-046)', () => {
             'data[].messageData',
         ])
         const found = routesWithSchema.flatMap((route) =>
-            unknownPaths(route.ResponseSchema as BaseType)
+            unknownPaths(route.ResponseSchema!)
                 .filter((path) => !allowed.has(path))
                 .map((path) => `${route.method} ${route.url}: ${path}`),
         )
         expect(found).toEqual([])
+    })
+
+    it('a route that can answer an error accepts the full canonical error', () => {
+        // mapControllerError may add reason/details, session_web adds csrfToken: under the
+        // undeclared-key check a hand-written error branch would turn them into a 500.
+        const minimal = { status: 'error', code: 'bad_request', message: 'm' }
+        const full = { ...minimal, reason: 'r', details: { a: 1 }, csrfToken: 't' }
+        const broken = routesWithSchema
+            .filter((route) => {
+                const reject = route.ResponseSchema!.onDeepUndeclaredKey('reject')
+                return (
+                    !(reject(minimal) instanceof type.errors) && reject(full) instanceof type.errors
+                )
+            })
+            .map((route) => `${route.method} ${route.url}`)
+        expect(broken).toEqual([])
     })
 })

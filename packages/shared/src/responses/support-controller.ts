@@ -13,8 +13,17 @@ export const SupportOpenChatResponseSchema = type.or(
 )
 export type SupportOpenChatResponse = typeof SupportOpenChatResponseSchema.infer
 
+// support-service.ts SupportChatHistoryItem.
+export const SupportChatHistoryItemSchema = type({
+    id: 'string',
+    role: "'user' | 'assistant'",
+    content: 'string',
+    screenshots: 'string[] | null',
+    createdAt: 'string',
+})
+
 export const SupportGetChatHistoryResponseSchema = type.or(
-    { status: "'ok'", 'message?': 'string', 'data?': 'unknown[]' },
+    { status: "'ok'", 'message?': 'string', 'data?': SupportChatHistoryItemSchema.array() },
     CanonicalErrorResponseSchema,
 )
 export type SupportGetChatHistoryResponse = typeof SupportGetChatHistoryResponseSchema.infer
@@ -25,14 +34,33 @@ export const SupportDeleteChatHistoryResponseSchema = type.or(
 )
 export type SupportDeleteChatHistoryResponse = typeof SupportDeleteChatHistoryResponseSchema.infer
 
+// knowledge-base-service.ts KbItemData.
+export const SupportKnowledgeBaseItemSchema = type({
+    id: 'string',
+    title: 'string',
+    content: 'string',
+    category: 'string | null',
+    isActive: 'boolean',
+    hasScreenshot: 'boolean',
+    screenshotKey: 'string | null',
+    embeddingIndexed: 'boolean',
+    createdAt: 'string',
+    updatedAt: 'string',
+})
+
 export const SupportKnowledgeBaseListResponseSchema = type.or(
-    { status: "'ok'", 'message?': 'string', 'data?': 'unknown[]', 'total?': 'number' },
+    {
+        status: "'ok'",
+        'message?': 'string',
+        'data?': SupportKnowledgeBaseItemSchema.array(),
+        'total?': 'number',
+    },
     CanonicalErrorResponseSchema,
 )
 export type SupportKnowledgeBaseListResponse = typeof SupportKnowledgeBaseListResponseSchema.infer
 
 export const SupportKnowledgeBaseItemResponseSchema = type.or(
-    { status: "'ok'", 'message?': 'string', 'data?': 'unknown' },
+    { status: "'ok'", 'message?': 'string', 'data?': SupportKnowledgeBaseItemSchema },
     CanonicalErrorResponseSchema,
 )
 export type SupportKnowledgeBaseItemResponse = typeof SupportKnowledgeBaseItemResponseSchema.infer

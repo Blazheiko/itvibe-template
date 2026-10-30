@@ -1,4 +1,5 @@
 import { type } from '@arktype/type'
+import { CanonicalErrorResponseSchema } from './error-response.js'
 
 // One llm_text_usage row. Token counts are null when the provider did not report
 // usage; userId is null for system calls (knowledge-base indexing).
@@ -15,16 +16,19 @@ export const TextUsageRowSchema = type({
 })
 export type TextUsageRow = typeof TextUsageRowSchema.infer
 
-export const GetTextUsageResponseSchema = type({
-    status: "'success' | 'error'",
-    'message?': 'string',
-    'data?': {
-        rows: TextUsageRowSchema.array(),
-        total: 'number',
-        page: 'number',
-        limit: 'number',
+export const GetTextUsageResponseSchema = type.or(
+    {
+        status: "'success'",
+        'message?': 'string',
+        'data?': {
+            rows: TextUsageRowSchema.array(),
+            total: 'number',
+            page: 'number',
+            limit: 'number',
+        },
     },
-})
+    CanonicalErrorResponseSchema,
+)
 export type GetTextUsageResponse = typeof GetTextUsageResponseSchema.infer
 
 export const TextUsageStatRowSchema = type({
@@ -38,11 +42,14 @@ export const TextUsageStatRowSchema = type({
 })
 export type TextUsageStatRow = typeof TextUsageStatRowSchema.infer
 
-export const GetUsageStatsResponseSchema = type({
-    status: "'success' | 'error'",
-    'message?': 'string',
-    'data?': {
-        text: TextUsageStatRowSchema.array(),
+export const GetUsageStatsResponseSchema = type.or(
+    {
+        status: "'success'",
+        'message?': 'string',
+        'data?': {
+            text: TextUsageStatRowSchema.array(),
+        },
     },
-})
+    CanonicalErrorResponseSchema,
+)
 export type GetUsageStatsResponse = typeof GetUsageStatsResponseSchema.infer
