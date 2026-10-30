@@ -1,13 +1,7 @@
 import type { Type } from '@arktype/type'
 
 import { defaultValidator } from '#app/validate/index.js'
-import type {
-    HttpContext,
-    HttpHandler,
-    RouteConfig,
-    RouteItem,
-    TypedHandler,
-} from '#vendor/types/types.js'
+import type { HttpContext, RouteConfig, RouteItem, TypedHandler } from '#vendor/types/types.js'
 import type { RouteResponse } from '#app/routing/route-response.js'
 import type { BodyMethod, HttpRouteMethod } from '#vendor/utils/routing/body-methods.js'
 
@@ -69,7 +63,5 @@ export function defineRoute<
         ...config,
         validator: config.validator !== undefined ? defaultValidator(config.validator) : undefined,
         queryValidator: wrappedQueryValidator,
-        // RouteItem erases the handler type anyway; the result check only matters on input.
-        handler: config.handler as HttpHandler<InferSchema<TBody>, InferQueryFromSchema<TQuery>>,
     }
 }

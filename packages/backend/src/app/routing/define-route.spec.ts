@@ -315,6 +315,13 @@ describe('defineRoute response typing', () => {
             // @ts-expect-error a top-level array is not a Payload
             handler: () => ['a'],
         })
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: type('string[]'),
+            // @ts-expect-error no object satisfies a non-Payload schema
+            handler: () => ({ responseSchemaIsNotPayload: ['a'] }),
+        })
         expect(true).toBe(true)
     })
 })
@@ -339,6 +346,12 @@ describe('defineWsRoute response typing', () => {
             ResponseSchema: type({ ready: 'boolean' }),
             // @ts-expect-error { status: 'ok' } has no `ready`
             handler: (): { status: 'ok' } => ({ status: 'ok' }),
+        })
+        defineWsRoute({
+            url: 'not-payload',
+            ResponseSchema: type('string[]'),
+            // @ts-expect-error no object satisfies a non-Payload schema
+            handler: () => ({ responseSchemaIsNotPayload: ['a'] }),
         })
         defineWsRoute({ url: 'free', handler: () => ({ anything: 1 }) })
         expect(true).toBe(true)

@@ -15,7 +15,7 @@
 - [x] 0.4 / 7.1: `pnpm --filter backend typecheck` — before 1.93 s (1.93 / 1.96 / 1.90), after 2.31 s (2.14 / 2.31 / 2.47, cold 3.02 s excluded). Noisy; growth ≈ 0.4 s
 - [x] 0.5 / 7.2: `ResponseSchema` coverage 60/60 HTTP, 4/4 WS (plan said 5 WS; there are 4)
 - [x] 1.1–1.2: all `shared/responses` schemas are `type(...)` / `type.or(...)` → static `Type`; generic constraint `Type` accepts all 64 routes
-- [x] 1.3: `RouteResponse<TRes>` — input not assignable to `Payload` → marker `ResponseSchemaIsNotPayload<TIn>` (no result satisfies it); no current schema hits it
+- [x] 1.3: `RouteResponse<TRes>` — input not assignable to `Payload` → `never` (review: a structural marker could be built by a handler; replaced, negative tests for HTTP and WS; the handler casts in `defineRoute`/`defineWsRoute` became unnecessary and were removed); no current schema hits it
 - [x] 1.4: no controller is shared between HTTP and WS (WS controllers live in `controllers/ws`)
 - [x] 1.5 / 4.2 / 6: no `204` routes. Redirects: OAuth `redirect`, `callback` (own schemas, different statuses, already conform) and `/support/screenshot/:articleId`. Decision: specialised `SupportScreenshotResponseSchema`, no shared redirect schema
 - [x] 2–3, 5: type tests in `define-route.spec.ts` (RED: 8 unused `@ts-expect-error`), `TypedHandler`, `route-response.ts`, generic in `defineRoute` / `defineWsRoute`; contracts kept (optional `ResponseSchema`, default `undefined`, returns `RouteItem`, runtime unchanged)
