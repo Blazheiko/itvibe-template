@@ -1,6 +1,7 @@
 import type { RateLimit, RouteItem, MyWebSocket, WsResponseData } from '#vendor/types/types.js'
 import logger from '#vendor/utils/logger.js'
 import { clientKey, rateLimitStore, retryAfterSeconds } from './rate-limit-store.js'
+import { createWsErrorEnvelope } from '#vendor/utils/network/ws-error-envelope.js'
 
 function getWsClientIdentifier(ws: MyWebSocket): string {
     // Use IP address from WebSocket user data for rate limiting
@@ -26,18 +27,6 @@ interface WsRateLimitResult {
     retryAfter?: number
     errorMessage?: string
 }
-
-type WsErrorEnvelope = NonNullable<WsResponseData['error']>
-
-const createWsErrorEnvelope = (
-    code: string,
-    message: string,
-    extra?: Record<string, unknown>,
-): WsErrorEnvelope => ({
-    code,
-    message,
-    ...(extra ?? {}),
-})
 
 export default function checkRateLimitWs(
     ws: MyWebSocket,

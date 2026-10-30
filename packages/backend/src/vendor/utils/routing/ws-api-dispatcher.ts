@@ -18,19 +18,7 @@ import { ValidationError } from '#app/validate/errors/validation-error.js'
 import { validateRoutePayload } from '#vendor/utils/validation/validate-route-payload.js'
 import logger from '#vendor/utils/logger.js'
 import { isEmptyPayload } from '#vendor/utils/network/response-body.js'
-
-type WsErrorEnvelope = NonNullable<WsResponseData['error']>
-
-const createWsErrorEnvelope = (
-    code: string,
-    message: string,
-    options?: { reason?: string; details?: unknown },
-): WsErrorEnvelope => ({
-    code,
-    message,
-    ...(options?.reason !== undefined ? { reason: options.reason } : {}),
-    ...(options?.details !== undefined ? { details: options.details } : {}),
-})
+import { createWsErrorEnvelope, setWsError } from '#vendor/utils/network/ws-error-envelope.js'
 
 export default async (
     message: WsMessage,
@@ -40,7 +28,8 @@ export default async (
     wsRoutesByUrl: Readonly<WsRoutes>,
 ): Promise<WsResponseData> => {
     const responseData: WsResponseData = {
-        data: {},
+        // null until the handler answers: an error or a stopped middleware sends no data.
+        data: null,
         event: message.event,
         timestamp: message.timestamp,
         status: '200',
@@ -108,11 +97,9 @@ export default async (
                     if (result.ok) {
                         responseData.data = result.payload as typeof responseData.data
                     } else {
-                        responseData.data = null
-                        responseData.status = 'error'
-                        responseData.error = createWsErrorEnvelope(
-                            'internal_error',
-                            'Internal server error',
+                        setWsError(
+                            responseData,
+                            createWsErrorEnvelope('internal_error', 'Internal server error'),
                         )
                     }
                 }
@@ -120,18 +107,19 @@ export default async (
 
             return responseData
         }
-        responseData.status = 'error'
-        responseData.error = createWsErrorEnvelope('not_found', 'Route not found')
+        setWsError(responseData, createWsErrorEnvelope('not_found', 'Route not found'))
     } catch (e: unknown) {
         if (e instanceof ValidationError) {
-            responseData.status = 'error'
-            responseData.error = createWsErrorEnvelope('validation_failed', 'Validation failure', {
-                details: {
-                    kind: 'validation',
-                    messages: e.messages,
-                    ...(e.issues !== undefined ? { issues: e.issues } : {}),
-                },
-            })
+            setWsError(
+                responseData,
+                createWsErrorEnvelope('validation_failed', 'Validation failure', {
+                    details: {
+                        kind: 'validation',
+                        messages: e.messages,
+                        ...(e.issues !== undefined ? { issues: e.issues } : {}),
+                    },
+                }),
+            )
         } else {
             logger.error(
                 {
@@ -143,8 +131,10 @@ export default async (
                 },
                 'WS Message Error',
             )
-            responseData.status = 'error'
-            responseData.error = createWsErrorEnvelope('internal_error', 'Internal server error')
+            setWsError(
+                responseData,
+                createWsErrorEnvelope('internal_error', 'Internal server error'),
+            )
         }
     }
 

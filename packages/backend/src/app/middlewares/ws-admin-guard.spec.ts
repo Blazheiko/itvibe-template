@@ -5,7 +5,7 @@ import wsAdminGuard from './ws-admin-guard.js'
 
 const wsContext = (role: string | undefined) => ({
     userData: role === undefined ? null : { role },
-    responseData: { status: '200', data: {}, error: null, event: 'admin/x', timestamp: 0 },
+    responseData: { status: '200', data: null, error: null, event: 'admin/x', timestamp: 0 },
 })
 
 describe('ws_admin_guard', () => {
