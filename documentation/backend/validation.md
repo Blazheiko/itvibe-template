@@ -96,7 +96,7 @@ defineRoute({
 
 ### Виведення типів
 
-`defineRoute` виводить тип `payload` з `Type<T>` схеми тіла, а тип `query` — зі схеми query (або `null`, якщо `queryValidator` не задано). Для обробників, оголошених окремо (методи контролерів), є хелпер `InferQuery<typeof Schema>` в [app/validate/index.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/validate/index.ts); на рівні контракту — `InferPayload<V>`. У shared-схемах тип зазвичай експортується поруч зі схемою через `typeof Schema.infer` / `["inferIn"]`.
+`defineRoute` виводить тип `payload` з `Type<T>` схеми тіла, а тип `query` — зі схеми query (або `null`, якщо `queryValidator` не задано). Якщо задано `ResponseSchema`, результат хендлера звіряється з її вхідним типом (`inferIn`) — див. [Тип відповіді хендлера](/backend/routing#тип-відповіді-хендлера). Для обробників, оголошених окремо (методи контролерів), є хелпер `InferQuery<typeof Schema>` в [app/validate/index.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/validate/index.ts); на рівні контракту — `InferPayload<V>`. У shared-схемах тип зазвичай експортується поруч зі схемою через `typeof Schema.infer` / `["inferIn"]`.
 
 ## Де виконується валідація
 
