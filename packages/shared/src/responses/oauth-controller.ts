@@ -1,17 +1,20 @@
 import { type } from '@arktype/type'
+import { CanonicalErrorResponseSchema } from './error-response.js'
 
-const OAuthRedirectStatus = type.enumerated('redirect', 'error')
-export const OAuthRedirectResponseSchema = type({
-    status: OAuthRedirectStatus,
-    'message?': 'string',
-})
+// The redirect answers 302 or, for an unknown provider, the canonical error of
+// mapControllerError (with `code`), which is checked at runtime.
+export const OAuthRedirectResponseSchema = type.or(
+    { status: "'redirect'" },
+    CanonicalErrorResponseSchema,
+)
 export type OAuthRedirectResponse = typeof OAuthRedirectResponseSchema.infer
 
-const OAuthCallbackStatus = type.enumerated('success', 'error')
-export const OAuthCallbackResponseSchema = type({
-    status: OAuthCallbackStatus,
-    'message?': 'string',
-})
+// The callback is always a 302 back to the frontend (not checked at runtime); the body
+// marks the outcome with the canonical error shape, like every other route.
+export const OAuthCallbackResponseSchema = type.or(
+    { status: "'success'" },
+    CanonicalErrorResponseSchema,
+)
 export type OAuthCallbackResponse = typeof OAuthCallbackResponseSchema.infer
 
 // Providers whose client id, secret and redirect URI are all set on the backend.

@@ -130,14 +130,27 @@ describe('response schema guards (feat-046)', () => {
     it('a route that can answer an error accepts the full canonical error', () => {
         // mapControllerError may add reason/details, session_web adds csrfToken: under the
         // undeclared-key check a hand-written error branch would turn them into a 500.
-        const minimal = { status: 'error', code: 'bad_request', message: 'm' }
-        const full = { ...minimal, reason: 'r', details: { a: 1 }, csrfToken: 't' }
+        // Any error branch counts, also one without `code`: it would reject or strip it.
+        const probes = [
+            { status: 'error' },
+            { status: 'error', message: 'm' },
+            { status: 'error', code: 'bad_request', message: 'm' },
+        ]
+        const full = {
+            status: 'error',
+            code: 'bad_request',
+            message: 'm',
+            reason: 'r',
+            details: { a: 1 },
+            csrfToken: 't',
+        }
         const broken = routesWithSchema
             .filter((route) => {
                 const reject = route.ResponseSchema!.onDeepUndeclaredKey('reject')
-                return (
-                    !(reject(minimal) instanceof type.errors) && reject(full) instanceof type.errors
+                const answersErrors = probes.some(
+                    (probe) => !(reject(probe) instanceof type.errors),
                 )
+                return answersErrors && reject(full) instanceof type.errors
             })
             .map((route) => `${route.method} ${route.url}`)
         expect(broken).toEqual([])
@@ -156,4 +169,22 @@ describe('response schema guards (feat-046)', () => {
         })
         expect(failed.map((route) => route.url)).toEqual([])
     })
+
+    it.each(['strict', 'log'] as const)(
+        '%s keeps the canonical error of GET /auth/oauth/:provider/redirect',
+        (mode) => {
+            // Unknown provider → mapControllerError → 400 with `code` (reviewer P1).
+            const route = http.find((item) => item.url.endsWith('auth/oauth/:provider/redirect'))
+            const check = createResponseCheck(route?.ResponseSchema, { mode })
+            const payload = {
+                status: 'error',
+                code: 'bad_request',
+                message: 'Unsupported provider',
+            }
+            expect(check?.(payload, { route: 'oauth', transport: 'http' })).toEqual({
+                ok: true,
+                payload,
+            })
+        },
+    )
 })

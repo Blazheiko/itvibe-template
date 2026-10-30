@@ -2,7 +2,7 @@ import { type } from '@arktype/type'
 import { CanonicalErrorResponseSchema, type WithCanonicalError } from './error-response.js'
 
 export const PingResponseSchema = type({
-    status: 'string',
+    status: "'ok'",
 })
 export type PingResponse = typeof PingResponseSchema.infer
 
