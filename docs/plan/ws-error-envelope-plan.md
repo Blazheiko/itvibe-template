@@ -21,13 +21,13 @@
 
 Шляхи помилок у диспетчері (`packages/backend/src/vendor/utils/routing/ws-api-dispatcher.ts`):
 
-| Шлях                                                    | `data` зараз           | Рядок                 |
-| ------------------------------------------------------- | ---------------------- | --------------------- |
-| Маршрут не знайдено → `not_found`                       | `{}`                   | 124                   |
-| `ValidationError` → `validation_failed`                 | `{}`                   | 128                   |
-| Виняток (зокрема невалідний `event`) → `internal_error` | `{}` або часткові дані | 147                   |
-| Перевірка відповіді → `internal_error`                  | `null`                 | 111                   |
-| Rate limit → `rate_limited`                             | `null`                 | `ws-rate-limit.ts:96` |
+| Шлях                                               | `data` зараз           | Рядок                 |
+| -------------------------------------------------- | ---------------------- | --------------------- |
+| Маршрут не знайдено → `not_found`                  | `{}`                   | 124                   |
+| `ValidationError` → `validation_failed`            | `{}`                   | 128                   |
+| Виняток handler'а чи middleware → `internal_error` | `{}` або часткові дані | 147                   |
+| Перевірка відповіді → `internal_error`             | `null`                 | 111                   |
+| Rate limit → `rate_limited`                        | `null`                 | `ws-rate-limit.ts:96` |
 
 `internal_error` з `catch` може навіть віддати те, що handler встиг записати в `responseData.data`
 до винятку, — кидок після присвоєння не скидає `data`.
@@ -90,8 +90,8 @@ export const setWsError = (responseData: WsResponseData, envelope: WsErrorEnvelo
 ### 4.3 Охорона
 
 Тест у `ws-validation.spec.ts` (або новий `ws-error-envelope.spec.ts`): для кожного шляху помилки
-диспетчера — `not_found`, `validation_failed`, виняток handler'а (зокрема після запису в
-`responseData.data`), невалідний `event`, перевірка відповіді, rate limit — відповідь має
+диспетчера — `not_found` (зокрема `event` з порожнім іменем маршруту), `validation_failed`, виняток
+handler'а (зокрема після запису в `responseData.data`), перевірка відповіді, rate limit — відповідь має
 `status: 'error'`, `data: null`, `error.code` очікуваний.
 
 ### 4.4 Документація
@@ -109,7 +109,7 @@ export const setWsError = (responseData: WsResponseData, envelope: WsErrorEnvelo
    виправлення: `data: null` і один модуль конверта; бізнес-помилки поза обсягом); гілка
    `feat/ws-error-envelope`.
 2. **T1** — тести перед зміною (§4.3): червоні на `not_found`, `validation_failed`, винятку
-   handler'а й невалідному `event`.
+   handler'а й `event` з порожнім іменем маршруту.
 3. **T2** — `ws-error-envelope.ts` (§4.1); три копії замінити імпортом.
 4. **T3** — диспетчер: `setWsError` на всіх шляхах помилок, початкове `data: null` (§4.2);
    оновити фікстури тестів, що будують `responseData` з `data: {}`

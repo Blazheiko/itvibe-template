@@ -85,9 +85,14 @@ describe('ws-api-dispatcher transport errors (feat-048)', () => {
         expect(JSON.stringify(result)).not.toContain('secret')
     })
 
-    it('an event without a route name is an internal_error with data null', async () => {
+    it('an event with an empty route name is not_found with data null', async () => {
+        // ':only'.split(':')[0] is '', not undefined: no route matches it.
         const result = await dispatch(':only', null)
-        expect(result).toMatchObject({ status: 'error', data: null })
+        expect(result).toMatchObject({
+            status: 'error',
+            data: null,
+            error: { code: 'not_found' },
+        })
     })
 
     it('rate_limited has data null', async () => {

@@ -14,7 +14,7 @@
 - [x] **1.1** `not_found` → `status: 'error'`, `data: null`.
 - [x] **1.2** `validation_failed` (невалідний payload) → `data: null`, `details.kind: 'validation'`.
 - [x] **1.3** Виняток handler'а після запису в `responseData.data` → `internal_error`, `data: null`.
-- [x] **1.4** Невалідний `event` (без імені маршруту) → `internal_error`, `data: null`.
+- [x] **1.4** `event` з порожнім іменем маршруту (`':only'`) → `not_found`, `data: null`.
 - [x] **1.5** Перевірка відповіді і rate limit → `data: null` (вже зелені, фіксують поведінку).
 
 ## Етап 2. Один модуль конверта (T2)
