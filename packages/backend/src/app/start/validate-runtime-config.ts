@@ -74,10 +74,6 @@ export function validateRuntimeConfig(): void {
         logger.warn(warning)
     }
 
-    for (const warning of responseValidationConfig.warnings) {
-        logger.warn(warning)
-    }
-
     const proxyWarning = getProxyWarning()
     if (proxyWarning !== null) {
         logger.warn(proxyWarning)

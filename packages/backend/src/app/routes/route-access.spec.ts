@@ -52,7 +52,6 @@ describe('runtime response validation wiring (feat-044 T5)', () => {
     })
 
     it('a route with a ResponseSchema gets a check, one without gets null', () => {
-        // Tests run outside production, so RESPONSE_VALIDATION is never off here.
         for (const route of [...http, ...ws]) {
             const expected = route.ResponseSchema === undefined ? 'object' : 'function'
             expect(typeof route.responseCheck, route.url).toBe(expected)
