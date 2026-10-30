@@ -440,7 +440,7 @@
             "description": "docs/plan/strip-response-fields-plan.md §4.6 (supersedes response-schema-runtime-validation-tasks.md T13): RESPONSE_VALIDATION_CONTRACT has no off mode and log is fail-closed for schema mismatches, so production starts in log after the feat-046 staging gate; rollout is production log -> strict (the only difference left: undeclared keys become a 500 instead of being stripped) after a period without undeclared_key warnings in logs and Sentry",
             "owner": "Blazheiko",
             "branch": "chore/response-validation-rollout",
-            "dependencies": ["feat-044"],
+            "dependencies": ["feat-044", "feat-046"],
             "status": "not-started",
             "evidence": ""
         },
