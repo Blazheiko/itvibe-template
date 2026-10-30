@@ -457,11 +457,11 @@
         {
             "id": "feat-047",
             "name": "Wire-Format Response Schemas",
-            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §7: align response schemas with the JSON the client receives (Date -> ISO string, e.g. push-subscription schemas) so /doc/routes describes the wire format; decide whether CI validates JSON.parse(JSON.stringify(payload)); after feat-046 the fast path sends the original object, not the schema output: with morphs (Date -> ISO string) revisit createResponseCheck to send the reject output, replace the identity test with a format test, re-run bench:response, and lift the no-morph guard in route-access.spec.ts",
+            "description": "docs/plan/wire-format-response-schemas-plan.md: response schemas describe the JSON the client receives — no Date or bigint in route schemas (a guard test), values are serialized in transformers (id → String, Date → toISOString), no morphs (the feat-046 fast path stays); push log/statistics and prompt routes get transformers; unused DB-shaped push schemas are removed; non-finite numbers become a 500 in inspectPayload",
             "owner": "Blazheiko",
             "branch": "feat/wire-format-response-schemas",
             "dependencies": ["feat-044", "feat-046"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
