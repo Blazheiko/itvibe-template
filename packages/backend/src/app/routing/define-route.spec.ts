@@ -1,6 +1,10 @@
 import { type } from '@arktype/type'
 import { describe, expect, it } from 'vitest'
 
+import { mapControllerError } from '#app/controllers/shared/controller-error.js'
+import { badRequest } from '#app/services/shared/errors.js'
+import { CanonicalErrorResponseSchema } from 'shared/responses'
+
 import { defineRoute } from './define-route.js'
 import { defineWsRoute } from './define-ws-route.js'
 
@@ -142,5 +146,201 @@ describe('defineWsRoute', () => {
 
         expect(route.method).toBe('ws')
         expect(route.validator?.describe?.()).toBe(schema)
+    })
+})
+
+// Type-level checks: each `@ts-expect-error` must hit a real error, so `pnpm typecheck`
+// fails if the handler result stops being checked against the route's ResponseSchema.
+describe('defineRoute response typing', () => {
+    const OkSchema = type({ status: "'ok'" })
+    const ReadySchema = type({ ready: 'boolean' })
+    const OkOrErrorSchema = type.or(OkSchema, CanonicalErrorResponseSchema)
+    const ok = (): { status: 'ok' } => ({ status: 'ok' })
+
+    it('rejects a handler result that does not match ResponseSchema', () => {
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            // @ts-expect-error 'fail' is not 'ok'
+            handler: () => ({ status: 'fail' as const }),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('rejects an annotated handler declared with a foreign schema', () => {
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: ReadySchema,
+            // @ts-expect-error { status: 'ok' } has no `ready`
+            handler: ok,
+        })
+        expect(true).toBe(true)
+    })
+
+    it('accepts any Payload when the route has no ResponseSchema', () => {
+        defineRoute({ url: '/items', method: 'get', handler: () => 'text' })
+        defineRoute({ url: '/items', method: 'get', handler: () => ({ anything: 1 }) })
+        expect(true).toBe(true)
+    })
+
+    it('accepts a sync and an async result', () => {
+        defineRoute({ url: '/a', method: 'get', ResponseSchema: OkSchema, handler: ok })
+        defineRoute({
+            url: '/b',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            handler: async () => ok(),
+        })
+        // Known limit: TypeScript widens a literal whose contextual type is the generic
+        // `TRes['inferIn']`, so an inline handler needs `as const` like a controller does.
+        defineRoute({
+            url: '/c',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            handler: () => ({ status: 'ok' as const }),
+        })
+        defineRoute({
+            url: '/d',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            // @ts-expect-error the literal widens to string without `as const`
+            handler: (_context) => ({ status: 'ok' }),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('accepts a mapControllerError result when the schema includes the error union', () => {
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: OkOrErrorSchema,
+            handler: (context) => mapControllerError(context, badRequest('bad')),
+        })
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            // @ts-expect-error the schema has no error branch
+            handler: (context) => mapControllerError(context, badRequest('bad')),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('accepts null only when the schema allows it', () => {
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            // @ts-expect-error null is not in the schema
+            handler: () => null,
+        })
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: OkSchema.or('null'),
+            handler: () => null,
+        })
+        expect(true).toBe(true)
+    })
+
+    it('checks a bound controller method like an arrow function', () => {
+        const controller = {
+            prefix: 'ok',
+            get(this: { prefix: string }): { status: string } {
+                return { status: this.prefix }
+            },
+        }
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: OkSchema,
+            // @ts-expect-error string is wider than 'ok'
+            handler: controller.get.bind(controller),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('still infers body and query alongside the result', () => {
+        defineRoute({
+            url: '/items',
+            method: 'post',
+            validator: type({ id: 'string' }),
+            queryValidator: type({ page: 'string' }),
+            ResponseSchema: type({ id: 'string', page: 'string' }),
+            handler: ({ httpData }) => ({
+                id: httpData.payload?.id ?? '',
+                page: httpData.query.page,
+            }),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('checks the result against the schema input, not its morphed output', () => {
+        const Morphed = type({ count: 'string.numeric.parse' })
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: Morphed,
+            handler: () => ({ count: '1' }),
+        })
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: Morphed,
+            // @ts-expect-error the input is a string; the parsed number is the output
+            handler: () => ({ count: 1 }),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('does not check the result when ResponseSchema is Type | undefined', () => {
+        // Known limit: only an exact `Type` enables the check.
+        const maybe: typeof OkSchema | undefined = undefined as typeof OkSchema | undefined
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: maybe,
+            handler: () => ({ anything: 1 }),
+        })
+        expect(true).toBe(true)
+    })
+
+    it('rejects a schema whose input is not a Payload', () => {
+        defineRoute({
+            url: '/items',
+            method: 'get',
+            ResponseSchema: type('string[]'),
+            // @ts-expect-error a top-level array is not a Payload
+            handler: () => ['a'],
+        })
+        expect(true).toBe(true)
+    })
+})
+
+describe('defineWsRoute response typing', () => {
+    const OkSchema = type({ status: "'ok'" })
+
+    it('checks the handler result against ResponseSchema', () => {
+        defineWsRoute({
+            url: 'ok',
+            ResponseSchema: OkSchema,
+            handler: () => ({ status: 'ok' as const }),
+        })
+        defineWsRoute({
+            url: 'fail',
+            ResponseSchema: OkSchema,
+            // @ts-expect-error 'fail' is not 'ok'
+            handler: () => ({ status: 'fail' as const }),
+        })
+        defineWsRoute({
+            url: 'foreign',
+            ResponseSchema: type({ ready: 'boolean' }),
+            // @ts-expect-error { status: 'ok' } has no `ready`
+            handler: (): { status: 'ok' } => ({ status: 'ok' }),
+        })
+        defineWsRoute({ url: 'free', handler: () => ({ anything: 1 }) })
+        expect(true).toBe(true)
     })
 })
