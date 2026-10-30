@@ -491,8 +491,8 @@
             "owner": "Blazheiko",
             "branch": "feat/typed-route-response",
             "dependencies": ["feat-044"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #150 (merge 27303ee): progress.md Evidence of Completion — typecheck/lint/test, e2e 12 passed, docs build/verify, tsc mutation check for HTTP and WS"
         }
     ]
 }
