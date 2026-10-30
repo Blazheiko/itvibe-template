@@ -461,8 +461,8 @@
             "owner": "Blazheiko",
             "branch": "feat/wire-format-response-schemas",
             "dependencies": ["feat-044", "feat-046"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #156 (merge 40d7653): progress.md Evidence of Completion — typecheck/lint/format/test (backend 1153), test:pg 23, e2e 12 passed, docs build/verify, bench:response within the +50 % limit, manual strict check of prompt and push routes"
         },
         {
             "id": "feat-048",
