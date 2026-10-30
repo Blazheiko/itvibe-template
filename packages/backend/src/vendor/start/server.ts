@@ -281,10 +281,10 @@ export const readAndParseBody = async (
 const NO_BODY_SKIPPED_HEADERS = ['content-type', 'content-length'] as const
 
 /**
- * Runtime ResponseSchema check of what the handler returned (feat-044, plan §4.3.1).
- * Only a response that will carry the handler payload is checked: whatever the
- * status (a /ready 503 included), but not 3xx/204/205 or an empty payload. In
- * strict mode an invalid payload becomes a canonical 500: the handler headers
+ * Runtime ResponseSchema check of what the handler returned (feat-044 §4.3.1,
+ * feat-046 §4.3). Only a response that will carry the handler payload is checked:
+ * whatever the status (a /ready 503 included), but not 3xx/204/205 or an empty
+ * payload. The check returns what to send; a rejected payload becomes a canonical 500: the handler headers
  * may describe the rejected payload (ETag, Content-Disposition, ...) and are
  * dropped, the cookies stay because the session has already changed.
  */
@@ -296,7 +296,12 @@ const checkHandlerResponse = (
     if (route.responseCheck === null) return
     const { status, payload } = responseData
     if (isEmptyPayload(payload) || !hasResponseBody(status, payload)) return
-    if (route.responseCheck(payload, { route: route.url, transport: 'http', requestId })) return
+    const result = route.responseCheck(payload, { route: route.url, transport: 'http', requestId })
+    if (result.ok) {
+        // The original object, or its copy without keys undeclared in the schema (log mode).
+        responseData.payload = result.payload as Payload
+        return
+    }
     responseData.status = 500
     responseData.headers.length = 0
     responseData.payload = { ...buildStatusErrorBody(500) }

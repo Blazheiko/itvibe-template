@@ -97,23 +97,24 @@ export default async (
             ) {
                 const handler = route.handler
                 responseData.data = await handler(context)
-                // Runtime ResponseSchema check (feat-044, plan §4.3.2). Only this
-                // direct reply is checked, not later async messages or broadcasts.
-                if (
-                    route.responseCheck !== null &&
-                    !isEmptyPayload(responseData.data) &&
-                    !route.responseCheck(responseData.data, {
+                // Runtime ResponseSchema check (feat-044 §4.3.2, feat-046 §4.3). Only
+                // this direct reply is checked, not later async messages or broadcasts.
+                if (route.responseCheck !== null && !isEmptyPayload(responseData.data)) {
+                    const result = route.responseCheck(responseData.data, {
                         route: route.url,
                         transport: 'ws',
                         requestId,
                     })
-                ) {
-                    responseData.data = null
-                    responseData.status = 'error'
-                    responseData.error = createWsErrorEnvelope(
-                        'internal_error',
-                        'Internal server error',
-                    )
+                    if (result.ok) {
+                        responseData.data = result.payload as typeof responseData.data
+                    } else {
+                        responseData.data = null
+                        responseData.status = 'error'
+                        responseData.error = createWsErrorEnvelope(
+                            'internal_error',
+                            'Internal server error',
+                        )
+                    }
                 }
             }
 

@@ -105,10 +105,10 @@ describe('ws-api-dispatcher runtime response validation (feat-044)', () => {
         )
     }
 
-    const check = async (mode: 'strict' | 'log' | 'off') => {
+    const check = async (mode: 'strict' | 'log') => {
         const { createResponseCheck } =
             await import('#vendor/utils/validation/validate-response.js')
-        return createResponseCheck(UserSchema, { mode, sampleRate: 1 })
+        return createResponseCheck(UserSchema, { mode })
     }
 
     it('strict: error envelope with data null and no validation details', async () => {
@@ -132,17 +132,33 @@ describe('ws-api-dispatcher runtime response validation (feat-044)', () => {
         })
     })
 
-    it('log: the original envelope is sent and a warn is written', async () => {
+    it('log: a schema mismatch is an error envelope too (fail-closed)', async () => {
         const result = await dispatch(invalidUser, await check('log'))
-        expect(result).toMatchObject({ status: '200', data: invalidUser, error: null })
+        expect(result).toMatchObject({ status: 'error', data: null })
+        expect(JSON.stringify(result)).not.toContain('leak@example.com')
+        expect(logger.error).toHaveBeenCalledOnce()
+    })
+
+    it('log: undeclared keys are stripped from data and a warn is written', async () => {
+        const result = await dispatch(
+            { id: 1, email: 'a@b.c', passwordHash: 'hash-secret' },
+            await check('log'),
+        )
+        expect(result).toMatchObject({
+            status: '200',
+            data: { id: 1, email: 'a@b.c' },
+            error: null,
+        })
+        expect(JSON.stringify(result)).not.toContain('hash-secret')
         expect(logger.warn).toHaveBeenCalledOnce()
     })
 
-    it('off: responseCheck is null, nothing is checked or logged', async () => {
-        expect(await check('off')).toBeNull()
-        const result = await dispatch(invalidUser, null)
-        expect(result).toMatchObject({ status: '200', data: invalidUser, error: null })
-        expect(logger.warn).not.toHaveBeenCalled()
-        expect(logger.error).not.toHaveBeenCalled()
+    it('strict: an undeclared key is an error envelope', async () => {
+        const result = await dispatch(
+            { id: 1, email: 'a@b.c', passwordHash: 'hash-secret' },
+            await check('strict'),
+        )
+        expect(result).toMatchObject({ status: 'error', data: null })
+        expect(JSON.stringify(result)).not.toContain('hash-secret')
     })
 })

@@ -16,12 +16,30 @@ vi.mock('#app/services/observability/sentry-service.js', () => ({
     },
 }))
 
-const { createResponseCheck, __resetResponseValidationLog, RESPONSE_VALIDATION_LOG_WINDOW_MS } =
-    await import('./validate-response.js')
+const {
+    createResponseCheck,
+    isUndeclaredKey,
+    __resetResponseValidationLog,
+    RESPONSE_VALIDATION_LOG_WINDOW_MS,
+    RESPONSE_VALIDATION_MAX_ISSUES,
+} = await import('./validate-response.js')
 
 const schema = type({ id: 'number', email: 'string' })
 const meta = { route: 'api/users', transport: 'http' as const, requestId: 'req-1' }
 const invalid = { id: 'secret-value-123', email: 'leak@example.com' }
+const valid = { id: 1, email: 'a@b.c' }
+const withExtra = { id: 1, email: 'a@b.c', passwordHash: 'hash-value-456' }
+
+const ListSchema = type.or(
+    {
+        status: "'ok'",
+        items: type({ id: 'number', nested: { name: 'string' } }).array(),
+    },
+    { status: "'error'", message: 'string' },
+)
+
+type Entry = Record<string, unknown> & { issues: { path: string; code: string }[] }
+const lastEntry = (fn: typeof logger.warn): Entry => (fn.mock.calls.at(-1) as [Entry])[0]
 
 beforeEach(() => {
     vi.clearAllMocks()
@@ -30,161 +48,206 @@ beforeEach(() => {
 })
 
 describe('createResponseCheck', () => {
-    it('returns null in off mode and without a schema', () => {
-        expect(createResponseCheck(schema, { mode: 'off', sampleRate: 1 })).toBeNull()
-        expect(createResponseCheck(undefined, { mode: 'strict', sampleRate: 1 })).toBeNull()
+    it('returns null only without a schema', () => {
+        expect(createResponseCheck(undefined, { mode: 'strict' })).toBeNull()
+        expect(createResponseCheck(undefined, { mode: 'log' })).toBeNull()
+        expect(createResponseCheck(schema, { mode: 'log' })).toBeTypeOf('function')
     })
 
-    it('passes a valid payload without logging', () => {
-        const check = createResponseCheck(schema, { mode: 'strict', sampleRate: 1 })
-        expect(check?.({ id: 1, email: 'a@b.c' }, meta)).toBe(true)
-        expect(logger.error).not.toHaveBeenCalled()
-        expect(sentry.captureMessage).not.toHaveBeenCalled()
-    })
+    it.each(['strict', 'log'] as const)(
+        '%s sends the same object for a valid payload, without logging',
+        (mode) => {
+            const check = createResponseCheck(schema, { mode })
+            const payload = { ...valid }
+            const result = check?.(payload, meta)
+            expect(result).toEqual({ ok: true, payload })
+            expect(result?.ok === true && result.payload).toBe(payload)
+            expect(logger.warn).not.toHaveBeenCalled()
+            expect(logger.error).not.toHaveBeenCalled()
+        },
+    )
 
-    it('strict rejects an invalid payload and logs an error', () => {
-        const check = createResponseCheck(schema, { mode: 'strict', sampleRate: 1 })
-        expect(check?.(invalid, meta)).toBe(false)
+    it.each(['strict', 'log'] as const)('%s rejects a schema mismatch', (mode) => {
+        const check = createResponseCheck(schema, { mode })
+        expect(check?.(invalid, meta)).toEqual({ ok: false })
         expect(logger.error).toHaveBeenCalledOnce()
-        const [entry] = logger.error.mock.calls[0] as [Record<string, unknown>]
-        expect(entry).toMatchObject({ route: 'api/users', mode: 'strict', requestId: 'req-1' })
-        expect(entry['issues']).toEqual([{ path: 'id', code: 'domain', expected: 'a number' }])
+        expect(lastEntry(logger.error)).toMatchObject({
+            route: 'api/users',
+            mode,
+            kind: 'mismatch',
+            rejected: true,
+            requestId: 'req-1',
+            issues: [{ path: 'id', code: 'domain', expected: 'a number' }],
+        })
     })
 
-    it('log keeps an invalid payload and logs a warn', () => {
-        const check = createResponseCheck(schema, { mode: 'log', sampleRate: 1 })
-        expect(check?.(invalid, meta)).toBe(true)
+    it.each(['strict', 'log'] as const)(
+        '%s rejects an undeclared key together with a mismatch (no original payload)',
+        (mode) => {
+            const check = createResponseCheck(schema, { mode })
+            expect(check?.({ ...invalid, passwordHash: 'x' }, meta)).toEqual({ ok: false })
+            expect(lastEntry(logger.error)['kind']).toBe('mismatch')
+        },
+    )
+
+    it('strict rejects an undeclared key and logs its path', () => {
+        const check = createResponseCheck(schema, { mode: 'strict' })
+        expect(check?.(withExtra, meta)).toEqual({ ok: false })
+        expect(lastEntry(logger.error)).toMatchObject({
+            kind: 'undeclared',
+            rejected: true,
+            issues: [{ path: 'passwordHash', code: 'undeclared_key' }],
+        })
+    })
+
+    it('log strips undeclared keys at every depth and in each union branch', () => {
+        const check = createResponseCheck(ListSchema, { mode: 'log' })
+        const payload = {
+            status: 'ok',
+            secret: 1,
+            items: [{ id: 1, nested: { name: 'a', token: 't' }, passwordHash: 'h' }],
+        }
+        const result = check?.(payload, meta)
+        expect(result).toEqual({
+            ok: true,
+            payload: { status: 'ok', items: [{ id: 1, nested: { name: 'a' } }] },
+        })
         expect(logger.warn).toHaveBeenCalledOnce()
-        expect(logger.error).not.toHaveBeenCalled()
+        expect(lastEntry(logger.warn)).toMatchObject({ kind: 'undeclared', rejected: false })
+        expect(
+            lastEntry(logger.warn)
+                .issues.map((issue) => issue.path)
+                .sort(),
+        ).toEqual(['items[0].nested.token', 'items[0].passwordHash', 'secret'])
+
+        const error = check?.({ status: 'error', message: 'm', stack: 's' }, meta)
+        expect(error).toEqual({ ok: true, payload: { status: 'error', message: 'm' } })
+    })
+
+    it('log does not mutate the handler object and keeps Date values', () => {
+        const check = createResponseCheck(type({ at: 'Date', id: 'number' }), { mode: 'log' })
+        const at = new Date(0)
+        const payload = { at, id: 1, extra: true }
+        const result = check?.(payload, meta)
+        expect(payload).toEqual({ at, id: 1, extra: true })
+        // The copy holds a new Date with the same time: it serializes the same way.
+        const sent = result?.ok === true ? (result.payload as { at: unknown }).at : null
+        expect(sent).toBeInstanceOf(Date)
+        expect(sent).toEqual(at)
+    })
+
+    it('log rejects when strip fails (fail-closed for both schema calls)', () => {
+        const check = createResponseCheck(schema, {
+            mode: 'log',
+            strip: (value) => type('number')(value),
+        })
+        expect(check?.(withExtra, meta)).toEqual({ ok: false })
+        expect(logger.error).toHaveBeenCalledOnce()
+    })
+
+    it('does not filter the content of an unknown field (guarantee limit, plan §4.5)', () => {
+        const check = createResponseCheck(type({ 'data?': 'unknown' }), { mode: 'log' })
+        const payload = { data: { leak: 1 } }
+        expect(check?.(payload, meta)).toEqual({ ok: true, payload })
+    })
+
+    it('keeps at most RESPONSE_VALIDATION_MAX_ISSUES paths and counts the rest', () => {
+        const check = createResponseCheck(ListSchema, { mode: 'log' })
+        const items = Array.from({ length: 25 }, (_, i) => ({
+            id: i,
+            nested: { name: 'a' },
+            extra: i,
+        }))
+        check?.({ status: 'ok', items }, meta)
+        const entry = lastEntry(logger.warn)
+        expect(entry.issues).toHaveLength(RESPONSE_VALIDATION_MAX_ISSUES)
+        expect(entry['truncated']).toBe(25 - RESPONSE_VALIDATION_MAX_ISSUES)
     })
 
     it('never puts response values into the log or the Sentry event', () => {
-        const check = createResponseCheck(schema, { mode: 'strict', sampleRate: 1 })
-        check?.(invalid, meta)
-        const logged = JSON.stringify(logger.error.mock.calls)
-        const sent = JSON.stringify(sentry.captureMessage.mock.calls)
-        for (const text of [logged, sent]) {
-            expect(text).not.toContain('secret-value-123')
-            expect(text).not.toContain('leak@example.com')
+        for (const mode of ['strict', 'log'] as const) {
+            const check = createResponseCheck(schema, { mode })
+            check?.(invalid, meta)
+            check?.(withExtra, { ...meta, route: `api/${mode}` })
+        }
+        const text = JSON.stringify([
+            logger.error.mock.calls,
+            logger.warn.mock.calls,
+            sentry.captureMessage.mock.calls,
+        ])
+        for (const value of ['secret-value-123', 'leak@example.com', 'hash-value-456']) {
+            expect(text).not.toContain(value)
         }
     })
 
-    it('does not mutate or replace the payload with the schema output', () => {
-        const morph = type({ n: 'string' }).pipe((value) => ({ n: Number(value.n) }))
-        const check = createResponseCheck(morph, { mode: 'strict', sampleRate: 1 })
-        const payload = { n: '5' }
-        expect(check?.(payload, meta)).toBe(true)
-        expect(payload).toEqual({ n: '5' })
-    })
-
-    it('logs once per route within the window and counts the rest', () => {
+    it('logs once per route and kind within the window and counts the rest', () => {
         let clock = 1_000
-        const check = createResponseCheck(schema, {
-            mode: 'log',
-            sampleRate: 1,
-            now: () => clock,
-        })
-        check?.(invalid, meta)
-        check?.(invalid, meta)
-        check?.(invalid, meta)
+        const check = createResponseCheck(schema, { mode: 'log', now: () => clock })
+        check?.(withExtra, meta)
+        check?.(withExtra, meta)
+        check?.(withExtra, meta)
         expect(logger.warn).toHaveBeenCalledOnce()
 
-        check?.(invalid, { ...meta, route: 'api/other' })
+        // A stripped response does not hide a 500 of the same route.
+        check?.(invalid, meta)
+        expect(logger.error).toHaveBeenCalledOnce()
+
+        check?.(withExtra, { ...meta, route: 'api/other' })
         expect(logger.warn).toHaveBeenCalledTimes(2)
 
         clock += RESPONSE_VALIDATION_LOG_WINDOW_MS
-        check?.(invalid, meta)
+        check?.(withExtra, meta)
         expect(logger.warn).toHaveBeenCalledTimes(3)
-        const [entry] = logger.warn.mock.calls[2] as [Record<string, unknown>]
-        expect(entry['suppressed']).toBe(2)
+        expect(lastEntry(logger.warn)['suppressed']).toBe(2)
     })
 
-    describe('sampling', () => {
-        it('log + rate 0 never calls the schema', () => {
-            const spy = vi.fn((value: unknown) => schema(value))
-            const check = createResponseCheck(spy as unknown as typeof schema, {
-                mode: 'log',
-                sampleRate: 0,
-            })
-            for (let i = 0; i < 20; i++) check?.(invalid, meta)
-            expect(spy).not.toHaveBeenCalled()
+    describe('ArkType contract (guard)', () => {
+        it('reports an undeclared key as predicate + removed', () => {
+            const result = type({ a: 'string' }).onDeepUndeclaredKey('reject')({ a: 'x', b: 1 })
+            expect(result).toBeInstanceOf(type.errors)
+            const errors = result as InstanceType<typeof type.errors>
+            expect(errors.map((error) => [error.code, error.expected])).toEqual([
+                ['predicate', 'removed'],
+            ])
+            expect(errors.every(isUndeclaredKey)).toBe(true)
         })
 
-        it('log + rate 1 always calls the schema', () => {
-            const spy = vi.fn((value: unknown) => schema(value))
-            const check = createResponseCheck(spy as unknown as typeof schema, {
-                mode: 'log',
-                sampleRate: 1,
-                random: () => 0.999,
-            })
-            for (let i = 0; i < 5; i++) check?.(invalid, meta)
-            expect(spy).toHaveBeenCalledTimes(5)
-        })
-
-        it('log + rate 0.5 follows the random source', () => {
-            const spy = vi.fn((value: unknown) => schema(value))
-            const values = [0.1, 0.9]
-            const check = createResponseCheck(spy as unknown as typeof schema, {
-                mode: 'log',
-                sampleRate: 0.5,
-                random: () => values.shift() ?? 0,
-            })
-            check?.(invalid, meta)
-            check?.(invalid, meta)
-            expect(spy).toHaveBeenCalledOnce()
-        })
-
-        it('strict ignores the sample rate', () => {
-            const spy = vi.fn((value: unknown) => schema(value))
-            const check = createResponseCheck(spy as unknown as typeof schema, {
-                mode: 'strict',
-                sampleRate: 0,
-            })
-            expect(check?.(invalid, meta)).toBe(false)
-            expect(spy).toHaveBeenCalledOnce()
+        it('reports a type mismatch with another code', () => {
+            const result = type({ a: 'string' }).onDeepUndeclaredKey('reject')({ a: 1 })
+            const errors = result as InstanceType<typeof type.errors>
+            expect(errors.some(isUndeclaredKey)).toBe(false)
         })
     })
 
     describe('Sentry', () => {
-        it('sends an event tagged response_validation', () => {
-            const check = createResponseCheck(schema, { mode: 'strict', sampleRate: 1 })
+        it('sends an error event for a 500 and a warning for a stripped response', () => {
+            const check = createResponseCheck(schema, { mode: 'log' })
             check?.(invalid, meta)
-            expect(sentry.captureMessage).toHaveBeenCalledOnce()
-            const [, level, ctx] = sentry.captureMessage.mock.calls[0] as [
+            check?.(withExtra, meta)
+            const calls = sentry.captureMessage.mock.calls as [
                 string,
                 string,
                 Record<string, unknown>,
-            ]
-            expect(level).toBe('error')
-            expect(ctx).toMatchObject({
+            ][]
+            expect(calls.map((call) => call[1])).toEqual(['error', 'warning'])
+            expect(calls[0]?.[2]).toMatchObject({
                 route: 'api/users',
                 requestId: 'req-1',
-                tags: { response_validation: 'strict', transport: 'http' },
+                tags: { response_validation: 'log', transport: 'http', kind: 'mismatch' },
             })
+            expect(calls[1]?.[2]).toMatchObject({ tags: { kind: 'undeclared' } })
         })
 
-        it('skips the log stream so the error is not sent twice', () => {
-            const check = createResponseCheck(schema, { mode: 'strict', sampleRate: 1 })
+        it('skips the log stream so the event is not sent twice', () => {
+            const check = createResponseCheck(schema, { mode: 'strict' })
             check?.(invalid, meta)
-            const [entry] = logger.error.mock.calls[0] as [Record<string, unknown>]
-            expect(entry['sentrySkip']).toBe(true)
-        })
-
-        it('shares the deduplication window with the log', () => {
-            const check = createResponseCheck(schema, {
-                mode: 'log',
-                sampleRate: 1,
-                now: () => 5_000,
-            })
-            for (let i = 0; i < 4; i++) check?.(invalid, meta)
-            expect(sentry.captureMessage).toHaveBeenCalledOnce()
-            expect(sentry.captureMessage.mock.calls[0]?.[1]).toBe('warning')
+            expect(lastEntry(logger.error)['sentrySkip']).toBe(true)
         })
 
         it('with Sentry off still logs', () => {
             sentry.enabled = false
-            const check = createResponseCheck(schema, { mode: 'log', sampleRate: 1 })
-            check?.(invalid, meta)
+            const check = createResponseCheck(schema, { mode: 'log' })
+            check?.(withExtra, meta)
             expect(sentry.captureMessage).not.toHaveBeenCalled()
             expect(logger.warn).toHaveBeenCalledOnce()
         })

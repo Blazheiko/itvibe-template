@@ -88,7 +88,8 @@ interface Setup {
     responseCheck: ResponseCheck | null
 }
 
-const spyCheck = (): ResponseCheck & ReturnType<typeof vi.fn> => vi.fn(() => true) as never
+const spyCheck = (): ResponseCheck & ReturnType<typeof vi.fn> =>
+    vi.fn((payload: unknown) => ({ ok: true, payload })) as never
 
 const route = (name: string, setup: Setup) => ({
     ...defineRoute({
@@ -169,10 +170,10 @@ const call = async (name: string): Promise<Sent> => {
 const header = (sent: Sent, name: string): string[] =>
     sent.headers.filter(([n]) => n.toLowerCase() === name.toLowerCase()).map(([, v]) => v)
 
-const strict = createResponseCheck(UserSchema, { mode: 'strict', sampleRate: 1 })
-const log = createResponseCheck(UserSchema, { mode: 'log', sampleRate: 1 })
-const off = createResponseCheck(UserSchema, { mode: 'off', sampleRate: 1 })
+const strict = createResponseCheck(UserSchema, { mode: 'strict' })
+const log = createResponseCheck(UserSchema, { mode: 'log' })
 const invalidUser = { id: 'not-a-number', email: 'leak@example.com' }
+const userWithSecret = { id: 1, email: 'a@b.c', passwordHash: 'hash-secret' }
 
 const skipped = {
     middleware: spyCheck(),
@@ -194,14 +195,12 @@ describe('HTTP runtime response validation', () => {
                 }),
                 route('strict-invalid', { payload: invalidUser, responseCheck: strict }),
                 route('log-invalid', { payload: invalidUser, responseCheck: log }),
-                route('off-invalid', { payload: invalidUser, responseCheck: off }),
+                route('log-extra', { payload: userWithSecret, responseCheck: log }),
+                route('strict-extra', { payload: userWithSecret, responseCheck: strict }),
                 route('ready-503', {
                     status: 503,
                     payload: { status: 'unavailable' },
-                    responseCheck: createResponseCheck(ReadySchema, {
-                        mode: 'strict',
-                        sampleRate: 1,
-                    }),
+                    responseCheck: createResponseCheck(ReadySchema, { mode: 'strict' }),
                 }),
                 route('strict-invalid-headers', {
                     payload: invalidUser,
@@ -263,19 +262,26 @@ describe('HTTP runtime response validation', () => {
         expect(logger.error).toHaveBeenCalledOnce()
     })
 
-    it('log sends the original response and writes a warn', async () => {
+    it('log also replaces a schema mismatch with a 500 (fail-closed)', async () => {
         const sent = await call('log-invalid')
+        expect(sent.status).toBe('500 Internal Server Error')
+        expect(sent.body).not.toContain('leak@example.com')
+        expect(logger.error).toHaveBeenCalledOnce()
+    })
+
+    it('log sends the response without undeclared keys and writes a warn', async () => {
+        const sent = await call('log-extra')
         expect(sent.status).toBe('200 OK')
-        expect(JSON.parse(sent.body ?? '')).toEqual(invalidUser)
+        expect(JSON.parse(sent.body ?? '')).toEqual({ id: 1, email: 'a@b.c' })
+        expect(sent.body).not.toContain('hash-secret')
         expect(logger.warn).toHaveBeenCalledOnce()
     })
 
-    it('off has no check at all', async () => {
-        expect(off).toBeNull()
-        const sent = await call('off-invalid')
-        expect(sent.status).toBe('200 OK')
-        expect(logger.warn).not.toHaveBeenCalled()
-        expect(logger.error).not.toHaveBeenCalled()
+    it('strict answers an undeclared key with a 500', async () => {
+        const sent = await call('strict-extra')
+        expect(sent.status).toBe('500 Internal Server Error')
+        expect(sent.body).not.toContain('hash-secret')
+        expect(logger.error).toHaveBeenCalledOnce()
     })
 
     it('checks a handler 503 (/ready) and lets a valid one through', async () => {
