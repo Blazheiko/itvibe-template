@@ -447,11 +447,11 @@
         {
             "id": "feat-046",
             "name": "Strip Undeclared Response Fields",
-            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §4.4: response schemas use '+': 'delete' (after an audit for morphs) and strict sends the cleaned schema output, so ResponseSchema becomes an allow-list that blocks leaks of extra fields",
+            "description": "docs/plan/strip-response-fields-plan.md: ResponseSchema becomes an allow-list of response fields. RESPONSE_VALIDATION is renamed to RESPONSE_VALIDATION_CONTRACT (strict|log, no off, no sampling; old name accepted for one release); a schema mismatch is a 500 in both modes; undeclared keys are a 500 in strict and are stripped with a warn in log; unknown fields carrying DB or user data are detailed, the remaining ones are listed as exceptions without the guarantee",
             "owner": "Blazheiko",
             "branch": "feat/strip-response-fields",
             "dependencies": ["feat-044"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
