@@ -73,8 +73,14 @@ const PROTOTYPE_KEYS: ReadonlySet<string> = new Set([
 /** Log code of an object whose prototype may serialize another structure (toJSON). */
 export const UNSAFE_PROTOTYPE_CODE = 'unsafe_prototype'
 
-const isPlainPrototype = (value: object): boolean => {
+// JSON.stringify serializes exactly what the schema saw only for a plain object, a plain
+// array or a plain Date without its own toJSON (enumerable or not: for...in and ArkType
+// miss a non-enumerable one). A subclass or an own toJSON may serialize anything.
+const hasPlainSerialization = (value: object): boolean => {
+    if (Object.hasOwn(value, 'toJSON')) return false
     const proto: unknown = Object.getPrototypeOf(value)
+    if (value instanceof Date) return proto === Date.prototype
+    if (Array.isArray(value)) return proto === Array.prototype
     return proto === Object.prototype || proto === null
 }
 
@@ -105,6 +111,15 @@ const inspectPayload = (payload: unknown): PayloadInspection => {
         return path
     }
     const walk = (value: object): void => {
+        // Checked before the Date and array cases: they have their own hooks too.
+        if (!hasPlainSerialization(value)) {
+            unsafe.push({
+                propString: pathOf(),
+                code: UNSAFE_PROTOTYPE_CODE,
+                expected: 'a plain object, array or Date',
+            })
+            return
+        }
         if (value instanceof Date) return
         if (Array.isArray(value)) {
             for (let index = 0; index < value.length; index++) {
@@ -115,14 +130,6 @@ const inspectPayload = (payload: unknown): PayloadInspection => {
                     segments.pop()
                 }
             }
-            return
-        }
-        if (!isPlainPrototype(value)) {
-            unsafe.push({
-                propString: pathOf(),
-                code: UNSAFE_PROTOTYPE_CODE,
-                expected: 'a plain object',
-            })
             return
         }
         const record = value as Record<string, unknown>

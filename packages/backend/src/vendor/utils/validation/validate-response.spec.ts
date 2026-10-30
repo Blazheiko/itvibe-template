@@ -256,6 +256,59 @@ describe('createResponseCheck', () => {
             expect(lastEntry(logger.error).issues[0]).toMatchObject({ code: 'unsafe_prototype' })
         })
 
+        describe('serialization hooks before the Date and array cases (review round 2)', () => {
+            const hookSchema = type({ id: 'number', at: 'Date', tags: 'string[]' })
+            const leak = (): Record<string, unknown> => ({ passwordHash: 'hook-secret' })
+            class LeakyDate extends Date {
+                override toJSON(): string {
+                    return 'hook-secret'
+                }
+            }
+            const variants: [string, () => unknown][] = [
+                [
+                    'a Date with its own toJSON',
+                    () => {
+                        const at = new Date(0)
+                        Object.defineProperty(at, 'toJSON', { value: leak })
+                        return { id: 1, at, tags: ['a'] }
+                    },
+                ],
+                ['a Date subclass', () => ({ id: 1, at: new LeakyDate(0), tags: ['a'] })],
+                [
+                    'an array with its own toJSON',
+                    () => {
+                        const tags = ['a']
+                        Object.defineProperty(tags, 'toJSON', { value: leak })
+                        return { id: 1, at: new Date(0), tags }
+                    },
+                ],
+                [
+                    'a plain object with a non-enumerable toJSON',
+                    () => {
+                        const payload = { id: 1, at: new Date(0), tags: ['a'] }
+                        Object.defineProperty(payload, 'toJSON', { value: leak })
+                        return payload
+                    },
+                ],
+            ]
+
+            for (const mode of ['strict', 'log'] as const) {
+                it.each(variants)(`${mode} rejects %s`, (_name, make) => {
+                    const check = createResponseCheck(hookSchema, { mode })
+                    expect(check?.(make(), meta)).toEqual({ ok: false })
+                    expect(lastEntry(logger.error).issues[0]).toMatchObject({
+                        code: 'unsafe_prototype',
+                    })
+                })
+            }
+
+            it('still sends a plain Date and a plain array as they are', () => {
+                const check = createResponseCheck(hookSchema, { mode: 'strict' })
+                const payload = { id: 1, at: new Date(0), tags: ['a'] }
+                expect(check?.(payload, meta)).toEqual({ ok: true, payload })
+            })
+        })
+
         it('rejects a nested non-plain object but accepts Date and null-prototype objects', () => {
             const check = createResponseCheck(type({ at: 'Date', n: { a: 'string' } }), {
                 mode: 'log',
