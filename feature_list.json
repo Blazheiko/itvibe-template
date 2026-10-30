@@ -497,11 +497,11 @@
         {
             "id": "feat-051",
             "name": "Drop Legacy RESPONSE_VALIDATION",
-            "description": "docs/plan/strip-response-fields-plan.md §4.4: one release after feat-046, remove the legacy RESPONSE_VALIDATION / RESPONSE_VALIDATION_SAMPLE_RATE mapping from config/response-validation.ts, its tests and the docs warning",
+            "description": "docs/plan/drop-legacy-response-validation-plan.md: remove the legacy RESPONSE_VALIDATION / RESPONSE_VALIDATION_SAMPLE_RATE mapping and the warnings field from config/response-validation.ts, its tests, the start-up warning loop, the docs warning and the .env.example line; the old variables are not checked at all (template without production); fix comments that still mention the off mode",
             "owner": "Blazheiko",
             "branch": "chore/drop-legacy-response-validation",
             "dependencies": ["feat-046"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         }
     ]
