@@ -467,11 +467,11 @@
         {
             "id": "feat-048",
             "name": "Uniform WS Error Envelope",
-            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §4.3.2: validation_failed and not_found WS errors return data: null instead of the initial data: {}, like rate-limit and response-validation errors",
+            "description": "docs/plan/ws-error-envelope-plan.md: every WS transport error (not_found, validation_failed, internal_error incl. a handler that threw after writing data, rate_limited, response validation) has status 'error', data null and the error envelope; one ws-error-envelope module with setWsError replaces three copies of createWsErrorEnvelope; the dispatcher starts with data null; business errors of controllers and middleware stay in data (out of scope)",
             "owner": "Blazheiko",
             "branch": "feat/ws-error-envelope",
             "dependencies": ["feat-044"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
