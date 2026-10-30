@@ -3,36 +3,35 @@
 ## Current State
 
 **Last Updated:** 2026-10-30
-**Active Feature:** feat-051 - Drop Legacy RESPONSE_VALIDATION
-**Branch:** `chore/drop-legacy-response-validation` (based on `docs/feat-051-plan`, PR #158)
-**Plan:** `docs/plan/drop-legacy-response-validation-plan.md`, tasks: `docs/plan/drop-legacy-response-validation-tasks.md`
+**Active Feature:** feat-048 - Uniform WS Error Envelope
+**Branch:** `feat/ws-error-envelope` (based on `docs/feat-048-plan`, PR #162)
+**Plan:** `docs/plan/ws-error-envelope-plan.md`, tasks: `docs/plan/ws-error-envelope-tasks.md`
 
 ## Status
 
 ### Done
 
-- [x] 0.1: PR #158 (plan, task list, feat-051 → `in_progress`). Not merged
-- [x] 0.4: `grep` of plan §2 repeated — no new mentions
-- [x] T1/T2: `config/response-validation.ts` reads only `RESPONSE_VALIDATION_CONTRACT`; no `warnings` field; legacy tests removed; a test pins that `RESPONSE_VALIDATION=off` has no effect; warning loop removed from `validate-runtime-config.ts`
-- [x] T3: comments in `types.d.ts`, `router.ts`, `route-access.spec.ts` no longer mention the off mode
-- [x] T4: `.env.example` line, docs warning «Стара назва» (`response-validation.md`) and the configuration.md note removed
-- [x] 5.3: backend starts with `RESPONSE_VALIDATION_CONTRACT=log` (`/api/ping` → ok), no start-up line mentions RESPONSE_VALIDATION
-- [x] 5.4: `grep` outside `docs/plan/` finds the old variable only in the test of 1.3
+- [x] 0.1: PR #162 (plan, task list, feat-048 → `in_progress`). Not merged
+- [x] T1: `vendor/utils/routing/ws-error-envelope.spec.ts` — not_found, validation_failed, handler that threw after writing data, empty route name, rate limit, stopped middleware; 5 red before the fix (rate limit already `null`)
+- [x] T2: `vendor/utils/network/ws-error-envelope.ts` (`createWsErrorEnvelope`, `setWsError`) + unit tests; three copies removed from `ws-api-dispatcher.ts`, `ws-handlers.ts`, `ws-rate-limit.ts`
+- [x] T3: dispatcher uses `setWsError` on every error path and starts with `data: null`; `ws-admin-guard.spec.ts` fixture updated
+- [x] T4: `documentation/backend/websocket.md` — `data: null`, transport vs business errors
+- [x] 5.3 manual: local backend, real WebSocket with a temporary user (removed after): `api/missing_route` → `{"data":null,"status":"error","error":{"code":"not_found",…}}`; `api/support/support_chat` with `message: 1` → `data: null`, `validation_failed` with `details.kind: "validation"`
 
 ## Evidence of Completion
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — exit 0
-- `pnpm test` — backend 1148, frontend 126, api-playground 14, shared 14, documentation 26
+- `pnpm test` — backend 1156, frontend 126, api-playground 14, shared 14, documentation 26
 - `CI=1 pnpm --filter frontend test:e2e` — 12 passed
 - `pnpm docs:build && pnpm docs:verify` — passed
 
 Commits:
 
-- c5a4435 Remove legacy RESPONSE_VALIDATION notes and off-mode comments (feat-051 T3-T4)
-- bf7d478 Read only RESPONSE_VALIDATION_CONTRACT (feat-051 T1-T2)
-- 5d9c90a Plan feat-051: drop the legacy RESPONSE_VALIDATION mapping
+- c861ee0 Document the two WS error conventions (feat-048 T4)
+- 0cd8395 Send data null with every WS transport error (feat-048 T1-T3)
+- 3dead86 Plan feat-048: uniform WS error envelope
 
 ## Notes for Next Session
 
-1. Owner merges PR #158, then the feature PR
-2. Done-PR to `main`: feat-051 → `done`
+1. Owner merges PR #162, then the feature PR
+2. Done-PR to `main`: feat-048 → `done`
