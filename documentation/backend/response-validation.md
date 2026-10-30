@@ -44,7 +44,9 @@ RESPONSE_VALIDATION_CONTRACT=log
 
 Зайві ключі шукаються на будь-якій глибині: у вкладених об'єктах, в елементах масивів і в кожній гілці union (успіх і помилка).
 
-Перевіряється **об'єкт, який повернув контролер, до JSON-серіалізації** — не JSON, який отримує клієнт. Тому схема з `Date` пропускає `Date`, хоча клієнт отримає ISO-рядок. У схемах відповідей немає морфів (`.pipe`, `.parse`): інакше формат залежав би від того, чи вирізалися ключі. Тест [route-access.spec.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/route-access.spec.ts) не дає додати морф.
+Перевіряється **об'єкт, який повернув контролер, до JSON-серіалізації**, і схема описує **саме той JSON, який отримує клієнт**. Тому в схемах відповідей немає `Date` і `bigint`: transformer віддає id рядком (`String(id)`), а дату ISO-рядком UTC (`toISOString()`), схема оголошує `'string'`. `Date` чи `bigint`, що потрапили у відповідь, — невідповідність, `500`. `Infinity` / `-Infinity` ArkType приймає як `number`, але JSON записав би `null`, тож обхід відповіді теж дає `500` (код `non_finite_number`).
+
+У схемах відповідей немає й морфів (`.pipe`, `.parse`): відправляється вихідний об'єкт, а не результат схеми, тож морф змінив би формат лише для відповідей із зайвими ключами. Це постійне правило, не тимчасове. Тести в [route-access.spec.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routes/route-access.spec.ts) не дають додати в схему маршруту ні морф, ні `Date`, ні `bigint`.
 
 ### Поля без гарантії allow-list
 
