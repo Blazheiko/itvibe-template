@@ -1,5 +1,4 @@
 import type { BaseType } from '@arktype/type'
-import * as ResponseSchemas from 'shared/responses'
 
 // Walks the JSON form of an ArkType schema and returns the paths whose content the
 // schema does not describe (`unknown` → `{}`, `unknown[]` → `"Array"`): an allow-list
@@ -39,14 +38,6 @@ const walk = (node: Node, path: string, out: Set<string>): void => {
     }
     if (node['branches'] !== undefined) walk(node['branches'], path, out)
 }
-
-const isSchema = (value: unknown): value is BaseType =>
-    typeof value === 'function' && 'json' in value && 'internal' in value
-
-export const responseSchemaEntries = (): [string, BaseType][] =>
-    Object.entries(ResponseSchemas).filter((entry): entry is [string, BaseType] =>
-        isSchema(entry[1]),
-    )
 
 export const unknownPaths = (schema: BaseType): string[] => {
     const out = new Set<string>()

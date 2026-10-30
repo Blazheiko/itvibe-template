@@ -1,6 +1,7 @@
 import type { CreateSubscriptionInput, UpdateSubscriptionInput } from 'shared/schemas'
 import { Result } from 'better-result'
-import { pushSubscriptionRepository } from '#app/repositories/index.js'
+import { pushSubscriptionRepository, type PushNotificationLogRow } from '#app/repositories/index.js'
+import type { SerializedPushSubscription } from '#app/transformers/push-subscription-transformer.js'
 import { pushSubscriptionTransformer } from '#app/transformers/index.js'
 import { conflict, internalMessage, notFound, type AppResult } from '#app/services/shared/errors.js'
 import { tryInternal } from '#app/services/shared/result-helpers.js'
@@ -119,7 +120,11 @@ export const pushSubscriptionService = {
     async getSubscription(
         userId: bigint,
         subscriptionId: bigint,
-    ): Promise<AppResult<{ data: Record<string, unknown> }>> {
+    ): Promise<
+        AppResult<{
+            data: SerializedPushSubscription & { notificationLogs: PushNotificationLogRow[] }
+        }>
+    > {
         const result = await tryInternal(
             () =>
                 Promise.all([

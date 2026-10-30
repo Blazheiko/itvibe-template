@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import type { BaseType } from '@arktype/type'
+
+import { unknownPaths } from '#app/routes/response-schema-guards.js'
 import type { HttpContext, RouteItem } from '#vendor/types/types.js'
 
 vi.mock('#logger', () => ({
@@ -90,5 +93,36 @@ describe('route access matrix (code-issues items 48, 67)', () => {
         for (const route of adminWs) {
             expect(route.middlewares, route.url).toContain('ws_admin_guard')
         }
+    })
+})
+
+describe('response schema guards (feat-046)', () => {
+    const routesWithSchema = [...http, ...ws].filter((route) => route.ResponseSchema !== undefined)
+
+    it('no response schema has a morph: the original object is sent after reject', () => {
+        // A morph would make the sent format depend on whether undeclared keys were
+        // stripped (plan §4.6, feat-047). Revisit createResponseCheck before allowing one.
+        const withMorph = routesWithSchema
+            .filter((route) => route.ResponseSchema?.internal.includesTransform === true)
+            .map((route) => route.url)
+        expect(withMorph).toEqual([])
+    })
+
+    it('an unknown field is allowed only as a listed exception (plan §4.5)', () => {
+        // The allow-list does not filter the content of these fields; the same list is in
+        // documentation/backend/response-validation.md.
+        const allowed = new Set([
+            // Canonical error: built only from AppError constructors.
+            'details',
+            // Push log: `data` of a notification this user's device already received.
+            'data.notificationLogs[].messageData',
+            'data[].messageData',
+        ])
+        const found = routesWithSchema.flatMap((route) =>
+            unknownPaths(route.ResponseSchema as BaseType)
+                .filter((path) => !allowed.has(path))
+                .map((path) => `${route.method} ${route.url}: ${path}`),
+        )
+        expect(found).toEqual([])
     })
 })
