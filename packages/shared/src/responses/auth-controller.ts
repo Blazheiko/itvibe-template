@@ -1,5 +1,4 @@
 import { type } from '@arktype/type'
-import { ErrorCodeSchema } from './error-code-schema.js'
 import type { ErrorCode as AppErrorCode } from '../errors/error-codes.js'
 import { CanonicalErrorResponseSchema, type CanonicalErrorResponse } from './error-response.js'
 
@@ -11,6 +10,10 @@ const AuthUserSchema = type({
     emailVerified: 'boolean',
     'emailVerifiedAt?': 'string | null',
     'role?': "'user' | 'admin'",
+    // The rest of userTransformer.serialize: the client keeps `avatar` from the login answer.
+    'avatar?': 'string | null',
+    'created_at?': 'string | null',
+    'updated_at?': 'string | null',
 })
 
 const PhoneChallengeResponseSchema = type.or(
@@ -147,23 +150,14 @@ export const ForgotPasswordResponseSchema = type({
 })
 export type ForgotPasswordResponse = typeof ForgotPasswordResponseSchema.infer
 
-const ResetPasswordReason = type.enumerated(
-    'invalid_token',
-    'expired_token',
-    'used_token',
-    'token_required',
-    'passwords_mismatch',
-)
+type ResetPasswordReason =
+    'invalid_token' | 'expired_token' | 'used_token' | 'token_required' | 'passwords_mismatch'
+// The canonical error already accepts `reason: string`; a second error branch with the
+// ResetPasswordReason enum would overlap it, and an overlapping union cannot get the
+// undeclared-key strip (feat-046). The exact reason stays in ResetPasswordResponse.
 export const ResetPasswordResponseSchema = type.or(
     { status: "'success'", 'message?': 'string' },
     CanonicalErrorResponseSchema,
-    {
-        status: "'error'",
-        code: ErrorCodeSchema,
-        message: 'string',
-        reason: ResetPasswordReason,
-        'details?': 'unknown',
-    },
 )
 export type ResetPasswordResponse =
     | { status: 'success'; message?: string }
@@ -172,7 +166,7 @@ export type ResetPasswordResponse =
           status: 'error'
           code: AppErrorCode
           message: string
-          reason: typeof ResetPasswordReason.infer
+          reason: ResetPasswordReason
           details?: unknown
       }
 

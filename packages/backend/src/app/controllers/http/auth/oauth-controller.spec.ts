@@ -64,7 +64,11 @@ describe('OAuthController.callback', () => {
 
         expect(context.responseData.status).toBe(302)
         expect(context.headers.get('Location')).toBe('/?error=oauth_failed')
-        expect(response).toEqual({ status: 'error', message: 'Missing OAuth parameters' })
+        expect(response).toEqual({
+            status: 'error',
+            code: 'bad_request',
+            message: 'Missing OAuth parameters',
+        })
         expect(handleCallback).not.toHaveBeenCalled()
     })
 

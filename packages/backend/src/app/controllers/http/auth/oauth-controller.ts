@@ -3,6 +3,7 @@ import { mapControllerError } from '#app/controllers/shared/controller-error.js'
 import { Result } from 'better-result'
 import { OAUTH_EMAIL_UNVERIFIED, oauthService } from '#app/services/auth/oauth-service.js'
 import { appErrorMessage, badRequest, type AppError } from '#app/services/shared/errors.js'
+import { appErrorToHttpPayload } from '#app/services/shared/apply-service-status.js'
 import type { OAuthCallbackQuery, OAuthRedirectQuery } from 'shared/schemas'
 import oauthConfig from '#config/oauth.js'
 import type { OAuthCallbackResponse, OAuthProvidersResponse, OAuthRedirectResponse } from 'shared'
@@ -18,7 +19,8 @@ const redirectToError = (
         'reason' in error && error.reason === OAUTH_EMAIL_UNVERIFIED ? OAUTH_EMAIL_UNVERIFIED : null
     context.responseData.status = 302
     context.responseData.setHeader('Location', withReason(oauthConfig.frontendErrorUrl, reason))
-    return { status: 'error', message: appErrorMessage(error) }
+    // The status stays 302: only the body takes the canonical error shape.
+    return appErrorToHttpPayload(error)
 }
 
 // Adds `reason=<code>` to the query of the configured error URL, which may be relative

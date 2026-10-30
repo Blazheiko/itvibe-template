@@ -1,31 +1,29 @@
 import { type } from '@arktype/type'
+import { CanonicalErrorResponseSchema } from './error-response.js'
 
-export const UploadAvatarResponseSchema = type({
-    status: "'ok' | 'error'",
-    'code?': 'string',
-    'reason?': 'string',
-    'details?': 'unknown',
-    'message?': 'string',
-    'user?': {
-        id: 'string',
-        name: 'string',
-        email: 'string',
-        'avatar?': 'string | null',
-    },
+const AvatarUserSchema = type({
+    id: 'string',
+    name: 'string',
+    email: 'string',
+    'avatar?': 'string | null',
 })
+
+export const UploadAvatarResponseSchema = type.or(
+    {
+        status: "'ok'",
+        'message?': 'string',
+        'user?': AvatarUserSchema,
+    },
+    CanonicalErrorResponseSchema,
+)
 export type UploadAvatarResponse = typeof UploadAvatarResponseSchema.infer
 
-export const DeleteAvatarResponseSchema = type({
-    status: "'ok' | 'error'",
-    'code?': 'string',
-    'reason?': 'string',
-    'details?': 'unknown',
-    'message?': 'string',
-    'user?': {
-        id: 'string',
-        name: 'string',
-        email: 'string',
-        'avatar?': 'string | null',
+export const DeleteAvatarResponseSchema = type.or(
+    {
+        status: "'ok'",
+        'message?': 'string',
+        'user?': AvatarUserSchema,
     },
-})
+    CanonicalErrorResponseSchema,
+)
 export type DeleteAvatarResponse = typeof DeleteAvatarResponseSchema.infer

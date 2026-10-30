@@ -136,7 +136,8 @@ export const pushSubscriptions = pgTable(
         browserVersion: varchar('browser_version', { length: 50 }),
         osName: varchar('os_name', { length: 100 }),
         osVersion: varchar('os_version', { length: 50 }),
-        notificationTypes: jsonb('notification_types'),
+        // Validated on input as ('mention' | 'system')[] (shared/schemas/push-subscription).
+        notificationTypes: jsonb('notification_types').$type<('mention' | 'system')[]>(),
         timezone: varchar('timezone', { length: 50 }),
     },
     (table) => [index('push_subscriptions_user_id_fkey').on(table.userId)],
@@ -159,7 +160,8 @@ export const pushNotificationLogs = pgTable(
         sentAt: timestamp('sent_at').notNull().defaultNow(),
         status: pushNotificationStatusEnum('status'),
         errorMessage: text('error_message'),
-        responseData: jsonb('response_data'),
+        // Written by push-notification-sender-service.ts.
+        responseData: jsonb('response_data').$type<{ statusCode?: number | null } | null>(),
     },
     (table) => [
         index('push_notifications_log_user_id_fkey').on(table.userId),

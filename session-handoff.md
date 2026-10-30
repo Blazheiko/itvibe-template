@@ -1,5 +1,5 @@
 # Session Handoff
 
-**Feature:** feat-050 - Typed Route Responses · **Branch:** `feat/typed-route-response` · **Date:** 2026-10-30
+**Feature:** feat-046 - Strip Undeclared Response Fields · **Branch:** `feat/strip-response-fields` · **Date:** 2026-10-30
 
-Implementation, docs and DoD checks are done (see `progress.md`). Remaining: merge PR #149 and the feature PR, then flip feat-050 → `done` on `main`. Merging was blocked for the agent by the auto-mode classifier.
+Implementation, schema detailing, crawl, docs and DoD checks are done (see `progress.md`). Remaining: merge PR #152 and the feature PR, run the staging gate (T10, ≥ 7 days in `log` without mismatch records), then production and the done-PR to `main` (feat-046 → `done`, feat-045/feat-047 description updates).

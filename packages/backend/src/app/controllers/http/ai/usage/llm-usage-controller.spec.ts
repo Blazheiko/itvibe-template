@@ -34,7 +34,7 @@ describe('LlmUsageController.getTextUsage (item 53)', () => {
             httpData: { query: { page: 1, limit: 10 } },
         } as unknown as HttpContext<unknown, never>)
 
-        expect(response.data?.rows[0]).toMatchObject({
+        expect('data' in response && response.data.rows[0]).toMatchObject({
             userId: null,
             promptTokens: null,
             totalTokens: null,
