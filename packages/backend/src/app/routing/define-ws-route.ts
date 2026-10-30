@@ -1,7 +1,13 @@
 import type { Type } from '@arktype/type'
 
 import { defaultValidator } from '#app/validate/index.js'
-import type { RouteConfig, RouteItem, TypedHandler, WsContext, WsHandler } from '#vendor/types/types.js'
+import type {
+    RouteConfig,
+    RouteItem,
+    TypedHandler,
+    WsContext,
+    WsHandler,
+} from '#vendor/types/types.js'
 import type { RouteResponse } from '#app/routing/route-response.js'
 
 type InferSchema<TSchema> = TSchema extends Type<infer T> ? T : unknown
