@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { type } from '@arktype/type'
 
-import { unknownPaths } from '#app/routes/response-schema-guards.js'
+import { nonWirePaths, unknownPaths } from '#app/routes/response-schema-guards.js'
 import type { HttpContext, RouteItem } from '#vendor/types/types.js'
 
 vi.mock('#logger', () => ({
@@ -107,6 +107,17 @@ describe('response schema guards (feat-046)', () => {
             .filter((route) => route.ResponseSchema?.internal.includesTransform === true)
             .map((route) => route.url)
         expect(withMorph).toEqual([])
+    })
+
+    it('no response schema has Date or bigint: it describes the JSON the client gets', () => {
+        // makeJson turns bigint into a string and JSON.stringify a Date into an ISO string;
+        // serialize them in a transformer and declare 'string' (feat-047 §4.1).
+        const found = routesWithSchema.flatMap((route) =>
+            nonWirePaths(route.ResponseSchema!).map(
+                (path) => `${route.method} ${route.url}: ${path}`,
+            ),
+        )
+        expect(found).toEqual([])
     })
 
     it('an unknown field is allowed only as a listed exception (plan §4.5)', () => {

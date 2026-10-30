@@ -29,6 +29,7 @@ import type {
     LinkEmailStartResponse,
     ResetPhoneStartResponse,
     ResetPhoneCompleteResponse,
+    GetSubscriptionStatisticsResponse,
 } from 'shared/responses'
 import type {
     CreateSubscriptionInput,
@@ -251,13 +252,6 @@ interface PushSubscriptionResponse {
     updated_at: string
 }
 
-interface PushSubscriptionStatistics {
-    total_sent: number
-    total_delivered: number
-    last_sent_at?: string
-    subscription_duration: number
-}
-
 export const pushSubscriptionApi = {
     getSubscriptions: async (): Promise<ApiResponse<PushSubscriptionResponse[]>> => {
         return baseApi.http<PushSubscriptionResponse[]>('GET', apiPath('push-subscriptions'))
@@ -293,8 +287,8 @@ export const pushSubscriptionApi = {
 
     getSubscriptionStatistics: async (
         subscriptionId: string,
-    ): Promise<ApiResponse<PushSubscriptionStatistics>> => {
-        return baseApi.http<PushSubscriptionStatistics>(
+    ): Promise<ApiResponse<GetSubscriptionStatisticsResponse>> => {
+        return baseApi.http<GetSubscriptionStatisticsResponse>(
             'GET',
             apiPath(`push-subscriptions/${subscriptionId}/statistics`),
         )

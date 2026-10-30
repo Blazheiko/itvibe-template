@@ -16,6 +16,7 @@ import type {
     PromptUpdateResponse,
     PromptTestResponse,
 } from 'shared'
+import { promptTransformer } from '#app/transformers/index.js'
 
 const PROMPT_TYPES: PromptType[] = [
     'SUPPORT_SYSTEM',
@@ -31,7 +32,9 @@ export default {
     list(_context: HttpContext): PromptGetListResponse {
         return {
             status: 'success',
-            data: promptService.all().filter((prompt) => isPromptType(prompt.type)),
+            data: promptTransformer.serializeArray(
+                promptService.all().filter((prompt) => isPromptType(prompt.type)),
+            ),
         }
     },
 
@@ -44,7 +47,7 @@ export default {
         if (prompt === undefined) {
             return mapControllerError(context, notFound('Prompt', 'Prompt not found'))
         }
-        return { status: 'success', data: prompt }
+        return { status: 'success', data: promptTransformer.serialize(prompt) }
     },
 
     async testPrompt(context: HttpContext<PromptTestInput>): Promise<PromptTestResponse> {

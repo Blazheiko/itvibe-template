@@ -190,11 +190,10 @@ export type { NoteRow, NoteInsert } from './note/note-repository.js'
 
 ## Крок 5. Transformer
 
-Transformer перетворює рядок БД на публічний DTO: `bigint` → `string`, `Date` → ISO-рядок через `luxon`, як у [push-subscription-transformer.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/push-subscription-transformer.ts). Внутрішні поля (`userId`) назовні не віддаються.
+Transformer перетворює рядок БД на публічний DTO: `bigint` → `string`, `Date` → ISO-рядок UTC через `toISOString()`, як у [push-subscription-transformer.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/transformers/push-subscription-transformer.ts). Внутрішні поля (`userId`) назовні не віддаються.
 
 ```ts
 // packages/backend/src/app/transformers/note-transformer.ts
-import { DateTime } from 'luxon'
 import type { Note } from 'shared'
 import type { NoteRow } from '#app/repositories/index.js'
 
@@ -204,7 +203,7 @@ export const noteTransformer = {
             id: String(note.id),
             title: note.title,
             body: note.body,
-            created_at: DateTime.fromJSDate(note.createdAt).toISO(),
+            created_at: note.createdAt.toISOString(),
         }
     },
 

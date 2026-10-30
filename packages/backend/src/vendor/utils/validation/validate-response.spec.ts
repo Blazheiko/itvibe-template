@@ -322,6 +322,32 @@ describe('createResponseCheck', () => {
         })
     })
 
+    describe('non-finite numbers (feat-047 §4.4)', () => {
+        const numbers = type({ rate: 'number', nested: { n: 'number' }, list: 'number[]' })
+        const ok = { rate: 1, nested: { n: 2 }, list: [3] }
+        const variants: [string, unknown, string][] = [
+            ['Infinity at the top level', { ...ok, rate: Infinity }, 'rate'],
+            ['-Infinity in a nested object', { ...ok, nested: { n: -Infinity } }, 'nested.n'],
+            ['Infinity in an array', { ...ok, list: [3, Infinity] }, 'list[1]'],
+        ]
+
+        for (const mode of ['strict', 'log'] as const) {
+            it.each(variants)(`${mode} rejects %s`, (_name, payload, path) => {
+                const check = createResponseCheck(numbers, { mode })
+                expect(check?.(payload, meta)).toEqual({ ok: false })
+                expect(lastEntry(logger.error).issues[0]).toMatchObject({
+                    path,
+                    code: 'non_finite_number',
+                })
+            })
+        }
+
+        it('sends finite numbers unchanged', () => {
+            const check = createResponseCheck(numbers, { mode: 'strict' })
+            expect(check?.(ok, meta)).toEqual({ ok: true, payload: ok })
+        })
+    })
+
     describe('ArkType contract (guard)', () => {
         it('reports an undeclared key as predicate + removed', () => {
             const result = type({ a: 'string' }).onDeepUndeclaredKey('reject')({ a: 'x', b: 1 })

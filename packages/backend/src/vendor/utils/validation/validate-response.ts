@@ -8,7 +8,8 @@ import logger from '#vendor/utils/logger.js'
 // (docs/plan/strip-response-fields-plan.md §4.3). It checks the object the handler
 // returned, before JSON serialization:
 //  1. `reject` passes and inspectPayload finds nothing → the original object, no copy;
-//  2. any error other than an undeclared key, or a non-plain object → 500 in both modes;
+//  2. any error other than an undeclared key, a non-plain object or a non-finite number
+//     → 500 in both modes;
 //  3. only undeclared keys (incl. keys named like Object.prototype members) → 500 in
 //     strict, the stripped copy in log.
 // The original object is sent only after a successful `reject`: correct while response
@@ -73,6 +74,15 @@ const PROTOTYPE_KEYS: ReadonlySet<string> = new Set([
 /** Log code of an object whose prototype may serialize another structure (toJSON). */
 export const UNSAFE_PROTOTYPE_CODE = 'unsafe_prototype'
 
+/** Log code of Infinity / -Infinity: ArkType `number` accepts it, JSON writes null (feat-047). */
+export const NON_FINITE_NUMBER_CODE = 'non_finite_number'
+
+const nonFinite = (propString: string): Issue => ({
+    propString,
+    code: NON_FINITE_NUMBER_CODE,
+    expected: 'a finite number',
+})
+
 // JSON.stringify serializes exactly what the schema saw only for a plain object, a plain
 // array or a plain Date without its own toJSON (enumerable or not: for...in and ArkType
 // miss a non-enumerable one). A subclass or an own toJSON may serialize anything.
@@ -98,7 +108,7 @@ const inspectPayload = (payload: unknown): PayloadInspection => {
     const prototypeKeys: Issue[] = []
     const unsafe: Issue[] = []
     const segments: (string | number)[] = []
-    const pathOf = (last?: string): string => {
+    const pathOf = (last?: string | number): string => {
         let path = ''
         for (const segment of last === undefined ? segments : [...segments, last]) {
             path +=
@@ -128,6 +138,8 @@ const inspectPayload = (payload: unknown): PayloadInspection => {
                     segments.push(index)
                     walk(item)
                     segments.pop()
+                } else if (typeof item === 'number' && !Number.isFinite(item)) {
+                    unsafe.push(nonFinite(pathOf(index)))
                 }
             }
             return
@@ -148,6 +160,8 @@ const inspectPayload = (payload: unknown): PayloadInspection => {
                 segments.push(key)
                 walk(child)
                 segments.pop()
+            } else if (typeof child === 'number' && !Number.isFinite(child)) {
+                unsafe.push(nonFinite(pathOf(key)))
             }
         }
     }

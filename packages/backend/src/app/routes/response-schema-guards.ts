@@ -44,3 +44,40 @@ export const unknownPaths = (schema: BaseType): string[] => {
     walk(schema.json, '', out)
     return [...out].sort()
 }
+
+// Paths whose type JSON does not keep (feat-047): `Date` becomes an ISO string and `bigint`
+// a string in makeJson, so a schema with them does not describe what the client gets.
+const walkNonWire = (node: Node, path: string, out: Set<string>): void => {
+    if (Array.isArray(node)) {
+        for (const branch of node) walkNonWire(branch, path, out)
+        return
+    }
+    if (node === 'bigint' || node === 'Date') {
+        out.add(`${path}: ${node}`)
+        return
+    }
+    if (!isRecord(node)) return
+    if (node['proto'] === 'Date') out.add(`${path}: Date`)
+    if (node['domain'] === 'bigint') out.add(`${path}: bigint`)
+    if (node['sequence'] !== undefined) walkNonWire(node['sequence'], `${path}[]`, out)
+    if (node['branches'] !== undefined) walkNonWire(node['branches'], path, out)
+    for (const group of ['required', 'optional'] as const) {
+        const props = node[group]
+        if (!Array.isArray(props)) continue
+        for (const prop of props) {
+            if (isRecord(prop) && typeof prop['key'] === 'string') {
+                walkNonWire(
+                    prop['value'],
+                    path === '' ? prop['key'] : `${path}.${prop['key']}`,
+                    out,
+                )
+            }
+        }
+    }
+}
+
+export const nonWirePaths = (schema: BaseType): string[] => {
+    const out = new Set<string>()
+    walkNonWire(schema.json, '', out)
+    return [...out].sort()
+}
