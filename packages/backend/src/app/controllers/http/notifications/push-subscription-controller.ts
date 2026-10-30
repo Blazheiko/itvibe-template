@@ -21,6 +21,7 @@ import type {
     GetSubscriptionStatisticsResponse,
     DeactivateSubscriptionResponse,
     GetVapidPublicKeyResponse,
+    TestPushResponse,
 } from 'shared'
 import type {
     CreateSubscriptionInput,
@@ -260,12 +261,7 @@ export default {
         }
     },
 
-    async testPush(context: HttpContext<PushSubscriptionTestInput>): Promise<{
-        status: string
-        message: string
-        sent?: number
-        failed?: number
-    }> {
+    async testPush(context: HttpContext<PushSubscriptionTestInput>): Promise<TestPushResponse> {
         context.logger.info('testPush handler')
 
         const userId = resolveUserId(context)
