@@ -27,3 +27,17 @@ describe('userTransformer', () => {
         expect(serialized).toMatchObject({ id: '7', name: 'Jane', emailVerified: false })
     })
 })
+
+describe('date format (feat-047 §4.2)', () => {
+    it('sends dates as UTC ISO strings whatever the process time zone', () => {
+        const serialized = userTransformer.serialize({
+            ...row,
+            emailVerifiedAt: new Date('2026-10-25T10:02:00.000Z'),
+        })
+        expect(serialized).toMatchObject({
+            created_at: '2026-10-25T10:00:00.000Z',
+            updated_at: '2026-10-25T10:01:00.000Z',
+            emailVerifiedAt: '2026-10-25T10:02:00.000Z',
+        })
+    })
+})

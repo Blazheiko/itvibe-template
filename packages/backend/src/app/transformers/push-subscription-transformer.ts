@@ -1,4 +1,3 @@
-import { DateTime } from 'luxon'
 import type { PushSubscriptionRow, PushSubscriptionWithLogs } from '#app/repositories/index.js'
 import {
     pushNotificationLogTransformer,
@@ -35,9 +34,9 @@ export const pushSubscriptionTransformer = {
             ...rest,
             id: String(id),
             userId: String(userId),
-            created_at: DateTime.fromJSDate(createdAt).toISO(),
-            updated_at: DateTime.fromJSDate(updatedAt).toISO(),
-            lastUsedAt: lastUsedAt !== null ? DateTime.fromJSDate(lastUsedAt).toISO() : null,
+            created_at: createdAt.toISOString(),
+            updated_at: updatedAt.toISOString(),
+            lastUsedAt: lastUsedAt !== null ? lastUsedAt.toISOString() : null,
         }
     },
 
@@ -51,9 +50,9 @@ export const pushSubscriptionTransformer = {
             ),
             id: String(id),
             userId: String(userId),
-            created_at: DateTime.fromJSDate(createdAt).toISO(),
-            updated_at: DateTime.fromJSDate(updatedAt).toISO(),
-            lastUsedAt: lastUsedAt !== null ? DateTime.fromJSDate(lastUsedAt).toISO() : null,
+            created_at: createdAt.toISOString(),
+            updated_at: updatedAt.toISOString(),
+            lastUsedAt: lastUsedAt !== null ? lastUsedAt.toISOString() : null,
         }
     },
 

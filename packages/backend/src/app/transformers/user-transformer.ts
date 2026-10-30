@@ -1,4 +1,3 @@
-import { DateTime } from 'luxon'
 import type { UserRow } from '#app/repositories/index.js'
 
 export type SerializedUser = Omit<
@@ -28,11 +27,10 @@ export const userTransformer = {
         return {
             ...rest,
             id: String(id),
-            created_at: DateTime.fromJSDate(createdAt).toISO(),
-            updated_at: DateTime.fromJSDate(updatedAt).toISO(),
+            created_at: createdAt.toISOString(),
+            updated_at: updatedAt.toISOString(),
             emailVerified: emailVerifiedAt !== null,
-            emailVerifiedAt:
-                emailVerifiedAt === null ? null : DateTime.fromJSDate(emailVerifiedAt).toISO(),
+            emailVerifiedAt: emailVerifiedAt === null ? null : emailVerifiedAt.toISOString(),
         }
     },
 
