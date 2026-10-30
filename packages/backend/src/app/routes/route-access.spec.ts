@@ -27,6 +27,7 @@ vi.stubEnv('APP_KEY', 'a'.repeat(32))
 const { default: httpRoutes } = await import('./http-routes.js')
 const { default: wsRoutes } = await import('./ws-routes.js')
 const { routesHandler } = await import('#vendor/start/router.js')
+const { createResponseCheck } = await import('#vendor/utils/validation/validate-response.js')
 const { default: executeMiddlewares } =
     await import('#vendor/utils/middlewares/core/execute-httpMiddlewares.js')
 
@@ -140,5 +141,19 @@ describe('response schema guards (feat-046)', () => {
             })
             .map((route) => `${route.method} ${route.url}`)
         expect(broken).toEqual([])
+    })
+
+    it.each(['strict', 'log'] as const)('builds the %s check for every route', (mode) => {
+        // log adds onDeepUndeclaredKey('delete'), a morph: ArkType rejects it on a union
+        // with overlapping branches at start-up.
+        const failed = routesWithSchema.filter((route) => {
+            try {
+                createResponseCheck(route.ResponseSchema, { mode })
+                return false
+            } catch {
+                return true
+            }
+        })
+        expect(failed.map((route) => route.url)).toEqual([])
     })
 })
