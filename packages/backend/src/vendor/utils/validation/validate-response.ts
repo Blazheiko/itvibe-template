@@ -7,9 +7,10 @@ import logger from '#vendor/utils/logger.js'
 // Runtime check of a handler result against the route ResponseSchema
 // (docs/plan/strip-response-fields-plan.md §4.3). It checks the object the handler
 // returned, before JSON serialization:
-//  1. `reject` passes → the original object is sent, no copy;
-//  2. any error other than an undeclared key → 500 in both modes;
-//  3. only undeclared keys → 500 in strict, `strip` output in log.
+//  1. `reject` passes and inspectPayload finds nothing → the original object, no copy;
+//  2. any error other than an undeclared key, or a non-plain object → 500 in both modes;
+//  3. only undeclared keys (incl. keys named like Object.prototype members) → 500 in
+//     strict, the stripped copy in log.
 // The original object is sent only after a successful `reject`: correct while response
 // schemas have no morphs (a guard test in validate-response.spec.ts keeps it so).
 
@@ -47,15 +48,118 @@ export const RESPONSE_VALIDATION_MAX_ISSUES = 20
 /** Log code of an undeclared key, to filter them from schema mismatches. */
 export const UNDECLARED_KEY_CODE = 'undeclared_key'
 
-type SchemaErrors = InstanceType<typeof type.errors>
-type SchemaError = SchemaErrors[number]
+/** A schema error or an issue found by inspectPayload, in the same shape. */
+interface Issue {
+    propString: string
+    code: string
+    expected: string
+}
 
 // ArkType reports an undeclared key under onDeepUndeclaredKey('reject') as
 // `predicate` + `removed`; not a documented contract, so a test pins it.
-export const isUndeclaredKey = (error: Pick<SchemaError, 'code' | 'expected'>): boolean =>
+export const isUndeclaredKey = (error: Pick<Issue, 'code' | 'expected'>): boolean =>
     error.code === 'predicate' && error.expected === 'removed'
 
 type IssueKind = 'mismatch' | 'undeclared'
+
+// ArkType reads a key named like an Object.prototype member (constructor, __proto__,
+// hasOwnProperty, …) through the prototype, so neither reject nor delete sees it as
+// undeclared and it reaches the client. No response schema declares such a key.
+const PROTOTYPE_KEYS: ReadonlySet<string> = new Set([
+    ...Object.getOwnPropertyNames(Object.prototype),
+    '__proto__',
+])
+
+/** Log code of an object whose prototype may serialize another structure (toJSON). */
+export const UNSAFE_PROTOTYPE_CODE = 'unsafe_prototype'
+
+const isPlainPrototype = (value: object): boolean => {
+    const proto: unknown = Object.getPrototypeOf(value)
+    return proto === Object.prototype || proto === null
+}
+
+interface PayloadInspection {
+    /** Own keys named like Object.prototype members, as undeclared-key issues. */
+    prototypeKeys: Issue[]
+    /** Objects that are not plain, an array or a Date: what JSON gets may differ. */
+    unsafe: Issue[]
+}
+
+// One walk over what JSON.stringify will visit; ArkType does not check either case.
+// Hot path (every response): no allocations on a clean payload, the path string is built
+// only for an issue.
+const inspectPayload = (payload: unknown): PayloadInspection => {
+    const prototypeKeys: Issue[] = []
+    const unsafe: Issue[] = []
+    const segments: (string | number)[] = []
+    const pathOf = (last?: string): string => {
+        let path = ''
+        for (const segment of last === undefined ? segments : [...segments, last]) {
+            path +=
+                typeof segment === 'number'
+                    ? `[${String(segment)}]`
+                    : path === ''
+                      ? segment
+                      : `.${segment}`
+        }
+        return path
+    }
+    const walk = (value: object): void => {
+        if (value instanceof Date) return
+        if (Array.isArray(value)) {
+            for (let index = 0; index < value.length; index++) {
+                const item: unknown = value[index]
+                if (typeof item === 'object' && item !== null) {
+                    segments.push(index)
+                    walk(item)
+                    segments.pop()
+                }
+            }
+            return
+        }
+        if (!isPlainPrototype(value)) {
+            unsafe.push({
+                propString: pathOf(),
+                code: UNSAFE_PROTOTYPE_CODE,
+                expected: 'a plain object',
+            })
+            return
+        }
+        const record = value as Record<string, unknown>
+        for (const key in record) {
+            if (!Object.hasOwn(record, key)) continue
+            if (PROTOTYPE_KEYS.has(key)) {
+                prototypeKeys.push({
+                    propString: pathOf(key),
+                    code: 'predicate',
+                    expected: 'removed',
+                })
+                continue
+            }
+            const child = record[key]
+            if (typeof child === 'object' && child !== null) {
+                segments.push(key)
+                walk(child)
+                segments.pop()
+            }
+        }
+    }
+    if (typeof payload === 'object' && payload !== null) walk(payload)
+    return { prototypeKeys, unsafe }
+}
+
+// Copy of `value` without own keys named like Object.prototype members, at any depth.
+const omitPrototypeKeys = (value: unknown): unknown => {
+    if (typeof value !== 'object' || value === null || value instanceof Date) return value
+    if (Array.isArray(value)) return value.map(omitPrototypeKeys)
+    const copy: Record<string, unknown> = {}
+    for (const key of Object.keys(value)) {
+        if (!PROTOTYPE_KEYS.has(key)) {
+            copy[key] = omitPrototypeKeys((value as Record<string, unknown>)[key])
+        }
+    }
+    return copy
+}
 
 interface RouteLogState {
     lastAt: number
@@ -69,7 +173,7 @@ export const __resetResponseValidationLog = (): void => {
 }
 
 // Paths, codes and expected types only: `actual` may carry response values (PII).
-const summarize = (errors: SchemaErrors): { issues: ResponseIssue[]; truncated: number } => ({
+const summarize = (errors: readonly Issue[]): { issues: ResponseIssue[]; truncated: number } => ({
     issues: errors.slice(0, RESPONSE_VALIDATION_MAX_ISSUES).map((error) => ({
         path: error.propString === '' ? '(root)' : error.propString,
         code: isUndeclaredKey(error) ? UNDECLARED_KEY_CODE : error.code,
@@ -83,7 +187,7 @@ const report = (
     kind: IssueKind,
     rejected: boolean,
     meta: ResponseCheckMeta,
-    errors: SchemaErrors,
+    errors: readonly Issue[],
     now: number,
 ): void => {
     // A stripped response (warn) must not hide a 500 of the same route, so each kind
@@ -138,23 +242,34 @@ export const createResponseCheck = (
 
     return (payload, meta) => {
         const checked: unknown = reject(payload)
-        if (!(checked instanceof type.errors)) return { ok: true, payload }
+        const schemaErrors = checked instanceof type.errors ? checked : null
 
-        if (!checked.every(isUndeclaredKey)) {
-            report(mode, 'mismatch', true, meta, checked, now())
+        if (schemaErrors !== null && !schemaErrors.every(isUndeclaredKey)) {
+            report(mode, 'mismatch', true, meta, schemaErrors, now())
             return { ok: false }
         }
+        const { prototypeKeys, unsafe } = inspectPayload(payload)
+        if (unsafe.length > 0) {
+            report(mode, 'mismatch', true, meta, unsafe, now())
+            return { ok: false }
+        }
+        const undeclared: Issue[] = [...(schemaErrors ?? []), ...prototypeKeys]
+        if (undeclared.length === 0) return { ok: true, payload }
+
         if (strip === null) {
-            report(mode, 'undeclared', true, meta, checked, now())
+            report(mode, 'undeclared', true, meta, undeclared, now())
             return { ok: false }
         }
-        const stripped: unknown = strip(payload)
+        const stripped: unknown = schemaErrors === null ? payload : strip(payload)
         // Should not fail after a reject with only undeclared keys, but stay fail-closed.
         if (stripped instanceof type.errors) {
             report(mode, 'mismatch', true, meta, stripped, now())
             return { ok: false }
         }
-        report(mode, 'undeclared', false, meta, checked, now())
-        return { ok: true, payload: stripped }
+        report(mode, 'undeclared', false, meta, undeclared, now())
+        return {
+            ok: true,
+            payload: prototypeKeys.length > 0 ? omitPrototypeKeys(stripped) : stripped,
+        }
     }
 }

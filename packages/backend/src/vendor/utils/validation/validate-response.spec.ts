@@ -201,6 +201,74 @@ describe('createResponseCheck', () => {
         expect(lastEntry(logger.warn)['suppressed']).toBe(2)
     })
 
+    describe('keys named like Object.prototype members (reviewer P1)', () => {
+        const nestedSchema = type({ id: 'number', n: { a: 'string' } })
+        const keys = [...Object.getOwnPropertyNames(Object.prototype), '__proto__']
+        // JSON.parse creates `__proto__` as an own key, like a row or request body would.
+        const payloadWith = (key: string): unknown =>
+            JSON.parse(
+                `{"id":1,"n":{"a":"x","${key}":{"s":"nested-secret"}},"${key}":{"passwordHash":"top-secret"}}`,
+            )
+
+        it.each(keys)('log strips %s at the top level and nested', (key) => {
+            const check = createResponseCheck(nestedSchema, { mode: 'log' })
+            const result = check?.(payloadWith(key), meta)
+            expect(result?.ok).toBe(true)
+            const sent = JSON.stringify(result?.ok === true ? result.payload : null)
+            expect(sent).toBe('{"id":1,"n":{"a":"x"}}')
+            expect(
+                lastEntry(logger.warn)
+                    .issues.map((issue) => issue.path)
+                    .sort(),
+            ).toEqual([key, `n.${key}`].sort())
+        })
+
+        it.each(keys)('strict answers %s with a 500', (key) => {
+            const check = createResponseCheck(nestedSchema, { mode: 'strict' })
+            expect(check?.(payloadWith(key), meta)).toEqual({ ok: false })
+        })
+
+        it('strips them inside array items too', () => {
+            const check = createResponseCheck(ListSchema, { mode: 'log' })
+            const payload = JSON.parse(
+                '{"status":"ok","items":[{"id":1,"nested":{"name":"a"},"constructor":{"x":"secret"}}]}',
+            ) as unknown
+            const result = check?.(payload, meta)
+            expect(JSON.stringify(result?.ok === true ? result.payload : null)).not.toContain(
+                'secret',
+            )
+        })
+    })
+
+    describe('objects that serialize another structure (reviewer P2)', () => {
+        it.each(['strict', 'log'] as const)('%s rejects a class instance with toJSON', (mode) => {
+            class Dto {
+                id = 1
+                email = 'a@b.c'
+                toJSON(): Record<string, unknown> {
+                    return { id: this.id, email: this.email, passwordHash: 'proto-secret' }
+                }
+            }
+            const check = createResponseCheck(schema, { mode })
+            expect(check?.(new Dto(), meta)).toEqual({
+                ok: false,
+            })
+            expect(lastEntry(logger.error).issues[0]).toMatchObject({ code: 'unsafe_prototype' })
+        })
+
+        it('rejects a nested non-plain object but accepts Date and null-prototype objects', () => {
+            const check = createResponseCheck(type({ at: 'Date', n: { a: 'string' } }), {
+                mode: 'log',
+            })
+            class Inner {
+                a = 'x'
+            }
+            expect(check?.({ at: new Date(0), n: new Inner() }, meta)).toEqual({ ok: false })
+            const bare = Object.assign(Object.create(null) as object, { a: 'x' })
+            expect(check?.({ at: new Date(0), n: bare }, meta).ok).toBe(true)
+        })
+    })
+
     describe('ArkType contract (guard)', () => {
         it('reports an undeclared key as predicate + removed', () => {
             const result = type({ a: 'string' }).onDeepUndeclaredKey('reject')({ a: 'x', b: 1 })

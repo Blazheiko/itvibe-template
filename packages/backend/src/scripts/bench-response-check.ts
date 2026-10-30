@@ -1,7 +1,9 @@
 // Benchmark of the response contract check (feat-046 §4.7): JSON.stringify against the
-// feat-044 check, the `reject` check of a clean response and the whole path of a response
-// with undeclared keys (reject → strip → paths). Medians of 7 runs after a warm-up.
+// feat-044 check (the bare schema) and createResponseCheck itself — a clean response, and
+// the whole path of a response with undeclared keys in log mode (reject → inspect → strip
+// → log). Medians of 7 runs after a warm-up. Run with LOG_LEVEL=silent.
 import { type } from '@arktype/type'
+import { createResponseCheck } from '#vendor/utils/validation/validate-response.js'
 
 const ErrorSchema = type({
     status: "'error'",
@@ -24,20 +26,10 @@ const Schema = type.or(
     { status: "'success'", 'message?': 'string', items: ItemSchema.array(), total: 'number' },
     ErrorSchema,
 )
-const reject = Schema.onDeepUndeclaredKey('reject')
-const strip = Schema.onDeepUndeclaredKey('delete')
-
-const isUndeclaredKey = (error: { code: string; expected: string }): boolean =>
-    error.code === 'predicate' && error.expected === 'removed'
-
-const fullPath = (payload: unknown): unknown => {
-    const checked = reject(payload)
-    if (!(checked instanceof type.errors)) return payload
-    if (!checked.every(isUndeclaredKey)) return null
-    const paths = checked.slice(0, 20).map((error) => error.propString)
-    const stripped = strip(payload)
-    return stripped instanceof type.errors ? null : [stripped, paths]
-}
+const strictCheck = createResponseCheck(Schema, { mode: 'strict' })
+const logCheck = createResponseCheck(Schema, { mode: 'log' })
+if (strictCheck === null || logCheck === null) throw new Error('no check')
+const meta = { route: 'bench', transport: 'http' as const }
 
 const makePayload = (count: number, withExtraKey: boolean): unknown => ({
     status: 'success',
@@ -77,15 +69,15 @@ const rows = [10, 100, 1000].map((count) => {
     const dirty = makePayload(count, true)
     const json = median((payload) => JSON.stringify(payload), clean, iterations)
     const check = median((payload) => Schema(payload), clean, iterations)
-    const rejectMs = median((payload) => reject(payload), clean, iterations)
-    const dirtyMs = median(fullPath, dirty, iterations)
+    const rejectMs = median((payload) => strictCheck(payload, meta), clean, iterations)
+    const dirtyMs = median((payload) => logCheck(payload, meta), dirty, iterations)
     return {
         items: count,
         'json ms': json.toFixed(4),
         'feat-044 check ms': check.toFixed(4),
-        'reject ms': rejectMs.toFixed(4),
-        'reject / json': (rejectMs / json).toFixed(2),
-        'reject / check': (rejectMs / check).toFixed(2),
+        'clean ms': rejectMs.toFixed(4),
+        'clean / json': (rejectMs / json).toFixed(2),
+        'clean / check': (rejectMs / check).toFixed(2),
         'undeclared path ms': dirtyMs.toFixed(4),
         'undeclared / json': (dirtyMs / json).toFixed(1),
     }
