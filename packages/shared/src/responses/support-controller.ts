@@ -37,6 +37,14 @@ export const SupportKnowledgeBaseItemResponseSchema = type.or(
 )
 export type SupportKnowledgeBaseItemResponse = typeof SupportKnowledgeBaseItemResponseSchema.infer
 
+// GET /support/screenshot/:articleId answers 302 with Location; the body only marks the
+// redirect. feat-044 skips 3xx, so this schema is checked by TypeScript only.
+export const SupportScreenshotResponseSchema = type.or(
+    { status: "'redirect'" },
+    CanonicalErrorResponseSchema,
+)
+export type SupportScreenshotResponse = typeof SupportScreenshotResponseSchema.infer
+
 export const SupportKnowledgeBaseDeleteResponseSchema = type.or(
     { status: "'ok'", 'message?': 'string' },
     CanonicalErrorResponseSchema,

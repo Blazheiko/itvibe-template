@@ -7,6 +7,7 @@ import { badRequest, notFound, unauthorized } from '#app/services/shared/errors.
 import type {
     SupportGetChatHistoryResponse,
     SupportDeleteChatHistoryResponse,
+    SupportScreenshotResponse,
 } from 'shared/responses'
 import { Result } from 'better-result'
 
@@ -51,7 +52,7 @@ export default {
         return { status: 'ok' }
     },
 
-    async getScreenshot(context: HttpContext): Promise<{ status: string; message?: string }> {
+    async getScreenshot(context: HttpContext): Promise<SupportScreenshotResponse> {
         const userId = getUserId(context)
         if (userId === null) return mapControllerError(context, unauthorized())
 

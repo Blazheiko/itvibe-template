@@ -1,5 +1,5 @@
 # Session Handoff
 
-**Feature:** feat-044 - Runtime Response Validation · **Branch:** `feat/response-validation` · **Date:** 2026-10-29
+**Feature:** feat-050 - Typed Route Responses · **Branch:** `feat/typed-route-response` · **Date:** 2026-10-30
 
-feat-044 is done (PR #142, closed in #143; review fixes in a follow-up PR). Next work lives in its own features: rollout feat-045, follow-ups feat-046..feat-049 (see `feature_list.json`).
+Implementation, docs and DoD checks are done (see `progress.md`). Remaining: merge PR #149 and the feature PR, then flip feat-050 → `done` on `main`. Merging was blocked for the agent by the auto-mode classifier.

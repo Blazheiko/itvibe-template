@@ -2,45 +2,51 @@
 
 ## Current State
 
-**Last Updated:** 2026-10-29 (review fixes)
-**Active Feature:** feat-044 - Runtime Response Validation
-**Branch:** `feat/response-validation`
-**Plan:** `docs/plan/response-schema-runtime-validation.md`, tasks: `docs/plan/response-schema-runtime-validation-tasks.md`
+**Last Updated:** 2026-10-30
+**Active Feature:** feat-050 - Typed Route Responses
+**Branch:** `feat/typed-route-response` (based on `chore/feat-050-in-progress`, PR #149)
+**Plan:** `docs/plan/typed-route-response-plan.md`, tasks: `docs/plan/typed-route-response-tasks.md`
 
 ## Status
 
 ### Done
 
-- [x] T0: PR #141 (feature_list entry + plan and task list)
-- [x] T1–T2 (`929b3b8`): `config/response-validation.ts` — `RESPONSE_VALIDATION=strict|log|off` (default `strict` outside production, `off` in production), `RESPONSE_VALIDATION_SAMPLE_RATE` 0..1; invalid value stops the start via `validateRuntimeConfig()`; `.env.example`
-- [x] T4 (`90726a5`): `vendor/utils/validation/validate-response.ts` — `createResponseCheck(schema, config)`; logs path/code/expected only (no values), one log line + one Sentry event (tag `response_validation`) per route per minute with a `suppressed` counter; sampling only in `log`; schema output never replaces the payload
-- [x] T3, T5–T7 (`22d1fd4`): `hasResponseBody()`/`isEmptyPayload()` shared with `sendResponse`; `NormalizedRouteItem.responseCheck` (required, built once in `routesHandler`); HTTP `checkHandlerResponse` (any status incl. `/ready` 503; not for middleware-stopped, thrown, 3xx/204/205/empty); strict → canonical 500, handler headers dropped, cookies kept; WS strict → `status: 'error'`, `internal_error`, `data: null`
-- [x] T8 (`807505f`): crawl of the running backend in `log` then `strict` (≈35 HTTP routes incl. admin, push CRUD, auth) found one mismatch — `GET /api/admin/usage/text` `total` was a bigint string (`count(*)` without `::int`); fixed + pg regression test. Temporary vitest pin to `log` removed
-- [x] T9: benchmark — valid check is 3–5% of `JSON.stringify` (1000 users 5.4 µs vs 141 µs); an invalid response costs about as much as serialization
-- [x] T10 (`7d3b06c`): `documentation/backend/response-validation.md`, env rows in `configuration.md`, sidebar + `KEY_PAGES`
+- [x] 0.1: PR #149 (review notes §7, task list, feat-050 → `in_progress`). Checks green; **not merged** — merge needs the owner
+- [x] 0.4 / 7.1: `pnpm --filter backend typecheck` — before 1.93 s (1.93 / 1.96 / 1.90), after 2.31 s (2.14 / 2.31 / 2.47, cold 3.02 s excluded). Noisy; growth ≈ 0.4 s
+- [x] 0.5 / 7.2: `ResponseSchema` coverage 60/60 HTTP, 4/4 WS (plan said 5 WS; there are 4)
+- [x] 1.1–1.2: all `shared/responses` schemas are `type(...)` / `type.or(...)` → static `Type`; generic constraint `Type` accepts all 64 routes
+- [x] 1.3: `RouteResponse<TRes>` — input not assignable to `Payload` → `never` (review: a structural marker could be built by a handler; replaced, negative tests for HTTP and WS; the handler casts in `defineRoute`/`defineWsRoute` became unnecessary and were removed); no current schema hits it
+- [x] 1.4: no controller is shared between HTTP and WS (WS controllers live in `controllers/ws`)
+- [x] 1.5 / 4.2 / 6: no `204` routes. Redirects: OAuth `redirect`, `callback` (own schemas, different statuses, already conform) and `/support/screenshot/:articleId`. Decision: specialised `SupportScreenshotResponseSchema`, no shared redirect schema
+- [x] 2–3, 5: type tests in `define-route.spec.ts` (RED: 8 unused `@ts-expect-error`), `TypedHandler`, `route-response.ts`, generic in `defineRoute` / `defineWsRoute`; contracts kept (optional `ResponseSchema`, default `undefined`, returns `RouteItem`, runtime unchanged)
+- [x] 3.5–3.6: alias `RouteResponse` is expanded in messages; a route-name marker (`TUrl` generic) does not show up either (unused alias param dropped) → reverted. The error is already reported on the route's `handler:` line
+- [x] 4: `testPush` → `TestPushResponse`; screenshot schema + `getScreenshot` narrowed; `serialize-routes` fixtures. `serializeRoutes` consumer is only `/doc/routes`; frontend uses the screenshot URL as an image, not its body
+- [x] 8: `routing.md` (new section «Тип відповіді хендлера» with the real error), `adding-a-feature.md`, `first-endpoint.md`
 
-### Not done / out of scope
+### Findings that changed the plan
 
-- [ ] WS routes not exercised against a running server (covered by dispatcher tests only)
-- [ ] `GET /api/admin/history-online` returned 500 locally: the local DB lacks the `user_online.role` migration — unrelated to this feature
-- T12 follow-ups registered in `feature_list.json`: feat-046 (strip undeclared fields), feat-047 (wire-format schemas), feat-048 (uniform WS error envelope), feat-049 (async WS messages); per-route override deliberately not registered until a route needs it
-- T13 rollout registered as feat-045
+- **Inline handlers widen literals too.** TypeScript widens a literal whose contextual type is the generic `TRes['inferIn']` (minimal repro, also with `NoInfer` and `const` variants), so `() => ({ status: 'ok' })` fails; `as const` or an annotation is needed. Plan §3.1 claimed otherwise; test fixes the limit
 
 ## Evidence of Completion
 
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` — clean
-- `pnpm test` — backend 1075, frontend 126, shared 14, api-playground 14, documentation 26
-- `PG_TEST_URL=… pnpm --filter backend test:pg llm-usage.pg.test.ts` — 23 passed; the new `countText` test fails without the fix (`'3'` vs `3`)
-- Mutation checks: disabling the HTTP and WS call sites fails 5 tests; removing the header reset fails 1
-- Manual: backend on :3100 with `RESPONSE_VALIDATION=log` logged `data.total expected a number` for `/api/admin/usage/text`; after the fix, `strict` crawl — no validation errors, no 500 from validation
-- `pnpm docs:build && pnpm docs:verify` — passed
-- After review: `CI=1 pnpm --filter frontend test:e2e` (production build + `vite preview`, as on CI) — 12 passed. Without `CI=1` Playwright reuses whatever dev server already listens on :5173; on this machine that was an unrelated running dev server and 12 tests failed there
-- After review, manual check of an invalid response in all three modes: the `count(*)::int` fix temporarily reverted, backend on :3100, `GET /api/admin/usage/text` as admin:
-    - `strict` → `500 {"status":"error","code":"internal_error","message":"Internal Server Error"}` + `ERROR Response does not match ResponseSchema` with `path: data.total`
-    - `log` → `200` with `"total":"0"` + `WARN` with the same issue
-    - `off` → `200` with `"total":"0"`, no log line
-- After review, benchmark per mode (off / log 0.1 / log 1 / strict) with the method in `documentation/backend/response-validation.md`
+- `pnpm typecheck` — exit 0
+- `pnpm lint` — exit 0; `pnpm format:check` — exit 0
+- `pnpm test` — backend 1087/1087 (131 files), frontend 126/126, api-playground 14/14, shared passed
+- `CI=1 pnpm --filter frontend test:e2e` — 12 passed
+- `pnpm docs:build && pnpm docs:verify` — «verify-dist: all checks passed»
+- Mutation: `/ping` with `ReadyResponseSchema` → `http-routes.ts(54,9): error TS2322`; WS `support_chat` with `AdminOnlineUsersWsResponseSchema` → `ws-routes.ts(39,17): error TS2322`; reverted. (Swapping to `SupportOpenChatResponseSchema` gives no error — it is identical to `SupportChatResponseSchema`.)
+- Golden path: the feature is type-level; verified by the mutation check above and the type tests. Runtime path unchanged (`defineRoute` body only re-attaches `handler`)
+
+Commits:
+
+- 97681fd Format define-route helpers
+- e7db907 Document typed route responses in routing and controller guides
+- 241d87d Fix serialize-routes fixtures to return what their schemas declare
+- ba139b7 Give GET /support/screenshot/:articleId its own redirect schema
+- c24690a Narrow testPush result to TestPushResponse
+- 52d3f1c Check handler results against ResponseSchema in defineRoute/defineWsRoute
 
 ## Notes for Next Session
 
-- After merge: PR flipping feat-044 to `done`, then register the rollout feature (T13) and follow-ups (T12) in `feature_list.json`.
+1. Owner merges PR #149, then the feature PR (rebase on `main` if #149 is squashed)
+2. After merge: PR to `main` flipping feat-050 → `done` with the evidence commit
