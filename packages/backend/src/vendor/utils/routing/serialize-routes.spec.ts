@@ -96,7 +96,7 @@ describe('serializeRoutes', () => {
                 url: '/register',
                 method: 'post',
                 ResponseSchema: type.or(successSchema, CanonicalErrorResponseSchema),
-                handler: () => ({ ok: true }),
+                handler: () => ({ status: 'success' as const, message: 'ok' }),
             }),
         ]
 
@@ -128,7 +128,7 @@ describe('serializeRoutes', () => {
                 url: '/ping',
                 method: 'get',
                 ResponseSchema: responseSchema,
-                handler: () => ({ ok: true }),
+                handler: () => ({ status: 'ok' as const, message: 'ok' }),
             }),
         ]
 
