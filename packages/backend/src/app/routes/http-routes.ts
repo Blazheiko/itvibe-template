@@ -416,7 +416,7 @@ export default [
                 url: '/screenshot/:articleId',
                 method: 'get',
                 handler: SupportController.getScreenshot.bind(SupportController),
-                ResponseSchema: ResponseSchemas.SupportKnowledgeBaseItemResponseSchema,
+                ResponseSchema: ResponseSchemas.SupportScreenshotResponseSchema,
                 description: 'Get screenshot for a knowledge base article',
             }),
         ],
