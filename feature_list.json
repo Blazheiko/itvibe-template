@@ -437,7 +437,7 @@
         {
             "id": "feat-045",
             "name": "Response Validation Rollout",
-            "description": "docs/plan/response-schema-runtime-validation-tasks.md T13: RESPONSE_VALIDATION=log in staging (rate 1), then production (rate from the T9 benchmark); collect warn logs and Sentry events tagged response_validation, fix each mismatch in its own PR; after 14 days without warnings switch staging to strict; production strict only by a recorded team decision",
+            "description": "docs/plan/strip-response-fields-plan.md §4.6 (supersedes response-schema-runtime-validation-tasks.md T13): RESPONSE_VALIDATION_CONTRACT has no off mode and log is fail-closed for schema mismatches, so production starts in log after the feat-046 staging gate; rollout is production log -> strict (the only difference left: undeclared keys become a 500 instead of being stripped) after a period without undeclared_key warnings in logs and Sentry",
             "owner": "Blazheiko",
             "branch": "chore/response-validation-rollout",
             "dependencies": ["feat-044"],
@@ -457,10 +457,10 @@
         {
             "id": "feat-047",
             "name": "Wire-Format Response Schemas",
-            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §7: align response schemas with the JSON the client receives (Date -> ISO string, e.g. push-subscription schemas) so /doc/routes describes the wire format; decide whether CI validates JSON.parse(JSON.stringify(payload))",
+            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §7: align response schemas with the JSON the client receives (Date -> ISO string, e.g. push-subscription schemas) so /doc/routes describes the wire format; decide whether CI validates JSON.parse(JSON.stringify(payload)); after feat-046 the fast path sends the original object, not the schema output: with morphs (Date -> ISO string) revisit createResponseCheck to send the reject output, replace the identity test with a format test, re-run bench:response, and lift the no-morph guard in route-access.spec.ts",
             "owner": "Blazheiko",
             "branch": "feat/wire-format-response-schemas",
-            "dependencies": ["feat-044"],
+            "dependencies": ["feat-044", "feat-046"],
             "status": "not-started",
             "evidence": ""
         },
@@ -493,6 +493,16 @@
             "dependencies": ["feat-044"],
             "status": "done",
             "evidence": "PR #150 (merge 27303ee): progress.md Evidence of Completion — typecheck/lint/test, e2e 12 passed, docs build/verify, tsc mutation check for HTTP and WS"
+        },
+        {
+            "id": "feat-051",
+            "name": "Drop Legacy RESPONSE_VALIDATION",
+            "description": "docs/plan/strip-response-fields-plan.md §4.4: one release after feat-046, remove the legacy RESPONSE_VALIDATION / RESPONSE_VALIDATION_SAMPLE_RATE mapping from config/response-validation.ts, its tests and the docs warning",
+            "owner": "Blazheiko",
+            "branch": "chore/drop-legacy-response-validation",
+            "dependencies": ["feat-046"],
+            "status": "not-started",
+            "evidence": ""
         }
     ]
 }
