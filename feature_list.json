@@ -471,8 +471,8 @@
             "owner": "Blazheiko",
             "branch": "feat/ws-error-envelope",
             "dependencies": ["feat-044"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #163 (merge 429416a): progress.md Evidence of Completion — typecheck/lint/format/test (backend 1156), e2e 12 passed, docs build/verify, manual WS check (unknown route and invalid payload answer data null)"
         },
         {
             "id": "feat-049",
