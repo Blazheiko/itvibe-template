@@ -27,6 +27,7 @@ import configApp from '#config/app.js'
 import type { Validator } from '#vendor/contracts/validator.js'
 import { ValidationError } from '#app/validate/errors/validation-error.js'
 import { RedisUnavailableError } from '#vendor/utils/network/errors/redis-unavailable-error.js'
+import { createWsErrorEnvelope } from '#vendor/utils/network/ws-error-envelope.js'
 
 // ---------------------------------------------------------------------------
 // App hooks — registered at startup from app/start/index.ts
@@ -85,19 +86,6 @@ const wsStorage: Set<MyWebSocket> = new Set<MyWebSocket>()
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-type WsErrorEnvelope = NonNullable<WsResponseData['error']>
-
-const createWsErrorEnvelope = (
-    code: string,
-    message: string,
-    options?: { reason?: string; details?: unknown },
-): WsErrorEnvelope => ({
-    code,
-    message,
-    ...(options?.reason !== undefined ? { reason: options.reason } : {}),
-    ...(options?.details !== undefined ? { details: options.details } : {}),
-})
 
 const sendJson = (ws: MyWebSocket, data: WsResponseData): void => {
     if (typeof ws.cork !== 'function') {
