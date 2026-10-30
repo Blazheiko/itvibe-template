@@ -451,8 +451,8 @@
             "owner": "Blazheiko",
             "branch": "feat/strip-response-fields",
             "dependencies": ["feat-044"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #153 (merge 000879c): progress.md Evidence of Completion — typecheck/lint/format/test (backend 1138), e2e 12 passed, docs build/verify, bench:response within §4.7 (+50 % accepted), live crawl in log and strict with 0 response-validation records; T10 staging gate not applicable (template without production), kept as a deployment warning in docs"
         },
         {
             "id": "feat-047",

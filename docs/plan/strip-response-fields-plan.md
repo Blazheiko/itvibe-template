@@ -335,6 +335,9 @@ TypeScript-тип (як `ErrorDetails` у `CanonicalErrorResponse`) цього �
     evidence — нуль записів про невідповідність (Sentry `response_validation`, логи), перелік
     вирізаних шляхів `undeclared_key` з рішенням для кожного. Лише після цього — production-реліз
     і feat-046 → `done`. Є записи про невідповідність — виправити, тиждень з початку.
+    **Рішення (2026-10-30, власник):** репозиторій — шаблон, production і staging немає, тож T10 у
+    межах фічі не виконується. Вимога лишається для того, хто розгортає шаблон: попередження
+    «Production» у `documentation/backend/response-validation.md`.
 
 ## 6. Відкриті питання
 
