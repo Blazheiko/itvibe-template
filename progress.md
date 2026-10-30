@@ -3,50 +3,54 @@
 ## Current State
 
 **Last Updated:** 2026-10-30
-**Active Feature:** feat-050 - Typed Route Responses
-**Branch:** `feat/typed-route-response` (based on `chore/feat-050-in-progress`, PR #149)
-**Plan:** `docs/plan/typed-route-response-plan.md`, tasks: `docs/plan/typed-route-response-tasks.md`
+**Active Feature:** feat-046 - Strip Undeclared Response Fields
+**Branch:** `feat/strip-response-fields` (based on `docs/feat-046-plan`, PR #152)
+**Plan:** `docs/plan/strip-response-fields-plan.md`, tasks: `docs/plan/strip-response-fields-tasks.md`
 
 ## Status
 
 ### Done
 
-- [x] 0.1: PR #149 (review notes §7, task list, feat-050 → `in_progress`). Checks green; **not merged** — merge needs the owner
-- [x] 0.4 / 7.1: `pnpm --filter backend typecheck` — before 1.93 s (1.93 / 1.96 / 1.90), after 2.31 s (2.14 / 2.31 / 2.47, cold 3.02 s excluded). Noisy; growth ≈ 0.4 s
-- [x] 0.5 / 7.2: `ResponseSchema` coverage 60/60 HTTP, 4/4 WS (plan said 5 WS; there are 4)
-- [x] 1.1–1.2: all `shared/responses` schemas are `type(...)` / `type.or(...)` → static `Type`; generic constraint `Type` accepts all 64 routes
-- [x] 1.3: `RouteResponse<TRes>` — input not assignable to `Payload` → `never` (review: a structural marker could be built by a handler; replaced, negative tests for HTTP and WS; the handler casts in `defineRoute`/`defineWsRoute` became unnecessary and were removed); no current schema hits it
-- [x] 1.4: no controller is shared between HTTP and WS (WS controllers live in `controllers/ws`)
-- [x] 1.5 / 4.2 / 6: no `204` routes. Redirects: OAuth `redirect`, `callback` (own schemas, different statuses, already conform) and `/support/screenshot/:articleId`. Decision: specialised `SupportScreenshotResponseSchema`, no shared redirect schema
-- [x] 2–3, 5: type tests in `define-route.spec.ts` (RED: 8 unused `@ts-expect-error`), `TypedHandler`, `route-response.ts`, generic in `defineRoute` / `defineWsRoute`; contracts kept (optional `ResponseSchema`, default `undefined`, returns `RouteItem`, runtime unchanged)
-- [x] 3.5–3.6: alias `RouteResponse` is expanded in messages; a route-name marker (`TUrl` generic) does not show up either (unused alias param dropped) → reverted. The error is already reported on the route's `handler:` line
-- [x] 4: `testPush` → `TestPushResponse`; screenshot schema + `getScreenshot` narrowed; `serialize-routes` fixtures. `serializeRoutes` consumer is only `/doc/routes`; frontend uses the screenshot URL as an image, not its body
-- [x] 8: `routing.md` (new section «Тип відповіді хендлера» with the real error), `adding-a-feature.md`, `first-endpoint.md`
+- [x] 0.1: PR #152 (plan, task list, feat-046 → `in_progress` with the new description). **Not merged** — merge needs the owner
+- [x] 0.5 / T0.5 perf spike: `pnpm --filter backend bench:response` (`src/scripts/bench-response-check.ts`), thresholds §4.7 reachable:
 
-### Findings that changed the plan
+    | items | json ms | feat-044 check | reject (clean) | reject/json | reject/check | undeclared path | /json |
+    | ----- | ------- | -------------- | -------------- | ----------- | ------------ | --------------- | ----- |
+    | 10    | 0.0183  | 0.0138         | 0.0178         | 0.97        | 1.29         | 0.189           | 10.3× |
+    | 100   | 0.1744  | 0.1349         | 0.1652         | 0.95        | 1.22         | 1.680           | 9.6×  |
+    | 1000  | 1.8930  | 1.3734         | 1.6541         | 0.87        | 1.20         | 17.16           | 9.1×  |
 
-- **Inline handlers widen literals too.** TypeScript widens a literal whose contextual type is the generic `TRes['inferIn']` (minimal repro, also with `NoInfer` and `const` variants), so `() => ({ status: 'ok' })` fails; `as const` or an annotation is needed. Plan §3.1 claimed otherwise; test fixes the limit
+    All within §4.7 (≤ 1.2× json, ≤ +30 % check, ≤ 0.25 / 2.5 ms, ≤ 15×). Borderline: +29 % vs check at 10 items.
+
+- [x] 0.6: mentions of `RESPONSE_VALIDATION*` — backend config/spec/validate-runtime-config, router, server/ws tests, `.env.example`, backend README, docs (`response-validation`, `configuration`, `routing`, `validation`), plans
+- [x] 1.1 audit of `unknown` in route response schemas (guard `route-access.spec.ts`): 17 fields on 17 routes. Detailed: push-subscriptions (all 7 routes), prompts, support chat history, knowledge base. Exceptions without the guarantee: `details` (canonical error), push log `messageData` (notification `data` the user's device already got). Unused schemas (`Test*`, `Index`, `Success`, `GetSetCookies`) are not on any route
+- [x] 1.2: `/test-*` debug schemas are not used by any route → no exception needed
+- [x] 1.3 / 2.9: no morphs in response schemas; guard test over all routes
+- [x] T1/T3/T4/T5 (`5457f1e`): config `RESPONSE_VALIDATION_CONTRACT` + legacy mapping; `createResponseCheck` reject → (mismatch 500 | strict 500 | log strip); HTTP and WS send the returned payload
+- [x] T6 (`31f7e1e`, `0d4b71a`): wire-shape schemas; jsonb `notification_types` / `response_data` typed via `$type<>()` (no SQL change). Found: prompt, llm-usage and avatar schemas described errors by hand (no canonical fields) → would be 500 on every `mapControllerError`; now `CanonicalErrorResponseSchema`; guard added
+- [x] T2 live crawl (`f7e6a9a`): temporary admin in the local DB (removed after), 32 requests (auth, main, oauth providers, push CRUD incl. logs/statistics/deactivate/delete, support history, knowledge base read, prompts, admin usage/users/online). Found and fixed:
+    - backend did **not start in `log`**: `ResetPasswordResponseSchema` had an overlapping second error branch; ArkType rejects `delete` (a morph) on it. New guard builds the check in both modes for every route
+    - `POST /auth/login` returned `user.avatar/created_at/updated_at` outside the schema (client keeps `avatar`) → declared
+    - After fixes: 0 response-validation records in `log` and in `strict`. Unrelated 500s: `vapid-public-key` (no VAPID keys locally), `admin/history-online` (local DB lacks the `user_online.role` migration, known since feat-044)
+    - Not crawled: WS routes (dispatcher tests only), knowledge base writes (they call the embedding API)
+- [x] T8 docs: `response-validation.md` rewritten (modes, algorithm, exceptions, logs, cost), `configuration.md`, `routing.md`, `validation.md`, backend README, `.env.example`, scripts README
+
+### Not done
+
+- [ ] PR #152 merge, feature PR, merge
+- [ ] T10 staging gate (owner): ≥ 7 days on staging in `log`, 0 mismatch records; only then production release and feat-046 → `done`
+- [ ] At the done-PR: update feat-045 description (no `off`; `log` is fail-closed for mismatches) and add a feat-047 note (fast path sends the original object — revisit with morphs); register removal of the legacy `RESPONSE_VALIDATION` name
 
 ## Evidence of Completion
 
 - `pnpm typecheck` — exit 0
 - `pnpm lint` — exit 0; `pnpm format:check` — exit 0
-- `pnpm test` — backend 1087/1087 (131 files), frontend 126/126, api-playground 14/14, shared passed
+- `pnpm test` — see commit trailer of the last commit
 - `CI=1 pnpm --filter frontend test:e2e` — 12 passed
-- `pnpm docs:build && pnpm docs:verify` — «verify-dist: all checks passed»
-- Mutation: `/ping` with `ReadyResponseSchema` → `http-routes.ts(54,9): error TS2322`; WS `support_chat` with `AdminOnlineUsersWsResponseSchema` → `ws-routes.ts(39,17): error TS2322`; reverted. (Swapping to `SupportOpenChatResponseSchema` gives no error — it is identical to `SupportChatResponseSchema`.)
-- Golden path: the feature is type-level; verified by the mutation check above and the type tests. Runtime path unchanged (`defineRoute` body only re-attaches `handler`)
-
-Commits:
-
-- 97681fd Format define-route helpers
-- e7db907 Document typed route responses in routing and controller guides
-- 241d87d Fix serialize-routes fixtures to return what their schemas declare
-- ba139b7 Give GET /support/screenshot/:articleId its own redirect schema
-- c24690a Narrow testPush result to TestPushResponse
-- 52d3f1c Check handler results against ResponseSchema in defineRoute/defineWsRoute
+- `pnpm docs:build && pnpm docs:verify` — passed
+- Crawl in `log` / `strict` — 0 response-validation records (above)
 
 ## Notes for Next Session
 
-1. Owner merges PR #149, then the feature PR (rebase on `main` if #149 is squashed)
-2. After merge: PR to `main` flipping feat-050 → `done` with the evidence commit
+1. Owner merges PR #152, then the feature PR
+2. Staging week (T10), then production and the done-PR with the feat-045/feat-047 updates
