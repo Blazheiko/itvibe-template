@@ -369,7 +369,7 @@ import {
 ] satisfies routeList;
 ```
 
-[`defineRoute`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Маршрутизації](/backend/routing) і [Middleware](/backend/middlewares)).
+[`defineRoute`](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/routing/define-route.ts) виводить тип payload з `validator`, тому `HttpContext<CreateNoteInput>` у контролері перевіряє компілятор. Результат контролера він звіряє з `ResponseSchema`: якщо `create` поверне не `CreateNoteResponse`, `tsc` впаде на рядку `handler:`. Анотацію `Promise<CreateNoteResponse>` у контролері лишайте — без неї літерали на кшталт `'success'` розширюються до `string` ([Тип відповіді хендлера](/backend/routing#тип-відповіді-хендлера)). Набір middleware `session_web` + `csrf_guard` + `auth_guard` такий самий, як у групи `avatar`. Отже, `POST` вимагає сесії й CSRF-токена (деталі — у [Маршрутизації](/backend/routing) і [Middleware](/backend/middlewares)).
 
 Якщо додаєте оновлення або видалення нотатки: для часткового оновлення беріть `method: "patch"` з `validator`, а для видалення — `method: "delete"` з `url: "/:id"` і без `validator`, бо `DELETE` тіло не читає ([Методи і тіло запиту](/backend/routing#методи-і-тіло-запиту)).
 
