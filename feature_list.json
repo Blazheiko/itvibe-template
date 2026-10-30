@@ -501,8 +501,8 @@
             "owner": "Blazheiko",
             "branch": "chore/drop-legacy-response-validation",
             "dependencies": ["feat-046"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #159 (merge cce542b): progress.md Evidence of Completion — typecheck/lint/format/test (backend 1148), e2e 12 passed, docs build/verify, backend start with RESPONSE_VALIDATION_CONTRACT=log"
         }
     ]
 }
