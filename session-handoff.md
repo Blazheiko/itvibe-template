@@ -1,5 +1,4 @@
 # Session Handoff
 
-**Feature:** feat-048 - Uniform WS Error Envelope · **Branch:** `feat/ws-error-envelope` · **Date:** 2026-10-30
-
-Done and verified (see `progress.md`). Remaining: merge PR #162 and the feature PR, then the done-PR to `main`.
+feat-049 is implemented and verified on `feat/ws-async-message-validation`; nothing is in flight.
+Remaining: merge PR #165 (plan) and the feature PR, then a PR to `main` flipping feat-049 to `done`.
