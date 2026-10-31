@@ -66,4 +66,4 @@
 - [x] **8.2** `CI=1 pnpm --filter frontend test:e2e`.
 - [x] **8.3** Ручна перевірка (§5 T8 плану): `admin_user_online_upsert` приходить адміну; зайве поле
       в `log` вирізано, шлях у лозі.
-- [ ] **8.4** Evidence у `progress.md`; PR гілки; feat-049 → `done` через PR у `main`.
+- [x] **8.4** Evidence у `progress.md`; PR гілки; feat-049 → `done` через PR у `main`.

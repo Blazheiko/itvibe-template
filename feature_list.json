@@ -481,8 +481,8 @@
             "owner": "Blazheiko",
             "branch": "feat/ws-async-message-validation",
             "dependencies": ["feat-044"],
-            "status": "in_progress",
-            "evidence": ""
+            "status": "done",
+            "evidence": "PR #167 (aaa265a; #166 merged into the plan branch): typecheck/lint/format/test clean (backend 1174, frontend 168), e2e 12/12, docs build+verify; manual WS check of admin_user_online_upsert in strict/log; progress.md on feat/ws-async-message-validation"
         },
         {
             "id": "feat-050",
