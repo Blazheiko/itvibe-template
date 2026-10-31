@@ -20,4 +20,10 @@ export type BroadcastEventName = keyof typeof BroadcastEventSchemas
 export type BroadcastPayload<E extends BroadcastEventName> =
     (typeof BroadcastEventSchemas)[E]['inferIn']
 
+// One event with its payload, as a union of pairs: a union of names cannot be passed
+// with a union of payloads, so the pair stays linked even for a non-literal event.
+export type BroadcastMessage = {
+    [E in BroadcastEventName]: [event: E, payload: BroadcastPayload<E>]
+}[BroadcastEventName]
+
 export const BROADCAST_EVENT_NAMES = Object.keys(BroadcastEventSchemas) as BroadcastEventName[]

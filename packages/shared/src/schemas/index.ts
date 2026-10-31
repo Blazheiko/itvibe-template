@@ -62,6 +62,7 @@ export {
     BROADCAST_EVENT_NAMES,
     type BroadcastEventName,
     type BroadcastPayload,
+    type BroadcastMessage,
 } from './ws/broadcast-events.js'
 
 export {

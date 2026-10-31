@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { BroadcastEventName, BroadcastMessage, BroadcastPayload } from 'shared/schemas'
 import type * as ValidateResponse from '#vendor/utils/validation/validate-response.js'
 
 const error = vi.fn()
@@ -82,6 +83,19 @@ describe('broadcastService types (feat-049 §4.2)', () => {
         // @ts-expect-error payload of support_chat_error
         service.broadcastMessageToUser('1', 'support_chat_token', { message: 'x' })
         expect(send).not.toHaveBeenCalled()
+    })
+
+    it('keeps the event and its payload linked for union arguments', () => {
+        const service = createBroadcastService({ mode: 'strict' })
+        const relay = (
+            event: BroadcastEventName,
+            payload: BroadcastPayload<BroadcastEventName>,
+        ): number =>
+            // @ts-expect-error a union of names with a union of payloads is not a BroadcastMessage
+            service.broadcastMessageToUser('1', event, payload)
+        expect(relay('support_chat_token', { message: 'wrong payload' })).toBe(0)
+        const message: BroadcastMessage = ['support_chat_token', { token: 'ok' }]
+        expect(service.broadcastMessageToUser('1', ...message)).toBe(3)
     })
 })
 

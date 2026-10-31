@@ -12,7 +12,7 @@ import {
     BROADCAST_EVENT_NAMES,
     BroadcastEventSchemas,
     type BroadcastEventName,
-    type BroadcastPayload,
+    type BroadcastMessage,
 } from 'shared/schemas'
 import type { WsChannel } from 'shared/guards'
 
@@ -22,28 +22,18 @@ import type { WsChannel } from 'shared/guards'
 // undeclared keys are stripped in log and drop the event in strict; a mismatch drops it
 // in both. There is nobody to answer 500 to, so a dropped event is only logged.
 export interface BroadcastService {
-    broadcastMessageToUser<E extends BroadcastEventName>(
-        userId: string,
-        event: E,
-        payload: BroadcastPayload<E>,
-    ): number
-    broadcastMessageToUserExcept<E extends BroadcastEventName>(
+    broadcastMessageToUser(userId: string, ...message: BroadcastMessage): number
+    broadcastMessageToUserExcept(
         userId: string,
         excludeUuid: string,
-        event: E,
-        payload: BroadcastPayload<E>,
+        ...message: BroadcastMessage
     ): number
-    broadcastMessageToUserConnection<E extends BroadcastEventName>(
+    broadcastMessageToUserConnection(
         userId: string,
         targetUuid: string,
-        event: E,
-        payload: BroadcastPayload<E>,
+        ...message: BroadcastMessage
     ): number
-    broadcastMessageToChannel<E extends BroadcastEventName>(
-        channel: WsChannel,
-        event: E,
-        payload: BroadcastPayload<E>,
-    ): boolean
+    broadcastMessageToChannel(channel: WsChannel, ...message: BroadcastMessage): boolean
 }
 
 export const createBroadcastService = (options: ResponseCheckOptions): BroadcastService => {
@@ -65,11 +55,7 @@ export const createBroadcastService = (options: ResponseCheckOptions): Broadcast
     }
 
     return {
-        broadcastMessageToUser<E extends BroadcastEventName>(
-            userId: string,
-            event: E,
-            payload: BroadcastPayload<E>,
-        ): number {
+        broadcastMessageToUser(userId: string, ...[event, payload]: BroadcastMessage): number {
             logger.info(`broadcastMessageToUser: ${userId} ${event}`)
             const message = serialize(event, payload)
             if (message === null) return 0
@@ -85,11 +71,10 @@ export const createBroadcastService = (options: ResponseCheckOptions): Broadcast
             return counter
         },
 
-        broadcastMessageToUserExcept<E extends BroadcastEventName>(
+        broadcastMessageToUserExcept(
             userId: string,
             excludeUuid: string,
-            event: E,
-            payload: BroadcastPayload<E>,
+            ...[event, payload]: BroadcastMessage
         ): number {
             logger.info(`broadcastMessageToUserExcept: ${userId} ${event} exclude: ${excludeUuid}`)
             const message = serialize(event, payload)
@@ -107,11 +92,10 @@ export const createBroadcastService = (options: ResponseCheckOptions): Broadcast
             return counter
         },
 
-        broadcastMessageToUserConnection<E extends BroadcastEventName>(
+        broadcastMessageToUserConnection(
             userId: string,
             targetUuid: string,
-            event: E,
-            payload: BroadcastPayload<E>,
+            ...[event, payload]: BroadcastMessage
         ): number {
             logger.info(
                 `broadcastMessageToUserConnection: ${userId} ${event} target: ${targetUuid}`,
@@ -135,10 +119,9 @@ export const createBroadcastService = (options: ResponseCheckOptions): Broadcast
             }
         },
 
-        broadcastMessageToChannel<E extends BroadcastEventName>(
+        broadcastMessageToChannel(
             channel: WsChannel,
-            event: E,
-            payload: BroadcastPayload<E>,
+            ...[event, payload]: BroadcastMessage
         ): boolean {
             logger.info({ channel, event }, 'broadcastMessageToChannel')
             const message = serialize(event, payload)

@@ -218,7 +218,7 @@ Support-контролери ([support-controller.ts](https://github.com/Blazhei
 
 ### Контракт подій
 
-Кожна подія має схему payload у реєстрі `BroadcastEventSchemas` ([broadcast-events.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/ws/broadcast-events.ts)). Методи `broadcastService` генеричні: `event` — лише ключ реєстру, `payload` — тип його схеми (`BroadcastPayload<E>`), тож неіснуючу подію чи payload іншої події не пропустить `tsc`.
+Кожна подія має схему payload у реєстрі `BroadcastEventSchemas` ([broadcast-events.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/ws/broadcast-events.ts)). Методи `broadcastService` приймають `event` і `payload` як пару `BroadcastMessage` — union кортежів `[event, BroadcastPayload<event>]` по всіх ключах реєстру. Тож неіснуючу подію чи payload іншої події не пропустить `tsc`, навіть якщо `event` не літерал: union назв разом з union payload'ів парою не є. Обгортку передавайте далі як `...message: BroadcastMessage`, а не окремими `event` / `payload`.
 
 Під час виконання кожна подія **один раз**, до серіалізації й до циклу по з'єднаннях, проходить ту саму перевірку, що й відповіді маршрутів (`createResponseCheck`, режим `RESPONSE_VALIDATION_CONTRACT`, див. [Перевірка відповідей](/backend/response-validation#broadcast)):
 

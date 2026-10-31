@@ -87,7 +87,7 @@ export type BroadcastPayload<E extends BroadcastEventName> =
 
 ### 4.2 Типізований `broadcastService`
 
-Методи стають генеричними: `<E extends BroadcastEventName>(…, event: E, payload: BroadcastPayload<E>)`.
+Методи приймають пару `...message: BroadcastMessage` — union кортежів `[E, BroadcastPayload<E>]` (рев'ю: генерик `E` з union-аргументами розривав зв'язок події й payload).
 `tsc` не пропустить неіснуючу подію чи невідповідний payload. Виклики в `support-service.ts`
 (`broadcastToConnection`) і `ws-presence-service.ts` типізуються так само.
 
