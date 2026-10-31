@@ -477,11 +477,11 @@
         {
             "id": "feat-049",
             "name": "Validate Async WS Messages",
-            "description": "docs/plan/response-schema-runtime-validation-tasks.md T12 / plan §4.3.2: runtime schema check for messages a WS handler sends later (support AI replies) and for broadcasts, which feat-044 does not cover",
+            "description": "docs/plan/ws-async-message-validation-plan.md: typed registry of broadcast events in shared (5 events), typed broadcastService methods, one runtime createResponseCheck per event before serialization (strict/log as for responses); an invalid event is not sent; frontend keeps ArkType-free guards with a parity test against the registry",
             "owner": "Blazheiko",
             "branch": "feat/ws-async-message-validation",
             "dependencies": ["feat-044"],
-            "status": "not-started",
+            "status": "in_progress",
             "evidence": ""
         },
         {
