@@ -1,0 +1,23 @@
+import { type } from '@arktype/type'
+import { EntityIdSchema } from '../../brands/index.js'
+import { WSAdminUserOnlineUpsertPayloadSchema } from './ws-admin-user-online-upsert.js'
+
+// Payloads of the events the backend pushes without a request (`broadcast:<event>`),
+// docs/plan/ws-async-message-validation-plan.md §4.1. The backend checks every event
+// against its schema before sending; the frontend checks it with hand-written guards
+// (no ArkType in the bundle) kept in sync by a parity test. Schemas describe JSON:
+// no Date, bigint or morphs, and no '+': 'reject' — the backend mode decides on keys.
+export const BroadcastEventSchemas = {
+    support_chat_token: type({ token: 'string' }),
+    support_chat_complete: type({ content: 'string', screenshots: 'string[]' }),
+    support_chat_error: type({ message: 'string' }),
+    admin_user_online_upsert: WSAdminUserOnlineUpsertPayloadSchema,
+    admin_user_online_remove: type({ id: EntityIdSchema }),
+} as const
+
+export type BroadcastEventName = keyof typeof BroadcastEventSchemas
+
+export type BroadcastPayload<E extends BroadcastEventName> =
+    (typeof BroadcastEventSchemas)[E]['inferIn']
+
+export const BROADCAST_EVENT_NAMES = Object.keys(BroadcastEventSchemas) as BroadcastEventName[]

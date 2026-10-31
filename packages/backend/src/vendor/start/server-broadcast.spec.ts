@@ -38,7 +38,7 @@ beforeEach(() => {
 
 describe('broadcastToChannel', () => {
     it('publishes to a declared channel', () => {
-        expect(broadcastToChannel('admin', 'admin_user_online_remove', { id: '1' })).toBe(true)
+        expect(broadcastToChannel('admin', 'admin_user_online_remove', '{}')).toBe(true)
         expect(publish).toHaveBeenCalledTimes(1)
         expect(publish.mock.calls[0]?.[0]).toBe('admin')
         expect(warn).not.toHaveBeenCalled()
@@ -48,7 +48,7 @@ describe('broadcastToChannel', () => {
         'drops a message for an undeclared channel %j that bypassed the type',
         (channel) => {
             // Simulates an untyped value reaching the function at runtime.
-            const result = broadcastToChannel(channel as 'admin', 'event', {})
+            const result = broadcastToChannel(channel as 'admin', 'event', '{}')
             expect(result).toBe(false)
             expect(publish).not.toHaveBeenCalled()
             expect(warn).toHaveBeenCalledTimes(1)

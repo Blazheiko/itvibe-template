@@ -64,7 +64,7 @@ import configApp from '#config/app.js'
 import getIP from '#vendor/utils/network/get-ip.js'
 import { serializeRoutes } from '#vendor/utils/routing/serialize-routes.js'
 import { isBodyMethod } from '#vendor/utils/routing/body-methods.js'
-import { makeBroadcastJson, makeJson } from '#vendor/utils/helpers/json-handlers.js'
+import { makeJson } from '#vendor/utils/helpers/json-handlers.js'
 import { validateRoutePayload } from '#vendor/utils/validation/validate-route-payload.js'
 import { flattenQuery } from '#vendor/utils/validation/flatten-query.js'
 
@@ -91,8 +91,9 @@ interface ServerRoutes {
 // The type limits callers at compile time; the runtime check covers values that
 // bypass it (casts, untyped data), so nothing is published to an arbitrary topic.
 // Returns true when the channel is allowed and publish was called; it does not
-// confirm delivery (the uWS publish result is ignored).
-const broadcastToChannel = (channel: WsChannel, event: string, payload: Payload): boolean => {
+// confirm delivery (the uWS publish result is ignored). `message` is the serialized
+// broadcast JSON, built by broadcastService after the event schema check.
+const broadcastToChannel = (channel: WsChannel, event: string, message: string): boolean => {
     if (!isWsChannel(channel)) {
         logger.warn(
             { channel: String(channel).slice(0, 64), event },
@@ -100,7 +101,7 @@ const broadcastToChannel = (channel: WsChannel, event: string, payload: Payload)
         )
         return false
     }
-    server.publish(channel, makeBroadcastJson(event, 200, payload))
+    server.publish(channel, message)
     return true
 }
 
