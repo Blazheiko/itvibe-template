@@ -4,6 +4,7 @@ import { type } from '@arktype/type'
 
 import { nonWirePaths, unknownPaths } from '#app/routes/response-schema-guards.js'
 import type { HttpContext, RouteItem } from '#vendor/types/types.js'
+import { BroadcastEventSchemas } from 'shared/schemas'
 
 vi.mock('#logger', () => ({
     default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
@@ -197,4 +198,25 @@ describe('response schema guards (feat-046)', () => {
             })
         },
     )
+})
+
+describe('broadcast event schemas (feat-049 §4.1)', () => {
+    const events = Object.entries(BroadcastEventSchemas)
+
+    it('have no morph, Date, bigint or unknown: they describe the JSON the client gets', () => {
+        const found = events.flatMap(([event, schema]) => [
+            ...(schema.internal.includesTransform ? [`${event}: morph`] : []),
+            ...nonWirePaths(schema).map((path) => `${event}: ${path}`),
+            ...unknownPaths(schema).map((path) => `${event}: unknown ${path}`),
+        ])
+        expect(found).toEqual([])
+    })
+
+    it('build a check in both modes', () => {
+        for (const mode of ['strict', 'log'] as const) {
+            for (const [, schema] of events) {
+                expect(createResponseCheck(schema, { mode })).not.toBeNull()
+            }
+        }
+    })
 })

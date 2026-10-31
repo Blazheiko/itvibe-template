@@ -9,6 +9,7 @@ import { broadcastService } from '#app/services/communication/broadcast-service.
 import { llmUsageService } from '#app/services/ai/usage/llm-usage-service.js'
 import { promptService } from '#app/services/ai/prompt-service.js'
 import { Result } from 'better-result'
+import type { BroadcastMessage } from 'shared/schemas'
 import logger from '#logger'
 import { type AppResult } from '#app/services/shared/errors.js'
 import { tryInternal } from '#app/services/shared/result-helpers.js'
@@ -35,21 +36,19 @@ export function resolveSupportLanguage(language: string | undefined): string {
 function broadcastToConnection(
     userIdStr: string,
     targetUuid: string | undefined,
-    event: string,
-    payload: Record<string, unknown>,
+    ...message: BroadcastMessage
 ): void {
     if (targetUuid !== undefined) {
         const sent = broadcastService.broadcastMessageToUserConnection(
             userIdStr,
             targetUuid,
-            event,
-            payload,
+            ...message,
         )
         if (sent === 0) {
-            broadcastService.broadcastMessageToUser(userIdStr, event, payload)
+            broadcastService.broadcastMessageToUser(userIdStr, ...message)
         }
     } else {
-        broadcastService.broadcastMessageToUser(userIdStr, event, payload)
+        broadcastService.broadcastMessageToUser(userIdStr, ...message)
     }
 }
 
