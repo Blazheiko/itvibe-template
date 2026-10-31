@@ -17,7 +17,7 @@ import logger from '#vendor/utils/logger.js'
 
 export interface ResponseCheckMeta {
     route: string
-    transport: 'http' | 'ws'
+    transport: 'http' | 'ws' | 'broadcast'
     requestId?: string | undefined
 }
 

@@ -8,7 +8,6 @@ export const WSAdminUserOnlineUpsertPayloadSchema = type({
     appType: "'web' | 'pwa'",
     userAgent: 'string',
     connectionsCount: 'number',
-    '+': 'reject',
 })
 
 export type WSAdminUserOnlineUpsertPayload = typeof WSAdminUserOnlineUpsertPayloadSchema.infer

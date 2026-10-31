@@ -99,7 +99,9 @@ RESPONSE_VALIDATION_CONTRACT=log
 }
 ```
 
-Повідомлення, які обробник надсилає пізніше асинхронно, і broadcast не перевіряються.
+### Broadcast
+
+Push-події (`broadcast:*`) перевіряє [broadcast-service.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/app/services/communication/broadcast-service.ts) схемою з реєстру `BroadcastEventSchemas` у тих самих режимах: перевірка одна на подію, до серіалізації; у лозі й Sentry `transport: "broadcast"`, `route` — назва події. Невалідна подія не надсилається (500 відповісти нікому) — таблиця в [WebSocket](/backend/websocket#контракт-подіи). Повідомлення, які WS-обробник надсилає сам, поза `broadcastService`, не перевіряються: усі асинхронні повідомлення (відповіді support-агента) ідуть через нього.
 
 ## Логи та Sentry
 
@@ -126,7 +128,7 @@ RESPONSE_VALIDATION_CONTRACT=log
 
 ## Як це вбудовано
 
-`routesHandler` у [router.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/router.ts) один раз при старті створює для кожного маршруту `responseCheck` — функцію перевірки або `null` для маршруту без `ResponseSchema`. Тест будує перевірку в обох режимах для кожного маршруту: union з гілками, що перекриваються, ArkType з `delete` не приймає, і сервер не стартував би.
+`routesHandler` у [router.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/backend/src/vendor/start/router.ts) один раз при старті створює для кожного маршруту `responseCheck` — функцію перевірки або `null` для маршруту без `ResponseSchema`. Тест будує перевірку в обох режимах для кожного маршруту й кожної broadcast-події: union з гілками, що перекриваються, ArkType з `delete` не приймає, і сервер не стартував би.
 
 ## Вартість
 
@@ -137,6 +139,8 @@ RESPONSE_VALIDATION_CONTRACT=log
 | 10        | 0.019            | 0.014                 | 0.020 (1.09×)      | 0.19 (9.9×)                                 |
 | 100       | 0.179            | 0.143                 | 0.197 (1.10×)      | 1.80 (10.0×)                                |
 | 1000      | 1.86             | 1.38                  | 1.98 (1.07×)       | 18.0 (9.7×)                                 |
+
+Broadcast-подія (`support_chat_token`, `admin_user_online_upsert`, той самий скрипт, режим `log`): перевірка 0.5–0.7 мкс на подію при серіалізації 0.55–1.0 мкс; вона одна на подію, тож від кількості адресатів не залежить.
 
 Заміряно `createResponseCheck` цілком: `reject`, обхід відповіді, вирізання й запис у лог (`LOG_LEVEL=silent`).
 
