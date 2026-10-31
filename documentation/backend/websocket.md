@@ -6,6 +6,15 @@
 
 **Задача:** коли користувач створює нотатку, усі його відкриті вкладки мають дізнатися про це без оновлення сторінки.
 
+1. Опишіть payload події в реєстрі [broadcast-events.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/ws/broadcast-events.ts) — без нього `tsc` не прийме назву події:
+
+    ```ts
+    export const BroadcastEventSchemas = {
+        // ...
+        note_created: type({ note: NoteSchema }),
+    } as const
+    ```
+
 1. У сервісі після успішного створення викличте `broadcastService`:
 
     ```ts
@@ -15,7 +24,7 @@
     broadcastService.broadcastMessageToUser(String(userId), 'note_created', { note })
     ```
 
-2. Кожне WebSocket-з'єднання цього користувача отримає повідомлення (знято з реального з'єднання):
+1. Кожне WebSocket-з'єднання цього користувача отримає повідомлення (знято з реального з'єднання):
 
     ```json
     {
@@ -32,7 +41,7 @@
     }
     ```
 
-3. На фронтенді події з префіксом `broadcast:` розбирає [useBroadcastHandler.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/composables/useBroadcastHandler.ts): додайте обробник `note_created` у `handlers` за зразком `support_chat_token`, перевірте форму `payload` і передайте подію далі через event bus.
+1. На фронтенді події з префіксом `broadcast:` розбирає [useBroadcastHandler.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/composables/useBroadcastHandler.ts): додайте guard `payload` у [ws-payload-guards.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/ws-payload-guards.ts) і обробник `note_created` у `handlers` за зразком `support_chat_token`, і передайте подію далі через event bus. Тест паритету `ws-payload-guards.spec.ts` вимагає guard для кожної події реєстру.
 
 ::: warning Тести сервісу
 `broadcast-service.ts` імпортує сервер, а той на старті вимагає `APP_KEY`. Без мока unit-тест сервісу впаде з `APP_KEY must be set...`. Додайте в тест:
@@ -206,6 +215,20 @@ Support-контролери ([support-controller.ts](https://github.com/Blazhei
 - `broadcastMessageToUserExcept(userId, excludeUuid, …)` — на всі, крім одного;
 - `broadcastMessageToUserConnection(userId, uuid, …)` — на конкретне з'єднання;
 - `broadcastMessageToChannel(channel: WsChannel, …)` → `broadcastToChannel` у `server.ts` (`isWsChannel`, потім `server.publish`).
+
+### Контракт подій
+
+Кожна подія має схему payload у реєстрі `BroadcastEventSchemas` ([broadcast-events.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/shared/src/schemas/ws/broadcast-events.ts)). Методи `broadcastService` генеричні: `event` — лише ключ реєстру, `payload` — тип його схеми (`BroadcastPayload<E>`), тож неіснуючу подію чи payload іншої події не пропустить `tsc`.
+
+Під час виконання кожна подія **один раз**, до серіалізації й до циклу по з'єднаннях, проходить ту саму перевірку, що й відповіді маршрутів (`createResponseCheck`, режим `RESPONSE_VALIDATION_CONTRACT`, див. [Перевірка відповідей](/backend/response-validation#broadcast)):
+
+| Payload             | `strict`                     | `log`                                   |
+| ------------------- | ---------------------------- | --------------------------------------- |
+| відповідає схемі    | надсилається                 | надсилається                            |
+| має зайві ключі     | **не надсилається**, `error` | надсилається без них, `warn` зі шляхами |
+| не відповідає схемі | **не надсилається**, `error` | **не надсилається**, `error`            |
+
+Відповісти 500 тут нікому, тому невалідна подія лише пишеться в лог (`Broadcast event dropped: payload breaks its schema`) і метод повертає `0` / `false`. Фронтенд перевіряє payload власними guard'ами без ArkType ([ws-payload-guards.ts](https://github.com/Blazheiko/vibe-template/blob/main/packages/frontend/src/utils/ws-payload-guards.ts)); їх відповідність схемам реєстру перевіряє тест паритету.
 
 Події, які реально надсилаються:
 
