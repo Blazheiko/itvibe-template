@@ -4,6 +4,8 @@
 // → log). Medians of 7 runs after a warm-up. Run with LOG_LEVEL=silent.
 import { type } from '@arktype/type'
 import { createResponseCheck } from '#vendor/utils/validation/validate-response.js'
+import { makeBroadcastJson } from '#vendor/utils/helpers/json-handlers.js'
+import { BroadcastEventSchemas } from 'shared/schemas'
 
 const ErrorSchema = type({
     status: "'error'",
@@ -84,3 +86,35 @@ const rows = [10, 100, 1000].map((count) => {
 })
 
 console.table(rows)
+
+// Broadcast events (feat-049 §4.3): one check per event before serialization, against
+// building the broadcast JSON for it.
+const events = [
+    ['support_chat_token', { token: 'Hello, ' }],
+    [
+        'admin_user_online_upsert',
+        {
+            id: '42',
+            name: 'Ada',
+            email: 'ada@example.test',
+            appType: 'web',
+            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+            connectionsCount: 2,
+        },
+    ],
+] as const
+console.table(
+    events.map(([event, payload]) => {
+        const eventCheck = createResponseCheck(BroadcastEventSchemas[event], { mode: 'log' })
+        if (eventCheck === null) throw new Error('no check')
+        const eventMeta = { route: event, transport: 'broadcast' as const }
+        const json = median((value) => makeBroadcastJson(event, 200, value), payload, 100_000)
+        const checkMs = median((value) => eventCheck(value, eventMeta), payload, 100_000)
+        return {
+            event,
+            'json µs': (json * 1000).toFixed(3),
+            'check µs': (checkMs * 1000).toFixed(3),
+            'check / json': (checkMs / json).toFixed(2),
+        }
+    }),
+)
